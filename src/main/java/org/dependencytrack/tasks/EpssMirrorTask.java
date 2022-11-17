@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.StatusLine;
@@ -37,6 +36,8 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.epss.EpssParser;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -111,13 +112,8 @@ public class EpssMirrorTask implements LoggableSubscriber {
     private void getAllFiles() {
         doDownload(this.feedUrl + "/" + FILENAME);
         if (mirroredWithoutErrors) {
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .title(NotificationConstants.Title.EPSS_MIRROR)
-                    .content("Mirroring of the Exploit Prediction Scoring System completed successfully")
-                    .level(NotificationLevel.INFORMATIONAL)
-            );
+            String content = "Mirroring of the Exploit Prediction Scoring System completed successfully";
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.INFORMATIONAL);
         }
     }
 
@@ -160,25 +156,15 @@ public class EpssMirrorTask implements LoggableSubscriber {
                 } else {
                     mirroredWithoutErrors = false;
                     LOGGER.warn("Unable to download - HTTP Response " + status.getStatusCode() + ": " + status.getReasonPhrase());
-                    Notification.dispatch(new Notification()
-                            .scope(NotificationScope.SYSTEM)
-                            .group(NotificationGroup.DATASOURCE_MIRRORING)
-                            .title(NotificationConstants.Title.EPSS_MIRROR)
-                            .content("An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. HTTP Response: " + status.getStatusCode())
-                            .level(NotificationLevel.ERROR)
-                    );
+                    String content = "An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. HTTP Response: " + status.getStatusCode();
+                    NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.ERROR);
                 }
             }
         } catch (IOException e) {
             mirroredWithoutErrors = false;
             LOGGER.error("Download failed : " + e.getMessage());
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .title(NotificationConstants.Title.EPSS_MIRROR)
-                    .content("An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.ERROR);
         }
     }
 

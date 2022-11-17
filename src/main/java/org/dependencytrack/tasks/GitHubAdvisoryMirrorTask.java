@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
@@ -51,6 +50,7 @@ import org.dependencytrack.parser.github.graphql.model.GitHubSecurityAdvisory;
 import org.dependencytrack.parser.github.graphql.model.GitHubVulnerability;
 import org.dependencytrack.parser.github.graphql.model.PageableList;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -146,22 +146,12 @@ public class GitHubAdvisoryMirrorTask implements LoggableSubscriber {
             }
         }
         if (mirroredWithoutErrors) {
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .title(NotificationConstants.Title.GITHUB_ADVISORY_MIRROR)
-                    .content("Mirroring of GitHub Advisories completed successfully")
-                    .level(NotificationLevel.INFORMATIONAL)
-            );
+            String content = "Mirroring of GitHub Advisories completed successfully";
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.GITHUB_ADVISORY_MIRROR, content , NotificationLevel.INFORMATIONAL);
         } else {
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .title(NotificationConstants.Title.GITHUB_ADVISORY_MIRROR)
-                    .content("An error occurred mirroring the contents of GitHub Advisories. Check log for details.")
-                    .level(NotificationLevel.ERROR)
-            );
-        }
+            String content = "An error occurred mirroring the contents of GitHub Advisories. Check log for details.";
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.GITHUB_ADVISORY_MIRROR, content , NotificationLevel.ERROR);
+            }
     }
 
     /**

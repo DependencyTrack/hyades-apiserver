@@ -18,7 +18,11 @@ public enum ConfigKey implements Config.Key {
     REPO_META_ANALYZER_CACHE_STAMPEDE_BLOCKER_ENABLED("repo.meta.analyzer.cacheStampedeBlocker.enabled", true),
     REPO_META_ANALYZER_CACHE_STAMPEDE_BLOCKER_LOCK_BUCKETS("repo.meta.analyzer.cacheStampedeBlocker.lock.buckets", 1000),
     REPO_META_ANALYZER_CACHE_STAMPEDE_BLOCKER_MAX_ATTEMPTS("repo.meta.analyzer.cacheStampedeBlocker.max.attempts", 10),
-    SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true);
+    SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
+    KAFKA_APPLICATION_ID("kafka.application.id", "dependencytrack-apiserver"),
+    KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
+    KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
+    KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1);
 
     private final String propertyName;
     private final Object defaultValue;

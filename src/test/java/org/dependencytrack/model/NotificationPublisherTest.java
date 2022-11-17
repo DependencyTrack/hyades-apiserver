@@ -28,7 +28,7 @@ public class NotificationPublisherTest {
     @Test
     public void testId() {
         NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setId(111L);
+        publisher.setId(111);
         Assert.assertEquals(111L, publisher.getId());
     } 
 

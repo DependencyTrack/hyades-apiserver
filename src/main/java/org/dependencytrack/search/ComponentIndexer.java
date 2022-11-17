@@ -19,7 +19,6 @@
 package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -31,6 +30,7 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 
 import java.io.IOException;
 import java.util.List;
@@ -82,13 +82,8 @@ public final class ComponentIndexer extends IndexManager implements ObjectIndexe
             handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("An error occurred while adding component to index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.COMPONENT_INDEXER)
-                    .content("An error occurred while adding component to index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An error occurred while adding component to index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.COMPONENT_INDEXER, content , NotificationLevel.ERROR);
         }
     }
 
@@ -104,13 +99,8 @@ public final class ComponentIndexer extends IndexManager implements ObjectIndexe
             handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("An error occurred while removing a component from the index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.COMPONENT_INDEXER)
-                    .content("An error occurred while removing a component from the index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An error occurred while removing a component from the index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.COMPONENT_INDEXER, content , NotificationLevel.ERROR);
         }
     }
 

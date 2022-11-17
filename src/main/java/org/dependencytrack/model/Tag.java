@@ -53,7 +53,7 @@ public class Tag implements Serializable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
-    private long id;
+    private int id;
 
     @Persistent
     @Column(name = "NAME", allowsNull = "false")
@@ -72,7 +72,7 @@ public class Tag implements Serializable {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(int id) {
         this.id = id;
     }
 

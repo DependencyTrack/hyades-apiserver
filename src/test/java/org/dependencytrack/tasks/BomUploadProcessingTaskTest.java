@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.notification.Notification;
 import alpine.notification.NotificationService;
@@ -26,22 +27,26 @@ import alpine.notification.Subscription;
 import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NewVulnerableDependencyAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityAnalysisEvent;
-import org.dependencytrack.model.Severity;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -51,6 +56,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.mockito.Mockito.mock;
 
 @NotThreadSafe
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
@@ -65,6 +71,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     }
 
     private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
+
+    private KafkaEventDispatcher kafkaEventDispatcherMock;
 
     @BeforeClass
     public static void setUpClass() {
@@ -82,6 +90,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     @Before
     public void setUp() {
+        kafkaEventDispatcherMock = mock(KafkaEventDispatcher.class);
+
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getGroupName(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
@@ -126,8 +136,24 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final byte[] bomBytes = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("bom-1.xml").toURI()));
 
-        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomBytes));
+        new BomUploadProcessingTask(kafkaEventDispatcherMock).inform(new BomUploadEvent(project.getUuid(), bomBytes));
         assertConditionWithTimeout(() -> NOTIFICATIONS.size() >= 5, Duration.ofSeconds(5));
+        assertThat(NOTIFICATIONS).satisfiesExactly(
+                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.BOM_CONSUMED.name()),
+                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.BOM_PROCESSED.name()),
+                n -> {
+                    assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABILITY.name());
+                    NewVulnerabilityIdentified nvi = (NewVulnerabilityIdentified) n.getSubject();
+                    assertThat(nvi.getVulnerabilityAnalysisLevel().equals(VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                },
+                n -> {
+                    assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABILITY.name());
+                    NewVulnerabilityIdentified nvi = (NewVulnerabilityIdentified) n.getSubject();
+                    assertThat(nvi.getVulnerabilityAnalysisLevel().toString().equals(VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                },
+                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABLE_DEPENDENCY.name())
+        );
+
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
@@ -149,22 +175,15 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         assertThat(qm.getAllVulnerabilities(component)).hasSize(2);
-        assertThat(NOTIFICATIONS).satisfiesExactly(
-                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.PROJECT_CREATED.name()),
-                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.BOM_CONSUMED.name()),
-                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.BOM_PROCESSED.name()),
-                n -> {
-                    assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABILITY.name());
-                    NewVulnerabilityIdentified nvi = (NewVulnerabilityIdentified) n.getSubject();
-                    assertThat(nvi.getVulnerabilityAnalysisLevel().equals(VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
-                },
-                n -> {
-                    assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABILITY.name());
-                    NewVulnerabilityIdentified nvi = (NewVulnerabilityIdentified) n.getSubject();
-                    assertThat(nvi.getVulnerabilityAnalysisLevel().toString().equals(VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
-                },
-                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABLE_DEPENDENCY.name())
-        );
+
+        // Verify that all expected events have been dispatched to Kafka
+        final ArgumentCaptor<Event> kafkaEventCaptor = ArgumentCaptor.forClass(Event.class);
+        Mockito.verify(kafkaEventDispatcherMock).dispatch(kafkaEventCaptor.capture());
+        final List<Event> capturedEvents = kafkaEventCaptor.getAllValues();
+        assertThat(capturedEvents).hasSize(1);
+        assertThat(capturedEvents.get(0)).isInstanceOf(ComponentVulnerabilityAnalysisEvent.class);
+        final var kafkaEvent = (ComponentVulnerabilityAnalysisEvent) capturedEvents.get(0);
+        assertThat(kafkaEvent.component().getUuid()).isEqualTo(component.getUuid());
     }
 
 }

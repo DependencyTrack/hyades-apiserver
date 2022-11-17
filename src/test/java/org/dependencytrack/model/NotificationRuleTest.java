@@ -39,7 +39,7 @@ public class NotificationRuleTest {
     @Test
     public void testId() {
         NotificationRule rule = new NotificationRule();
-        rule.setId(111L);
+        rule.setId(111);
         Assert.assertEquals(111L, rule.getId());
     }
 

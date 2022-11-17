@@ -29,7 +29,7 @@ public class TagTest {
     @Test
     public void testId() { 
         Tag tag = new Tag();
-        tag.setId(111L);
+        tag.setId(111);
         Assert.assertEquals(111L, tag.getId());
     } 
 
@@ -54,11 +54,11 @@ public class TagTest {
     @Test
     public void testEquals() {
         Tag t1 = new Tag();
-        t1.setId(111L);
+        t1.setId(111);
         Tag t2 = new Tag();
-        t2.setId(222L);
+        t2.setId(222);
         Tag t3 = new Tag();
-        t3.setId(111L);
+        t3.setId(111);
         Assert.assertFalse(t1.equals(t2));
         Assert.assertTrue(t1.equals(t3));
     }

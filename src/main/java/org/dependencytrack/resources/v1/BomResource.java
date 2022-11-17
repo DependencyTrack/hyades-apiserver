@@ -28,6 +28,7 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
+import kong.unirest.HttpStatus;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +36,7 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
@@ -47,6 +49,8 @@ import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -289,14 +293,33 @@ public class BomResource extends AlpineResource {
     public Response isTokenBeingProcessed (
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") String uuid) {
+        try (final var qm = new QueryManager()) {
+            final PersistenceManager pm = qm.getPersistenceManager();
 
-        final boolean value = Event.isEventBeingProcessed(UUID.fromString(uuid));
+            final Query<Bom> query = pm.newQuery(Bom.class);
+            query.setFilter("uploadToken == :uploadToken");
+            query.setParameters(UUID.fromString(uuid));
 
-        IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
+            final Bom bom = query.executeUnique();
+            if (bom == null) {
+                return Response.status(HttpStatus.NOT_FOUND).build();
+            }
 
-        response.setProcessing(value);
+            // TODO: As a quick-n-dirty solution, we use a check with "at least once" semantics.
+            // In reality, we want to ensure that all enabled analyzers finished their work.
+            for (final Component component : qm.getAllComponents(bom.getProject())) {
+                if (component.getLastVulnerabilityAnalysis() == null
+                        || !component.getLastVulnerabilityAnalysis().after(bom.getImported())) {
+                    IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
+                    response.setProcessing(true);
+                    return Response.ok(response).build();
+                }
+            }
 
-        return Response.ok(response).build();
+            IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
+            response.setProcessing(false);
+            return Response.ok(response).build();
+        }
     }
 
     /**

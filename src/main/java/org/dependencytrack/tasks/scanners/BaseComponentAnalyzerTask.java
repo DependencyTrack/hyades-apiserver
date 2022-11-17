@@ -21,7 +21,6 @@ package org.dependencytrack.tasks.scanners;
 import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentAnalysisCache;
@@ -138,23 +137,13 @@ public abstract class BaseComponentAnalyzerTask implements ScanTask {
                                                 final String statusText) {
         logger.error("HTTP Status : " + statusCode + " " + statusText);
         logger.error(" - Analyzer URL : " + url);
-        Notification.dispatch(new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.ANALYZER)
-                .title(NotificationConstants.Title.ANALYZER_ERROR)
-                .content("An error occurred while communicating with a vulnerability intelligence source. URL: " + url + " HTTP Status: " + statusCode + ". Check log for details.")
-                .level(NotificationLevel.ERROR)
-        );
+        String content = "An error occurred while communicating with a vulnerability intelligence source. URL: " + url + " HTTP Status: " + statusCode + ". Check log for details.";
+        NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.ANALYZER, NotificationConstants.Title.ANALYZER_ERROR, content , NotificationLevel.ERROR);
     }
 
     protected void handleRequestException(final Logger logger, final Exception e) {
         logger.error("Request failure", e);
-        Notification.dispatch(new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.ANALYZER)
-                .title(NotificationConstants.Title.ANALYZER_ERROR)
-                .content("An error occurred while communicating with a vulnerability intelligence source. Check log for details. " + e.getMessage())
-                .level(NotificationLevel.ERROR)
-        );
+        String content = "An error occurred while communicating with a vulnerability intelligence source. Check log for details. " + e.getMessage();
+        NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.ANALYZER, NotificationConstants.Title.ANALYZER_ERROR, content , NotificationLevel.ERROR);
     }
 }

@@ -60,6 +60,7 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -167,13 +168,8 @@ public abstract class IndexManager implements AutoCloseable {
         if (!indexDir.exists()) {
             if (!indexDir.mkdirs()) {
                 LOGGER.error("Unable to create index directory: " + indexDir.getCanonicalPath());
-                Notification.dispatch(new Notification()
-                        .scope(NotificationScope.SYSTEM)
-                        .group(NotificationGroup.FILE_SYSTEM)
-                        .title(NotificationConstants.Title.FILE_SYSTEM_ERROR)
-                        .content("Unable to create index directory: " + indexDir.getCanonicalPath())
-                        .level(NotificationLevel.ERROR)
-                );
+                String content = "Unable to create index directory: " + indexDir.getCanonicalPath();
+                NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.FILE_SYSTEM, NotificationConstants.Title.FILE_SYSTEM_ERROR, content , NotificationLevel.ERROR);
             }
         }
         return FSDirectory.open(indexDir.toPath());
@@ -251,13 +247,8 @@ public abstract class IndexManager implements AutoCloseable {
             handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("Error committing index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                    .content("Error committing index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "Error committing index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
         }
     }
 
@@ -347,13 +338,8 @@ public abstract class IndexManager implements AutoCloseable {
             handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("An I/O exception occurred while searching Lucene index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                    .content("An I/O exception occurred while searching Lucene index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An I/O exception occurred while searching Lucene index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
         }
         if (CollectionUtils.isNotEmpty(list)) {
             return list.get(0); // There should only be one document

@@ -111,7 +111,7 @@ public class Project implements Serializable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
-    private long id;
+    private int id;
 
     @Persistent
     @Column(name = "AUTHOR", jdbcType = "VARCHAR")
@@ -269,7 +269,7 @@ public class Project implements Serializable {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(int id) {
         this.id = id;
     }
 
