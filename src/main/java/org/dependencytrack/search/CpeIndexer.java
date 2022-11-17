@@ -19,7 +19,6 @@
 package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import org.apache.lucene.document.Document;
@@ -30,6 +29,7 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 
 import java.io.IOException;
 import java.util.List;
@@ -79,13 +79,8 @@ public final class CpeIndexer extends IndexManager implements ObjectIndexer<Cpe>
             getIndexWriter().addDocument(doc);
         } catch (IOException e) {
             LOGGER.error("An error occurred while adding a CPE to the index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CPE_INDEXER)
-                    .content("An error occurred while adding a CPE to the index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An error occurred while adding a CPE to the index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CPE_INDEXER, content , NotificationLevel.ERROR);
         }
     }
 
@@ -99,13 +94,8 @@ public final class CpeIndexer extends IndexManager implements ObjectIndexer<Cpe>
             getIndexWriter().deleteDocuments(new Term(IndexConstants.CPE_UUID, cpe.getUuid().toString()));
         } catch (IOException e) {
             LOGGER.error("An error occurred while removing a CPE from the index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CPE_INDEXER)
-                    .content("An error occurred while removing a CPE from the index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An error occurred while removing a CPE from the index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CPE_INDEXER, content , NotificationLevel.ERROR);
         }
     }
 

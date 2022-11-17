@@ -1,7 +1,6 @@
 package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +18,7 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 import us.springett.parsers.cpe.CpeParser;
 import us.springett.parsers.cpe.exceptions.CpeParsingException;
 import us.springett.parsers.cpe.exceptions.CpeValidationException;
@@ -155,31 +155,16 @@ public class FuzzyVulnerableSoftwareSearchManager {
             searchResult.addResultSet(indexManager.getIndexType().name().toLowerCase(), resultSet);
         } catch (ParseException e) {
             LOGGER.error("Failed to parse search string", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                    .content("Failed to parse search string. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "Failed to parse search string. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
         } catch (CorruptIndexException e) {
             LOGGER.error("Corrupted Lucene index detected", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                    .content("Corrupted Lucene index detected. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "Corrupted Lucene index detected. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
         } catch (IOException e) {
             LOGGER.error("An I/O Exception occurred while searching Lucene index", e);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.INDEXING_SERVICE)
-                    .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                    .content("An I/O Exception occurred while searching Lucene index. Check log for details. " + e.getMessage())
-                    .level(NotificationLevel.ERROR)
-            );
+            String content = "An I/O Exception occurred while searching Lucene index. Check log for details. " + e.getMessage();
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
         }
 
         indexManager.close();

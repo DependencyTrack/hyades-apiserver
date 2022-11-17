@@ -1,0 +1,113 @@
+package org.dependencytrack.event.kafka;
+
+import alpine.common.logging.Logger;
+import alpine.event.framework.Event;
+import alpine.notification.Notification;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.KafkaException;
+import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.kafka.dto.Component;
+import org.dependencytrack.notification.NotificationGroup;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * An {@link Event} dispatcher that wraps a Kafka {@link Producer}.
+ */
+public class KafkaEventDispatcher {
+
+    private static final Logger LOGGER = Logger.getLogger(KafkaEventDispatcher.class);
+
+    private final Producer<String, Object> producer;
+
+    public KafkaEventDispatcher() {
+        this(KafkaProducerInitializer.getProducer());
+    }
+
+    /**
+     * Constructor for unit tests.
+     * <p>
+     * The intention is to be able to provide {@link org.apache.kafka.clients.producer.MockProducer}
+     * instances here for testing purposes.
+     *
+     * @param producer The {@link Producer} to use
+     */
+    KafkaEventDispatcher(final Producer<String, Object> producer) {
+        this.producer = producer;
+    }
+
+    /**
+     * Dispatch a given {@link Event} to Kafka.
+     * <p>
+     * This call is blocking and will wait for the server to acknowledge the event.
+     *
+     * @param event The {@link Event} to dispatch
+     * @return A {@link RecordMetadata} instance for the dispatched event
+     * @throws IllegalArgumentException When dispatching the given {@link Event} to Kafka is not supported
+     * @throws KafkaException           When dispatching failed
+     */
+    public RecordMetadata dispatch(final Event event) {
+        if (event instanceof final ComponentVulnerabilityAnalysisEvent vulnerabilityAnalysisEvent) {
+            final var component = new Component(vulnerabilityAnalysisEvent.component());
+            return dispatchInternal(KafkaTopic.COMPONENT_ANALYSIS, component.uuid().toString(), component,
+                    Map.of("level", vulnerabilityAnalysisEvent.level().name()));
+        }
+
+        throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
+    }
+
+    public RecordMetadata dispatchNotification(final Notification notification){
+        if(notification.getGroup().equals(NotificationGroup.CONFIGURATION.toString()))
+            return dispatchInternal(KafkaTopic.CONFIGURATION_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.DATASOURCE_MIRRORING.toString()))
+            return dispatchInternal(KafkaTopic.DATASOURCE_MIRRORING_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.REPOSITORY.toString()))
+            return dispatchInternal(KafkaTopic.REPOSITORY_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.INTEGRATION.toString()))
+            return dispatchInternal(KafkaTopic.INTEGRATION_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.ANALYZER.toString()))
+            return dispatchInternal(KafkaTopic.ANALYZER_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.BOM_CONSUMED.toString()))
+            return dispatchInternal(KafkaTopic.BOM_CONSUMED_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.BOM_PROCESSED.toString()))
+            return dispatchInternal(KafkaTopic.BOM_PROCESSED_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.FILE_SYSTEM.toString()))
+            return dispatchInternal(KafkaTopic.FILE_SYSTEM_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.INDEXING_SERVICE.toString()))
+            return dispatchInternal(KafkaTopic.INDEXING_SERVICE_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.NEW_VULNERABILITY.toString()))
+            return dispatchInternal(KafkaTopic.NEW_VULNERABILITY_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.NEW_VULNERABLE_DEPENDENCY.toString()))
+            return dispatchInternal(KafkaTopic.NEW_VULNERABLE_DEPENDENCY_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.POLICY_VIOLATION.toString()))
+            return dispatchInternal(KafkaTopic.POLICY_VIOLATION_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.PROJECT_AUDIT_CHANGE.toString()))
+            return dispatchInternal(KafkaTopic.PROJECT_AUDIT_CHANGE_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.VEX_CONSUMED.toString()))
+            return dispatchInternal(KafkaTopic.VEX_CONSUMED_NOTIFICATION, null, notification, null);
+        else if (notification.getGroup().equals(NotificationGroup.VEX_PROCESSED.toString()))
+            return dispatchInternal(KafkaTopic.VEX_PROCESSED_NOTIFICATION, null, notification, null);
+        return null;
+    }
+
+
+    private RecordMetadata dispatchInternal(final KafkaTopic topic, final String key, final Object value, final Map<String, String> headers) {
+        try {
+            final var record = new ProducerRecord<>(topic.getName(), key, value);
+            Optional.ofNullable(headers)
+                    .orElseGet(Collections::emptyMap)
+                    .forEach((k, v) -> record.headers().add(k, v.getBytes()));
+            final RecordMetadata recordMeta = producer.send(record).get();
+            LOGGER.debug("Dispatched event (Topic: " + recordMeta.topic() + ", Partition: " + recordMeta.partition() + ", Offset: " + recordMeta.offset() + ")");
+            return recordMeta;
+        } catch (ExecutionException | InterruptedException e) {
+            throw new KafkaException(e);
+        }
+    }
+
+}

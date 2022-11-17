@@ -22,7 +22,6 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.event.VulnDbSyncEvent;
@@ -33,16 +32,13 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.vulndb.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 import us.springett.parsers.cpe.Cpe;
 import us.springett.parsers.cpe.CpeParser;
 import us.springett.parsers.cpe.exceptions.CpeEncodingException;
 import us.springett.parsers.cpe.exceptions.CpeParsingException;
 import us.springett.vulndbdatamirror.parser.VulnDbParser;
-import us.springett.vulndbdatamirror.parser.model.CPE;
-import us.springett.vulndbdatamirror.parser.model.Product;
-import us.springett.vulndbdatamirror.parser.model.Results;
-import us.springett.vulndbdatamirror.parser.model.Vendor;
-import us.springett.vulndbdatamirror.parser.model.Version;
+import us.springett.vulndbdatamirror.parser.model.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -90,26 +86,16 @@ public class VulnDbSyncTask implements LoggableSubscriber {
                     } catch (IOException ex) {
                         LOGGER.error("An error occurred while parsing VulnDB payload: " + file.getName(), ex);
                         successful = false;
-                        Notification.dispatch(new Notification()
-                                .scope(NotificationScope.SYSTEM)
-                                .group(NotificationGroup.DATASOURCE_MIRRORING)
-                                .title(NotificationConstants.Title.VULNDB_MIRROR)
-                                .content("An error occurred parsing VulnDB payload. Check log for details. " + ex.getMessage())
-                                .level(NotificationLevel.ERROR)
-                        );
+                        String content = "An error occurred parsing VulnDB payload. Check log for details. " + ex.getMessage();
+                        NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content , NotificationLevel.ERROR);
                     }
                 }
             }
             Event.dispatch(new IndexEvent(IndexEvent.Action.COMMIT, Vulnerability.class));
             LOGGER.info("VulnDB mirror synchronization task complete");
             if (successful) {
-                Notification.dispatch(new Notification()
-                        .scope(NotificationScope.SYSTEM)
-                        .group(NotificationGroup.DATASOURCE_MIRRORING)
-                        .title(NotificationConstants.Title.VULNDB_MIRROR)
-                        .content("Mirroring of VulnDB completed successfully")
-                        .level(NotificationLevel.INFORMATIONAL)
-                );
+                String content = "Mirroring of VulnDB completed successfully";
+                NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content , NotificationLevel.INFORMATIONAL);
             }
         }
     }

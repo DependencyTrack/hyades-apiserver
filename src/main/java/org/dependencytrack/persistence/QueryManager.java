@@ -438,8 +438,8 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProjectProperties(project);
     }
 
-    public Bom createBom(Project project, Date imported, Bom.Format format, String specVersion, Integer bomVersion, String serialNumber) {
-        return getBomQueryManager().createBom(project, imported, format, specVersion, bomVersion, serialNumber);
+    public Bom createBom(Project project, Date imported, Bom.Format format, String specVersion, Integer bomVersion, String serialNumber, final UUID uploadToken) {
+        return getBomQueryManager().createBom(project, imported, format, specVersion, bomVersion, serialNumber, uploadToken);
     }
 
     public List<Bom> getAllBoms(Project project) {

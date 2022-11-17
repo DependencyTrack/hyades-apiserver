@@ -52,6 +52,7 @@ import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -331,6 +332,10 @@ public class Component implements Serializable {
     @Index(name = "COMPONENT_LAST_RISKSCORE_IDX")
     @Column(name = "LAST_RISKSCORE", allowsNull = "true") // New column, must allow nulls on existing databases))
     private Double lastInheritedRiskScore;
+
+    @Persistent
+    @Column(name = "LAST_VULNERABILITY_ANALYSIS", allowsNull = "true")
+    private Date lastVulnerabilityAnalysis;
 
     /**
      * Sticky notes
@@ -741,6 +746,14 @@ public class Component implements Serializable {
 
     public void setLastInheritedRiskScore(Double lastInheritedRiskScore) {
         this.lastInheritedRiskScore = lastInheritedRiskScore;
+    }
+
+    public Date getLastVulnerabilityAnalysis() {
+        return lastVulnerabilityAnalysis;
+    }
+
+    public void setLastVulnerabilityAnalysis(Date lastVulnerabilityAnalysis) {
+        this.lastVulnerabilityAnalysis = lastVulnerabilityAnalysis;
     }
 
     public String getBomRef() {

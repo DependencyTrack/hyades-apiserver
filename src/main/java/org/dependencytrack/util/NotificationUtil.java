@@ -22,6 +22,7 @@ import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.io.FileUtils;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -73,8 +74,26 @@ public final class NotificationUtil {
     /**
      * Private constructor.
      */
-    private NotificationUtil() { }
 
+    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level){
+        (new NotificationUtil()).sendNotificationToKafka(new Notification()
+                .scope(scope)
+                .group(group)
+                .title(title)
+                .content(content)
+                .level(level)
+        );
+    }
+    public static void dispatchNotificationsWithSubject(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject){
+        (new NotificationUtil()).sendNotificationToKafka(new Notification()
+                .scope(scope)
+                .group(group)
+                .title(title)
+                .content(content)
+                .level(level)
+                .subject(subject)
+        );
+    }
     public static void analyzeNotificationCriteria(QueryManager qm, Vulnerability vulnerability, Component component, VulnerabilityAnalysisLevel vulnerabilityAnalysisLevel) {
         if (!qm.contains(vulnerability, component)) {
             // Component did not previously contain this vulnerability. It could be a newly discovered vulnerability
@@ -92,7 +111,7 @@ public final class NotificationUtil {
             detachedVuln.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability))); // Aliases are lost during detach above
             final Component detachedComponent = qm.detach(Component.class, component.getId());
 
-            Notification.dispatch(new Notification()
+            (new NotificationUtil()).sendNotificationToKafka(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(NotificationGroup.NEW_VULNERABILITY)
                     .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABILITY, component.getProject()))
@@ -114,7 +133,7 @@ public final class NotificationUtil {
                 vulnerability.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
             }
 
-            Notification.dispatch(new Notification()
+            (new NotificationUtil()).sendNotificationToKafka(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(NotificationGroup.NEW_VULNERABLE_DEPENDENCY)
                     .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABLE_DEPENDENCY, component.getProject()))
@@ -170,7 +189,7 @@ public final class NotificationUtil {
             // Aliases are lost during the detach above
             analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
 
-            Notification.dispatch(new Notification()
+            (new NotificationUtil()).sendNotificationToKafka(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
@@ -217,7 +236,7 @@ public final class NotificationUtil {
             violationAnalysis.getComponent().setProject(project); // Project of component is lost after the detach above
             violationAnalysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
 
-            Notification.dispatch(new Notification()
+            (new NotificationUtil()).sendNotificationToKafka(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, violationAnalysis.getComponent().getProject()))
@@ -236,7 +255,7 @@ public final class NotificationUtil {
         qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(3); // Ensure policy is included
         qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
-        Notification.dispatch(new Notification()
+        (new NotificationUtil()).sendNotificationToKafka(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.POLICY_VIOLATION)
                 .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION,policyViolation.getComponent().getProject()))
@@ -571,5 +590,11 @@ public final class NotificationUtil {
             return messageType + " on Project: [" + project.toString() + "]";
         }
         return messageType;
+    }
+
+    public void sendNotificationToKafka(Notification notification){
+        new KafkaEventDispatcher().dispatchNotification(notification);
+
+
     }
 }
