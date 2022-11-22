@@ -126,7 +126,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed";
                 //Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: After we have dedicated BOM SERVER
+                //FIXME:: Add reference to BOM after we have dedicated bom server
                 NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, "BOM_CONSUMED");
 
 
@@ -171,7 +171,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
                 //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: After we have dedicated BOM SERVER
+                //FIXME:: Add reference to BOM after we have dedicated bom server
                 NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_PROCESSED, NotificationConstants.Title.BOM_PROCESSED, content, NotificationLevel.INFORMATIONAL, "BOM_PROCESSED");
 
             } catch (Exception ex) {
