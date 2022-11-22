@@ -38,7 +38,6 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.CompressUtil;
@@ -46,7 +45,6 @@ import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -127,8 +125,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed";
-                Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, subject);
+                //Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
+                //FIXME:: After we have dedicated BOM SERVER
+                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, "BOM_CONSUMED");
 
 
                 final Date date = new Date();
@@ -171,8 +170,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 Event.dispatch(new RepositoryMetaEvent(detachedFlattenedComponent));
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
-                subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_PROCESSED, NotificationConstants.Title.BOM_PROCESSED, content, NotificationLevel.INFORMATIONAL, subject);
+                //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
+                //FIXME:: After we have dedicated BOM SERVER
+                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_PROCESSED, NotificationConstants.Title.BOM_PROCESSED, content, NotificationLevel.INFORMATIONAL, "BOM_PROCESSED");
 
             } catch (Exception ex) {
                 LOGGER.error("Error while processing bom", ex);
