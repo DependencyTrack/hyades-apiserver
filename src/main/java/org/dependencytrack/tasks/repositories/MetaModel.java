@@ -19,12 +19,14 @@
 package org.dependencytrack.tasks.repositories;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.dependencytrack.model.Component;
 
 import java.util.Date;
 
 public class MetaModel {
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private Component component;
     private String latestVersion;
     private Date publishedTimestamp;
