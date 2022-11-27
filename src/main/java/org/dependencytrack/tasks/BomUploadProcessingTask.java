@@ -25,6 +25,7 @@ import alpine.notification.NotificationLevel;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.RepositoryMetaEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -125,9 +126,8 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed";
                 //Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: After we have dedicated BOM SERVER
+                //FIXME:: Add reference to BOM after we have dedicated bom server
                 NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, "BOM_CONSUMED");
-
 
                 final Date date = new Date();
                 final Bom bom = qm.createBom(project, date, bomFormat, bomSpecVersion, bomVersion, serialNumnber, event.getChainIdentifier());
@@ -170,7 +170,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
                 //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: After we have dedicated BOM SERVER
+                //FIXME:: Add reference to BOM after we have dedicated bom server
                 NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_PROCESSED, NotificationConstants.Title.BOM_PROCESSED, content, NotificationLevel.INFORMATIONAL, "BOM_PROCESSED");
 
             } catch (Exception ex) {
@@ -196,6 +196,7 @@ public class BomUploadProcessingTask implements Subscriber {
         if (isNew) {
             newComponents.add(qm.detach(Component.class, component.getId()));
         }
+        kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
         if (component.getChildren() != null) {
             for (final Component child : component.getChildren()) {
                 processComponent(qm, child, flattenedComponents, newComponents);

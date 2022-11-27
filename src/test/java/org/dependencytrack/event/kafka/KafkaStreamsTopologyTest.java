@@ -1,9 +1,5 @@
 package org.dependencytrack.event.kafka;
 
-import alpine.notification.Notification;
-import alpine.notification.NotificationService;
-import alpine.notification.Subscriber;
-import alpine.notification.Subscription;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
@@ -14,69 +10,50 @@ import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.tasks.repositories.MetaModel;
 import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 
 public class KafkaStreamsTopologyTest extends PersistenceCapableTest {
 
-    public static class NotificationSubscriber implements Subscriber {
-
-        @Override
-        public void inform(final Notification notification) {
-            NOTIFICATIONS.add(notification);
-        }
-
-    }
-
-    private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
-
     private Topology topology;
     private TopologyTestDriver testDriver;
-    private TestInputTopic<UUID, VulnerabilityResult> inputTopic;
-
-    @BeforeClass
-    public static void setUpClass() {
-        NotificationService.getInstance().subscribe(new Subscription(NotificationSubscriber.class));
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        NotificationService.getInstance().unsubscribe(new Subscription(NotificationSubscriber.class));
-    }
+    private TestInputTopic<UUID, MetaModel> repoMetaAnalysisResultInputTopic;
+    private TestInputTopic<UUID, VulnerabilityResult> vulnAnalysisResultInputTopic;
 
     @Before
     public void setUp() {
         topology = new KafkaStreamsTopologyFactory().createTopology();
 
         testDriver = new TopologyTestDriver(topology);
-        inputTopic = testDriver.createInputTopic(KafkaTopic.COMPONENT_VULNERABILITY_ANALYSIS_RESULT.getName(),
+        repoMetaAnalysisResultInputTopic = testDriver.createInputTopic(KafkaTopic.REPO_META_ANALYSIS_RESULT.getName(),
+                new UUIDSerializer(), new JacksonSerializer<>());
+        vulnAnalysisResultInputTopic = testDriver.createInputTopic(KafkaTopic.VULN_ANALYSIS_RESULT.getName(),
                 new UUIDSerializer(), new JacksonSerializer<>());
     }
 
     @After
     public void tearDown() {
-        NOTIFICATIONS.clear();
         testDriver.close();
     }
 
     @Test
-    public void testVulnResultIngestion() throws InterruptedException {
+    // FIXME: Currently failing b/c notifications are being dispatched via NotificationUtil, but no Kafka producer
+    // is available. Will need to refactor NotificationUtil so that a MockProducer can be injected.
+    public void testVulnResultIngestion() {
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
@@ -91,12 +68,7 @@ public class KafkaStreamsTopologyTest extends PersistenceCapableTest {
         reportedVuln.setSource(Vulnerability.Source.INTERNAL);
 
         final Date beforeAnalysis = new Date();
-        inputTopic.pipeInput(component.getUuid(), new VulnerabilityResult(reportedVuln, AnalyzerIdentity.INTERNAL_ANALYZER));
-
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() >= 1, Duration.ofSeconds(5));
-        assertThat(NOTIFICATIONS).satisfiesExactly(
-                n -> assertThat(n.getGroup()).isEqualTo(NotificationGroup.NEW_VULNERABILITY.name())
-        );
+        vulnAnalysisResultInputTopic.pipeInput(component.getUuid(), new VulnerabilityResult(reportedVuln, AnalyzerIdentity.INTERNAL_ANALYZER));
 
         qm.getPersistenceManager().refresh(component);
         assertThat(component.getLastVulnerabilityAnalysis()).isAfter(beforeAnalysis);
@@ -125,13 +97,48 @@ public class KafkaStreamsTopologyTest extends PersistenceCapableTest {
         component = qm.createComponent(component, false);
 
         final Date beforeAnalysis = new Date();
-        inputTopic.pipeInput(component.getUuid(), new VulnerabilityResult(null, AnalyzerIdentity.INTERNAL_ANALYZER));
+        vulnAnalysisResultInputTopic.pipeInput(component.getUuid(), new VulnerabilityResult(null, AnalyzerIdentity.INTERNAL_ANALYZER));
 
         qm.getPersistenceManager().refresh(component);
         assertThat(component.getLastVulnerabilityAnalysis()).isAfter(beforeAnalysis);
 
         final List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
         assertThat(vulnerabilities).isEmpty();
+    }
+
+    @Test
+    public void testRepoMetaAnalysisResultIngestion() {
+        final Date beforeTestTimestamp = Date.from(Instant.now());
+
+        final var component = new Component();
+        component.setPurl("pkg:golang/github.com/foo/bar@1.2.3");
+
+        final var metaModel = new MetaModel(component);
+        metaModel.setLatestVersion("1.2.4");
+
+        repoMetaAnalysisResultInputTopic.pipeInput(UUID.randomUUID(), metaModel);
+
+        final RepositoryMetaComponent metaComponent = qm.getRepositoryMetaComponent(RepositoryType.GO_MODULES, "github.com/foo", "bar");
+        assertThat(metaComponent).isNotNull();
+        assertThat(metaComponent.getRepositoryType()).isEqualTo(RepositoryType.GO_MODULES);
+        assertThat(metaComponent.getNamespace()).isEqualTo("github.com/foo");
+        assertThat(metaComponent.getName()).isEqualTo("bar");
+        assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
+        assertThat(metaComponent.getPublished()).isNull();
+        assertThat(metaComponent.getLastCheck()).isAfter(beforeTestTimestamp);
+    }
+
+    @Test
+    public void testRepoMetaAnalysisResultNoResult() {
+        final var component = new Component();
+        component.setPurl("pkg:golang/github.com/foo/bar@1.2.3");
+
+        final var metaModel = new MetaModel(component);
+
+        repoMetaAnalysisResultInputTopic.pipeInput(UUID.randomUUID(), metaModel);
+
+        final RepositoryMetaComponent metaComponent = qm.getRepositoryMetaComponent(RepositoryType.GO_MODULES, "github.com/foo", "bar");
+        assertThat(metaComponent).isNull();
     }
 
     @Test
