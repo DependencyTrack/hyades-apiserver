@@ -25,6 +25,7 @@ import alpine.notification.NotificationLevel;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.RepositoryMetaEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -129,7 +130,6 @@ public class BomUploadProcessingTask implements Subscriber {
                 //FIXME:: Add reference to BOM after we have dedicated bom server
                 NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, "BOM_CONSUMED");
 
-
                 final Date date = new Date();
                 final Bom bom = qm.createBom(project, date, bomFormat, bomSpecVersion, bomVersion, serialNumnber, event.getChainIdentifier());
                 for (final Component component: components) {
@@ -197,6 +197,7 @@ public class BomUploadProcessingTask implements Subscriber {
         if (isNew) {
             newComponents.add(qm.detach(Component.class, component.getId()));
         }
+        kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
         if (component.getChildren() != null) {
             for (final Component child : component.getChildren()) {
                 processComponent(qm, child, flattenedComponents, newComponents);

@@ -7,6 +7,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.notification.NotificationGroup;
@@ -54,45 +55,40 @@ public class KafkaEventDispatcher {
     public RecordMetadata dispatch(final Event event) {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent vulnerabilityAnalysisEvent) {
             final var component = new Component(vulnerabilityAnalysisEvent.component());
-            return dispatchInternal(KafkaTopic.COMPONENT_ANALYSIS, component.uuid().toString(), component,
+            return dispatchInternal(KafkaTopic.VULN_ANALYSIS_COMPONENT, component.uuid().toString(), component,
                     Map.of("level", vulnerabilityAnalysisEvent.level().name()));
+        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent repositoryMetaAnalysisEvent) {
+            final var component = new Component(repositoryMetaAnalysisEvent.component());
+            return dispatchInternal(KafkaTopic.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
-    public RecordMetadata dispatchNotification(final Notification notification){
-        if(notification.getGroup().equals(NotificationGroup.CONFIGURATION.toString()))
-            return dispatchInternal(KafkaTopic.CONFIGURATION_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.DATASOURCE_MIRRORING.toString()))
-            return dispatchInternal(KafkaTopic.DATASOURCE_MIRRORING_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.REPOSITORY.toString()))
-            return dispatchInternal(KafkaTopic.REPOSITORY_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.INTEGRATION.toString()))
-            return dispatchInternal(KafkaTopic.INTEGRATION_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.ANALYZER.toString()))
-            return dispatchInternal(KafkaTopic.ANALYZER_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.BOM_CONSUMED.toString()))
-            return dispatchInternal(KafkaTopic.BOM_CONSUMED_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.BOM_PROCESSED.toString()))
-            return dispatchInternal(KafkaTopic.BOM_PROCESSED_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.FILE_SYSTEM.toString()))
-            return dispatchInternal(KafkaTopic.FILE_SYSTEM_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.INDEXING_SERVICE.toString()))
-            return dispatchInternal(KafkaTopic.INDEXING_SERVICE_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.NEW_VULNERABILITY.toString()))
-            return dispatchInternal(KafkaTopic.NEW_VULNERABILITY_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.NEW_VULNERABLE_DEPENDENCY.toString()))
-            return dispatchInternal(KafkaTopic.NEW_VULNERABLE_DEPENDENCY_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.POLICY_VIOLATION.toString()))
-            return dispatchInternal(KafkaTopic.POLICY_VIOLATION_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.PROJECT_AUDIT_CHANGE.toString()))
-            return dispatchInternal(KafkaTopic.PROJECT_AUDIT_CHANGE_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.VEX_CONSUMED.toString()))
-            return dispatchInternal(KafkaTopic.VEX_CONSUMED_NOTIFICATION, null, notification, null);
-        else if (notification.getGroup().equals(NotificationGroup.VEX_PROCESSED.toString()))
-            return dispatchInternal(KafkaTopic.VEX_PROCESSED_NOTIFICATION, null, notification, null);
-        return null;
+    public RecordMetadata dispatchNotification(final Notification notification) {
+        return switch (NotificationGroup.valueOf(notification.getGroup())) {
+            case CONFIGURATION -> dispatchInternal(KafkaTopic.NOTIFICATION_CONFIGURATION, null, notification, null);
+            case DATASOURCE_MIRRORING ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);
+            case REPOSITORY -> dispatchInternal(KafkaTopic.NOTIFICATION_REPOSITORY, null, notification, null);
+            case INTEGRATION -> dispatchInternal(KafkaTopic.NOTIFICATION_INTEGRATION, null, notification, null);
+            case ANALYZER -> dispatchInternal(KafkaTopic.NOTIFICATION_ANALYZER, null, notification, null);
+            case BOM_CONSUMED -> dispatchInternal(KafkaTopic.NOTIFICATION_BOM_CONSUMED, null, notification, null);
+            case BOM_PROCESSED -> dispatchInternal(KafkaTopic.NOTIFICATION_BOM_PROCESSED, null, notification, null);
+            case FILE_SYSTEM -> dispatchInternal(KafkaTopic.NOTIFICATION_FILE_SYSTEM, null, notification, null);
+            case INDEXING_SERVICE ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_INDEXING_SERVICE, null, notification, null);
+            case NEW_VULNERABILITY ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_NEW_VULNERABILITY, null, notification, null);
+            case NEW_VULNERABLE_DEPENDENCY ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY, null, notification, null);
+            case POLICY_VIOLATION ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
+            case PROJECT_AUDIT_CHANGE ->
+                    dispatchInternal(KafkaTopic.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
+            case VEX_CONSUMED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_CONSUMED, null, notification, null);
+            case VEX_PROCESSED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_PROCESSED, null, notification, null);
+        };
     }
 
 

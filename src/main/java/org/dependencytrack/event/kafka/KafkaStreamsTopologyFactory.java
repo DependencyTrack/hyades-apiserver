@@ -6,8 +6,10 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Named;
 import org.dependencytrack.event.kafka.dto.VulnerabilityResult;
+import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityResultProcessor;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
+import org.dependencytrack.tasks.repositories.MetaModel;
 
 class KafkaStreamsTopologyFactory {
 
@@ -15,10 +17,16 @@ class KafkaStreamsTopologyFactory {
         final var streamsBuilder = new StreamsBuilder();
 
         streamsBuilder
-                .stream(KafkaTopic.COMPONENT_VULNERABILITY_ANALYSIS_RESULT.getName(),
+                .stream(KafkaTopic.REPO_META_ANALYSIS_RESULT.getName(),
+                        Consumed.with(Serdes.UUID(), new JacksonSerde<>(MetaModel.class))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.REPO_META_ANALYSIS_RESULT)))
+                .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
+
+        streamsBuilder
+                .stream(KafkaTopic.VULN_ANALYSIS_RESULT.getName(),
                         Consumed.with(Serdes.UUID(), new JacksonSerde<>(VulnerabilityResult.class))
-                                .withName("consume_from_component-vuln-analysis-result_topic"))
-                .process(VulnerabilityResultProcessor::new, Named.as("process_vuln_analysis_results"));
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_RESULT)))
+                .process(VulnerabilityResultProcessor::new, Named.as("process_vuln_analysis_result"));
 
         return streamsBuilder.build();
     }
