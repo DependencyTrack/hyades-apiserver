@@ -587,7 +587,7 @@ public final class NotificationUtil {
         return "An violation analysis decision was made to a policy violation affecting a project";
     }
 
-    private static String generateNotificationTitle(String messageType, Project project) {
+    public static String generateNotificationTitle(String messageType, Project project) {
         if (project != null) {
             return messageType + " on Project: [" + project.toString() + "]";
         }
