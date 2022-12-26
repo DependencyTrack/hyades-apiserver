@@ -151,4 +151,6 @@ public class InternalAnalysisTask extends AbstractVulnerableSoftwareAnalysisTask
         super.analyzeVersionRange(qm, vsList, componentVersion, componentUpdate, component, vulnerabilityAnalysisLevel);
     }
 
+
+
 }

@@ -5,7 +5,9 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Named;
+import org.dependencytrack.event.kafka.dto.AnalyzerConfig;
 import org.dependencytrack.event.kafka.dto.VulnerabilityResult;
+import org.dependencytrack.event.kafka.processor.ComponentAnalyzerConfigProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityResultProcessor;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
@@ -27,6 +29,13 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(Serdes.UUID(), new JacksonSerde<>(VulnerabilityResult.class))
                                 .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_RESULT)))
                 .process(VulnerabilityResultProcessor::new, Named.as("process_vuln_analysis_result"));
+
+        streamsBuilder
+                .stream(KafkaTopic.VULN_ANALYSIS_INFO.getName(),
+                        Consumed.with(Serdes.UUID(), new JacksonSerde<>(AnalyzerConfig.class))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_INFO)))
+                .process(ComponentAnalyzerConfigProcessor::new, Named.as("process_vuln_analysis_config"));
+
 
         return streamsBuilder.build();
     }
