@@ -20,7 +20,7 @@ import java.util.UUID;
 
 public class ComponentAnalyzerConfigProcessor implements Processor<UUID, AnalyzerConfig, Void, Void> {
 
-    private static final Logger LOGGER = Logger.getLogger(VulnerabilityResultProcessor.class);
+    private static final Logger LOGGER = Logger.getLogger(ComponentAnalyzerConfigProcessor.class);
 
     @Override
     public void process(final Record<UUID, AnalyzerConfig> record) {
