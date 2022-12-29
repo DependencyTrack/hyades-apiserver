@@ -41,6 +41,7 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.AnalyzerCompletionTracker;
 import org.dependencytrack.util.CompressUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.NotificationUtil;
@@ -49,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -156,6 +158,10 @@ public class BomUploadProcessingTask implements Subscriber {
                 // the vulnerability analysis hasn't taken place yet).
                 final List<Component> detachedFlattenedComponent = qm.detach(flattenedComponents);
                 final Project detachedProject = qm.detach(Project.class, project.getId());
+                final List<UUID> componentUUIDList = new ArrayList<>();
+                detachedFlattenedComponent.stream().map(component -> component.getUuid()).forEach(componentUUIDList::add);
+                LOGGER.debug("Number of components in the project  " + project.getName() + "are " + componentUUIDList.size());
+                AnalyzerCompletionTracker.projectComponentsMap.put(project.getId(),componentUUIDList);
                 detachedFlattenedComponent.stream()
                         .map(component -> new ComponentVulnerabilityAnalysisEvent(component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS))
                         .forEach(kafkaEventDispatcher::dispatch);
