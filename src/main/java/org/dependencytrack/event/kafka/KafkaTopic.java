@@ -14,6 +14,7 @@ public enum KafkaTopic {
     NOTIFICATION_NEW_VULNERABLE_DEPENDENCY("dtrack.notification.new-vulnerable-dependency"),
     NOTIFICATION_POLICY_VIOLATION("dtrack.notification.policy-violation"),
     NOTIFICATION_PROJECT_AUDIT_CHANGE("dtrack.notification.project-audit-change"),
+    NOTIFICATION_PROJECT_CREATED("dtrack.notification.project-created"),
     NOTIFICATION_REPOSITORY("dtrack.notification.repository"),
     NOTIFICATION_VEX_CONSUMED("dtrack.notification.vex-consumed"),
     NOTIFICATION_VEX_PROCESSED("dtrack.notification.vex-processed"),
