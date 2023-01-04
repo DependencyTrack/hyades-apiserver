@@ -8,9 +8,11 @@ import org.apache.kafka.streams.kstream.Named;
 import org.dependencytrack.event.kafka.dto.AnalyzerConfig;
 import org.dependencytrack.event.kafka.dto.VulnerabilityResult;
 import org.dependencytrack.event.kafka.processor.ComponentAnalyzerConfigProcessor;
+import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityResultProcessor;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
+import org.dependencytrack.parser.osv.model.OsvAdvisory;
 import org.dependencytrack.tasks.repositories.MetaModel;
 
 class KafkaStreamsTopologyFactory {
@@ -35,6 +37,12 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(Serdes.UUID(), new JacksonSerde<>(AnalyzerConfig.class))
                                 .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_INFO)))
                 .process(ComponentAnalyzerConfigProcessor::new, Named.as("process_vuln_analysis_config"));
+
+        streamsBuilder
+                .stream(KafkaTopic.NEW_VULNERABILITY.getName(),
+                        Consumed.with(Serdes.String(), new JacksonSerde<>(OsvAdvisory.class))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.NEW_VULNERABILITY)))
+                .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
 
         return streamsBuilder.build();
