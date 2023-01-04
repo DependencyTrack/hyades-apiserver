@@ -26,8 +26,8 @@ import alpine.notification.NotificationLevel;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
-import com.mitchellbosecke.pebble.PebbleEngine;
-import com.mitchellbosecke.pebble.template.PebbleTemplate;
+import io.pebbletemplates.pebble.PebbleEngine;
+import io.pebbletemplates.pebble.template.PebbleTemplate;
 import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.UnirestInstance;
@@ -290,6 +290,7 @@ public class GitHubAdvisoryMirrorTask implements LoggableSubscriber {
             vs.setPurlType(purl.getType());
             vs.setPurlNamespace(purl.getNamespace());
             vs.setPurlName(purl.getName());
+            vs.setPurl(purl.canonicalize());
             vs.setVersionStartIncluding(versionStartIncluding);
             vs.setVersionStartExcluding(versionStartExcluding);
             vs.setVersionEndIncluding(versionEndIncluding);

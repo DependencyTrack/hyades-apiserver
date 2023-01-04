@@ -24,6 +24,8 @@ import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
+import alpine.notification.Notification;
+import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
@@ -43,6 +45,10 @@ import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.util.NotificationUtil;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -359,10 +365,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return a Tag object
      */
     public Tag getTagByName(final String name) {
-        final String trimmedTag = StringUtils.trimToNull(name);
+        final String loweredTrimmedTag = StringUtils.lowerCase(StringUtils.trimToNull(name));
         final Query<Tag> query = pm.newQuery(Tag.class, "name == :name");
         query.setRange(0, 1);
-        return singleResult(query.execute(trimmedTag));
+        return singleResult(query.execute(loweredTrimmedTag));
     }
 
     /**
@@ -371,13 +377,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return the created Tag object
      */
     public Tag createTag(final String name) {
-        final String trimmedTag = StringUtils.trimToNull(name);
-        final Tag resolvedTag = getTagByName(trimmedTag);
+        final String loweredTrimmedTag = StringUtils.lowerCase(StringUtils.trimToNull(name));
+        final Tag resolvedTag = getTagByName(loweredTrimmedTag);
         if (resolvedTag != null) {
             return resolvedTag;
         }
         final Tag tag = new Tag();
-        tag.setName(trimmedTag);
+        tag.setName(loweredTrimmedTag);
         return persist(tag);
     }
 
@@ -389,10 +395,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     private List<Tag> createTags(final List<String> names) {
         final List<Tag> newTags = new ArrayList<>();
         for (final String name: names) {
-            final String trimmedTag = StringUtils.trimToNull(name);
-            if (getTagByName(trimmedTag) == null) {
+            final String loweredTrimmedTag = StringUtils.lowerCase(StringUtils.trimToNull(name));
+            if (getTagByName(loweredTrimmedTag) == null) {
                 final Tag tag = new Tag();
-                tag.setName(trimmedTag);
+                tag.setName(loweredTrimmedTag);
                 newTags.add(tag);
             }
         }
@@ -430,6 +436,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        Notification.dispatch(new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.PROJECT_CREATED)
+                .title(NotificationConstants.Title.PROJECT_CREATED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .content(result.getName() + " was created")
+                .subject(NotificationUtil.toJson(pm.detachCopy(result)))
+        );
         commitSearchIndex(commitIndex, Project.class);
         return result;
     }
@@ -473,10 +487,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setVersion(version);
         project.setPurl(purl);
 
-        if (!active && project.isActive() && hasActiveChild(project)){
+        if (!active && Boolean.TRUE.equals(project.isActive()) && hasActiveChild(project)){
             throw new IllegalArgumentException("Project cannot be set to inactive, if active children are present.");
-        } else {
-            project.setActive(active);
         }
         project.setActive(active);
 
@@ -508,10 +520,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setPurl(transientProject.getPurl());
         project.setSwidTagId(transientProject.getSwidTagId());
 
-        if (project.isActive() && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)){
+        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)){
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
-        } else {
-            project.setActive(transientProject.isActive());
         }
         project.setActive(transientProject.isActive());
 
@@ -1077,7 +1087,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         boolean hasActiveChild = false;
         if (project.getChildren() != null){
             for (Project child: project.getChildren()) {
-                if (child.isActive() || hasActiveChild) {
+                if (Boolean.TRUE.equals(child.isActive()) || hasActiveChild) {
                     return true;
                 } else {
                     hasActiveChild = hasActiveChild(child);

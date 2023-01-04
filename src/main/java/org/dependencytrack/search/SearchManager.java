@@ -19,6 +19,8 @@
 package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
+import alpine.event.framework.Event;
+import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.document.Document;
@@ -28,6 +30,7 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -38,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -109,6 +113,8 @@ public class SearchManager {
             LOGGER.error("Corrupted Lucene index detected", e);
             String content = "Corrupted Lucene index detected. Check log for details. " + e.getMessage();
             NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
+            LOGGER.info("Trying to rebuild the corrupted index "+indexManager.getIndexType().name());
+            Event.dispatch(new IndexEvent(IndexEvent.Action.REINDEX, indexManager.getIndexType().getClazz()));
         } catch (IOException e) {
             LOGGER.error("An I/O Exception occurred while searching Lucene index", e);
             String content = "An I/O Exception occurred while searching Lucene index. Check log for details. " + e.getMessage();
@@ -142,6 +148,27 @@ public class SearchManager {
     public SearchResult searchVulnerableSoftwareIndex(final String queryString, final int limit) {
         return searchIndex(VulnerableSoftwareIndexer.getInstance(), queryString, limit);
     }
+
+    public String reindex(Set<String> type) {
+        List<IndexManager.IndexType> indexTypes = type.stream().flatMap(t -> IndexManager.IndexType.getIndexType(t).stream()).toList();
+        if(indexTypes.isEmpty()) {
+            throw new IllegalArgumentException("No valid index type was provided");
+        }
+        IndexEvent firstReindexEvent = new IndexEvent(IndexEvent.Action.REINDEX, indexTypes.get(0).getClazz());
+        String uuid = firstReindexEvent.getChainIdentifier().toString();
+        IndexEvent currentReindexEvent = firstReindexEvent;
+        for(IndexManager.IndexType indexType : indexTypes) {
+            if(indexType != indexTypes.get(0)) {
+                IndexEvent reindexEvent = new IndexEvent(IndexEvent.Action.REINDEX, indexType.getClazz());
+                currentReindexEvent.onSuccess(reindexEvent);
+                currentReindexEvent.onFailure(reindexEvent);
+                currentReindexEvent = reindexEvent;
+            }
+        }
+        Event.dispatch(firstReindexEvent);
+        return uuid;
+    }
+
     /**
      * Escapes special characters used in Lucene query syntax.
      * + - && || ! ( ) { } [ ] ^ " ~ * ? : \ /

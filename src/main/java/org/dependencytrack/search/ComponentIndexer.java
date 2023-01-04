@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
@@ -77,6 +78,8 @@ public final class ComponentIndexer extends IndexManager implements ObjectIndexe
 
         try {
             getIndexWriter().addDocument(doc);
+        } catch (CorruptIndexException e) {
+            handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("An error occurred while adding component to index", e);
             String content = "An error occurred while adding component to index. Check log for details. " + e.getMessage();
@@ -92,6 +95,8 @@ public final class ComponentIndexer extends IndexManager implements ObjectIndexe
     public void remove(final Component component) {
         try {
             getIndexWriter().deleteDocuments(new Term(IndexConstants.COMPONENT_UUID, component.getUuid().toString()));
+        } catch (CorruptIndexException e) {
+            handleCorruptIndexException(e);
         } catch (IOException e) {
             LOGGER.error("An error occurred while removing a component from the index", e);
             String content = "An error occurred while removing a component from the index. Check log for details. " + e.getMessage();

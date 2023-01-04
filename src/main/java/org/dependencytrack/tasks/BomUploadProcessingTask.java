@@ -114,6 +114,7 @@ public class BomUploadProcessingTask implements Subscriber {
                                 .orElse(Classifier.APPLICATION);
                             project.setClassifier(classifier);
                         }
+                        project.setExternalReferences(ModelConverter.convertBomMetadataExternalReferences(cycloneDxBom));
                         serialNumnber = (cycloneDxBom.getSerialNumber() != null) ? cycloneDxBom.getSerialNumber().replaceFirst("urn:uuid:", "") : null;
                         components = ModelConverter.convertComponents(qm, cycloneDxBom, project);
                         services = ModelConverter.convertServices(qm, cycloneDxBom, project);

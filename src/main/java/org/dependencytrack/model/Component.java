@@ -55,6 +55,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 /**
  * Model class for tracking individual components.
@@ -358,6 +359,10 @@ public class Component implements Serializable {
 
     @JsonIgnore
     private transient JsonObject cacheResult;
+
+    private transient Set<String> dependencyGraph;
+
+    private transient boolean expandDependencyGraph;
 
     public long getId() {
         return id;
@@ -778,6 +783,22 @@ public class Component implements Serializable {
 
     public void setCacheResult(JsonObject cacheResult) {
         this.cacheResult = cacheResult;
+    }
+
+    public Set<String> getDependencyGraph() {
+        return dependencyGraph;
+    }
+
+    public void setDependencyGraph(Set<String> dependencyGraph) {
+        this.dependencyGraph = dependencyGraph;
+    }
+
+    public boolean isExpandDependencyGraph() {
+        return expandDependencyGraph;
+    }
+
+    public void setExpandDependencyGraph(boolean expandDependencyGraph) {
+        this.expandDependencyGraph = expandDependencyGraph;
     }
 
     @Override

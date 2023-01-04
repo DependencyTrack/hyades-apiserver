@@ -86,6 +86,7 @@ public class KafkaEventDispatcher {
                     dispatchInternal(KafkaTopic.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
             case PROJECT_AUDIT_CHANGE ->
                     dispatchInternal(KafkaTopic.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
+            case PROJECT_CREATED -> dispatchInternal(KafkaTopic.NOTIFICATION_PROJECT_CREATED, null, notification, null);
             case VEX_CONSUMED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_CONSUMED, null, notification, null);
             case VEX_PROCESSED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_PROCESSED, null, notification, null);
         };
