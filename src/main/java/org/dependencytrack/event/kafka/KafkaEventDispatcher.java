@@ -65,6 +65,9 @@ public class KafkaEventDispatcher {
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
+    public RecordMetadata dispatchOsvMirror(String ecosystems){
+        return dispatchInternal(KafkaTopic.MIRROR_OSV, "osv", ecosystems, null);
+    }
     public RecordMetadata dispatchNotification(final Notification notification) {
         return switch (NotificationGroup.valueOf(notification.getGroup())) {
             case CONFIGURATION -> dispatchInternal(KafkaTopic.NOTIFICATION_CONFIGURATION, null, notification, null);

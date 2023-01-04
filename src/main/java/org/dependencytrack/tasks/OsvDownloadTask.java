@@ -14,6 +14,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -57,11 +58,14 @@ public class OsvDownloadTask implements LoggableSubscriber {
     private List<String> ecosystems;
     private String osvBaseUrl;
 
+    private final KafkaEventDispatcher kafkaEventDispatcher;
+
     public List<String> getEnabledEcosystems() {
         return this.ecosystems;
     }
 
     public OsvDownloadTask() {
+        this(new KafkaEventDispatcher());
         try (final QueryManager qm = new QueryManager()) {
             final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getPropertyName());
             if (enabled != null) {
@@ -76,11 +80,17 @@ public class OsvDownloadTask implements LoggableSubscriber {
             }
         }
     }
+    OsvDownloadTask(final KafkaEventDispatcher kafkaEventDispatcher) {
+        this.kafkaEventDispatcher = kafkaEventDispatcher;
+    }
 
     @Override
     public void inform(Event e) {
 
+
         if (e instanceof OsvMirrorEvent) {
+            kafkaEventDispatcher.dispatchOsvMirror(ecosystemConfig);
+            //below code needs to be commented out
 
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
                 for (String ecosystem : this.ecosystems) {
