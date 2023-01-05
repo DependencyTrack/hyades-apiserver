@@ -94,6 +94,9 @@ public class OsvDownloadTask implements LoggableSubscriber {
 
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
                 for (String ecosystem : this.ecosystems) {
+
+                    kafkaEventDispatcher.dispatchOsvMirror(ecosystem);
+                    //FIXME below code to be commented
                     LOGGER.info("Updating datasource with Google OSV advisories for ecosystem " + ecosystem);
                     String url = this.osvBaseUrl + URLEncoder.encode(ecosystem, StandardCharsets.UTF_8).replace("+", "%20")
                             + "/all.zip";
