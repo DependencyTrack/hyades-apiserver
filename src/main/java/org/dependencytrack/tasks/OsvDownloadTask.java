@@ -56,7 +56,6 @@ public class OsvDownloadTask implements LoggableSubscriber {
     private static final Logger LOGGER = Logger.getLogger(OsvDownloadTask.class);
     private String ecosystemConfig;
     private List<String> ecosystems;
-    private String osvBaseUrl;
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
 
@@ -73,10 +72,6 @@ public class OsvDownloadTask implements LoggableSubscriber {
                 if (this.ecosystemConfig != null) {
                     ecosystems = Arrays.stream(this.ecosystemConfig.split(";")).map(String::trim).toList();
                 }
-                this.osvBaseUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getPropertyName()).getPropertyValue();
-                if (this.osvBaseUrl != null && !this.osvBaseUrl.endsWith("/")) {
-                    this.osvBaseUrl += "/";
-                }
             }
         }
     }
@@ -86,267 +81,15 @@ public class OsvDownloadTask implements LoggableSubscriber {
 
     @Override
     public void inform(Event e) {
-
-
         if (e instanceof OsvMirrorEvent) {
-            kafkaEventDispatcher.dispatchOsvMirror(ecosystemConfig);
-            //below code needs to be commented out
-
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
                 for (String ecosystem : this.ecosystems) {
-
                     kafkaEventDispatcher.dispatchOsvMirror(ecosystem);
-                    //FIXME below code to be commented
-                    LOGGER.info("Updating datasource with Google OSV advisories for ecosystem " + ecosystem);
-                    String url = this.osvBaseUrl + URLEncoder.encode(ecosystem, StandardCharsets.UTF_8).replace("+", "%20")
-                            + "/all.zip";
-                    HttpUriRequest request = new HttpGet(url);
-                    try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                        final StatusLine status = response.getStatusLine();
-                        if (status.getStatusCode() == 200) {
-                            try (InputStream in = response.getEntity().getContent();
-                                 ZipInputStream zipInput = new ZipInputStream(in)) {
-                                unzipFolder(zipInput);
-                            }
-                        } else {
-                            LOGGER.error("Download failed : " + status.getStatusCode() + ": " + status.getReasonPhrase());
-                        }
-                    } catch (Exception ex) {
-                        LOGGER.error("Exception while executing Http client request", ex);
-                    }
                 }
-            } else {
+            }
+            else {
                 LOGGER.info("Google OSV mirroring is disabled. No ecosystem selected.");
             }
         }
-    }
-
-    private void unzipFolder(ZipInputStream zipIn) throws IOException {
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(zipIn));
-        OsvAdvisoryParser parser = new OsvAdvisoryParser();
-        ZipEntry zipEntry = zipIn.getNextEntry();
-        while (zipEntry != null) {
-
-            String line = null;
-            StringBuilder out = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                out.append(line);
-            }
-            JSONObject json = new JSONObject(out.toString());
-            final OsvAdvisory osvAdvisory = parser.parse(json);
-            if (osvAdvisory != null) {
-                updateDatasource(osvAdvisory);
-            }
-            zipEntry = zipIn.getNextEntry();
-            reader = new BufferedReader(new InputStreamReader(zipIn));
-        }
-        reader.close();
-    }
-
-    public void updateDatasource(final OsvAdvisory advisory) {
-
-        try (QueryManager qm = new QueryManager()) {
-
-            LOGGER.debug("Synchronizing Google OSV advisory: " + advisory.getId());
-            final Vulnerability vulnerability = mapAdvisoryToVulnerability(qm, advisory);
-            final List<VulnerableSoftware> vsListOld = qm.detach(qm.getVulnerableSoftwareByVulnId(vulnerability.getSource(), vulnerability.getVulnId()));
-            final Vulnerability synchronizedVulnerability = qm.synchronizeVulnerability(vulnerability, false);
-
-            if (advisory.getAliases() != null) {
-                for (int i = 0; i < advisory.getAliases().size(); i++) {
-                    final String alias = advisory.getAliases().get(i);
-                    final VulnerabilityAlias vulnerabilityAlias = new VulnerabilityAlias();
-
-                    // OSV will use IDs of other vulnerability databases for its
-                    // primary advisory ID (e.g. GHSA-45hx-wfhj-473x). We need to ensure
-                    // that we don't falsely report GHSA IDs as stemming from OSV.
-                    final Vulnerability.Source advisorySource = extractSource(advisory.getId());
-                    switch (advisorySource) {
-                        case NVD -> vulnerabilityAlias.setCveId(advisory.getId());
-                        case GITHUB -> vulnerabilityAlias.setGhsaId(advisory.getId());
-                        default -> vulnerabilityAlias.setOsvId(advisory.getId());
-                    }
-
-                    if (alias.startsWith("CVE") && Vulnerability.Source.NVD != advisorySource) {
-                        vulnerabilityAlias.setCveId(alias);
-                        qm.synchronizeVulnerabilityAlias(vulnerabilityAlias);
-                    } else if (alias.startsWith("GHSA") && Vulnerability.Source.GITHUB != advisorySource) {
-                        vulnerabilityAlias.setGhsaId(alias);
-                        qm.synchronizeVulnerabilityAlias(vulnerabilityAlias);
-                    }
-
-                    //TODO - OSV supports GSD and DLA/DSA identifiers (possibly others). Determine how to handle.
-                }
-            }
-
-            List<VulnerableSoftware> vsList = new ArrayList<>();
-            for (OsvAffectedPackage osvAffectedPackage : advisory.getAffectedPackages()) {
-                VulnerableSoftware vs = mapAffectedPackageToVulnerableSoftware(qm, osvAffectedPackage);
-                if (vs != null) {
-                    vsList.add(vs);
-                }
-            }
-            qm.persist(vsList);
-            qm.updateAffectedVersionAttributions(synchronizedVulnerability, vsList, Vulnerability.Source.OSV);
-            vsList = qm.reconcileVulnerableSoftware(synchronizedVulnerability, vsListOld, vsList, Vulnerability.Source.OSV);
-            synchronizedVulnerability.setVulnerableSoftware(vsList);
-            qm.persist(synchronizedVulnerability);
-        }
-        Event.dispatch(new IndexEvent(IndexEvent.Action.COMMIT, Vulnerability.class));
-    }
-
-    public Vulnerability mapAdvisoryToVulnerability(final QueryManager qm, final OsvAdvisory advisory) {
-
-        final Vulnerability vuln = new Vulnerability();
-        if(advisory.getId() != null) {
-            vuln.setSource(extractSource(advisory.getId()));
-        }
-        vuln.setVulnId(String.valueOf(advisory.getId()));
-        vuln.setTitle(advisory.getSummary());
-        vuln.setDescription(advisory.getDetails());
-        vuln.setPublished(Date.from(advisory.getPublished().toInstant()));
-        vuln.setUpdated(Date.from(advisory.getModified().toInstant()));
-
-        if (advisory.getCredits() != null) {
-            vuln.setCredits(String.join(", ", advisory.getCredits()));
-        }
-
-        if (advisory.getReferences() != null && advisory.getReferences().size() > 0) {
-            final StringBuilder sb = new StringBuilder();
-            for (String ref : advisory.getReferences()) {
-                sb.append("* [").append(ref).append("](").append(ref).append(")\n");
-            }
-            vuln.setReferences(sb.toString());
-        }
-
-        if (advisory.getCweIds() != null) {
-            for (int i=0; i<advisory.getCweIds().size(); i++) {
-                final Cwe cwe = CweResolver.getInstance().resolve(qm, advisory.getCweIds().get(i));
-                if (cwe != null) {
-                    vuln.addCwe(cwe);
-                }
-            }
-        }
-        vuln.setSeverity(calculateOSVSeverity(advisory));
-        vuln.setCvssV2Vector(advisory.getCvssV2Vector());
-        vuln.setCvssV3Vector(advisory.getCvssV3Vector());
-        return vuln;
-    }
-
-    // calculate severity of vulnerability on priority-basis (database, ecosystem)
-    public Severity calculateOSVSeverity(OsvAdvisory advisory) {
-
-        // derive from database_specific cvss v3 vector if available
-        if(advisory.getCvssV3Vector() != null) {
-            Cvss cvss = Cvss.fromVector(advisory.getCvssV3Vector());
-            Score score = cvss.calculateScore();
-            return normalizedCvssV3Score(score.getBaseScore());
-        }
-        // derive from database_specific cvss v2 vector if available
-        if (advisory.getCvssV2Vector() != null) {
-            Cvss cvss = Cvss.fromVector(advisory.getCvssV2Vector());
-            Score score = cvss.calculateScore();
-            return normalizedCvssV2Score(score.getBaseScore());
-        }
-        // get database_specific severity string if available
-        if (advisory.getSeverity() != null) {
-            if (advisory.getSeverity().equalsIgnoreCase("CRITICAL")) {
-                return Severity.CRITICAL;
-            } else if (advisory.getSeverity().equalsIgnoreCase("HIGH")) {
-                return Severity.HIGH;
-            } else if (advisory.getSeverity().equalsIgnoreCase("MODERATE")) {
-                return Severity.MEDIUM;
-            } else if (advisory.getSeverity().equalsIgnoreCase("LOW")) {
-                return Severity.LOW;
-            }
-        }
-        // get largest ecosystem_specific severity from its affected packages
-        if (advisory.getAffectedPackages() != null) {
-            List<Integer> severityLevels = new ArrayList<>();
-            for (OsvAffectedPackage vuln : advisory.getAffectedPackages()) {
-                severityLevels.add(vuln.getSeverity().getLevel());
-            }
-            Collections.sort(severityLevels);
-            Collections.reverse(severityLevels);
-            return getSeverityByLevel(severityLevels.get(0));
-        }
-        return Severity.UNASSIGNED;
-    }
-
-    public Vulnerability.Source extractSource(String vulnId) {
-        final String sourceId = vulnId.split("-")[0];
-        return switch (sourceId) {
-            case "GHSA" -> Vulnerability.Source.GITHUB;
-            case "CVE" -> Vulnerability.Source.NVD;
-            default -> Vulnerability.Source.OSV;
-        };
-    }
-
-    public VulnerableSoftware mapAffectedPackageToVulnerableSoftware(final QueryManager qm, final OsvAffectedPackage affectedPackage) {
-        if (affectedPackage.getPurl() == null) {
-            LOGGER.debug("No PURL provided for affected package " + affectedPackage.getPackageName() + " - skipping");
-            return null;
-        }
-
-        final PackageURL purl;
-        try {
-            purl = new PackageURL(affectedPackage.getPurl());
-        } catch (MalformedPackageURLException e) {
-            LOGGER.debug("Invalid PURL provided for affected package  " + affectedPackage.getPackageName() + " - skipping", e);
-            return null;
-        }
-
-        // Other sources do not populate the versionStartIncluding with 0.
-        // Semantically, versionStartIncluding=null is equivalent to >=0.
-        // Omit zero values here for consistency's sake.
-        final String versionStartIncluding = Optional.ofNullable(affectedPackage.getLowerVersionRange())
-                .filter(version -> !"0".equals(version))
-                .orElse(null);
-        final String versionEndExcluding = affectedPackage.getUpperVersionRangeExcluding();
-        final String versionEndIncluding = affectedPackage.getUpperVersionRangeIncluding();
-
-        VulnerableSoftware vs = qm.getVulnerableSoftwareByPurl(purl.getType(), purl.getNamespace(), purl.getName(),
-                versionEndExcluding, versionEndIncluding, null, versionStartIncluding);
-        if (vs != null) {
-            return vs;
-        }
-
-        vs = new VulnerableSoftware();
-        vs.setPurlType(purl.getType());
-        vs.setPurlNamespace(purl.getNamespace());
-        vs.setPurlName(purl.getName());
-        vs.setPurl(purl.canonicalize());
-        vs.setVulnerable(true);
-        vs.setVersion(affectedPackage.getVersion());
-        vs.setVersionStartIncluding(versionStartIncluding);
-        vs.setVersionEndExcluding(versionEndExcluding);
-        vs.setVersionEndIncluding(versionEndIncluding);
-        return vs;
-    }
-
-    public List<String> getEcosystems() {
-        ArrayList<String> ecosystems = new ArrayList<>();
-        String url = this.osvBaseUrl + "ecosystems.txt";
-        HttpUriRequest request = new HttpGet(url);
-        try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-            final StatusLine status = response.getStatusLine();
-            if (status.getStatusCode() == 200) {
-                try (InputStream in = response.getEntity().getContent();
-                     Scanner scanner = new Scanner(in, StandardCharsets.UTF_8)) {
-                    while (scanner.hasNextLine()) {
-                        final String line = scanner.nextLine();
-                        if(!line.isBlank()) {
-                            ecosystems.add(line.trim());
-                        }
-                    }
-                }
-            } else {
-                LOGGER.error("Ecosystem download failed : " + status.getStatusCode() + ": " + status.getReasonPhrase());
-            }
-        } catch (Exception ex) {
-            LOGGER.error("Exception while executing Http request for ecosystems", ex);
-        }
-        return ecosystems;
     }
 }
