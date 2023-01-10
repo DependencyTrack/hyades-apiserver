@@ -55,6 +55,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
 
     private static final Logger LOGGER = Logger.getLogger(OsvDownloadTask.class);
     private String ecosystemConfig;
+    private String osvBaseUrl;
     private List<String> ecosystems;
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
@@ -71,6 +72,10 @@ public class OsvDownloadTask implements LoggableSubscriber {
                 this.ecosystemConfig = enabled.getPropertyValue();
                 if (this.ecosystemConfig != null) {
                     ecosystems = Arrays.stream(this.ecosystemConfig.split(";")).map(String::trim).toList();
+                }
+                this.osvBaseUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getPropertyName()).getPropertyValue();
+                if (this.osvBaseUrl != null && !this.osvBaseUrl.endsWith("/")) {
+                    this.osvBaseUrl += "/";
                 }
             }
         }
@@ -91,5 +96,31 @@ public class OsvDownloadTask implements LoggableSubscriber {
                 LOGGER.info("Google OSV mirroring is disabled. No ecosystem selected.");
             }
         }
+    }
+
+
+    public List<String> getEcosystems() {
+        ArrayList<String> ecosystems = new ArrayList<>();
+        String url = this.osvBaseUrl + "ecosystems.txt";
+        HttpUriRequest request = new HttpGet(url);
+        try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
+            final StatusLine status = response.getStatusLine();
+            if (status.getStatusCode() == 200) {
+                try (InputStream in = response.getEntity().getContent();
+                     Scanner scanner = new Scanner(in, StandardCharsets.UTF_8)) {
+                    while (scanner.hasNextLine()) {
+                        final String line = scanner.nextLine();
+                        if(!line.isBlank()) {
+                            ecosystems.add(line.trim());
+                        }
+                    }
+                }
+            } else {
+                LOGGER.error("Ecosystem download failed : " + status.getStatusCode() + ": " + status.getReasonPhrase());
+            }
+        } catch (Exception ex) {
+            LOGGER.error("Exception while executing Http request for ecosystems", ex);
+        }
+        return ecosystems;
     }
 }

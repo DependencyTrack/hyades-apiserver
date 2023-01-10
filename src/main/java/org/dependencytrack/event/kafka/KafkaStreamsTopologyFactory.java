@@ -5,6 +5,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Named;
+import org.cyclonedx.model.Bom;
 import org.dependencytrack.event.kafka.dto.AnalyzerConfig;
 import org.dependencytrack.event.kafka.dto.VulnerabilityResult;
 import org.dependencytrack.event.kafka.processor.ComponentAnalyzerConfigProcessor;
@@ -40,7 +41,7 @@ class KafkaStreamsTopologyFactory {
 
         streamsBuilder
                 .stream(KafkaTopic.NEW_VULNERABILITY.getName(),
-                        Consumed.with(Serdes.String(), new JacksonSerde<>(OsvAdvisory.class))
+                        Consumed.with(Serdes.String(), new JacksonSerde<>(Bom.class))
                                 .withName("consume_from_%s_topic".formatted(KafkaTopic.NEW_VULNERABILITY)))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
