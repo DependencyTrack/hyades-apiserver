@@ -7,6 +7,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerableSoftware;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -135,6 +136,19 @@ public class CycloneDxToDTSchemaParserTest extends PersistenceCapableTest {
         MirrorVulnerabilityProcessor processor = new MirrorVulnerabilityProcessor();
         Vulnerability.Source source = processor.extractSource("GHSA-xmw9-q7x9-j5qc");
         Assert.assertEquals("GITHUB", source.name());
+    }
+
+    @Test
+    public void testAffectedPackages(){
+        MirrorVulnerabilityProcessor processor = new MirrorVulnerabilityProcessor();
+        VulnerableSoftware vs = processor.mapAffectedPackageToVulnerableSoftware(qm, bom, bom.getVulnerabilities().get(0).getAffects().get(0).getVersions().get(0).getRange(), bom.getVulnerabilities().get(0).getAffects().get(0).getRef());
+        Assert.assertNotNull(vs);
+        Assert.assertEquals("0", vs.getVersionStartIncluding());
+        Assert.assertEquals("0.14.15", vs.getVersionEndExcluding());
+        Assert.assertEquals("blaze-core_2.11", vs.getPurlName());
+        Assert.assertEquals("maven", vs.getPurlType());
+        Assert.assertEquals("org.http4s", vs.getPurlNamespace());
+
     }
 
 }
