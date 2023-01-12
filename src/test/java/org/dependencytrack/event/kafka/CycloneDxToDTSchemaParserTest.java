@@ -122,6 +122,7 @@ public class CycloneDxToDTSchemaParserTest extends PersistenceCapableTest {
         Assert.assertNotNull(vuln);
         Assert.assertEquals("GHSA-xmw9-q7x9-j5qc",vuln.getVulnId());
         Assert.assertEquals("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H", vuln.getCvssV3Vector());
+        Assert.assertNull(vuln.getCredits());
     }
 
     @Test
