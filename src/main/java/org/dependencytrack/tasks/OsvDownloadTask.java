@@ -10,37 +10,32 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.event.kafka.KafkaMirrorEventDispatcher;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.persistence.QueryManager;
+
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED;
+
 public class OsvDownloadTask implements LoggableSubscriber {
 
     private static final Logger LOGGER = Logger.getLogger(OsvDownloadTask.class);
-    private String ecosystemConfig;
     private String osvBaseUrl;
     private List<String> ecosystems;
 
-    private final KafkaMirrorEventDispatcher kafkaMirrorEventDispatcher;
-
-    public List<String> getEnabledEcosystems() {
-        return this.ecosystems;
-    }
-
     public OsvDownloadTask() {
-        this(new KafkaMirrorEventDispatcher());
         try (final QueryManager qm = new QueryManager()) {
             final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getPropertyName());
             if (enabled != null) {
-                this.ecosystemConfig = enabled.getPropertyValue();
-                if (this.ecosystemConfig != null) {
-                    ecosystems = Arrays.stream(this.ecosystemConfig.split(";")).map(String::trim).toList();
+                final String ecosystemConfig = enabled.getPropertyValue();
+                if (ecosystemConfig != null) {
+                    ecosystems = Arrays.stream(ecosystemConfig.split(";")).map(String::trim).toList();
                 }
                 this.osvBaseUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getPropertyName()).getPropertyValue();
                 if (this.osvBaseUrl != null && !this.osvBaseUrl.endsWith("/")) {
@@ -49,16 +44,13 @@ public class OsvDownloadTask implements LoggableSubscriber {
             }
         }
     }
-    OsvDownloadTask(final KafkaMirrorEventDispatcher kafkaMirrorEventDispatcher) {
-        this.kafkaMirrorEventDispatcher = kafkaMirrorEventDispatcher;
-    }
 
     @Override
     public void inform(Event e) {
         if (e instanceof OsvMirrorEvent) {
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
                 for (String ecosystem : this.ecosystems) {
-                    kafkaMirrorEventDispatcher.dispatch(ecosystem);
+                    new KafkaEventDispatcher().dispatch(new OsvMirrorEvent(ecosystem));
                 }
             }
             else {
