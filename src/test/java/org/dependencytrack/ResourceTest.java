@@ -25,14 +25,13 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
+import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
-import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.JerseyTest;
-import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
-import org.glassfish.jersey.test.spi.TestContainer;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -89,6 +88,7 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String V1_TAG = "/v1/tag";
 
     protected QueryManager qm;
+    protected MockProducer<String, Object> kafkaMockProducer;
     protected ManagedUser testUser;
     protected String jwt;
     protected Team team;
@@ -103,6 +103,7 @@ public abstract class ResourceTest extends JerseyTest {
     public void before() throws Exception {
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
+        this.kafkaMockProducer = (MockProducer<String, Object>) KafkaProducerInitializer.getProducer();
         testUser = qm.createManagedUser("testuser", String.valueOf(PasswordService.createHash("testuser".toCharArray())));
         this.jwt = new JsonWebToken().createToken(testUser);
         team = qm.createTeam("Test Users", true);
@@ -113,6 +114,7 @@ public abstract class ResourceTest extends JerseyTest {
     @After
     public void after() {
         PersistenceManagerFactory.tearDown();
+        KafkaProducerInitializer.tearDown();
     }
 
     @Override

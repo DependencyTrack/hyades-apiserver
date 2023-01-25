@@ -9,6 +9,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.notification.NotificationGroup;
 
@@ -53,13 +54,15 @@ public class KafkaEventDispatcher {
      * @throws KafkaException           When dispatching failed
      */
     public RecordMetadata dispatch(final Event event) {
-        if (event instanceof final ComponentVulnerabilityAnalysisEvent vulnerabilityAnalysisEvent) {
-            final var component = new Component(vulnerabilityAnalysisEvent.component());
+        if (event instanceof final ComponentVulnerabilityAnalysisEvent vaEvent) {
+            final var component = new Component(vaEvent.component());
             return dispatchInternal(KafkaTopic.VULN_ANALYSIS_COMPONENT, component.uuid().toString(), component,
-                    Map.of("level", vulnerabilityAnalysisEvent.level().name()));
-        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent repositoryMetaAnalysisEvent) {
-            final var component = new Component(repositoryMetaAnalysisEvent.component());
+                    Map.of("level", vaEvent.level().name()));
+        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
+            final var component = new Component(rmaEvent.component());
             return dispatchInternal(KafkaTopic.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
+        } else if (event instanceof final OsvMirrorEvent omEvent) {
+            return dispatchInternal(KafkaTopic.MIRROR_OSV, omEvent.ecosystem(), "", null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");

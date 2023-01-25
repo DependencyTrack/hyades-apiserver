@@ -76,7 +76,6 @@ public class SnykAnalysisTaskTest extends PersistenceCapableTest {
 
     @BeforeClass
     public static void beforeClass() {
-        NotificationService.getInstance().subscribe(new Subscription(NotificationSubscriber.class));
         mockServer = ClientAndServer.startClientAndServer(1080);
     }
 
@@ -117,13 +116,11 @@ public class SnykAnalysisTaskTest extends PersistenceCapableTest {
     @After
     public void tearDown() {
         mockServer.reset();
-        NOTIFICATIONS.clear();
     }
 
     @AfterClass
     public static void afterClass() {
         mockServer.stop();
-        NotificationService.getInstance().unsubscribe(new Subscription(NotificationSubscriber.class));
     }
 
     @Test
@@ -589,8 +586,9 @@ public class SnykAnalysisTaskTest extends PersistenceCapableTest {
 
         new SnykAnalysisTask().inform(new SnykAnalysisEvent(component));
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() > 0, Duration.ofSeconds(5));
-        assertThat(NOTIFICATIONS).anySatisfy(notification -> {
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() > 0, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).anySatisfy(event -> {
+            final var notification = (Notification) event.value();
             assertThat(notification.getScope()).isEqualTo(NotificationScope.SYSTEM.name());
             assertThat(notification.getLevel()).isEqualTo(NotificationLevel.WARNING);
             assertThat(notification.getGroup()).isEqualTo(NotificationGroup.ANALYZER.name());
@@ -637,17 +635,6 @@ public class SnykAnalysisTaskTest extends PersistenceCapableTest {
         mockServer.verify(request().withHeader("Authorization", "token token3"), VerificationTimes.exactly(20));
         mockServer.verify(request().withHeader("Authorization", "token token4"), VerificationTimes.exactly(20));
         mockServer.verify(request().withHeader("Authorization", "token token5"), VerificationTimes.exactly(20));
-    }
-
-    private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
-
-    public static class NotificationSubscriber implements Subscriber {
-
-        @Override
-        public void inform(final Notification notification) {
-            NOTIFICATIONS.add(notification);
-        }
-
     }
 
 }

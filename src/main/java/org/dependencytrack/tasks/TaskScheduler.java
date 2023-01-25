@@ -84,7 +84,7 @@ public final class TaskScheduler extends AlpineTaskScheduler {
             scheduleEvent(new GitHubAdvisoryMirrorEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_GHSA_MIRROR_CADENCE));
 
             // Creates a new event that executes every 24 hours (86400000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new OsvMirrorEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_OSV_MIRROR_CADENCE));
+            scheduleEvent(new OsvMirrorEvent(null), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_OSV_MIRROR_CADENCE));
 
             // Creates a new event that executes every 24 hours (86400000) by default after an initial 1 minute (60000) delay
             scheduleEvent(new NistMirrorEvent(), 60000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_NIST_MIRROR_CADENCE));

@@ -231,7 +231,22 @@ public final class NotificationUtil {
 
             Project project = violationAnalysis.getComponent().getProject();
             PolicyViolation policyViolation = violationAnalysis.getPolicyViolation();
-            policyViolation.getPolicyCondition().getPolicy(); // Force loading of policy
+            violationAnalysis.getPolicyViolation().getPolicyCondition().getPolicy(); // Force loading of policy
+
+            // Detach policyViolation, ensuring that all elements in the policyViolation->policyCondition->policy
+            // reference chain are included. It's important that "the opposite way" is not loaded when detaching,
+            // otherwise the policy->policyConditions reference chain will cause indefinite recursion issues during
+            // JSON serialization.
+            final int origMaxFetchDepth = qm.getPersistenceManager().getFetchPlan().getMaxFetchDepth();
+            final int origDetachmentOptions = qm.getPersistenceManager().getFetchPlan().getDetachmentOptions();
+            try {
+                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
+                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2);
+                policyViolation = qm.getPersistenceManager().detachCopy(policyViolation);
+            } finally {
+                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(origDetachmentOptions);
+                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(origMaxFetchDepth);
+            }
 
             violationAnalysis = qm.detach(ViolationAnalysis.class, violationAnalysis.getId());
 
@@ -254,7 +269,7 @@ public final class NotificationUtil {
         final ViolationAnalysis violationAnalysis = qm.getViolationAnalysis(policyViolation.getComponent(), policyViolation);
         if (violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState())) return;
         policyViolation.getPolicyCondition().getPolicy(); // Force loading of policy
-        qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(3); // Ensure policy is included
+        qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
         qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
         sendNotificationToKafka(new Notification()
