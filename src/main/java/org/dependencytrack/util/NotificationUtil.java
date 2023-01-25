@@ -269,7 +269,7 @@ public final class NotificationUtil {
         final ViolationAnalysis violationAnalysis = qm.getViolationAnalysis(policyViolation.getComponent(), policyViolation);
         if (violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState())) return;
         policyViolation.getPolicyCondition().getPolicy(); // Force loading of policy
-        qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(3); // Ensure policy is included
+        qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
         qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
         sendNotificationToKafka(new Notification()
