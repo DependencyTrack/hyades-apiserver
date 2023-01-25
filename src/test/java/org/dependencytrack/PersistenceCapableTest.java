@@ -20,6 +20,7 @@ package org.dependencytrack;
 
 import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
 import org.junit.Before;
@@ -42,6 +43,7 @@ public abstract class PersistenceCapableTest {
     @After
     public void after() {
         PersistenceManagerFactory.tearDown();
+        KafkaProducerInitializer.tearDown();
     }
 
 }

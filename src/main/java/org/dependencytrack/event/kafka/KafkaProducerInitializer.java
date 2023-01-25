@@ -5,6 +5,7 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -57,7 +58,27 @@ public class KafkaProducerInitializer implements ServletContextListener {
     }
 
     public static Producer<String, Object> getProducer() {
+        if (PRODUCER == null && Config.isUnitTestsEnabled()) {
+            // Workaround for tests, as we can't use dependency injection in JerseyTest.
+            // Analog to how it's done for instantiation of PersistenceManagerFactory:
+            // https://github.com/stevespringett/Alpine/blob/alpine-parent-2.2.0/alpine-server/src/main/java/alpine/server/persistence/PersistenceManagerFactory.java#L127-L135
+            PRODUCER = new MockProducer<>(true, new StringSerializer(), new JacksonSerializer<>());
+        }
+
         return PRODUCER;
+    }
+
+    /**
+     * Closes the {@link KafkaProducer} and removes any reference to it.
+     * <p>
+     * This method should be called in the {@code tearDown} method of unit- and integration
+     * tests that interact with the persistence layer.
+     */
+    public static void tearDown() {
+        if (PRODUCER != null) {
+            PRODUCER.close();
+            PRODUCER = null;
+        }
     }
 
     private static Producer<String, Object> createProducer() {
