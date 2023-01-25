@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.integrations.fortifyssc;
 
+import alpine.Config;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.http.HttpHeaders;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -56,12 +58,14 @@ public class FortifySscClientTest {
 
     @BeforeClass
     public static void beforeClass() {
+        Config.enableUnitTests();
         mockServer = startClientAndServer(1080);
     }
 
     @AfterClass
     public static void after() {
         mockServer.stop();
+        KafkaProducerInitializer.tearDown();
     }
 
     @Test

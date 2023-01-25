@@ -262,12 +262,14 @@ public class SnykAnalysisTask extends BaseComponentAnalyzerTask implements Cache
                     Refer to https://apidocs.snyk.io for supported versions.
                     """.formatted(apiVersion, apiVersionSunset);
             LOGGER.warn(message);
-            Notification.dispatch(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .level(NotificationLevel.WARNING)
-                    .group(NotificationGroup.ANALYZER)
-                    .title("Snyk API version %s is deprecated".formatted(apiVersion))
-                    .content(message));
+            NotificationUtil.dispatchNotificationsWithSubject(
+                    NotificationScope.SYSTEM,
+                    NotificationGroup.ANALYZER,
+                    "Snyk API version %s is deprecated".formatted(apiVersion),
+                    message,
+                    NotificationLevel.WARNING,
+                    null
+            );
         }
     }
 

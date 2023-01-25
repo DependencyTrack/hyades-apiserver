@@ -20,9 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import alpine.notification.NotificationService;
-import alpine.notification.Subscriber;
-import alpine.notification.Subscription;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
@@ -47,8 +44,6 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.json.Json;
@@ -60,7 +55,6 @@ import javax.ws.rs.core.Response;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
@@ -76,33 +70,6 @@ public class AnalysisResourceTest extends ResourceTest {
                                 .register(AuthenticationFilter.class)
                                 .register(AuthorizationFilter.class)))
                 .build();
-    }
-
-    public static class NotificationSubscriber implements Subscriber {
-
-        @Override
-        public void inform(final Notification notification) {
-            AnalysisResourceTest.NOTIFICATIONS.add(notification);
-        }
-
-    }
-
-    private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
-
-    @BeforeClass
-    public static void setUpClass() {
-        NotificationService.getInstance().subscribe(new Subscription(NotificationSubscriber.class));
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        NotificationService.getInstance().unsubscribe(new Subscription(NotificationSubscriber.class));
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-        NOTIFICATIONS.clear();
-        super.tearDown();
     }
 
     @Test
@@ -361,10 +328,10 @@ public class AnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
         assertThat(responseJson.getBoolean("isSuppressed")).isTrue();
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = NOTIFICATIONS.poll();
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
         assertThat(projectNotification).isNotNull();
-        final Notification notification = NOTIFICATIONS.poll();
+        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -411,10 +378,10 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getJsonArray("analysisComments")).isEmpty();
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = NOTIFICATIONS.poll();
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
         assertThat(projectNotification).isNotNull();
-        final Notification notification = NOTIFICATIONS.poll();
+        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -489,10 +456,10 @@ public class AnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = NOTIFICATIONS.poll();
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
         assertThat(projectNotification).isNotNull();
-        final Notification notification = NOTIFICATIONS.poll();
+        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -548,7 +515,7 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis comment here"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Jane Doe"));
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 1, Duration.ofSeconds(5));
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
     }
 
     @Test
@@ -606,10 +573,10 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Vendor Response: WILL_NOT_FIX → NOT_SET"))
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = NOTIFICATIONS.poll();
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
         assertThat(projectNotification).isNotNull();
-        final Notification notification = NOTIFICATIONS.poll();
+        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -776,10 +743,10 @@ public class AnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> NOTIFICATIONS.size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = NOTIFICATIONS.poll();
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
         assertThat(projectNotification).isNotNull();
-        final Notification notification = NOTIFICATIONS.poll();
+        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());

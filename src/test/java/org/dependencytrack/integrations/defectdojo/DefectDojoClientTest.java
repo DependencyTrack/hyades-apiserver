@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.integrations.defectdojo;
 
+import alpine.Config;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.http.HttpHeaders;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -51,6 +53,7 @@ public class DefectDojoClientTest {
 
     @Before
     public void before() {
+        Config.enableUnitTests();
         environmentVariables.set("http_proxy", "http://127.0.0.1:1080");
         testClient = new MockServerClient("localhost", 1080);
     }
@@ -65,6 +68,7 @@ public class DefectDojoClientTest {
                 request()
                     .withPath("/defectdojo/api/v2/reimport-scan/")
         );
+        KafkaProducerInitializer.tearDown();
     }
 
     @BeforeClass

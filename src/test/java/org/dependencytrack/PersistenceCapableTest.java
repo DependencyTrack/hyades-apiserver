@@ -20,6 +20,7 @@ package org.dependencytrack;
 
 import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
+import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
@@ -29,6 +30,7 @@ import org.junit.BeforeClass;
 public abstract class PersistenceCapableTest {
 
     protected QueryManager qm;
+    protected MockProducer<String, Object> kafkaMockProducer;
 
     @BeforeClass
     public static void init() {
@@ -38,6 +40,7 @@ public abstract class PersistenceCapableTest {
     @Before
     public void before() throws Exception {
         this.qm = new QueryManager();
+        this.kafkaMockProducer = (MockProducer<String, Object>) KafkaProducerInitializer.getProducer();
     }
 
     @After
