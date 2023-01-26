@@ -5,7 +5,7 @@ RUN mvn -B dependency:go-offline
 COPY ./src ./src
 RUN ls -la && mvn package -Dmaven.test.skip=true -P enhance -P embedded-jetty -P bundle-ui -Dlogback.configuration.file=src/main/docker/logback.xml
 
-FROM eclipse-temurin:17-jre-focal AS jre-build
+FROM eclipse-temurin:19-jre-focal AS jre-build
 
 FROM debian:bullseye-slim
 
