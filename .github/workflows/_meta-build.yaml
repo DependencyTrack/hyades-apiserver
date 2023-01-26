@@ -44,8 +44,6 @@ jobs:
           mvn clean
           mvn package -Dmaven.test.skip=true -P enhance -P embedded-jetty -Dservices.bom.merge.skip=false -Dlogback.configuration.file=src/main/docker/logback.xml
           mvn clean -P clean-exclude-wars
-          mvn package -Dmaven.test.skip=true -P enhance -P embedded-jetty -P bundle-ui -Dservices.bom.merge.skip=false -Dlogback.configuration.file=src/main/docker/logback.xml
-          mvn clean -P clean-exclude-wars
           mvn cyclonedx:makeBom -Dservices.bom.merge.skip=false org.codehaus.mojo:exec-maven-plugin:exec@merge-services-bom
 
       - name: Upload Artifacts
@@ -60,14 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-java
-
-    strategy:
-      matrix:
-        distribution:
-          - apiserver
-          - bundled
-      fail-fast: false
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3.2.0
@@ -98,9 +88,9 @@ jobs:
       - name: Set Container Tags
         id: tags
         run: |-
-          TAGS="ghcr.io/sahibamittal/dependency-track-${{ matrix.distribution }}:${{ inputs.app-version }}"
+          TAGS="ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}"
           if [[ "${{ inputs.app-version }}" != "snapshot" ]]; then
-            TAGS="${TAGS},ghcr.io/sahibamittal/dependency-track-${{ matrix.distribution }}:latest"
+            TAGS="${TAGS},ghcr.io/dependencytrack/hyades-apiserver:latest"
           fi
           echo "::set-output name=tags::${TAGS}"
 
@@ -111,7 +101,7 @@ jobs:
           build-args: |-
             APP_VERSION=${{ inputs.app-version }}
             COMMIT_SHA=${{ github.sha }}
-            WAR_FILENAME=dependency-track-${{ matrix.distribution }}.jar
+            WAR_FILENAME=dependency-track-apiserver.jar
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.publish-container }}
           context: .
@@ -121,7 +111,7 @@ jobs:
         if: ${{ inputs.publish-container }}
         uses: aquasecurity/trivy-action@0.8.0
         with:
-          image-ref: ghcr.io/sahibamittal/dependency-track-${{ matrix.distribution }}:${{ inputs.app-version }}
+          image-ref: ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           ignore-unfixed: true

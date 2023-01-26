@@ -3,14 +3,14 @@ name: Tests CI
 on:
   push:
     branches:
-      - 'kafka-poc'       # PoC main branch
+      - 'main'            # Main branch
       - '[0-9]+.[0-9]+.x' # Release branches
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
   pull_request:
     branches:
-      - 'kafka-poc'       # PoC main branch
+      - 'main'            # Main branch
       - '[0-9]+.[0-9]+.x' # Release branches
     paths-ignore:
       - '**/*.md'
@@ -42,11 +42,3 @@ jobs:
         run: |-
           mvn clean
           mvn test -P enhance
-
-      - name: Publish test coverage
-        if: ${{ github.ref == 'refs/heads/master' && contains(github.repository, 'DependencyTrack/') }}
-        uses: codacy/codacy-coverage-reporter-action@v1.3.0
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          language: Java
-          coverage-reports: target/jacoco-ut/jacoco.xml
