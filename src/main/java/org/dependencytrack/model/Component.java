@@ -52,10 +52,9 @@ import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Model class for tracking individual components.
@@ -84,6 +83,12 @@ import java.util.Set;
                 @Persistent(name = "id"),
                 @Persistent(name = "lastInheritedRiskScore"),
                 @Persistent(name = "uuid")
+        }),
+        @FetchGroup(name = "VULNERABILITY_ANALYSIS", members = {
+                @Persistent(name = "uuid"),
+                @Persistent(name = "cpe"),
+                @Persistent(name = "purl"),
+                @Persistent(name = "internal")
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -97,7 +102,8 @@ public class Component implements Serializable {
     public enum FetchGroup {
         ALL,
         INTERNAL_IDENTIFICATION,
-        METRICS_UPDATE
+        METRICS_UPDATE,
+        VULNERABILITY_ANALYSIS
     }
 
     @PrimaryKey
@@ -333,10 +339,6 @@ public class Component implements Serializable {
     @Index(name = "COMPONENT_LAST_RISKSCORE_IDX")
     @Column(name = "LAST_RISKSCORE", allowsNull = "true") // New column, must allow nulls on existing databases))
     private Double lastInheritedRiskScore;
-
-    @Persistent
-    @Column(name = "LAST_VULNERABILITY_ANALYSIS", allowsNull = "true")
-    private Date lastVulnerabilityAnalysis;
 
     /**
      * Sticky notes
@@ -751,14 +753,6 @@ public class Component implements Serializable {
 
     public void setLastInheritedRiskScore(Double lastInheritedRiskScore) {
         this.lastInheritedRiskScore = lastInheritedRiskScore;
-    }
-
-    public Date getLastVulnerabilityAnalysis() {
-        return lastVulnerabilityAnalysis;
-    }
-
-    public void setLastVulnerabilityAnalysis(Date lastVulnerabilityAnalysis) {
-        this.lastVulnerabilityAnalysis = lastVulnerabilityAnalysis;
     }
 
     public String getBomRef() {

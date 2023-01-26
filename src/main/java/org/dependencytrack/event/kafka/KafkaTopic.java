@@ -21,12 +21,7 @@ public enum KafkaTopic {
     REPO_META_ANALYSIS_COMPONENT("dtrack.repo-meta-analysis.component"),
     REPO_META_ANALYSIS_RESULT("dtrack.repo-meta-analysis.result"),
     VULN_ANALYSIS_COMPONENT("dtrack.vuln-analysis.component"),
-    VULN_ANALYSIS_COMPONENT_CPE("dtrack.vuln-analysis.component.cpe"),
-    VULN_ANALYSIS_COMPONENT_PURL("dtrack.vuln-analysis.component.purl"),
-    VULN_ANALYSIS_COMPONENT_SWID("dtrack.vuln-analysis.component.swid"),
-    VULN_ANALYSIS_VULNERABILITY("dtrack.vuln-analysis.vulnerability"),
     VULN_ANALYSIS_RESULT("dtrack.vuln-analysis.result"),
-    VULN_ANALYSIS_INFO("dtrack.vuln-analysis.info"),
     MIRROR_OSV("dtrack.vulnerability.mirror.osv"),
     NEW_VULNERABILITY("dtrack.vulnerability");
 

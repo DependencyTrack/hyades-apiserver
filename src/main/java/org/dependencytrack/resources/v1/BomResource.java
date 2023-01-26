@@ -28,15 +28,18 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
-import kong.unirest.HttpStatus;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.model.Bom;
+import org.dependencytrack.event.kafka.KafkaStateStoreNames;
+import org.dependencytrack.event.kafka.KafkaStreamsInitializer;
+import org.dependencytrack.event.kafka.dto.VulnerabilityScanCompletionStatus;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
@@ -49,8 +52,6 @@ import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -61,16 +62,22 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+
+import static org.apache.kafka.streams.StoreQueryParameters.fromNameAndType;
+import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -97,7 +104,7 @@ public class BomResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response exportProjectAsCycloneDx (
+    public Response exportProjectAsCycloneDx(
             @ApiParam(value = "The UUID of the project to export", required = true)
             @PathParam("uuid") String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
@@ -111,7 +118,7 @@ public class BomResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (! qm.hasAccess(super.getPrincipal(), project)) {
+            if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
 
@@ -130,7 +137,7 @@ public class BomResource extends AlpineResource {
                 if (StringUtils.trimToNull(format) == null || format.equalsIgnoreCase("JSON")) {
                     if (download) {
                         return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON), MediaType.APPLICATION_OCTET_STREAM)
-                                .header("content-disposition","attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.json\"").build();
+                                .header("content-disposition", "attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.json\"").build();
                     } else {
                         return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON),
                                 CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON).build();
@@ -138,7 +145,7 @@ public class BomResource extends AlpineResource {
                 } else if (format.equalsIgnoreCase("XML")) {
                     if (download) {
                         return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML), MediaType.APPLICATION_OCTET_STREAM)
-                                .header("content-disposition","attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.xml\"").build();
+                                .header("content-disposition", "attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.xml\"").build();
                     } else {
                         return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML),
                                 CycloneDxMediaType.APPLICATION_CYCLONEDX_XML).build();
@@ -166,7 +173,7 @@ public class BomResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response exportComponentAsCycloneDx (
+    public Response exportComponentAsCycloneDx(
             @ApiParam(value = "The UUID of the component to export", required = true)
             @PathParam("uuid") String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
@@ -176,7 +183,7 @@ public class BomResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
-            if (! qm.hasAccess(super.getPrincipal(), component.getProject())) {
+            if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
             }
 
@@ -252,10 +259,10 @@ public class BomResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
     public Response uploadBom(@FormDataParam("project") String projectUuid,
-                               @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
-                               @FormDataParam("projectName") String projectName,
-                               @FormDataParam("projectVersion") String projectVersion,
-                               final FormDataMultiPart multiPart) {
+                              @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
+                              @FormDataParam("projectName") String projectName,
+                              @FormDataParam("projectVersion") String projectVersion,
+                              final FormDataMultiPart multiPart) {
 
         final List<FormDataBodyPart> artifactParts = multiPart.getFields("bom");
         if (projectUuid != null) { // behavior in v3.0.0
@@ -290,36 +297,41 @@ public class BomResource extends AlpineResource {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response isTokenBeingProcessed (
+    public Response isTokenBeingProcessed(
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") String uuid) {
-        try (final var qm = new QueryManager()) {
-            final PersistenceManager pm = qm.getPersistenceManager();
-
-            final Query<Bom> query = pm.newQuery(Bom.class);
-            query.setFilter("uploadToken == :uploadToken");
-            query.setParameters(UUID.fromString(uuid));
-
-            final Bom bom = query.executeUnique();
-            if (bom == null) {
-                return Response.status(HttpStatus.NOT_FOUND).build();
-            }
-
-            // TODO: As a quick-n-dirty solution, we use a check with "at least once" semantics.
-            // In reality, we want to ensure that all enabled analyzers finished their work.
-            for (final Component component : qm.getAllComponents(bom.getProject())) {
-                if (component.getLastVulnerabilityAnalysis() == null
-                        || !component.getLastVulnerabilityAnalysis().after(bom.getImported())) {
-                    IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-                    response.setProcessing(true);
-                    return Response.ok(response).build();
-                }
-            }
-
-            IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-            response.setProcessing(false);
-            return Response.ok(response).build();
+        final KafkaStreams streams = KafkaStreamsInitializer.getStreamsInstance();
+        if (KafkaStreams.State.RUNNING != streams.state()) {
+            LOGGER.warn("Unable to check status of BOM token " + uuid + ", as Kafka Streams is in "
+                    + streams.state() + " state");
+            return Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
+                    .header(HttpHeaders.RETRY_AFTER, Instant.now().plusSeconds(5).toEpochMilli())
+                    .build();
         }
+
+        final ReadOnlyKeyValueStore<String, Long> expectedVulnScanResultsStore = streams
+                .store(fromNameAndType(KafkaStateStoreNames.EXPECTED_VULNERABILITY_SCAN_RESULTS, keyValueStore()));
+        boolean processingVulnAnalysis = Optional.ofNullable(expectedVulnScanResultsStore.get(uuid))
+                .map(expectedResultCount -> expectedResultCount > 0)
+                .orElse(false);
+        if (processingVulnAnalysis) {
+            final ReadOnlyKeyValueStore<String, VulnerabilityScanCompletionStatus> vulnScanStatusStore = streams
+                    .store(fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_STATUS, keyValueStore()));
+            processingVulnAnalysis = Optional.ofNullable(vulnScanStatusStore.get(uuid))
+                    .map(status -> switch (status) {
+                        case PENDING -> true;
+                        case COMPLETE -> false;
+                    })
+                    .orElse(false);
+        }
+
+        // Some tasks are still processed internally (e.g. policy evaluation)
+        final boolean processingInternally = Event.isEventBeingProcessed(UUID.fromString(uuid));
+
+        IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
+        response.setProcessing(processingInternally || processingVulnAnalysis);
+        return Response.ok(response).build();
     }
 
     /**
@@ -327,7 +339,7 @@ public class BomResource extends AlpineResource {
      */
     private Response process(QueryManager qm, Project project, String encodedBomData) {
         if (project != null) {
-            if (! qm.hasAccess(super.getPrincipal(), project)) {
+            if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
             final byte[] decoded = Base64.getDecoder().decode(encodedBomData);
@@ -348,10 +360,10 @@ public class BomResource extends AlpineResource {
      * Common logic that processes a BOM given a project and list of multi-party form objects containing decoded payloads.
      */
     private Response process(QueryManager qm, Project project, List<FormDataBodyPart> artifactParts) {
-        for (final FormDataBodyPart artifactPart: artifactParts) {
+        for (final FormDataBodyPart artifactPart : artifactParts) {
             final BodyPartEntity bodyPartEntity = (BodyPartEntity) artifactPart.getEntity();
             if (project != null) {
-                if (! qm.hasAccess(super.getPrincipal(), project)) {
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 try (InputStream in = bodyPartEntity.getInputStream()) {

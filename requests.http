@@ -14,7 +14,7 @@ Content-Type: application/x-www-form-urlencoded
 
 username=admin&password={{ adminPassword}}
 
-> {% client.global.set("bearerToken", response.body.trim()) %}
+> {% client.global.set("bearerToken", response.body.trim()); %}
 
 ### Delete Project
 
@@ -35,7 +35,7 @@ Authorization: Bearer {{bearerToken}}
   "classifier": "APPLICATION"
 }
 
-> {% client.global.set("projectUUID", response.body["uuid"]) %}
+> {% client.global.set("projectUUID", response.body["uuid"]); %}
 
 ### Get Project
 
@@ -43,7 +43,7 @@ GET /api/v1/project/lookup?name={{ projectName }}&version={{ projectVersion }}
 Host: localhost:8080
 Authorization: Bearer {{ bearerToken }}
 
-> {% client.global.set("projectUUID", response.body["uuid"]) %}
+> {% client.global.set("projectUUID", response.body["uuid"]); %}
 
 ### Upload BOM
 
@@ -69,7 +69,7 @@ Content-Disposition: form-data; name="projectVersion"
 
 --boundary--
 
-> {% client.global.set("bomUploadToken", response.body["token"]) %}
+> {% client.global.set("bomUploadToken", response.body["token"]); %}
 
 ### Check BOM Upload Token Status
 

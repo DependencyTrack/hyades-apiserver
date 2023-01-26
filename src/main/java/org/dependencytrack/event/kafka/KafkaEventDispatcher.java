@@ -11,8 +11,11 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.dto.Component;
+import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
+import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerializer;
 import org.dependencytrack.notification.NotificationGroup;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -56,7 +59,12 @@ public class KafkaEventDispatcher {
     public RecordMetadata dispatch(final Event event) {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent vaEvent) {
             final var component = new Component(vaEvent.component());
-            return dispatchInternal(KafkaTopic.VULN_ANALYSIS_COMPONENT, component.uuid().toString(), component,
+            final String scanKeySerialized;
+            try (final var serializer = new VulnerabilityScanKeySerializer()) {
+                final var scanKey = new VulnerabilityScanKey(vaEvent.token().toString(), component.uuid());
+                scanKeySerialized = new String(serializer.serialize(null, scanKey), StandardCharsets.UTF_8);
+            }
+            return dispatchInternal(KafkaTopic.VULN_ANALYSIS_COMPONENT, scanKeySerialized, component,
                     Map.of("level", vaEvent.level().name()));
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
             final var component = new Component(rmaEvent.component());

@@ -35,7 +35,7 @@ public class KafkaEventDispatcherTest {
         component.setUuid(UUID.randomUUID());
         component.setName("foobar");
 
-        final var event = new ComponentVulnerabilityAnalysisEvent(component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
+        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         final RecordMetadata recordMeta = dispatcher.dispatch(event);

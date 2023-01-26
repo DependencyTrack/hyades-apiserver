@@ -41,7 +41,6 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.AnalyzerCompletionTracker;
 import org.dependencytrack.util.CompressUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.NotificationUtil;
@@ -50,7 +49,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -126,7 +124,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     LOGGER.warn("The BOM uploaded is not in a supported format. Supported formats include CycloneDX XML and JSON");
                     return;
                 }
-                final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
+                // final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed";
                 //Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
                 //FIXME:: Add reference to BOM after we have dedicated bom server
@@ -158,12 +156,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 // the vulnerability analysis hasn't taken place yet).
                 final List<Component> detachedFlattenedComponent = qm.detach(flattenedComponents);
                 final Project detachedProject = qm.detach(Project.class, project.getId());
-                final List<UUID> componentUUIDList = new ArrayList<>();
-                detachedFlattenedComponent.stream().map(component -> component.getUuid()).forEach(componentUUIDList::add);
-                LOGGER.debug("Number of components in the project  " + project.getName() + "are " + componentUUIDList.size());
-                AnalyzerCompletionTracker.projectComponentsMap.put(project.getId(),componentUUIDList);
                 detachedFlattenedComponent.stream()
-                        .map(component -> new ComponentVulnerabilityAnalysisEvent(component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS))
+                        .map(component -> new ComponentVulnerabilityAnalysisEvent(event.getChainIdentifier(),
+                                component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS))
                         .forEach(kafkaEventDispatcher::dispatch);
 //                final VulnerabilityAnalysisEvent vae = new VulnerabilityAnalysisEvent(detachedFlattenedComponent).project(detachedProject);
 //                vae.setChainIdentifier(event.getChainIdentifier());
