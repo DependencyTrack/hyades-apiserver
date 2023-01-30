@@ -88,7 +88,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>7.3.0</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
-        <lib.json-unit.version>2.36.0</lib.json-unit.version>
+        <lib.json-unit.version>2.36.1</lib.json-unit.version>
         <lib.kafka-clients.version>3.3.2</lib.kafka-clients.version>
         <lib.kafka-junit.version>3.3.0</lib.kafka-junit.version>
         <lib.kafka-streams.version>3.3.2</lib.kafka-streams.version>
