@@ -9,6 +9,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -71,6 +73,8 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopic.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
         } else if (event instanceof final OsvMirrorEvent omEvent) {
             return dispatchInternal(KafkaTopic.MIRROR_OSV, omEvent.ecosystem(), "", null);
+        } else if (event instanceof final NistMirrorEvent nmEvent) {
+            return dispatchInternal(KafkaTopic.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
