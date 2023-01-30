@@ -14,8 +14,8 @@ This infrastructure serves as an aggregator of vulnerability databases that have
 
 OSV additionally provides infrastructure to ensure affected versions are accurately represented in each vulnerability entry, through bisection and version analysis.
 
-Dependency-Track integrates with OSV by mirroring advisories from GCS bucket maintained by OSV [gs://osv-vulnerabilities.](https://osv-vulnerabilities.storage.googleapis.com/).
-The mirror is refreshed daily, or upon restart of the Dependency-Track instance.
+Hyades-apiserver integrates with Hyades using Kafka event which integrates with OSV by mirroring advisories from GCS bucket maintained by OSV [gs://osv-vulnerabilities.](https://osv-vulnerabilities.storage.googleapis.com/).
+The mirror is refreshed daily, or upon restart of the Dependency-Track instance. Each time, a Kafka event is triggered to Hyades which sends back vulnerabilities to Hyades-apiserver. 
 No personal access token is required to authenticate with OSV.
 
 ![](../../images/osv-architecture.png)
