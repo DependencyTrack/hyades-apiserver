@@ -143,12 +143,6 @@
         <servlet-name>Metrics</servlet-name>
         <url-pattern>/metrics</url-pattern>
     </servlet-mapping>
-
-    <servlet>
-        <servlet-name>NVD Mirror</servlet-name>
-        <servlet-class>org.dependencytrack.servlets.NvdMirrorServlet</servlet-class>
-        <load-on-startup>1</load-on-startup>
-    </servlet>
     <servlet-mapping>
         <servlet-name>NVD Mirror</servlet-name>
         <url-pattern>/mirror/nvd/*</url-pattern>

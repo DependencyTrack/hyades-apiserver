@@ -18,8 +18,8 @@ Links back to the original CVE are also provided.
 
 ### NVD Mirror
 
-Dependency-Track is not only a consumer of the NVD, but provides mirroring functionality as well. This functionality
-is built into Dependency-Track and does not require further configuration. The mirror is automatically updated daily.
+Hyades-apiserver triggers a Kafka event to Hyades which handles the integration with NVD API and sends back vulnerabilities to be persisted in apiserver database. This functionality
+does not require further configuration. The mirror is automatically updated daily.
 
 > The base URL to the mirror is: http://hostname/mirror/nvd
 
