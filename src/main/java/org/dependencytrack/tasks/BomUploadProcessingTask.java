@@ -27,7 +27,6 @@ import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.RepositoryMetaEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -168,7 +167,6 @@ public class BomUploadProcessingTask implements Subscriber {
 //                    vae.onSuccess(new NewVulnerableDependencyAnalysisEvent(newComponents));
 //                }
 //                Event.dispatch(vae);
-                Event.dispatch(new RepositoryMetaEvent(detachedFlattenedComponent));
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
                 //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
