@@ -30,9 +30,8 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.VulnerabilityAnalysisEvent;
+import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
-import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
@@ -46,7 +45,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -158,9 +156,7 @@ public class FindingResource extends AlpineResource {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                   LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
-                  final List<Component> detachedComponents = qm.detach(qm.getAllComponents(project));
-                  final Project detachedProject = qm.detach(Project.class, project.getId());
-                  final VulnerabilityAnalysisEvent vae = new VulnerabilityAnalysisEvent(detachedComponents).project(detachedProject);
+                  final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
                   Event.dispatch(vae);
 
                   return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();

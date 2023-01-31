@@ -33,18 +33,16 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
-import org.dependencytrack.event.RepositoryMetaEvent;
-import org.dependencytrack.event.VulnerabilityAnalysisEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
-
-import java.util.List;
-import java.util.Map;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -58,6 +56,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * JAX-RS resources for processing components.
@@ -68,6 +68,8 @@ import javax.ws.rs.core.Response;
 @Path("/v1/component")
 @Api(value = "component", authorizations = @Authorization(value = "X-Api-Key"))
 public class ComponentResource extends AlpineResource {
+
+    private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
     @GET
     @Path("/project/{uuid}")
@@ -299,8 +301,8 @@ public class ComponentResource extends AlpineResource {
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
             component = qm.createComponent(component, true);
-            Event.dispatch(new VulnerabilityAnalysisEvent(component));
-            Event.dispatch(new RepositoryMetaEvent(List.of(component)));
+            kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
+            kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, null));
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
     }
@@ -383,8 +385,8 @@ public class ComponentResource extends AlpineResource {
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);
-                Event.dispatch(new VulnerabilityAnalysisEvent(component));
-                Event.dispatch(new RepositoryMetaEvent(List.of(component)));
+                kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
+                kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, null));
                 return Response.ok(component).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
