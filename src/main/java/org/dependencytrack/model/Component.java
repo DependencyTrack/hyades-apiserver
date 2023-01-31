@@ -86,10 +86,16 @@ import java.util.UUID;
         }),
         @FetchGroup(name = "REPOSITORY_META_ANALYSIS", members = {
                 @Persistent(name = "uuid"),
+                @Persistent(name = "group"),
+                @Persistent(name = "name"),
+                @Persistent(name = "version"),
                 @Persistent(name = "purl")
         }),
         @FetchGroup(name = "VULNERABILITY_ANALYSIS", members = {
                 @Persistent(name = "uuid"),
+                @Persistent(name = "group"),
+                @Persistent(name = "name"),
+                @Persistent(name = "version"),
                 @Persistent(name = "cpe"),
                 @Persistent(name = "purl"),
                 @Persistent(name = "internal")

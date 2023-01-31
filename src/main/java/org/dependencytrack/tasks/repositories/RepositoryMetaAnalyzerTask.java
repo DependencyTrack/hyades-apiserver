@@ -69,14 +69,14 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
     }
 
     private void processProject(final UUID projectUuid) throws Exception {
+        LOGGER.info("Submitting components of project %s for repository meta analysis".formatted(projectUuid));
+
         try (final var qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);
             if (project == null) {
                 LOGGER.error("A project with UUID %s does not exist".formatted(projectUuid));
                 return;
             }
-
-            LOGGER.info("Submitting components of project %s for repository meta analysis".formatted(projectUuid));
 
             final PersistenceManager pm = qm.getPersistenceManager();
             pm.getFetchPlan().setGroup(Component.FetchGroup.REPOSITORY_META_ANALYSIS.name());
@@ -118,17 +118,15 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "";
+            var filter = "project.active == :projectActive";
             var params = new HashMap<String, Object>();
+            params.put("projectActive", true);
             if (project != null) {
-                filter += "project == :project";
+                filter += " && project == :project";
                 params.put("project", project);
             }
             if (lastId != null) {
-                if (!filter.isEmpty()) {
-                    filter += " && ";
-                }
-                filter += "id < :lastId";
+                filter += " && id < :lastId";
                 params.put("lastId", lastId);
             }
             query.setFilter(filter);
