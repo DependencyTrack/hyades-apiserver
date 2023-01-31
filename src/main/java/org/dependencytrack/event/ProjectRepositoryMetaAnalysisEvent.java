@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * An {@link Event} used to trigger vulnerability analysis for all components within a given {@link Project}.
+ * Defines an {@link Event} used to trigger a repository meta analysis for all components within a given {@link Project}.
  */
 public record ProjectRepositoryMetaAnalysisEvent(UUID projectUuid) implements Event {
 
