@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package org.dependencytrack.tasks.scanners;
+package org.dependencytrack.model;
 
 /**
  * Specifies identities of all supported analyzers.

@@ -20,7 +20,6 @@ package org.dependencytrack.model;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.persistence.CweImporter;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

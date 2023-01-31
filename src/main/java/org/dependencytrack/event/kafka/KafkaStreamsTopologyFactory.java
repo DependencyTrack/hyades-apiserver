@@ -25,7 +25,7 @@ import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcesso
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanCompletionStatusSerde;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerde;
-import org.dependencytrack.tasks.repositories.MetaModel;
+import org.dependencytrack.model.MetaModel;
 
 import java.util.Properties;
 

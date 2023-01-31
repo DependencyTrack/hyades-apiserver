@@ -29,7 +29,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.Test;
 
 import java.util.Date;

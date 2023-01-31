@@ -1,10 +1,11 @@
-package org.dependencytrack.tasks.repositories;
+package org.dependencytrack.tasks;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopic;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.junit.Test;
 
 import java.util.UUID;

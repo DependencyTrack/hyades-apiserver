@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package org.dependencytrack.tasks.repositories;
+package org.dependencytrack.tasks;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;

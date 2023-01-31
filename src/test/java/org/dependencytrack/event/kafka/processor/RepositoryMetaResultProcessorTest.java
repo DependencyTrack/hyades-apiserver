@@ -12,7 +12,7 @@ import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.tasks.repositories.MetaModel;
+import org.dependencytrack.model.MetaModel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

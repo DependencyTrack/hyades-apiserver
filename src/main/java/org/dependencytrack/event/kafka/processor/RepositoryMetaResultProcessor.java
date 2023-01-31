@@ -7,7 +7,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.tasks.repositories.MetaModel;
+import org.dependencytrack.model.MetaModel;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDODataStoreException;

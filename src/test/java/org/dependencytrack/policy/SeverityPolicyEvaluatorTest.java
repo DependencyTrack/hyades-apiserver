@@ -25,7 +25,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.Assert;
 import org.junit.Test;
 

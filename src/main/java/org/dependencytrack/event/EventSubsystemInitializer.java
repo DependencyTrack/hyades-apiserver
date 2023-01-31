@@ -46,7 +46,7 @@ import org.dependencytrack.tasks.metrics.ComponentMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
-import org.dependencytrack.tasks.repositories.RepositoryMetaAnalyzerTask;
+import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
