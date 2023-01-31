@@ -41,6 +41,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 
@@ -302,7 +303,7 @@ public class ComponentResource extends AlpineResource {
 
             component = qm.createComponent(component, true);
             kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
-            kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, null));
+            kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
     }
@@ -386,7 +387,7 @@ public class ComponentResource extends AlpineResource {
 
                 component = qm.updateComponent(component, true);
                 kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
-                kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, null));
+                kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
                 return Response.ok(component).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
