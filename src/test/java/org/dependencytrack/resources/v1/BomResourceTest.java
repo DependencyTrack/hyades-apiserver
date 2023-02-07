@@ -33,7 +33,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;

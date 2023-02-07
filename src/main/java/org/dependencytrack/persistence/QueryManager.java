@@ -74,7 +74,7 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.Publisher;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;

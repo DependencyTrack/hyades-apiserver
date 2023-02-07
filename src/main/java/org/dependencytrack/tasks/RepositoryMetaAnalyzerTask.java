@@ -21,13 +21,12 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
@@ -37,40 +36,40 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A {@link Subscriber} to {@link ProjectVulnerabilityAnalysisEvent} and {@link PortfolioVulnerabilityAnalysisEvent}
- * that submits components of a specific project, or all components in the entire portfolio, for vulnerability
+ * A {@link Subscriber} to {@link ProjectRepositoryMetaAnalysisEvent} and {@link PortfolioRepositoryMetaAnalysisEvent}
+ * that submits components of a specific project, or all components in the entire portfolio, for repository meta
  * analysis.
  */
-public class VulnerabilityAnalysisTask implements Subscriber {
+public class RepositoryMetaAnalyzerTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(VulnerabilityAnalysisTask.class);
+    private static final Logger LOGGER = Logger.getLogger(RepositoryMetaAnalyzerTask.class);
 
-    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
+    private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
     /**
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof final ProjectVulnerabilityAnalysisEvent event) {
+        if (e instanceof final ProjectRepositoryMetaAnalysisEvent event) {
             try {
-                processProject(event.getProjectUuid(), event.getChainIdentifier());
+                processProject(event.projectUuid());
             } catch (Exception ex) {
                 LOGGER.error("""
                         An unexpected error occurred while submitting components of\s
-                        project %s for vulnerability analysis
-                        """.formatted(event.getProjectUuid()), ex);
+                        project %s for repository meta analysis
+                        """.formatted(event.projectUuid()), ex);
             }
-        } else if (e instanceof final PortfolioVulnerabilityAnalysisEvent event) {
+        } else if (e instanceof PortfolioRepositoryMetaAnalysisEvent) {
             try {
-                processPortfolio(event.getChainIdentifier());
+                processPortfolio();
             } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while submitting components for vulnerability analysis", ex);
+                LOGGER.error("An unexpected error occurred while submitting components for repository meta analysis", ex);
             }
         }
     }
 
-    private void processProject(final UUID projectUuid, final UUID scanToken) throws Exception {
-        LOGGER.info("Submitting components of project %s for vulnerability analysis".formatted(projectUuid));
+    private void processProject(final UUID projectUuid) throws Exception {
+        LOGGER.info("Submitting components of project %s for repository meta analysis".formatted(projectUuid));
 
         try (final var qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);
@@ -80,13 +79,12 @@ public class VulnerabilityAnalysisTask implements Subscriber {
             }
 
             final PersistenceManager pm = qm.getPersistenceManager();
-            pm.getFetchPlan().setGroup(Component.FetchGroup.VULNERABILITY_ANALYSIS.name());
+            pm.getFetchPlan().setGroup(Component.FetchGroup.REPOSITORY_META_ANALYSIS.name());
 
             List<Component> components = fetchNextComponentsPage(pm, project, null);
             while (!components.isEmpty()) {
                 for (final var component : components) {
-                    eventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(scanToken,
-                            pm.detachCopy(component), VulnerabilityAnalysisLevel.PERIODIC_ANALYSIS));
+                    kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
                 }
 
                 final long lastId = components.get(components.size() - 1).getId();
@@ -94,21 +92,20 @@ public class VulnerabilityAnalysisTask implements Subscriber {
             }
         }
 
-        LOGGER.info("All components of project %s submitted for vulnerability analysis".formatted(projectUuid));
+        LOGGER.info("All components of project %s submitted for repository meta analysis".formatted(projectUuid));
     }
 
-    private void processPortfolio(final UUID scanToken) throws Exception {
-        LOGGER.info("Submitting all components in portfolio for vulnerability analysis");
+    private void processPortfolio() throws Exception {
+        LOGGER.info("Submitting all components in portfolio for repository meta analysis");
 
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
-            pm.getFetchPlan().setGroup(Component.FetchGroup.VULNERABILITY_ANALYSIS.name());
+            pm.getFetchPlan().setGroup(Component.FetchGroup.REPOSITORY_META_ANALYSIS.name());
 
             List<Component> components = fetchNextComponentsPage(pm, null, null);
             while (!components.isEmpty()) {
                 for (final var component : components) {
-                    eventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(scanToken,
-                            pm.detachCopy(component), VulnerabilityAnalysisLevel.PERIODIC_ANALYSIS));
+                    kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
                 }
 
                 final long lastId = components.get(components.size() - 1).getId();
@@ -116,7 +113,7 @@ public class VulnerabilityAnalysisTask implements Subscriber {
             }
         }
 
-        LOGGER.info("All components in portfolio submitted for vulnerability analysis");
+        LOGGER.info("All components in portfolio submitted for repository meta analysis");
     }
 
     private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {

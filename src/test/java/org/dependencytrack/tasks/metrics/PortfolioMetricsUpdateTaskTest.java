@@ -33,7 +33,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.tasks.CallbackTask;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

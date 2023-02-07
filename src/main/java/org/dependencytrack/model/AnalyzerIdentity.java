@@ -16,26 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.model;
 
-import alpine.event.framework.Event;
-import org.dependencytrack.model.Component;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-public class RepositoryMetaEvent implements Event {
-
-    private Optional<List<Component>> components = Optional.empty();
-
-    public RepositoryMetaEvent() { }
-
-    public RepositoryMetaEvent(final List<Component> components) {
-        this.components = Optional.of(Collections.unmodifiableList(components));
-    }
-
-    public Optional<List<Component>> getComponents() {
-        return components;
-    }
+/**
+ * Specifies identities of all supported analyzers.
+ *
+ * @since 4.0.0
+ */
+public enum AnalyzerIdentity {
+    INTERNAL_ANALYZER,
+    OSSINDEX_ANALYZER,
+    NPM_AUDIT_ANALYZER,
+    VULNDB_ANALYZER,
+    SNYK_ANALYZER,
+    NONE
 }

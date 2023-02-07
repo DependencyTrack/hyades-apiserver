@@ -20,7 +20,7 @@ package org.dependencytrack.policy;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.*;
-import org.dependencytrack.tasks.scanners.AnalyzerIdentity;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -34,8 +34,8 @@ import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
+import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.RepositoryMetaEvent;
 import org.dependencytrack.event.VulnDbSyncEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -45,10 +45,10 @@ import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABL
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_SYNC_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_SYNC_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_SYNC_CADENCE;
+import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_CADENCE;
+import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_COMPONENT_ANALYSIS_CACHE_CLEAR_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_GHSA_MIRROR_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE;
@@ -102,7 +102,7 @@ public final class TaskScheduler extends AlpineTaskScheduler {
             scheduleEvent(new PortfolioVulnerabilityAnalysisEvent(), 21600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_PORTFOLIO_VULNERABILITY_ANALYSIS_CADENCE));
 
             // Creates a new event that executes every 24 hours (86400000) by default after an initial 1 hour (3600000) delay
-            scheduleEvent(new RepositoryMetaEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_REPOSITORY_METADATA_FETCH_CADENCE));
+            scheduleEvent(new PortfolioRepositoryMetaAnalysisEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_REPOSITORY_METADATA_FETCH_CADENCE));
 
             // Creates a new event that executes every 6 hours (21600000) by default after an initial 1 hour (3600000) delay
             scheduleEvent(new InternalComponentIdentificationEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE));
