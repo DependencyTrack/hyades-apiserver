@@ -7,6 +7,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
@@ -75,6 +76,8 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopic.MIRROR_OSV, omEvent.ecosystem(), "", null);
         } else if (event instanceof final NistMirrorEvent nmEvent) {
             return dispatchInternal(KafkaTopic.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+        } else if(event instanceof  final ComponentMetricsUpdateEvent componentMetricsUpdateEvent){
+            return dispatchInternal(KafkaTopic.COMPONENT_METRICS, componentMetricsUpdateEvent.uuid().toString(), componentMetricsUpdateEvent.dependencyMetrics(), null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");

@@ -67,7 +67,7 @@ public class ComponentMetricsUpdateTask implements Subscriber {
         }
     }
 
-    static Counters updateMetrics(final UUID uuid) throws Exception {
+    public static Counters updateMetrics(final UUID uuid) throws Exception {
         LOGGER.debug("Executing metrics update for component " + uuid);
         final var counters = new Counters();
 
@@ -169,6 +169,120 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
         return counters;
     }
+
+    public static DependencyMetrics getComponentMetrics(final UUID uuid) throws Exception{
+        try (final var qm = new QueryManager()) {
+            updateMetrics(uuid);
+            final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
+            if (component == null) {
+                throw new NoSuchElementException("Component " + uuid + " does not exist");
+            }
+            return qm.getMostRecentDependencyMetrics(component);
+        }
+    }
+
+//    public static DependencyMetrics updateMetrics(final UUID uuid) throws Exception {
+//        LOGGER.debug("Executing metrics update for component " + uuid);
+//        final var counters = new Counters();
+//
+//        try (final var qm = new QueryManager()) {
+//            final PersistenceManager pm = qm.getPersistenceManager();
+//
+//            final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
+//            if (component == null) {
+//                throw new NoSuchElementException("Component " + uuid + " does not exist");
+//            }
+//
+//            final Set<String> aliasesSeen = new HashSet<>();
+//            for (final Vulnerability vulnerability : getVulnerabilities(pm, component)) {
+//                // Quick pre-flight check whether we already encountered an alias of this particular vulnerability
+//                final String alias = vulnerability.getSource() + "|" + vulnerability.getVulnId();
+//                if (aliasesSeen.contains(alias)) {
+//                    LOGGER.debug("An alias of " + alias + " has already been processed; Skipping");
+//                    continue;
+//                }
+//
+//                // Fetch all aliases for this vulnerability and consider all of them as "seen"
+//                qm.getVulnerabilityAliases(vulnerability).stream()
+//                        .map(VulnerabilityAlias::getAllBySource)
+//                        .flatMap(vulnIdsBySource -> vulnIdsBySource.entrySet().stream())
+//                        .map(vulnIdBySource -> vulnIdBySource.getKey() + "|" + vulnIdBySource.getValue())
+//                        .forEach(aliasesSeen::add);
+//
+//                counters.vulnerabilities++;
+//
+//                switch (vulnerability.getSeverity()) {
+//                    case CRITICAL -> counters.critical++;
+//                    case HIGH -> counters.high++;
+//                    case MEDIUM -> counters.medium++;
+//                    case LOW, INFO -> counters.low++;
+//                    case UNASSIGNED -> counters.unassigned++;
+//                }
+//            }
+//
+//            counters.findingsTotal = toIntExact(counters.vulnerabilities);
+//            counters.findingsAudited = toIntExact(getTotalAuditedFindings(pm, component));
+//            counters.findingsUnaudited = counters.findingsTotal - counters.findingsAudited;
+//            counters.suppressions = toIntExact(getTotalSuppressedFindings(pm, component));
+//            counters.inheritedRiskScore = Metrics.inheritedRiskScore(counters.critical, counters.high, counters.medium, counters.low, counters.unassigned);
+//
+//            for (final PolicyViolationProjection violation : getPolicyViolations(pm, component)) {
+//                counters.policyViolationsTotal++;
+//
+//                switch (PolicyViolation.Type.valueOf(violation.type().name())) {
+//                    case LICENSE -> counters.policyViolationsLicenseTotal++;
+//                    case OPERATIONAL -> counters.policyViolationsOperationalTotal++;
+//                    case SECURITY -> counters.policyViolationsSecurityTotal++;
+//                }
+//
+//                switch (Policy.ViolationState.valueOf(violation.violationState().name())) {
+//                    case FAIL -> counters.policyViolationsFail++;
+//                    case WARN -> counters.policyViolationsWarn++;
+//                    case INFO -> counters.policyViolationsInfo++;
+//                }
+//            }
+//
+//            if (counters.policyViolationsLicenseTotal > 0) {
+//                counters.policyViolationsLicenseAudited = toIntExact(getTotalAuditedPolicyViolations(pm, component, PolicyViolation.Type.LICENSE));
+//                counters.policyViolationsLicenseUnaudited = counters.policyViolationsLicenseTotal - counters.policyViolationsLicenseAudited;
+//            }
+//            if (counters.policyViolationsOperationalTotal > 0) {
+//                counters.policyViolationsOperationalAudited = toIntExact(getTotalAuditedPolicyViolations(pm, component, PolicyViolation.Type.OPERATIONAL));
+//                counters.policyViolationsOperationalUnaudited = counters.policyViolationsOperationalTotal - counters.policyViolationsOperationalAudited;
+//            }
+//            if (counters.policyViolationsSecurityTotal > 0) {
+//                counters.policyViolationsSecurityAudited = toIntExact(getTotalAuditedPolicyViolations(pm, component, PolicyViolation.Type.SECURITY));
+//                counters.policyViolationsSecurityUnaudited = counters.policyViolationsSecurityTotal - counters.policyViolationsSecurityAudited;
+//            }
+//
+//            counters.policyViolationsAudited = counters.policyViolationsLicenseAudited +
+//                    counters.policyViolationsOperationalAudited +
+//                    counters.policyViolationsSecurityAudited;
+//            counters.policyViolationsUnaudited = counters.policyViolationsTotal - counters.policyViolationsAudited;
+//
+//            qm.runInTransaction(() -> {
+//                final DependencyMetrics latestMetrics = qm.getMostRecentDependencyMetrics(component);
+//                if (!counters.hasChanged(latestMetrics)) {
+//                    LOGGER.debug("Metrics of component " + uuid + " did not change");
+//                    latestMetrics.setLastOccurrence(counters.measuredAt);
+//                } else {
+//                    LOGGER.debug("Metrics of component " + uuid + " changed");
+//                    final DependencyMetrics metrics = counters.createComponentMetrics(component);
+//                    pm.makePersistent(metrics);
+//                }
+//            });
+//
+//            if (component.getLastInheritedRiskScore() == null ||
+//                    component.getLastInheritedRiskScore() != counters.inheritedRiskScore) {
+//                LOGGER.debug("Updating inherited risk score of component " + uuid);
+//                qm.runInTransaction(() -> component.setLastInheritedRiskScore(counters.inheritedRiskScore));
+//            }
+//            final DependencyMetrics latestMetrics = qm.getMostRecentDependencyMetrics(component);
+//            LOGGER.debug("Completed metrics update for component " + uuid + " in " +
+//                    DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
+//            return latestMetrics;
+//        }
+//    }
 
     @SuppressWarnings("unchecked")
     private static List<Vulnerability> getVulnerabilities(final PersistenceManager pm, final Component component) throws Exception {

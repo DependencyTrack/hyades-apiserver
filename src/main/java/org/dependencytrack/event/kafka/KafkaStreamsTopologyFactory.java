@@ -40,7 +40,6 @@ class KafkaStreamsTopologyFactory {
         final var componentSerde = new JacksonSerde<>(Component.class);
         final var scanKeySerde = new VulnerabilityScanKeySerde();
         final var scanResultSerde = new JacksonSerde<>(VulnerabilityScanResult.class);
-
         final KStream<VulnerabilityScanKey, Component> vulnScanComponentStream = streamsBuilder
                 .stream(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName(), Consumed
                         .with(scanKeySerde, componentSerde)
