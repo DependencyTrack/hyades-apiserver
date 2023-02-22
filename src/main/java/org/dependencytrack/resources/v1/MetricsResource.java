@@ -41,6 +41,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.tasks.metrics.ComponentMetricsUpdateTask;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.util.DateUtil;
 
 import javax.ws.rs.GET;
