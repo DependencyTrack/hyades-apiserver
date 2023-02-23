@@ -49,10 +49,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         component.setProject(project);
         component.setName("acme-lib");
         component = qm.createComponent(component, false);
-
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
+
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -96,13 +95,13 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         component = qm.createComponent(component, false);
 
         // Record initial project metrics
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
         // Run the task a second time, without any metric being changed
         final var beforeSecondRun = new Date();
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
 
         // Ensure that the lastOccurrence timestamp was correctly updated
         qm.getPersistenceManager().refresh(metrics);
@@ -147,9 +146,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
         qm.makeAnalysis(component, vulnSuppressed, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
         assertThat(metrics.getMedium()).isEqualTo(1); // One is suppressed
@@ -203,9 +201,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         final PolicyViolation suppressedViolation = createPolicyViolation(component, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(component, suppressedViolation, ViolationAnalysisState.REJECTED, true);
 
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -295,9 +292,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Kick off metrics calculation.
         // Expectation is that both C and D will not be considered because they alias A.
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
 
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1); // INTERNAL-001
         assertThat(metrics.getMedium()).isEqualTo(1); // GHSA-002

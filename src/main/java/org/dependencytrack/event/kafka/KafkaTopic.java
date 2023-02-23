@@ -24,11 +24,13 @@ public enum KafkaTopic {
     VULN_ANALYSIS_RESULT("dtrack.vuln-analysis.result"),
     MIRROR_OSV("dtrack.vulnerability.mirror.osv"),
     MIRROR_NVD("dtrack.vulnerability.mirror.nvd"),
-    
+
     NEW_VULNERABILITY("dtrack.vulnerability"),
 
-    COMPONENT_METRICS("dtrack.component.metrics");
+    COMPONENT_METRICS("dtrack.component.metrics"),
+    PROJECT_METRICS_RESULT("dtrack.project.metrics"),
 
+    PORTFOLIO_METRICS_RESULT("dtrack.portfolio.metrics");
     private final String name;
 
     KafkaTopic(final String name) {

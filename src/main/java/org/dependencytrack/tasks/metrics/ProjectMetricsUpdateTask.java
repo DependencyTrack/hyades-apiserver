@@ -21,20 +21,16 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -59,10 +55,8 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         }
     }
 
-    public void updateMetrics(final UUID uuid) throws Exception {
+    public static void updateMetrics(final UUID uuid) throws Exception {
         LOGGER.info("Executing metrics update for project " + uuid);
-        final var counters = new Counters();
-
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
@@ -77,38 +71,17 @@ public class ProjectMetricsUpdateTask implements Subscriber {
             while (!components.isEmpty()) {
                 for (final Component component : components) {
                     DependencyMetrics metrics = ComponentMetricsUpdateTask.getComponentMetrics(component.getUuid());
-                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(),metrics ));
+                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
                 }
 
                 LOGGER.debug("Fetching next components page for project " + uuid);
                 final long lastId = components.get(components.size() - 1).getId();
                 components = fetchNextComponentsPage(pm, project, lastId);
             }
-
-            qm.runInTransaction(() -> {
-                final ProjectMetrics latestMetrics = qm.getMostRecentProjectMetrics(project);
-                if (!counters.hasChanged(latestMetrics)) {
-                    LOGGER.debug("Metrics of project " + uuid + " did not change");
-                    latestMetrics.setLastOccurrence(counters.measuredAt);
-                } else {
-                    LOGGER.debug("Metrics of project " + uuid + " changed");
-                    final ProjectMetrics metrics = counters.createProjectMetrics(project);
-                    pm.makePersistent(metrics);
-                }
-            });
-
-            if (project.getLastInheritedRiskScore() == null ||
-                    project.getLastInheritedRiskScore() != counters.inheritedRiskScore) {
-                LOGGER.debug("Updating inherited risk score of project " + uuid);
-                qm.runInTransaction(() -> project.setLastInheritedRiskScore(counters.inheritedRiskScore));
-            }
         }
-
-        LOGGER.info("Completed metrics update for project " + uuid + " in " +
-                DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
     }
 
-    private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
+    private static List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
             if (lastId == null) {
                 query.setFilter("project == :project");

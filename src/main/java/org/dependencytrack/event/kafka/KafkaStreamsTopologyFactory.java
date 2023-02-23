@@ -20,12 +20,16 @@ import org.dependencytrack.event.kafka.dto.VulnerabilityScanCompletionStatus;
 import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
 import org.dependencytrack.event.kafka.dto.VulnerabilityScanResult;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
+import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
+import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanCompletionStatusSerde;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerde;
 import org.dependencytrack.model.MetaModel;
+import org.dependencytrack.model.PortfolioMetrics;
+import org.dependencytrack.model.ProjectMetrics;
 
 import java.util.Properties;
 
@@ -121,6 +125,18 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(Serdes.String(), new JacksonSerde<>(Bom.class))
                                 .withName("consume_from_%s_topic".formatted(KafkaTopic.NEW_VULNERABILITY)))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
+
+        streamsBuilder
+                .stream(KafkaTopic.PROJECT_METRICS_RESULT.getName(),
+                        Consumed.with(Serdes.String(), new JacksonSerde<>(ProjectMetrics.class))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PROJECT_METRICS_RESULT)))
+                .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
+
+        streamsBuilder
+                .stream(KafkaTopic.PORTFOLIO_METRICS_RESULT.getName(),
+                        Consumed.with(Serdes.String(), new JacksonSerde<>(PortfolioMetrics.class))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PORTFOLIO_METRICS_RESULT)))
+                .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
 
         return streamsBuilder.build(streamsProperties);
     }

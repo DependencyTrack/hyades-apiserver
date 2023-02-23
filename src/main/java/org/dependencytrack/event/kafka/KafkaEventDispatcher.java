@@ -12,6 +12,7 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerializer;
@@ -76,7 +77,7 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopic.MIRROR_OSV, omEvent.ecosystem(), "", null);
         } else if (event instanceof final NistMirrorEvent nmEvent) {
             return dispatchInternal(KafkaTopic.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
-        } else if(event instanceof  final ComponentMetricsUpdateEvent componentMetricsUpdateEvent){
+        } else if (event instanceof final ComponentMetricsUpdateEvent componentMetricsUpdateEvent) {
             return dispatchInternal(KafkaTopic.COMPONENT_METRICS, componentMetricsUpdateEvent.uuid().toString(), componentMetricsUpdateEvent.dependencyMetrics(), null);
         }
 
