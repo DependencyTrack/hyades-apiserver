@@ -39,7 +39,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaStateStoreNames;
 import org.dependencytrack.event.kafka.KafkaStreamsInitializer;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanCompletionStatus;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
@@ -51,6 +50,8 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -316,13 +317,11 @@ public class BomResource extends AlpineResource {
                 .map(expectedResultCount -> expectedResultCount > 0)
                 .orElse(false);
         if (processingVulnAnalysis) {
-            final ReadOnlyKeyValueStore<String, VulnerabilityScanCompletionStatus> vulnScanStatusStore = streams
-                    .store(fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_STATUS, keyValueStore()));
-            processingVulnAnalysis = Optional.ofNullable(vulnScanStatusStore.get(uuid))
-                    .map(status -> switch (status) {
-                        case PENDING -> true;
-                        case COMPLETE -> false;
-                    })
+            final ReadOnlyKeyValueStore<String, ScanCompletion> vulnScanCompletionStore = streams
+                    .store(fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION, keyValueStore()));
+            processingVulnAnalysis = Optional.ofNullable(vulnScanCompletionStore.get(uuid))
+                    .map(ScanCompletion::getStatus)
+                    .map(ScanCompletionStatus.SCAN_COMPLETION_STATUS_PENDING::equals)
                     .orElse(false);
         }
 

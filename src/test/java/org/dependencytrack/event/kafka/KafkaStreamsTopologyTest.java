@@ -3,23 +3,25 @@ package org.dependencytrack.event.kafka;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.dependencytrack.event.kafka.dto.Component;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanCompletionStatus;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanResult;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanStatus;
 import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.MetaModel;
-import org.dependencytrack.model.AnalyzerIdentity;
+import org.hyades.proto.vuln.v1.Source;
+import org.hyades.proto.vulnanalysis.v1.Component;
+import org.hyades.proto.vulnanalysis.v1.ScanCommand;
+import org.hyades.proto.vulnanalysis.v1.ScanKey;
+import org.hyades.proto.vulnanalysis.v1.ScanResult;
+import org.hyades.proto.vulnanalysis.v1.ScanStatus;
+import org.hyades.proto.vulnanalysis.v1.Scanner;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -27,7 +29,6 @@ import org.junit.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -97,26 +98,40 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         qm.persist(componentB);
 
         final var scanToken = UUID.randomUUID();
-        final var scanKeyComponentA = new VulnerabilityScanKey(scanToken.toString(), componentA.getUuid());
-        final var scanKeyComponentB = new VulnerabilityScanKey(scanToken.toString(), componentB.getUuid());
-
-        final var vulnComponentA = new Vulnerability();
-        vulnComponentA.setVulnId("INT-001");
-        vulnComponentA.setSource(Vulnerability.Source.INTERNAL);
-
-        final var vulnComponentB = new Vulnerability();
-        vulnComponentB.setVulnId("OSSINDEX-001");
-        vulnComponentB.setSource(Vulnerability.Source.OSSINDEX);
+        final var scanKeyComponentA = ScanKey.newBuilder()
+                .setCorrelationId(scanToken.toString())
+                .setComponentUuid(componentA.getUuid().toString())
+                .build();
+        final var scanKeyComponentB = ScanKey.newBuilder()
+                .setCorrelationId(scanToken.toString())
+                .setComponentUuid(componentB.getUuid().toString())
+                .build();
+        final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("INT-001")
+                .setSource(Source.SOURCE_INTERNAL)
+                .build();
+        final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SONATYPE-001")
+                .setSource(Source.SOURCE_OSSINDEX)
+                .build();
 
         kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_RESULT.getName(), List.of(
-                        new KeyValue<>("%s/%s".formatted(scanToken, componentA.getUuid()),
-                                new VulnerabilityScanResult(scanKeyComponentA, AnalyzerIdentity.INTERNAL_ANALYZER,
-                                        VulnerabilityScanStatus.SUCCESSFUL, List.of(vulnComponentA), null)),
-                        new KeyValue<>("%s/%s".formatted(scanToken, componentB.getUuid()),
-                                new VulnerabilityScanResult(scanKeyComponentB, AnalyzerIdentity.OSSINDEX_ANALYZER,
-                                        VulnerabilityScanStatus.SUCCESSFUL, List.of(vulnComponentB), null))))
-                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
-                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonSerializer.class));
+                        new KeyValue<>(scanKeyComponentA,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentA)
+                                        .setScanner(Scanner.SCANNER_INTERNAL)
+                                        .setStatus(ScanStatus.SCAN_STATUS_SUCCESSFUL)
+                                        .addVulnerabilities(vulnComponentA)
+                                        .build()),
+                        new KeyValue<>(scanKeyComponentB,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentB)
+                                        .setScanner(Scanner.SCANNER_OSSINDEX)
+                                        .setStatus(ScanStatus.SCAN_STATUS_SUCCESSFUL)
+                                        .addVulnerabilities(vulnComponentB)
+                                        .build())))
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
         assertConditionWithTimeout(() -> !qm.getAllVulnerabilities(componentA).isEmpty()
                 && !qm.getAllVulnerabilities(componentB).isEmpty(), Duration.ofSeconds(5));
@@ -133,26 +148,49 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
         for (final UUID uuid : componentUuids) {
             kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName(), List.of(
-                            new KeyValue<>("%s/%s".formatted(scanToken, uuid),
-                                    new Component(uuid, null, null, null, null, null))))
-                    .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
-                    .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonSerializer.class));
+                            new KeyValue<>(
+                                    ScanKey.newBuilder()
+                                            .setCorrelationId(scanToken)
+                                            .setComponentUuid(uuid.toString())
+                                            .build(),
+                                    ScanCommand.newBuilder()
+                                            .setComponent(Component.newBuilder()
+                                                    .setUuid(uuid.toString())
+                                                    .build())
+                                            .build()
+                            ))
+                    )
+                    .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                    .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
         }
 
         for (final UUID uuid : componentUuids) {
+            final ScanKey scanKey = ScanKey.newBuilder()
+                    .setCorrelationId(scanToken)
+                    .setComponentUuid(uuid.toString())
+                    .build();
+
             kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_RESULT.getName(), List.of(
-                            new KeyValue<>("%s/%s".formatted(scanToken, uuid),
-                                    new VulnerabilityScanResult(new VulnerabilityScanKey(scanToken, uuid), AnalyzerIdentity.NONE,
-                                            VulnerabilityScanStatus.COMPLETE, Collections.emptyList(), null))))
-                    .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
-                    .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonSerializer.class));
+                            new KeyValue<>(
+                                    scanKey,
+                                    ScanResult.newBuilder()
+                                            .setKey(scanKey)
+                                            .setScanner(Scanner.SCANNER_NONE)
+                                            .setStatus(ScanStatus.SCAN_STATUS_COMPLETE)
+                                            .build()))
+                    )
+                    .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                    .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
         }
 
-        final ReadOnlyKeyValueStore<String, VulnerabilityScanCompletionStatus> statusStore = kafkaStreams.store(StoreQueryParameters
-                .fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_STATUS, QueryableStoreTypes.keyValueStore()));
+        final ReadOnlyKeyValueStore<String, ScanCompletion> statusStore = kafkaStreams.store(StoreQueryParameters
+                .fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION, QueryableStoreTypes.keyValueStore()));
 
         try {
-            assertConditionWithTimeout(() -> VulnerabilityScanCompletionStatus.COMPLETE == statusStore.get(scanToken), Duration.ofSeconds(5));
+            assertConditionWithTimeout(() -> {
+                final ScanCompletion completion = statusStore.get(scanToken);
+                return completion != null && completion.getStatus() == ScanCompletionStatus.SCAN_COMPLETION_STATUS_COMPLETE;
+            }, Duration.ofSeconds(5));
         } catch (AssertionError e) {
             final ReadOnlyKeyValueStore<String, Long> expectedStore = kafkaStreams.store(StoreQueryParameters
                     .fromNameAndType(KafkaStateStoreNames.EXPECTED_VULNERABILITY_SCAN_RESULTS, QueryableStoreTypes.keyValueStore()));
