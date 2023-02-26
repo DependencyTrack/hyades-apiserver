@@ -88,7 +88,7 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String V1_TAG = "/v1/tag";
 
     protected QueryManager qm;
-    protected MockProducer<String, Object> kafkaMockProducer;
+    protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected ManagedUser testUser;
     protected String jwt;
     protected Team team;
@@ -103,7 +103,7 @@ public abstract class ResourceTest extends JerseyTest {
     public void before() throws Exception {
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
-        this.kafkaMockProducer = (MockProducer<String, Object>) KafkaProducerInitializer.getProducer();
+        this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         testUser = qm.createManagedUser("testuser", String.valueOf(PasswordService.createHash("testuser".toCharArray())));
         this.jwt = new JsonWebToken().createToken(testUser);
         team = qm.createTeam("Test Users", true);

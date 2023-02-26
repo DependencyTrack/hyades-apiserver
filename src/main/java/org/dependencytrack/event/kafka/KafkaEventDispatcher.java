@@ -3,20 +3,21 @@ package org.dependencytrack.event.kafka;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.notification.Notification;
+import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.errors.SerializationException;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.dto.Component;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
-import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerializer;
 import org.dependencytrack.notification.NotificationGroup;
+import org.hyades.proto.vulnanalysis.v1.ScanCommand;
+import org.hyades.proto.vulnanalysis.v1.ScanKey;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -30,7 +31,7 @@ public class KafkaEventDispatcher {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaEventDispatcher.class);
 
-    private final Producer<String, Object> producer;
+    private final Producer<byte[], byte[]> producer;
 
     public KafkaEventDispatcher() {
         this(KafkaProducerInitializer.getProducer());
@@ -44,7 +45,7 @@ public class KafkaEventDispatcher {
      *
      * @param producer The {@link Producer} to use
      */
-    KafkaEventDispatcher(final Producer<String, Object> producer) {
+    KafkaEventDispatcher(final Producer<byte[], byte[]> producer) {
         this.producer = producer;
     }
 
@@ -60,21 +61,31 @@ public class KafkaEventDispatcher {
      */
     public RecordMetadata dispatch(final Event event) {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent vaEvent) {
-            final var component = new Component(vaEvent.component());
-            final String scanKeySerialized;
-            try (final var serializer = new VulnerabilityScanKeySerializer()) {
-                final var scanKey = new VulnerabilityScanKey(vaEvent.token().toString(), component.uuid());
-                scanKeySerialized = new String(serializer.serialize(null, scanKey), StandardCharsets.UTF_8);
-            }
-            return dispatchInternal(KafkaTopic.VULN_ANALYSIS_COMPONENT, scanKeySerialized, component,
-                    Map.of("level", vaEvent.level().name()));
+            final var componentBuilder = org.hyades.proto.vulnanalysis.v1.Component.newBuilder()
+                    .setUuid(vaEvent.component().getUuid().toString())
+                    .setInternal(vaEvent.component().isInternal());
+            Optional.ofNullable(vaEvent.component().getCpe()).ifPresent(componentBuilder::setCpe);
+            Optional.ofNullable(vaEvent.component().getPurl()).map(PackageURL::canonicalize).ifPresent(componentBuilder::setPurl);
+            Optional.ofNullable(vaEvent.component().getSwidTagId()).ifPresent(componentBuilder::setSwidTagId);
+
+            return dispatchInternal(
+                    KafkaTopics.VULN_ANALYSIS_COMMAND,
+                    ScanKey.newBuilder()
+                            .setCorrelationId(vaEvent.token().toString())
+                            .setComponentUuid(vaEvent.component().getUuid().toString())
+                            .build(),
+                    ScanCommand.newBuilder()
+                            .setComponent(componentBuilder)
+                            .build(),
+                    null
+            );
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
             final var component = new Component(rmaEvent.component());
-            return dispatchInternal(KafkaTopic.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
+            return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
         } else if (event instanceof final OsvMirrorEvent omEvent) {
-            return dispatchInternal(KafkaTopic.MIRROR_OSV, omEvent.ecosystem(), "", null);
-        } else if (event instanceof final NistMirrorEvent nmEvent) {
-            return dispatchInternal(KafkaTopic.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+            return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
+        } else if (event instanceof NistMirrorEvent) {
+            return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
@@ -82,35 +93,50 @@ public class KafkaEventDispatcher {
 
     public RecordMetadata dispatchNotification(final Notification notification) {
         return switch (NotificationGroup.valueOf(notification.getGroup())) {
-            case CONFIGURATION -> dispatchInternal(KafkaTopic.NOTIFICATION_CONFIGURATION, null, notification, null);
+            case CONFIGURATION -> dispatchInternal(KafkaTopics.NOTIFICATION_CONFIGURATION, null, notification, null);
             case DATASOURCE_MIRRORING ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);
-            case REPOSITORY -> dispatchInternal(KafkaTopic.NOTIFICATION_REPOSITORY, null, notification, null);
-            case INTEGRATION -> dispatchInternal(KafkaTopic.NOTIFICATION_INTEGRATION, null, notification, null);
-            case ANALYZER -> dispatchInternal(KafkaTopic.NOTIFICATION_ANALYZER, null, notification, null);
-            case BOM_CONSUMED -> dispatchInternal(KafkaTopic.NOTIFICATION_BOM_CONSUMED, null, notification, null);
-            case BOM_PROCESSED -> dispatchInternal(KafkaTopic.NOTIFICATION_BOM_PROCESSED, null, notification, null);
-            case FILE_SYSTEM -> dispatchInternal(KafkaTopic.NOTIFICATION_FILE_SYSTEM, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);
+            case REPOSITORY -> dispatchInternal(KafkaTopics.NOTIFICATION_REPOSITORY, null, notification, null);
+            case INTEGRATION -> dispatchInternal(KafkaTopics.NOTIFICATION_INTEGRATION, null, notification, null);
+            case ANALYZER -> dispatchInternal(KafkaTopics.NOTIFICATION_ANALYZER, null, notification, null);
+            case BOM_CONSUMED -> dispatchInternal(KafkaTopics.NOTIFICATION_BOM_CONSUMED, null, notification, null);
+            case BOM_PROCESSED -> dispatchInternal(KafkaTopics.NOTIFICATION_BOM_PROCESSED, null, notification, null);
+            case FILE_SYSTEM -> dispatchInternal(KafkaTopics.NOTIFICATION_FILE_SYSTEM, null, notification, null);
             case INDEXING_SERVICE ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_INDEXING_SERVICE, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_INDEXING_SERVICE, null, notification, null);
             case NEW_VULNERABILITY ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_NEW_VULNERABILITY, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY, null, notification, null);
             case NEW_VULNERABLE_DEPENDENCY ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY, null, notification, null);
             case POLICY_VIOLATION ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
             case PROJECT_AUDIT_CHANGE ->
-                    dispatchInternal(KafkaTopic.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
-            case PROJECT_CREATED -> dispatchInternal(KafkaTopic.NOTIFICATION_PROJECT_CREATED, null, notification, null);
-            case VEX_CONSUMED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_CONSUMED, null, notification, null);
-            case VEX_PROCESSED -> dispatchInternal(KafkaTopic.NOTIFICATION_VEX_PROCESSED, null, notification, null);
+                    dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
+            case PROJECT_CREATED ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_CREATED, null, notification, null);
+            case VEX_CONSUMED -> dispatchInternal(KafkaTopics.NOTIFICATION_VEX_CONSUMED, null, notification, null);
+            case VEX_PROCESSED -> dispatchInternal(KafkaTopics.NOTIFICATION_VEX_PROCESSED, null, notification, null);
         };
     }
 
 
-    private RecordMetadata dispatchInternal(final KafkaTopic topic, final String key, final Object value, final Map<String, String> headers) {
+    private <K, V> RecordMetadata dispatchInternal(final KafkaTopics.Topic<K, V> topic, final K key, final V value, final Map<String, String> headers) {
+        final byte[] keyBytes;
         try {
-            final var record = new ProducerRecord<>(topic.getName(), key, value);
+            keyBytes = topic.keySerde().serializer().serialize(topic.name(), key);
+        } catch (SerializationException e) {
+            throw new KafkaException(e);
+        }
+
+        final byte[] valueBytes;
+        try {
+            valueBytes = topic.valueSerde().serializer().serialize(topic.name(), value);
+        } catch (SerializationException e) {
+            throw new KafkaException(e);
+        }
+
+        try {
+            final var record = new ProducerRecord<>(topic.name(), keyBytes, valueBytes);
             Optional.ofNullable(headers)
                     .orElseGet(Collections::emptyMap)
                     .forEach((k, v) -> record.headers().add(k, v.getBytes()));

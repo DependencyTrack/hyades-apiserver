@@ -9,10 +9,10 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.model.MetaModel;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.MetaModel;
 import org.hyades.proto.vuln.v1.Source;
 import org.hyades.proto.vulnanalysis.v1.Component;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
@@ -58,7 +58,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         final var metaModel = new MetaModel(component);
         metaModel.setLatestVersion("1.2.4");
 
-        kafka.send(SendKeyValues.to(KafkaTopic.REPO_META_ANALYSIS_RESULT.getName(), List.of(
+        kafka.send(SendKeyValues.to(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), List.of(
                         new KeyValue<>(component.getUuid(), metaModel)
                 ))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class)
@@ -115,7 +115,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setSource(Source.SOURCE_OSSINDEX)
                 .build();
 
-        kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_RESULT.getName(), List.of(
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
                         new KeyValue<>(scanKeyComponentA,
                                 ScanResult.newBuilder()
                                         .setKey(scanKeyComponentA)
@@ -147,7 +147,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         }
 
         for (final UUID uuid : componentUuids) {
-            kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName(), List.of(
+            kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_COMMAND.name(), List.of(
                             new KeyValue<>(
                                     ScanKey.newBuilder()
                                             .setCorrelationId(scanToken)
@@ -170,7 +170,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     .setComponentUuid(uuid.toString())
                     .build();
 
-            kafka.send(SendKeyValues.to(KafkaTopic.VULN_ANALYSIS_RESULT.getName(), List.of(
+            kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
                             new KeyValue<>(
                                     scanKey,
                                     ScanResult.newBuilder()

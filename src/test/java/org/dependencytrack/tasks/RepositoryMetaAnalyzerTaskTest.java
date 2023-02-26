@@ -3,15 +3,15 @@ package org.dependencytrack.tasks;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.kafka.KafkaTopic;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.junit.Test;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
 
@@ -49,12 +49,12 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName()),
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName()),
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName());
-                    final var eventComponent = (org.dependencytrack.event.kafka.dto.Component) record.value();
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
+                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
                     assertThat(eventComponent.uuid()).isEqualTo(componentProjectB.getUuid());
                     assertThat(eventComponent.group()).isEqualTo(componentProjectB.getGroup());
                     assertThat(eventComponent.name()).isEqualTo(componentProjectB.getName());
@@ -63,8 +63,8 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                     assertThat(eventComponent.purl()).isNull();
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName());
-                    final var eventComponent = (org.dependencytrack.event.kafka.dto.Component) record.value();
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
+                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
                     assertThat(eventComponent.uuid()).isEqualTo(componentProjectA.getUuid());
                     assertThat(eventComponent.group()).isEqualTo(componentProjectA.getGroup());
                     assertThat(eventComponent.name()).isEqualTo(componentProjectA.getName());
@@ -105,10 +105,10 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName());
-                    final var eventComponent = (org.dependencytrack.event.kafka.dto.Component) record.value();
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
+                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
                     assertThat(eventComponent.uuid()).isEqualTo(componentC.getUuid());
                     assertThat(eventComponent.group()).isEqualTo(componentC.getGroup());
                     assertThat(eventComponent.name()).isEqualTo(componentC.getName());
@@ -117,8 +117,8 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                     assertThat(eventComponent.purl()).isEqualTo(componentC.getPurl().toString());
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName());
-                    final var eventComponent = (org.dependencytrack.event.kafka.dto.Component) record.value();
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
+                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
                     assertThat(eventComponent.uuid()).isEqualTo(componentB.getUuid());
                     assertThat(eventComponent.group()).isEqualTo(componentB.getGroup());
                     assertThat(eventComponent.name()).isEqualTo(componentB.getName());
@@ -127,8 +127,8 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                     assertThat(eventComponent.purl()).isNull();
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName());
-                    final var eventComponent = (org.dependencytrack.event.kafka.dto.Component) record.value();
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
+                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
                     assertThat(eventComponent.uuid()).isEqualTo(componentA.getUuid());
                     assertThat(eventComponent.group()).isEqualTo(componentA.getGroup());
                     assertThat(eventComponent.name()).isEqualTo(componentA.getName());
@@ -151,7 +151,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName())
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name())
                 // Component of inactive project must not have been submitted for analysis
         );
     }

@@ -30,7 +30,7 @@ import org.junit.BeforeClass;
 public abstract class PersistenceCapableTest {
 
     protected QueryManager qm;
-    protected MockProducer<String, Object> kafkaMockProducer;
+    protected MockProducer<byte[], byte[]> kafkaMockProducer;
 
     @BeforeClass
     public static void init() {
@@ -40,7 +40,7 @@ public abstract class PersistenceCapableTest {
     @Before
     public void before() throws Exception {
         this.qm = new QueryManager();
-        this.kafkaMockProducer = (MockProducer<String, Object>) KafkaProducerInitializer.getProducer();
+        this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
     }
 
     @After
