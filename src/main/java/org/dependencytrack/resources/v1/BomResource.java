@@ -323,7 +323,7 @@ public class BomResource extends AlpineResource {
                         case PENDING -> true;
                         case COMPLETE -> false;
                     })
-                    .orElse(false);
+                    .orElse(true); // No results have been received yet -> Still processing
         }
 
         // Some tasks are still processed internally (e.g. policy evaluation)
