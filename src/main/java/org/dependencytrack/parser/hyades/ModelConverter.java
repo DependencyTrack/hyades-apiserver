@@ -40,7 +40,7 @@ public final class ModelConverter {
             case SOURCE_SNYK -> Vulnerability.Source.SNYK;
             case SOURCE_VULNDB -> Vulnerability.Source.VULNDB;
             default ->
-                    throw new IllegalArgumentException("Unknown vulnerability source %s".formatted(hyadesVuln.getSource()));
+                    throw new IllegalArgumentException("Invalid vulnerability source %s".formatted(hyadesVuln.getSource()));
         });
         vuln.setTitle(hyadesVuln.getTitle());
         vuln.setDescription(hyadesVuln.getDescription());
@@ -113,6 +113,11 @@ public final class ModelConverter {
             case SOURCE_OSV -> alias.setOsvId(hyadesVuln.getId());
             case SOURCE_SNYK -> alias.setSnykId(hyadesVuln.getId());
             case SOURCE_VULNDB -> alias.setVulnDbId(hyadesVuln.getId());
+            // Source of the vulnerability itself has been validated before,
+            // so this scenario is highly unlikely to ever happen. Including
+            // it here to make linters happy.
+            default ->
+                    throw new IllegalArgumentException("Invalid vulnerability source %s".formatted(hyadesVuln.getSource()));
         }
 
         switch (hyadesAlias.getSource()) {
@@ -123,6 +128,8 @@ public final class ModelConverter {
             case SOURCE_OSV -> alias.setOsvId(hyadesAlias.getId());
             case SOURCE_SNYK -> alias.setSnykId(hyadesAlias.getId());
             case SOURCE_VULNDB -> alias.setVulnDbId(hyadesAlias.getId());
+            default -> throw new IllegalArgumentException("Invalid source %s for alias %s"
+                    .formatted(hyadesAlias.getSource(), hyadesAlias.getId()));
         }
 
         return alias;
