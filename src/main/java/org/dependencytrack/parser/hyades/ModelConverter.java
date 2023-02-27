@@ -54,15 +54,21 @@ public final class ModelConverter {
             vuln.setUpdated(Date.from(Instant.ofEpochSecond(hyadesVuln.getUpdated().getSeconds())));
         }
 
+        // Vulnerabilities can have multiple risk ratings of the same type, but DT currently only supports one.
+        // For now, we simply use the first one per type. We also only consider ratings from the authoritative
+        // source of the vulnerability. Third-party ratings are ignored for now.
         for (final Rating rating : hyadesVuln.getRatingsList()) {
             if (rating.getSource() == hyadesVuln.getSource()) {
-                if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV3) {
+                if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV31 && vuln.getCvssV3Vector() == null) {
                     vuln.setCvssV3Vector(rating.getVector());
                     vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
-                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV2) {
+                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV3 && vuln.getCvssV3Vector() == null) {
+                    vuln.setCvssV3Vector(rating.getVector());
+                    vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
+                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV2 && vuln.getCvssV2Vector() == null) {
                     vuln.setCvssV2Vector(rating.getVector());
                     vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
-                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_OWASP) {
+                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_OWASP && vuln.getOwaspRRVector() == null) {
                     vuln.setOwaspRRVector(rating.getVector());
                 }
             }
