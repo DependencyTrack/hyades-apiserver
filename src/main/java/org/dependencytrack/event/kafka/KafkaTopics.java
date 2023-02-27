@@ -1,6 +1,8 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.notification.Notification;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.cyclonedx.model.Bom;
@@ -41,29 +43,33 @@ public final class KafkaTopics {
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
 
+    // As ObjectMapper construction is rather expensive, share a common instance across all JSON Serdes.
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
+    private static final Serde<Notification> NOTIFICATION_SERDE = new JacksonSerde<>(Notification.class, OBJECT_MAPPER);
+
     static {
-        NOTIFICATION_ANALYZER = new Topic<>("dtrack.notification.analyzer", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_BOM_CONSUMED = new Topic<>("dtrack.notification.bom-consumed", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_BOM_PROCESSED = new Topic<>("dtrack.notification.bom-processed", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_CONFIGURATION = new Topic<>("dtrack.notification.configuration", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_DATASOURCE_MIRRORING = new Topic<>("dtrack.notification.datasource-mirroring", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_FILE_SYSTEM = new Topic<>("dtrack.notification.file-system", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_INDEXING_SERVICE = new Topic<>("dtrack.notification.indexing-service", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_INTEGRATION = new Topic<>("dtrack.notification.integration", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_NEW_VULNERABILITY = new Topic<>("dtrack.notification.new-vulnerability", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_NEW_VULNERABLE_DEPENDENCY = new Topic<>("dtrack.notification.new-vulnerable-dependency", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_POLICY_VIOLATION = new Topic<>("dtrack.notification.policy-violation", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_PROJECT_AUDIT_CHANGE = new Topic<>("dtrack.notification.project-audit-change", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_PROJECT_CREATED = new Topic<>("dtrack.notification.project-created", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_REPOSITORY = new Topic<>("dtrack.notification.repository", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_VEX_CONSUMED = new Topic<>("dtrack.notification.vex-consumed", Serdes.String(), new JacksonSerde<>(Notification.class));
-        NOTIFICATION_VEX_PROCESSED = new Topic<>("dtrack.notification.vex-processed", Serdes.String(), new JacksonSerde<>(Notification.class));
+        NOTIFICATION_ANALYZER = new Topic<>("dtrack.notification.analyzer", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_BOM_CONSUMED = new Topic<>("dtrack.notification.bom-consumed", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_BOM_PROCESSED = new Topic<>("dtrack.notification.bom-processed", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_CONFIGURATION = new Topic<>("dtrack.notification.configuration", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_DATASOURCE_MIRRORING = new Topic<>("dtrack.notification.datasource-mirroring", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_FILE_SYSTEM = new Topic<>("dtrack.notification.file-system", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_INDEXING_SERVICE = new Topic<>("dtrack.notification.indexing-service", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_INTEGRATION = new Topic<>("dtrack.notification.integration", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_NEW_VULNERABILITY = new Topic<>("dtrack.notification.new-vulnerability", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_NEW_VULNERABLE_DEPENDENCY = new Topic<>("dtrack.notification.new-vulnerable-dependency", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_POLICY_VIOLATION = new Topic<>("dtrack.notification.policy-violation", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_PROJECT_AUDIT_CHANGE = new Topic<>("dtrack.notification.project-audit-change", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_PROJECT_CREATED = new Topic<>("dtrack.notification.project-created", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_REPOSITORY = new Topic<>("dtrack.notification.repository", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_VEX_CONSUMED = new Topic<>("dtrack.notification.vex-consumed", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_VEX_PROCESSED = new Topic<>("dtrack.notification.vex-processed", Serdes.String(), NOTIFICATION_SERDE);
 
         MIRROR_NVD = new Topic<>("dtrack.vulnerability.mirror.nvd", Serdes.String(), Serdes.String());
         MIRROR_OSV = new Topic<>("dtrack.vulnerability.mirror.osv", Serdes.String(), Serdes.String());
-        NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new JacksonSerde<>(Bom.class));
-        REPO_META_ANALYSIS_COMPONENT = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new JacksonSerde<>(Component.class));
-        REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.UUID(), new JacksonSerde<>(MetaModel.class));
+        NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new JacksonSerde<>(Bom.class, OBJECT_MAPPER));
+        REPO_META_ANALYSIS_COMPONENT = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new JacksonSerde<>(Component.class, OBJECT_MAPPER));
+        REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.UUID(), new JacksonSerde<>(MetaModel.class, OBJECT_MAPPER));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));
     }

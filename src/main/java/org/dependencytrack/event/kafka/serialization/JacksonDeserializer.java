@@ -1,18 +1,27 @@
 package org.dependencytrack.event.kafka.serialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class JacksonDeserializer<T> implements Deserializer<T> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final Class<T> clazz;
 
     public JacksonDeserializer(final Class<T> clazz) {
+        this(clazz, null);
+    }
+
+    public JacksonDeserializer(final Class<T> clazz, final ObjectMapper objectMapper) {
         this.clazz = clazz;
+        this.objectMapper = Optional.ofNullable(objectMapper)
+                .orElseGet(() -> new ObjectMapper().registerModule(new JavaTimeModule()));
     }
 
     @Override
