@@ -23,6 +23,7 @@ import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
 import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanResultsExpectedReceived;
 
 import java.util.Properties;
 import java.util.UUID;
@@ -94,12 +95,20 @@ class KafkaStreamsTopologyFactory {
         // the scan overall can be considered to be completed.
         completedProcessedVulnScanResultsTable
                 .toStream(Named.as("stream_received_vuln_scan_result_count"))
-                .join(expectedVulnScanResultsTable, (received, expected) -> expected - received, Joined
-                        .with(Serdes.String(), Serdes.Long(), Serdes.Long())
-                        .withName("join_result_counts"))
-                .mapValues(count -> count == 0
-                                ? ScanCompletion.newBuilder().setStatus(ScanCompletionStatus.SCAN_COMPLETION_STATUS_COMPLETE).build()
-                                : ScanCompletion.newBuilder().setStatus(ScanCompletionStatus.SCAN_COMPLETION_STATUS_PENDING).build(),
+                .join(expectedVulnScanResultsTable,
+                        (received, expected) -> ScanResultsExpectedReceived.newBuilder()
+                                .setReceived(received)
+                                .setExpected(expected)
+                                .build(),
+                        Joined.with(Serdes.String(), Serdes.Long(), Serdes.Long())
+                                .withName("join_result_counts"))
+                .mapValues(expectedReceived -> ScanCompletion.newBuilder()
+                                .setResults(expectedReceived)
+                                .setStatus(expectedReceived.getExpected() - expectedReceived.getReceived() == 0
+                                        ? ScanCompletionStatus.SCAN_COMPLETION_STATUS_COMPLETE
+                                        : ScanCompletionStatus.SCAN_COMPLETION_STATUS_PENDING
+                                )
+                                .build(),
                         Named.as("map_to_completion_status"))
                 .toTable(Named.as("materialize_vuln_scan_completion_status"), Materialized
                         .<String, ScanCompletion, KeyValueStore<Bytes, byte[]>>as(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION)
