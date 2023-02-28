@@ -1280,4 +1280,7 @@ public class QueryManager extends AlpineQueryManager {
         pm.currentTransaction().commit();
     }
 
+    public PaginatedResult getObjectByUuid(Class<Project> projectClass, UUID uuid, Project.FetchGroup metricsUpdate) {
+
+    }
 }

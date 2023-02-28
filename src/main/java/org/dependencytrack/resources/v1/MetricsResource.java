@@ -264,7 +264,7 @@ public class MetricsResource extends AlpineResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
-                    new ProjectMetricsUpdateEvent(project.getUuid());
+                    Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid()));
                     return Response.ok().build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();

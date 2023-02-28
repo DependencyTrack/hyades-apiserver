@@ -33,6 +33,7 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
@@ -420,6 +421,7 @@ public class ComponentResource extends AlpineResource {
                 }
                 qm.recursivelyDelete(component, false);
                 qm.commitSearchIndex(Component.class);
+                new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

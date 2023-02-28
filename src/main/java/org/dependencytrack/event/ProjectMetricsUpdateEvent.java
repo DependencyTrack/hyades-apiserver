@@ -21,7 +21,6 @@ package org.dependencytrack.event;
 import alpine.event.framework.AbstractChainableEvent;
 import alpine.event.framework.Event;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 
 import java.util.UUID;
 

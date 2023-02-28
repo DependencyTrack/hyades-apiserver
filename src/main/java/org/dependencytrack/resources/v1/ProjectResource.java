@@ -39,6 +39,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import java.security.Principal;
 import java.util.Set;
@@ -431,7 +432,8 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
+            @ApiResponse(code = 500, message = "Unable to delete components of the project")
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProject(
@@ -443,6 +445,7 @@ public class ProjectResource extends AlpineResource {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
                     qm.recursivelyDelete(project, true);
+                    ProjectMetricsUpdateTask.deleteComponents(project.getUuid());
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
@@ -450,6 +453,8 @@ public class ProjectResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Unable to delete components of the project").build();
         }
     }
 

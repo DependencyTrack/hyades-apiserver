@@ -21,7 +21,7 @@ public class PortfolioMetricsProcessor implements Processor<String, PortfolioMet
                 LOGGER.debug("Portfolio metrics changed");
                 pm.makePersistent(record.value());
             });
-            LOGGER.info("Completed metrics update for portfolio " + record.key());
+            LOGGER.info("Completed metrics update for portfolio -- maybe add number of projects in this");
         }
 
     }

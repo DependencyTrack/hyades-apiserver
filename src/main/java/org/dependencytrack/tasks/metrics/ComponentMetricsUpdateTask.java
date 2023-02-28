@@ -105,7 +105,6 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                     case UNASSIGNED -> counters.unassigned++;
                 }
             }
-
             counters.findingsTotal = toIntExact(counters.vulnerabilities);
             counters.findingsAudited = toIntExact(getTotalAuditedFindings(pm, component));
             counters.findingsUnaudited = counters.findingsTotal - counters.findingsAudited;

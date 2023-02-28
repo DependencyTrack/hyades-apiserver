@@ -81,6 +81,31 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         }
     }
 
+    public static void deleteComponents(final UUID uuid) throws Exception {
+        LOGGER.info("Executing metrics update for project " + uuid);
+        try (final QueryManager qm = new QueryManager()) {
+            final PersistenceManager pm = qm.getPersistenceManager();
+
+            final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.METRICS_UPDATE.name()));
+            if (project == null) {
+                throw new NoSuchElementException("Project " + uuid + " does not exist");
+            }
+
+            LOGGER.debug("Fetching first components page for project " + uuid);
+            List<Component> components = fetchNextComponentsPage(pm, project, null);
+
+            while (!components.isEmpty()) {
+                for (final Component component : components) {
+                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
+                }
+
+                LOGGER.debug("Fetching next components page for project " + uuid);
+                final long lastId = components.get(components.size() - 1).getId();
+                components = fetchNextComponentsPage(pm, project, lastId);
+            }
+        }
+    }
+
     private static List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
             if (lastId == null) {
