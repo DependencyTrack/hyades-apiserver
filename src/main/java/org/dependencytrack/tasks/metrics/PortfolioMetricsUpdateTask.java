@@ -22,13 +22,17 @@ import alpine.common.logging.Logger;
 import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A {@link Subscriber} task that updates portfolio metrics.
@@ -60,11 +64,29 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             List<Project> activeProjects = fetchNextActiveProjectsPage(pm, null);
 
             while (!activeProjects.isEmpty()) {
+                final long firstId = activeProjects.get(0).getId();
                 final long lastId = activeProjects.get(activeProjects.size() - 1).getId();
+                final int batchCount = activeProjects.size();
+
+                final var countDownLatch = new CountDownLatch(batchCount);
                 for (final Project project : activeProjects) {
                     LOGGER.debug("Dispatching metrics update event for project " + project.getUuid());
-                    ProjectMetricsUpdateTask.updateMetrics(project.getUuid());
+                    final var callbackEvent = new CallbackEvent(countDownLatch::countDown);
+                    Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid())
+                            .onSuccess(callbackEvent)
+                            .onFailure(callbackEvent));
                 }
+                LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
+                if (!countDownLatch.await(15, TimeUnit.MINUTES)) {
+                    // Depending on the system load, it may take a while for the queued events
+                    // to be processed. And depending on how large the projects are, it may take a
+                    // while for the processing of the respective event to complete.
+                    // It is unlikely though that either of these situations causes a block for
+                    // over 15 minutes. If that happens, the system is under-resourced.
+                    LOGGER.warn("Updating metrics for projects " + firstId + "-" + lastId +
+                            " took longer than expected (15m); Proceeding with potentially stale data");
+                }
+                LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }

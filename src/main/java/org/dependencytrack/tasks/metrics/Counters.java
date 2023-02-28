@@ -33,7 +33,7 @@ import java.util.Date;
  *
  * @since 4.6.0
  */
-final class Counters {
+public final class Counters {
 
     int critical, high, medium, low, unassigned;
     double inheritedRiskScore;
@@ -45,13 +45,257 @@ final class Counters {
             policyViolationsLicenseTotal, policyViolationsLicenseAudited, policyViolationsLicenseUnaudited,
             policyViolationsOperationalTotal, policyViolationsOperationalAudited, policyViolationsOperationalUnaudited;
 
+    public int getCritical() {
+        return critical;
+    }
+
+    public void setCritical(int critical) {
+        this.critical = critical;
+    }
+
+    public int getHigh() {
+        return high;
+    }
+
+    public void setHigh(int high) {
+        this.high = high;
+    }
+
+    public int getMedium() {
+        return medium;
+    }
+
+    public void setMedium(int medium) {
+        this.medium = medium;
+    }
+
+    public int getLow() {
+        return low;
+    }
+
+    public void setLow(int low) {
+        this.low = low;
+    }
+
+    public int getUnassigned() {
+        return unassigned;
+    }
+
+    public void setUnassigned(int unassigned) {
+        this.unassigned = unassigned;
+    }
+
+    public double getInheritedRiskScore() {
+        return inheritedRiskScore;
+    }
+
+    public void setInheritedRiskScore(double inheritedRiskScore) {
+        this.inheritedRiskScore = inheritedRiskScore;
+    }
+
+    public int getComponents() {
+        return components;
+    }
+
+    public void setComponents(int components) {
+        this.components = components;
+    }
+
+    public int getVulnerableComponents() {
+        return vulnerableComponents;
+    }
+
+    public void setVulnerableComponents(int vulnerableComponents) {
+        this.vulnerableComponents = vulnerableComponents;
+    }
+
+    public int getProjects() {
+        return projects;
+    }
+
+    public void setProjects(int projects) {
+        this.projects = projects;
+    }
+
+    public int getVulnerableProjects() {
+        return vulnerableProjects;
+    }
+
+    public void setVulnerableProjects(int vulnerableProjects) {
+        this.vulnerableProjects = vulnerableProjects;
+    }
+
+    public int getVulnerabilities() {
+        return vulnerabilities;
+    }
+
+    public void setVulnerabilities(int vulnerabilities) {
+        this.vulnerabilities = vulnerabilities;
+    }
+
+    public int getSuppressions() {
+        return suppressions;
+    }
+
+    public void setSuppressions(int suppressions) {
+        this.suppressions = suppressions;
+    }
+
+    public int getFindingsTotal() {
+        return findingsTotal;
+    }
+
+    public void setFindingsTotal(int findingsTotal) {
+        this.findingsTotal = findingsTotal;
+    }
+
+    public int getFindingsAudited() {
+        return findingsAudited;
+    }
+
+    public void setFindingsAudited(int findingsAudited) {
+        this.findingsAudited = findingsAudited;
+    }
+
+    public int getFindingsUnaudited() {
+        return findingsUnaudited;
+    }
+
+    public void setFindingsUnaudited(int findingsUnaudited) {
+        this.findingsUnaudited = findingsUnaudited;
+    }
+
+    public int getPolicyViolationsFail() {
+        return policyViolationsFail;
+    }
+
+    public void setPolicyViolationsFail(int policyViolationsFail) {
+        this.policyViolationsFail = policyViolationsFail;
+    }
+
+    public int getPolicyViolationsWarn() {
+        return policyViolationsWarn;
+    }
+
+    public void setPolicyViolationsWarn(int policyViolationsWarn) {
+        this.policyViolationsWarn = policyViolationsWarn;
+    }
+
+    public int getPolicyViolationsInfo() {
+        return policyViolationsInfo;
+    }
+
+    public void setPolicyViolationsInfo(int policyViolationsInfo) {
+        this.policyViolationsInfo = policyViolationsInfo;
+    }
+
+    public int getPolicyViolationsTotal() {
+        return policyViolationsTotal;
+    }
+
+    public void setPolicyViolationsTotal(int policyViolationsTotal) {
+        this.policyViolationsTotal = policyViolationsTotal;
+    }
+
+    public int getPolicyViolationsAudited() {
+        return policyViolationsAudited;
+    }
+
+    public void setPolicyViolationsAudited(int policyViolationsAudited) {
+        this.policyViolationsAudited = policyViolationsAudited;
+    }
+
+    public int getPolicyViolationsUnaudited() {
+        return policyViolationsUnaudited;
+    }
+
+    public void setPolicyViolationsUnaudited(int policyViolationsUnaudited) {
+        this.policyViolationsUnaudited = policyViolationsUnaudited;
+    }
+
+    public int getPolicyViolationsSecurityTotal() {
+        return policyViolationsSecurityTotal;
+    }
+
+    public void setPolicyViolationsSecurityTotal(int policyViolationsSecurityTotal) {
+        this.policyViolationsSecurityTotal = policyViolationsSecurityTotal;
+    }
+
+    public int getPolicyViolationsSecurityAudited() {
+        return policyViolationsSecurityAudited;
+    }
+
+    public void setPolicyViolationsSecurityAudited(int policyViolationsSecurityAudited) {
+        this.policyViolationsSecurityAudited = policyViolationsSecurityAudited;
+    }
+
+    public int getPolicyViolationsSecurityUnaudited() {
+        return policyViolationsSecurityUnaudited;
+    }
+
+    public void setPolicyViolationsSecurityUnaudited(int policyViolationsSecurityUnaudited) {
+        this.policyViolationsSecurityUnaudited = policyViolationsSecurityUnaudited;
+    }
+
+    public int getPolicyViolationsLicenseTotal() {
+        return policyViolationsLicenseTotal;
+    }
+
+    public void setPolicyViolationsLicenseTotal(int policyViolationsLicenseTotal) {
+        this.policyViolationsLicenseTotal = policyViolationsLicenseTotal;
+    }
+
+    public int getPolicyViolationsLicenseAudited() {
+        return policyViolationsLicenseAudited;
+    }
+
+    public void setPolicyViolationsLicenseAudited(int policyViolationsLicenseAudited) {
+        this.policyViolationsLicenseAudited = policyViolationsLicenseAudited;
+    }
+
+    public int getPolicyViolationsLicenseUnaudited() {
+        return policyViolationsLicenseUnaudited;
+    }
+
+    public void setPolicyViolationsLicenseUnaudited(int policyViolationsLicenseUnaudited) {
+        this.policyViolationsLicenseUnaudited = policyViolationsLicenseUnaudited;
+    }
+
+    public int getPolicyViolationsOperationalTotal() {
+        return policyViolationsOperationalTotal;
+    }
+
+    public void setPolicyViolationsOperationalTotal(int policyViolationsOperationalTotal) {
+        this.policyViolationsOperationalTotal = policyViolationsOperationalTotal;
+    }
+
+    public int getPolicyViolationsOperationalAudited() {
+        return policyViolationsOperationalAudited;
+    }
+
+    public void setPolicyViolationsOperationalAudited(int policyViolationsOperationalAudited) {
+        this.policyViolationsOperationalAudited = policyViolationsOperationalAudited;
+    }
+
+    public int getPolicyViolationsOperationalUnaudited() {
+        return policyViolationsOperationalUnaudited;
+    }
+
+    public void setPolicyViolationsOperationalUnaudited(int policyViolationsOperationalUnaudited) {
+        this.policyViolationsOperationalUnaudited = policyViolationsOperationalUnaudited;
+    }
+
+    public Date getMeasuredAt() {
+        return measuredAt;
+    }
+
     final Date measuredAt;
 
-    Counters() {
+    public Counters() {
         this.measuredAt = new Date();
     }
 
-    DependencyMetrics createComponentMetrics(final Component component) {
+    public DependencyMetrics createComponentMetrics(final Component component) {
         final var metrics = new DependencyMetrics();
         metrics.setComponent(component);
         metrics.setProject(component.getProject());
@@ -86,7 +330,7 @@ final class Counters {
         return metrics;
     }
 
-    ProjectMetrics createProjectMetrics(final Project project) {
+    public ProjectMetrics createProjectMetrics(final Project project) {
         final var metrics = new ProjectMetrics();
         metrics.setProject(project);
         metrics.setCritical(this.critical);
@@ -122,7 +366,7 @@ final class Counters {
         return metrics;
     }
 
-    PortfolioMetrics createPortfolioMetrics() {
+    public PortfolioMetrics createPortfolioMetrics() {
         final var metrics = new PortfolioMetrics();
         metrics.setCritical(this.critical);
         metrics.setHigh(this.high);
@@ -159,7 +403,7 @@ final class Counters {
         return metrics;
     }
 
-    boolean hasChanged(final DependencyMetrics comparedTo) {
+    public boolean hasChanged(final DependencyMetrics comparedTo) {
         return comparedTo == null
                 || comparedTo.getCritical() != this.critical
                 || comparedTo.getHigh() != this.high
@@ -189,7 +433,7 @@ final class Counters {
                 || comparedTo.getPolicyViolationsOperationalUnaudited() != this.policyViolationsOperationalUnaudited;
     }
 
-    boolean hasChanged(final ProjectMetrics comparedTo) {
+    public boolean hasChanged(final ProjectMetrics comparedTo) {
         return comparedTo == null
                 || comparedTo.getCritical() != this.critical
                 || comparedTo.getHigh() != this.high
@@ -221,7 +465,7 @@ final class Counters {
                 || comparedTo.getVulnerableComponents() != this.vulnerableComponents;
     }
 
-    boolean hasChanged(final PortfolioMetrics comparedTo) {
+    public boolean hasChanged(final PortfolioMetrics comparedTo) {
         return comparedTo == null
                 || comparedTo.getCritical() != this.critical
                 || comparedTo.getHigh() != this.high

@@ -1,6 +1,5 @@
 package org.dependencytrack.event.kafka.processor;
 
-import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -12,12 +11,11 @@ import org.dependencytrack.event.kafka.serialization.JacksonDeserializer;
 import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.model.Vulnerability;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.Time;
+import javax.jdo.PersistenceManager;
 import java.util.Date;
 import java.util.UUID;
 
@@ -50,17 +48,76 @@ public class ProjectMetricsProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processNewProjectMetricsEvent() {
+    public void testProjectWithNoMetrics() {
         Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
-        ProjectMetrics projectMetrics = new ProjectMetrics();
+        ProjectMetrics projectMetrics = setProjectMetrics(1, 2, 3, 2, 5, 2);
         projectMetrics.setProject(project);
-        projectMetrics.setCritical(1);
-        projectMetrics.setHigh(2);
-        projectMetrics.setMedium(3);
+        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
+        qm.getPersistenceManager().refreshAll();
+        ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getCritical()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(2);
+        assertThat(metrics.getMedium()).isEqualTo(3);
+        assertThat(metrics.getLow()).isZero();
+
+
+    }
+
+    @Test
+    public void testProjectWithSameExistingMetrics() {
+        final PersistenceManager pm = qm.getPersistenceManager();
+        ProjectMetrics projectMetrics1 = setProjectMetrics(1,2,3,2,5,2);
+        Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
+        projectMetrics1.setProject(project);
+        qm.runInTransaction(() -> {
+            projectMetrics1.setProject(project);
+            pm.makePersistent(projectMetrics1);
+        });
+        ProjectMetrics projectMetrics = setProjectMetrics(1,2,3,2,5,2);
+        projectMetrics.setProject(project);
+        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
+        qm.getPersistenceManager().refreshAll();
+        ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getCritical()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(2);
+        assertThat(metrics.getMedium()).isEqualTo(3);
+        assertThat(metrics.getLow()).isZero();
+    }
+
+    @Test
+    public void testProjectWithDifferentExistingMetrics() {
+        final PersistenceManager pm = qm.getPersistenceManager();
+        ProjectMetrics projectMetrics1 = setProjectMetrics(0,0,0,0,0,0);
+        Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
+        projectMetrics1.setProject(project);
+        qm.runInTransaction(() -> {
+            projectMetrics1.setProject(project);
+            pm.makePersistent(projectMetrics1);
+        });
+        ProjectMetrics projectMetrics = setProjectMetrics(1,2,3,2,5,2);
+        projectMetrics.setProject(project);
+        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
+        qm.getPersistenceManager().refreshAll();
+        ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getCritical()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(2);
+        assertThat(metrics.getMedium()).isEqualTo(3);
+        assertThat(metrics.getLow()).isZero();
+    }
+
+    public static ProjectMetrics setProjectMetrics(int critical, int high, int medium,
+                                                   int unassigned, int findingsTotal, int findingsAudited) {
+        ProjectMetrics projectMetrics = new ProjectMetrics();
+        projectMetrics.setCritical(critical);
+        projectMetrics.setHigh(high);
+        projectMetrics.setMedium(medium);
         projectMetrics.setLow(0);
-        projectMetrics.setUnassigned(2);
-        projectMetrics.setFindingsTotal(5);
-        projectMetrics.setFindingsAudited(2);
+        projectMetrics.setUnassigned(unassigned);
+        projectMetrics.setFindingsTotal(findingsTotal);
+        projectMetrics.setFindingsAudited(findingsAudited);
         projectMetrics.setFirstOccurrence(new Date());
         projectMetrics.setFindingsUnaudited(0);
         projectMetrics.setPolicyViolationsFail(0);
@@ -79,17 +136,7 @@ public class ProjectMetricsProcessorTest extends PersistenceCapableTest {
         projectMetrics.setPolicyViolationsOperationalTotal(0);
         projectMetrics.setPolicyViolationsOperationalUnaudited(0);
         projectMetrics.setLastOccurrence(new Date(new Date().getTime() - (1000 * 60 * 60 * 24)));
-        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
-        PaginatedResult metrics1 = qm.getProjectMetrics(project);
-        assertThat(project).isNotNull();
-        assertThat(project.getName()).isEqualTo("testProject");
-        assertThat(project.getMetrics().getCritical()).isEqualTo(1);
-//        assertThat(metaComponent.getNamespace()).isEqualTo("foo");
-//        assertThat(metaComponent.getName()).isEqualTo("bar");
-//        assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
-//        assertThat(metaComponent.getPublished()).isEqualTo(metaModel.getPublishedTimestamp());
-//        assertThat(metaComponent.getLastCheck()).isAfterOrEqualTo(testStartTime);
-
+        return projectMetrics;
     }
 
 }

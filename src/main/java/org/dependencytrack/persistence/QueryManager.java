@@ -1279,8 +1279,4 @@ public class QueryManager extends AlpineQueryManager {
         pm.deletePersistent(team);
         pm.currentTransaction().commit();
     }
-
-    public PaginatedResult getObjectByUuid(Class<Project> projectClass, UUID uuid, Project.FetchGroup metricsUpdate) {
-
-    }
 }
