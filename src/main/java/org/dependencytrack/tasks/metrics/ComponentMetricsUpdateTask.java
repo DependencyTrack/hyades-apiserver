@@ -67,14 +67,14 @@ public class ComponentMetricsUpdateTask implements Subscriber {
         }
     }
 
-    public static Counters updateMetrics(final UUID uuid) throws Exception {
+    public static Component updateMetrics(final UUID uuid) throws Exception {
         LOGGER.debug("Executing metrics update for component " + uuid);
         final var counters = new Counters();
-
+        final Component component;
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
-            final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
+            component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
             if (component == null) {
                 throw new NoSuchElementException("Component " + uuid + " does not exist");
             }
@@ -166,7 +166,7 @@ public class ComponentMetricsUpdateTask implements Subscriber {
 
         LOGGER.debug("Completed metrics update for component " + uuid + " in " +
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
-        return counters;
+        return component;
     }
 
     public static DependencyMetrics getComponentMetrics(final UUID uuid) throws Exception {

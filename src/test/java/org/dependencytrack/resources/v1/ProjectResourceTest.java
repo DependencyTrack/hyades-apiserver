@@ -38,7 +38,6 @@ import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -51,9 +50,9 @@ public class ProjectResourceTest extends ResourceTest {
     @Override
     protected DeploymentContext configureDeployment() {
         return ServletDeploymentContext.forServlet(new ServletContainer(
-                new ResourceConfig(ProjectResource.class)
-                        .register(ApiFilter.class)
-                        .register(AuthenticationFilter.class)))
+                        new ResourceConfig(ProjectResource.class)
+                                .register(ApiFilter.class)
+                                .register(AuthenticationFilter.class)))
                 .build();
     }
 
@@ -61,7 +60,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsDefaultRequestTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
         }
         Response response = target(V1_PROJECT)
@@ -79,7 +78,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByNameRequestTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
         }
         Response response = target(V1_PROJECT)
@@ -98,7 +97,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByInvalidNameRequestTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
         }
         Response response = target(V1_PROJECT)
@@ -115,10 +114,10 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByNameActiveOnlyRequestTest() {
-        for (int i=0; i<500; i++) {
+        for (int i = 0; i < 500; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
         }
-        for (int i=500; i<1000; i++) {
+        for (int i = 500; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, false, false);
         }
         Response response = target(V1_PROJECT)
@@ -250,7 +249,7 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createProjectTest(){
+    public void createProjectTest() {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -546,7 +545,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateChildAsParentOfChild() {
-        Project parent = qm.createProject("ABC",null, "1.0", null, null, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         Project child = qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
 
         Project tmpProject = new Project();
@@ -561,7 +560,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateParentToInactiveWithActiveChild() {
-        Project parent = qm.createProject("ABC",null, "1.0", null, null, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
 
         Project tmpProject = new Project();
@@ -575,7 +574,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectParentToSelf() {
-        Project parent = qm.createProject("ABC",null, "1.0", null, null, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
 
         Project tmpProject = new Project();
         tmpProject.setName(parent.getName());
@@ -589,7 +588,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithoutDescendantsOfTest() {
-        Project grandParent = qm.createProject("ABC",null, "1.0", null, null, null, true, false);
+        Project grandParent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         Project parent = qm.createProject("DEF", null, "1.0", null, grandParent, null, true, false);
         Project child = qm.createProject("GHI", null, "1.0", null, parent, null, true, false);
         qm.createProject("JKL", null, "1.0", null, child, null, true, false);

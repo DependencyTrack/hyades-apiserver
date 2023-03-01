@@ -419,9 +419,9 @@ public class ComponentResource extends AlpineResource {
                 if (! qm.hasAccess(super.getPrincipal(), component.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
+                new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
                 qm.recursivelyDelete(component, false);
                 qm.commitSearchIndex(Component.class);
-                new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

@@ -46,9 +46,9 @@ public class ComponentResourceTest extends ResourceTest {
     @Override
     protected DeploymentContext configureDeployment() {
         return ServletDeploymentContext.forServlet(new ServletContainer(
-                new ResourceConfig(ComponentResource.class)
-                        .register(ApiFilter.class)
-                        .register(AuthenticationFilter.class)))
+                        new ResourceConfig(ComponentResource.class)
+                                .register(ApiFilter.class)
+                                .register(AuthenticationFilter.class)))
                 .build();
     }
 

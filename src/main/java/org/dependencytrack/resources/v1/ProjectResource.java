@@ -34,6 +34,7 @@ import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
@@ -444,8 +445,8 @@ public class ProjectResource extends AlpineResource {
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
+                    Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid()));
                     qm.recursivelyDelete(project, true);
-                    ProjectMetricsUpdateTask.deleteComponents(project.getUuid());
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
