@@ -79,9 +79,6 @@ class KafkaStreamsTopologyFactory {
                         .with(Serdes.UUID(), scanResultSerde)
                         .withName("vuln-scan-result-by-component-uuid"))
                 .process(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
-        // TODO: Kick off policy evaluation when vulnerability analysis completed,
-        // as some policies may check for things like severities etc.
-
         // Count the processed vulnerability scanner results with status COMPLETE that have been emitted for the same scan token.
         final KTable<String, Long> completedProcessedVulnScanResultsTable = processedVulnScanResulStream
                 .selectKey((scanKey, scanResult) -> scanKey.token(),
