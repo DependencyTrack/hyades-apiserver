@@ -423,6 +423,11 @@
             <version>${lib.testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config-core</artifactId>
+            <version>2.13.1</version>
+        </dependency>
     </dependencies>
 
     <build>

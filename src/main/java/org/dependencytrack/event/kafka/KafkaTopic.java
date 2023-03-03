@@ -1,5 +1,8 @@
 package org.dependencytrack.event.kafka;
 
+import io.smallrye.config.SmallRyeConfig;
+import org.eclipse.microprofile.config.ConfigProvider;
+
 public enum KafkaTopic {
 
     NOTIFICATION_ANALYZER("dtrack.notification.analyzer"),
@@ -33,7 +36,12 @@ public enum KafkaTopic {
     }
 
     public String getName() {
-        return name;
+        var prefix = "";
+        SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
+        var prefixConfig = config.getConfigValue("api.topic.prefix");
+        if (prefixConfig.getValue() != null)
+            prefix = prefixConfig.getValue();
+        return prefix + name;
     }
 
 
