@@ -10,9 +10,13 @@ import org.apache.kafka.common.serialization.Serializer;
 public class JacksonSerializer<T> implements Serializer<T> {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
     @Override
     public byte[] serialize(final String topic, final T data) {
         try {
+            if (data == null) {
+                return null;
+            }
             return objectMapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
             throw new SerializationException(e);

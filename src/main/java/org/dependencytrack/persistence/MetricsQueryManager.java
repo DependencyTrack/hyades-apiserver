@@ -37,6 +37,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Constructs a new QueryManager.
+     *
      * @param pm a PersistenceManager object
      */
     MetricsQueryManager(final PersistenceManager pm) {
@@ -45,7 +46,8 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Constructs a new QueryManager.
-     * @param pm a PersistenceManager object
+     *
+     * @param pm      a PersistenceManager object
      * @param request an AlpineRequest object
      */
     MetricsQueryManager(final PersistenceManager pm, final AlpineRequest request) {
@@ -54,6 +56,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves the current VulnerabilityMetrics
+     *
      * @return a VulnerabilityMetrics object
      */
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
@@ -64,6 +67,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves the most recent PortfolioMetrics.
+     *
      * @return a PortfolioMetrics object
      */
     public PortfolioMetrics getMostRecentPortfolioMetrics() {
@@ -75,6 +79,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves PortfolioMetrics in descending order starting with the most recent.
+     *
      * @return a PaginatedResult object
      */
     public PaginatedResult getPortfolioMetrics() {
@@ -85,17 +90,19 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves PortfolioMetrics in ascending order starting with the oldest since the date specified.
+     *
      * @return a List of metrics
      */
     @SuppressWarnings("unchecked")
     public List<PortfolioMetrics> getPortfolioMetricsSince(Date since) {
         final Query<PortfolioMetrics> query = pm.newQuery(PortfolioMetrics.class, "lastOccurrence >= :since");
         query.setOrdering("lastOccurrence asc");
-        return (List<PortfolioMetrics>)query.execute(since);
+        return (List<PortfolioMetrics>) query.execute(since);
     }
 
     /**
      * Retrieves the most recent ProjectMetrics.
+     *
      * @param project the Project to retrieve metrics for
      * @return a ProjectMetrics object
      */
@@ -108,6 +115,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves ProjectMetrics in descending order starting with the most recent.
+     *
      * @param project the Project to retrieve metrics for
      * @return a PaginatedResult object
      */
@@ -119,17 +127,19 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves ProjectMetrics in ascending order starting with the oldest since the date specified.
+     *
      * @return a List of metrics
      */
     @SuppressWarnings("unchecked")
     public List<ProjectMetrics> getProjectMetricsSince(Project project, Date since) {
         final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project && lastOccurrence >= :since");
         query.setOrdering("lastOccurrence asc");
-        return (List<ProjectMetrics>)query.execute(project, since);
+        return (List<ProjectMetrics>) query.execute(project, since);
     }
 
     /**
      * Retrieves the most recent DependencyMetrics.
+     *
      * @param component the Component to retrieve metrics for
      * @return a DependencyMetrics object
      */
@@ -138,10 +148,28 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
         query.setOrdering("lastOccurrence desc");
         query.setRange(0, 1);
         return singleResult(query.execute(component));
+
+    }
+
+    /**
+     * Retrieves the most recent DependencyMetrics.
+     *
+     * @param component   the Component to retrieve metrics for
+     * @param fetchGroups to set the fetch groups neeeded for the query for
+     * @return a DependencyMetrics object
+     */
+    public DependencyMetrics getMostRecentDependencyMetrics(Component component, final List<String> fetchGroups) {
+        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
+        query.setOrdering("lastOccurrence desc");
+        query.setRange(0, 1);
+        query.getFetchPlan().setGroups(fetchGroups);
+        return singleResult(query.execute(component));
+
     }
 
     /**
      * Retrieves DependencyMetrics in descending order starting with the most recent.
+     *
      * @param component the Component to retrieve metrics for
      * @return a PaginatedResult object
      */
@@ -153,13 +181,14 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Retrieves DependencyMetrics in ascending order starting with the oldest since the date specified.
+     *
      * @return a List of metrics
      */
     @SuppressWarnings("unchecked")
     public List<DependencyMetrics> getDependencyMetricsSince(Component component, Date since) {
         final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component && lastOccurrence >= :since");
         query.setOrdering("lastOccurrence asc");
-        return (List<DependencyMetrics>)query.execute(component, since);
+        return (List<DependencyMetrics>) query.execute(component, since);
     }
 
     /**
@@ -190,6 +219,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Deleted all metrics associated for the specified Project.
+     *
      * @param project the Project to delete metrics for
      */
     void deleteMetrics(Project project) {
@@ -202,6 +232,7 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Deleted all metrics associated for the specified Component.
+     *
      * @param component the Component to delete metrics for
      */
     void deleteMetrics(Component component) {

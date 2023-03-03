@@ -83,13 +83,17 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
                     final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
+                    assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-c");
                     assertThat(eventMetrics.getSuppressed()).isEqualTo(1);
                 },
                 record -> {
                     final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
+                    assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-b");
                     assertThat(eventMetrics.getHigh()).isEqualTo(1);
                     assertThat(eventMetrics.getFindingsAudited()).isEqualTo(1);
                     assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);
@@ -100,6 +104,8 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
                 },
                 record -> {
                     final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
+                    assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-a");
                     assertThat(eventMetrics.getHigh()).isEqualTo(1);
                     assertThat(eventMetrics.getFindingsUnaudited()).isEqualTo(1);
                     assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);

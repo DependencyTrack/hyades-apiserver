@@ -27,10 +27,10 @@ public enum KafkaTopic {
 
     NEW_VULNERABILITY("dtrack.vulnerability"),
 
-    COMPONENT_METRICS("dtrack.component.metrics"),
-    PROJECT_METRICS_RESULT("dtrack.project.metrics"),
+    COMPONENT_METRICS("dtrack.metrics.component"),
+    PROJECT_METRICS_RESULT("dtrack.metrics.project"),
 
-    PORTFOLIO_METRICS_RESULT("dtrack.portfolio.metrics");
+    PORTFOLIO_METRICS_RESULT("dtrack.metrics.portfolio");
     private final String name;
 
     KafkaTopic(final String name) {
