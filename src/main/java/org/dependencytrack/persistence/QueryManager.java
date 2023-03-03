@@ -72,9 +72,11 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.Publisher;
+import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -1304,4 +1306,95 @@ public class QueryManager extends AlpineQueryManager {
         pm.deletePersistent(team);
         pm.currentTransaction().commit();
     }
+
+    /**
+     * Create a new {@link VulnerabilityScan} record.
+     * <p>
+     * This method expects that access to the {@link VulnerabilityScan} table is serialized
+     * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
+     * locking to be used.
+     *
+     * @param scanToken       The token that uniquely identifies the scan for clients
+     * @param expectedResults Number of expected {@link ScanStatus#SCAN_STATUS_COMPLETE} events for this scan
+     * @return The created {@link VulnerabilityScan}
+     */
+    public VulnerabilityScan createVulnerabilityScan(final String scanToken, final int expectedResults) {
+        final Transaction trx = pm.currentTransaction();
+        trx.setOptimistic(true);
+        try {
+            trx.begin();
+            final var scan = new VulnerabilityScan();
+            scan.setToken(scanToken);
+            scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
+            final var startDate = new Date();
+            scan.setStartedAt(startDate);
+            scan.setUpdatedAt(startDate);
+            scan.setExpectedResults(expectedResults);
+            pm.makePersistent(scan);
+            trx.commit();
+            return scan;
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
+    /**
+     * Fetch a {@link VulnerabilityScan} by its token.
+     *
+     * @param token The token that uniquely identifies the scan for clients
+     * @return A {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
+     */
+    public VulnerabilityScan getVulnerabilityScan(final String token) {
+        final Transaction trx = pm.currentTransaction();
+        trx.setRollbackOnly(); // We won't commit anything
+        try {
+            trx.begin();
+            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
+            scanQuery.setFilter("token == :token");
+            scanQuery.setParameters(token);
+            return scanQuery.executeUnique();
+        } finally {
+            trx.rollback();
+        }
+    }
+
+    /**
+     * Record the successful receipt of a {@link ScanStatus#SCAN_STATUS_COMPLETE} event for a given {@link VulnerabilityScan}.
+     * <p>
+     * This method expects that access to the {@link VulnerabilityScan} table is serialized
+     * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
+     * locking to be used.
+     *
+     * @param scanToken The token that uniquely identifies the scan for clients
+     * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
+     */
+    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken) {
+        final Transaction trx = pm.currentTransaction();
+        trx.setOptimistic(true);
+        try {
+            trx.begin();
+            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
+            scanQuery.setFilter("token == :token");
+            scanQuery.setParameters(scanToken);
+            final VulnerabilityScan scan = scanQuery.executeUnique();
+            if (scan == null) {
+                return null;
+            }
+            final int received = scan.getReceivedResults() + 1;
+            scan.setReceivedResults(received);
+            scan.setStatus(scan.getExpectedResults() - received == 0
+                    ? VulnerabilityScan.Status.COMPLETED
+                    : VulnerabilityScan.Status.IN_PROGRESS);
+            scan.setUpdatedAt(new Date());
+            trx.commit();
+            return scan;
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
 }

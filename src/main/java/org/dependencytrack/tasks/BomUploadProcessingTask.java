@@ -48,7 +48,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -133,7 +132,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Date date = new Date();
                 final Bom bom = qm.createBom(project, date, bomFormat, bomSpecVersion, bomVersion, serialNumnber, event.getChainIdentifier());
                 for (final Component component: components) {
-                    processComponent(qm, component, flattenedComponents, newComponents, event.getChainIdentifier());
+                    processComponent(qm, component, flattenedComponents, newComponents);
                 }
                 LOGGER.info("Identified " + newComponents.size() + " new components");
                 for (final ServiceComponent service: services) {
@@ -154,6 +153,11 @@ public class BomUploadProcessingTask implements Subscriber {
                 // analysis has completed. If not chained, synchronous publishing mode will return immediately upon
                 // return from this method, resulting in inaccurate findings being returned in the response (since
                 // the vulnerability analysis hasn't taken place yet).
+                qm.createVulnerabilityScan(event.getChainIdentifier().toString(), flattenedComponents.size());
+                for (final Component component : flattenedComponents) {
+                    kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(event.getChainIdentifier(),
+                            component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                }
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
                 //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
@@ -172,8 +176,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private void processComponent(final QueryManager qm, Component component,
                                   final List<Component> flattenedComponents,
-                                  final List<Component> newComponents,
-                                  final UUID token) {
+                                  final List<Component> newComponents) {
         final boolean isNew = component.getUuid() == null;
         component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
         component = qm.createComponent(component, false);
@@ -185,10 +188,9 @@ public class BomUploadProcessingTask implements Subscriber {
             newComponents.add(qm.detach(Component.class, component.getId()));
         }
         kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
-        kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(token, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
         if (component.getChildren() != null) {
             for (final Component child : component.getChildren()) {
-                processComponent(qm, child, flattenedComponents, newComponents, token);
+                processComponent(qm, child, flattenedComponents, newComponents);
             }
         }
     }

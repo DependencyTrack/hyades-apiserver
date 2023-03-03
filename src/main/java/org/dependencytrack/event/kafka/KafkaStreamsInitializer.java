@@ -60,14 +60,6 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         }
     }
 
-    public static KafkaStreams getStreamsInstance() {
-        if (STREAMS == null) {
-            throw new IllegalStateException("Kafka Streams has not been initialized yet");
-        }
-
-        return STREAMS;
-    }
-
     static Properties getDefaultProperties() {
         final var properties = new Properties();
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));

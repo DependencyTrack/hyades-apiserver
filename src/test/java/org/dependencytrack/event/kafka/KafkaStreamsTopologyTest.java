@@ -4,15 +4,13 @@ import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.UUIDSerializer;
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.MetaModel;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.hyades.proto.vuln.v1.Source;
 import org.hyades.proto.vulnanalysis.v1.Component;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
@@ -20,9 +18,6 @@ import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 import org.hyades.proto.vulnanalysis.v1.Scanner;
-import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
-import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -141,6 +136,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
     public void vulnScanCompletionTest() throws Exception {
         final var scanToken = UUID.randomUUID().toString();
 
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(scanToken, 500);
+
         final var componentUuids = new ArrayList<UUID>();
         for (int i = 0; i < 500; i++) {
             componentUuids.add(UUID.randomUUID());
@@ -183,23 +180,16 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
         }
 
-        final ReadOnlyKeyValueStore<String, ScanCompletion> statusStore = kafkaStreams.store(StoreQueryParameters
-                .fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION, QueryableStoreTypes.keyValueStore()));
+        assertConditionWithTimeout(() -> {
+            qm.getPersistenceManager().refresh(scan);
+            return scan != null && scan.getReceivedResults() == 500;
+        }, Duration.ofSeconds(15));
 
-        try {
-            assertConditionWithTimeout(() -> {
-                final ScanCompletion completion = statusStore.get(scanToken);
-                return completion != null && completion.getStatus() == ScanCompletionStatus.SCAN_COMPLETION_STATUS_COMPLETE;
-            }, Duration.ofSeconds(5));
-        } catch (AssertionError e) {
-            final ReadOnlyKeyValueStore<String, Long> expectedStore = kafkaStreams.store(StoreQueryParameters
-                    .fromNameAndType(KafkaStateStoreNames.EXPECTED_VULNERABILITY_SCAN_RESULTS, QueryableStoreTypes.keyValueStore()));
-            final ReadOnlyKeyValueStore<String, Long> receivedStore = kafkaStreams.store(StoreQueryParameters
-                    .fromNameAndType(KafkaStateStoreNames.RECEIVED_VULNERABILITY_SCAN_RESULTS, QueryableStoreTypes.keyValueStore()));
-            final Long expected = expectedStore.get(scanToken);
-            final Long received = receivedStore.get(scanToken);
-            Assert.fail("Vulnerability scan was not marked as completed (expected: %d; received: %d)".formatted(expected, received));
-        }
+        assertThat(scan.getToken()).isEqualTo(scanToken);
+        assertThat(scan.getExpectedResults()).isEqualTo(500);
+        assertThat(scan.getReceivedResults()).isEqualTo(500);
+        assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.COMPLETED);
+        assertThat(scan.getUpdatedAt()).isAfter(scan.getStartedAt());
     }
 
 }

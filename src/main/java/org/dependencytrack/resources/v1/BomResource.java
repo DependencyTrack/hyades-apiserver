@@ -31,16 +31,13 @@ import io.swagger.annotations.Authorization;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaStateStoreNames;
-import org.dependencytrack.event.kafka.KafkaStreamsInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -50,8 +47,6 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
-import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -63,22 +58,17 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import static org.apache.kafka.streams.StoreQueryParameters.fromNameAndType;
-import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -301,35 +291,20 @@ public class BomResource extends AlpineResource {
     public Response isTokenBeingProcessed(
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") String uuid) {
-        final KafkaStreams streams = KafkaStreamsInitializer.getStreamsInstance();
-        if (KafkaStreams.State.RUNNING != streams.state()) {
-            LOGGER.warn("Unable to check status of BOM token " + uuid + ", as Kafka Streams is in "
-                    + streams.state() + " state");
-            return Response
-                    .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .header(HttpHeaders.RETRY_AFTER, Instant.now().plusSeconds(5).toEpochMilli())
-                    .build();
-        }
-
-        final ReadOnlyKeyValueStore<String, Long> expectedVulnScanResultsStore = streams
-                .store(fromNameAndType(KafkaStateStoreNames.EXPECTED_VULNERABILITY_SCAN_RESULTS, keyValueStore()));
-        boolean processingVulnAnalysis = Optional.ofNullable(expectedVulnScanResultsStore.get(uuid))
-                .map(expectedResultCount -> expectedResultCount > 0)
-                .orElse(false);
-        if (processingVulnAnalysis) {
-            final ReadOnlyKeyValueStore<String, ScanCompletion> vulnScanCompletionStore = streams
-                    .store(fromNameAndType(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION, keyValueStore()));
-            processingVulnAnalysis = Optional.ofNullable(vulnScanCompletionStore.get(uuid))
-                    .map(ScanCompletion::getStatus)
-                    .map(ScanCompletionStatus.SCAN_COMPLETION_STATUS_PENDING::equals)
-                    .orElse(false);
-        }
-
-        // Some tasks are still processed internally (e.g. policy evaluation)
+        // Check whether any internal tasks are processing events related to the token.
         final boolean processingInternally = Event.isEventBeingProcessed(UUID.fromString(uuid));
 
+        // Check for pending vulnerability scans.
+        final VulnerabilityScan.Status vulnScanStatus;
+        try (final var qm = new QueryManager()) {
+            final VulnerabilityScan vulnScan = qm.getVulnerabilityScan(uuid);
+            vulnScanStatus = Optional.ofNullable(vulnScan)
+                    .map(VulnerabilityScan::getStatus)
+                    .orElse(VulnerabilityScan.Status.UNKNOWN);
+        }
+
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-        response.setProcessing(processingInternally || processingVulnAnalysis);
+        response.setProcessing(processingInternally ||  vulnScanStatus == VulnerabilityScan.Status.IN_PROGRESS);
         return Response.ok(response).build();
     }
 
