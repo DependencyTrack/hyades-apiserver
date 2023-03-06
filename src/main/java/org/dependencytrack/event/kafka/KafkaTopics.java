@@ -1,11 +1,13 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.Config;
 import alpine.notification.Notification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.cyclonedx.model.Bom;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
@@ -75,6 +77,12 @@ public final class KafkaTopics {
     }
 
     public record Topic<K, V>(String name, Serde<K> keySerde, Serde<V> valueSerde) {
+
+        @Override
+        public String name() {
+            return Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX) + name;
+        }
+
     }
 
 }
