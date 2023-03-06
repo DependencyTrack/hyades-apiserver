@@ -1,7 +1,7 @@
 package org.dependencytrack.event.kafka;
 
-import io.smallrye.config.SmallRyeConfig;
-import org.eclipse.microprofile.config.ConfigProvider;
+import alpine.Config;
+import org.dependencytrack.common.ConfigKey;
 
 public enum KafkaTopic {
 
@@ -36,12 +36,7 @@ public enum KafkaTopic {
     }
 
     public String getName() {
-        var prefix = "";
-        SmallRyeConfig config = ConfigProvider.getConfig().unwrap(SmallRyeConfig.class);
-        var prefixConfig = config.getConfigValue("api.topic.prefix");
-        if (prefixConfig.getValue() != null)
-            prefix = prefixConfig.getValue();
-        return prefix + name;
+        return Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX) + name;
     }
 
 
