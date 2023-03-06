@@ -51,7 +51,7 @@ class KafkaStreamsTopologyFactory {
         // Count the components submitted for vulnerability analysis under the same scan token,
         // and persist this number in a KTable.
         final KTable<String, Long> expectedVulnScanResultsTable = vulnScanCommandStream
-                .selectKey((scanKey, component) -> scanKey.getCorrelationId(),
+                .selectKey((scanKey, component) -> scanKey.getScanToken(),
                         Named.as("re-key_component_to_scan_token"))
                 .groupByKey(Grouped.with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_COMMAND.valueSerde()))
                 .count(Named.as("count_components"), Materialized
@@ -78,7 +78,7 @@ class KafkaStreamsTopologyFactory {
 
         // Count the processed vulnerability scanner results with status COMPLETE that have been emitted for the same scan token.
         final KTable<String, Long> completedProcessedVulnScanResultsTable = processedVulnScanResulStream
-                .selectKey((scanKey, scanResult) -> scanKey.getCorrelationId(),
+                .selectKey((scanKey, scanResult) -> scanKey.getScanToken(),
                         Named.as("re-key_vuln_scan_result_to_scan_token"))
                 .groupByKey(Grouped
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())

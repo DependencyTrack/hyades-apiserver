@@ -99,11 +99,11 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
         final var scanToken = UUID.randomUUID();
         final var scanKeyComponentA = ScanKey.newBuilder()
-                .setCorrelationId(scanToken.toString())
+                .setScanToken(scanToken.toString())
                 .setComponentUuid(componentA.getUuid().toString())
                 .build();
         final var scanKeyComponentB = ScanKey.newBuilder()
-                .setCorrelationId(scanToken.toString())
+                .setScanToken(scanToken.toString())
                 .setComponentUuid(componentB.getUuid().toString())
                 .build();
         final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
@@ -150,7 +150,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
             kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_COMMAND.name(), List.of(
                             new KeyValue<>(
                                     ScanKey.newBuilder()
-                                            .setCorrelationId(scanToken)
+                                            .setScanToken(scanToken)
                                             .setComponentUuid(uuid.toString())
                                             .build(),
                                     ScanCommand.newBuilder()
@@ -166,7 +166,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
         for (final UUID uuid : componentUuids) {
             final ScanKey scanKey = ScanKey.newBuilder()
-                    .setCorrelationId(scanToken)
+                    .setScanToken(scanToken)
                     .setComponentUuid(uuid.toString())
                     .build();
 

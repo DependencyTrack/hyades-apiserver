@@ -71,7 +71,7 @@ public class KafkaEventDispatcher {
             return dispatchInternal(
                     KafkaTopics.VULN_ANALYSIS_COMMAND,
                     ScanKey.newBuilder()
-                            .setCorrelationId(vaEvent.token().toString())
+                            .setScanToken(vaEvent.token().toString())
                             .setComponentUuid(vaEvent.component().getUuid().toString())
                             .build(),
                     ScanCommand.newBuilder()
