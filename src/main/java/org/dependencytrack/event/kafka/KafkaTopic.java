@@ -1,5 +1,8 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.Config;
+import org.dependencytrack.common.ConfigKey;
+
 public enum KafkaTopic {
 
     NOTIFICATION_ANALYZER("dtrack.notification.analyzer"),
@@ -33,7 +36,7 @@ public enum KafkaTopic {
     }
 
     public String getName() {
-        return name;
+        return Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX) + name;
     }
 
 
