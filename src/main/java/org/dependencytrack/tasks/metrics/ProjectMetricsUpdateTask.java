@@ -82,7 +82,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
     }
 
     public static void deleteComponents(final UUID uuid) throws Exception {
-        LOGGER.info("Executing metrics update for project " + uuid);
+        LOGGER.info("Deleting components for project " + uuid);
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
@@ -98,7 +98,6 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 for (final Component component : components) {
                     new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
                 }
-
                 LOGGER.debug("Fetching next components page for project " + uuid);
                 final long lastId = components.get(components.size() - 1).getId();
                 components = fetchNextComponentsPage(pm, project, lastId);

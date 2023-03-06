@@ -12,7 +12,6 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
 import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerializer;

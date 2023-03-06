@@ -124,15 +124,15 @@ class KafkaStreamsTopologyFactory {
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         streamsBuilder
-                .stream(KafkaTopic.PROJECT_METRICS_RESULT.getName(),
+                .stream(KafkaTopic.PROJECT_METRICS.getName(),
                         Consumed.with(Serdes.String(), new JacksonSerde<>(ProjectMetrics.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PROJECT_METRICS_RESULT)))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PROJECT_METRICS)))
                 .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
 
         streamsBuilder
-                .stream(KafkaTopic.PORTFOLIO_METRICS_RESULT.getName(),
+                .stream(KafkaTopic.PORTFOLIO_METRICS.getName(),
                         Consumed.with(Serdes.String(), new JacksonSerde<>(PortfolioMetrics.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PORTFOLIO_METRICS_RESULT)))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PORTFOLIO_METRICS)))
                 .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
 
         return streamsBuilder.build(streamsProperties);

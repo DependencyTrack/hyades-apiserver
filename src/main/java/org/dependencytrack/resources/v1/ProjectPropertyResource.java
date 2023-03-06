@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -54,8 +53,6 @@ import java.util.List;
 @Path("/v1/project/{uuid}/property")
 @Api(value = "projectProperty", authorizations = @Authorization(value = "X-Api-Key"))
 public class ProjectPropertyResource extends AbstractConfigPropertyResource {
-
-    private static final Logger LOGGER = Logger.getLogger(ProjectPropertyResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
