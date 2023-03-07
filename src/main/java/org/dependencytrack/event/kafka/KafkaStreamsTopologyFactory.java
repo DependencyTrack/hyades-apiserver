@@ -19,10 +19,6 @@ import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
-import org.dependencytrack.event.kafka.serialization.JacksonSerde;
-import org.dependencytrack.model.MetaModel;
-import org.dependencytrack.model.PortfolioMetrics;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -134,13 +130,13 @@ class KafkaStreamsTopologyFactory {
         streamsBuilder
                 .stream(KafkaTopics.PROJECT_METRICS.name(),
                         Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS)))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS.name())))
                 .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
 
         streamsBuilder
                 .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
                         Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS)))
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS.name())))
                 .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
 
         return streamsBuilder.build(streamsProperties);
