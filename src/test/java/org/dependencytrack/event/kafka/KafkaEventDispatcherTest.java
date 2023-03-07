@@ -4,12 +4,11 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationGroup;
@@ -24,11 +23,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class KafkaEventDispatcherTest {
 
-    private MockProducer<String, Object> mockProducer;
+    private MockProducer<byte[], byte[]> mockProducer;
 
     @Before
     public void setUp() {
-        mockProducer = new MockProducer<>(true, new StringSerializer(), new JacksonSerializer<>());
+        mockProducer = new MockProducer<>(true, new ByteArraySerializer(), new ByteArraySerializer());
     }
 
     @Test
@@ -41,7 +40,7 @@ public class KafkaEventDispatcherTest {
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         final RecordMetadata recordMeta = dispatcher.dispatch(event);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
 
@@ -50,13 +49,13 @@ public class KafkaEventDispatcherTest {
         final var eventOsv = new OsvMirrorEvent("npm");
         var dispatcher = new KafkaEventDispatcher(mockProducer);
         RecordMetadata recordMeta = dispatcher.dispatch(eventOsv);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopic.MIRROR_OSV.getName());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_OSV.name());
         assertThat(mockProducer.history()).hasSize(1);
 
         final var eventNvd = new NistMirrorEvent();
         dispatcher = new KafkaEventDispatcher(mockProducer);
         recordMeta = dispatcher.dispatch(eventNvd);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopic.MIRROR_NVD.getName());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_NVD.name());
         assertThat(mockProducer.history()).hasSize(2);
     }
 
@@ -77,7 +76,7 @@ public class KafkaEventDispatcherTest {
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         final RecordMetadata recordMeta = dispatcher.dispatchNotification(notification);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopic.NOTIFICATION_NEW_VULNERABILITY.getName());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
 

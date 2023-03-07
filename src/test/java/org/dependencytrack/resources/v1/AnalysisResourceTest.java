@@ -27,6 +27,7 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -58,6 +59,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 @NotThreadSafe
 public class AnalysisResourceTest extends ResourceTest {
@@ -329,9 +331,9 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getBoolean("isSuppressed")).isTrue();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -379,9 +381,9 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -457,9 +459,9 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -574,9 +576,9 @@ public class AnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -744,9 +746,9 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());

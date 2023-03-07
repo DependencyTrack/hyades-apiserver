@@ -20,7 +20,7 @@ package org.dependencytrack.tasks;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaTopic;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -86,11 +86,11 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomBytes));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopic.NOTIFICATION_PROJECT_CREATED.getName()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopic.NOTIFICATION_BOM_CONSUMED.getName()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopic.REPO_META_ANALYSIS_COMPONENT.getName()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopic.NOTIFICATION_BOM_PROCESSED.getName())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
         );
 
         qm.getPersistenceManager().refresh(project);
