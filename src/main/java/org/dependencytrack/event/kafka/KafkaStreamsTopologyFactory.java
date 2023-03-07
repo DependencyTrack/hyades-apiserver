@@ -14,24 +14,25 @@ import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.cyclonedx.model.Bom;
-import org.dependencytrack.event.kafka.dto.Component;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanCompletionStatus;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanKey;
-import org.dependencytrack.event.kafka.dto.VulnerabilityScanResult;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
-import org.dependencytrack.event.kafka.serialization.VulnerabilityScanCompletionStatusSerde;
-import org.dependencytrack.event.kafka.serialization.VulnerabilityScanKeySerde;
 import org.dependencytrack.model.MetaModel;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
+import org.hyades.proto.vulnanalysis.v1.ScanCommand;
+import org.hyades.proto.vulnanalysis.v1.ScanKey;
+import org.hyades.proto.vulnanalysis.v1.ScanResult;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletion;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanCompletionStatus;
+import org.hyades.proto.vulnanalysis.v1.internal.ScanResultsExpectedReceived;
 
 import java.util.Properties;
+import java.util.UUID;
 
 class KafkaStreamsTopologyFactory {
 
@@ -41,25 +42,24 @@ class KafkaStreamsTopologyFactory {
         final var streamsProperties = new Properties();
         streamsProperties.put(StreamsConfig.TOPOLOGY_OPTIMIZATION_CONFIG, StreamsConfig.OPTIMIZE);
 
-        final var componentSerde = new JacksonSerde<>(Component.class);
-        final var scanKeySerde = new VulnerabilityScanKeySerde();
-        final var scanResultSerde = new JacksonSerde<>(VulnerabilityScanResult.class);
-        final KStream<VulnerabilityScanKey, Component> vulnScanComponentStream = streamsBuilder
-                .stream(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName(), Consumed
-                        .with(scanKeySerde, componentSerde)
-                        .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName())));
+        final var vulnScanCompletionSerde = new KafkaProtobufSerde<>(ScanCompletion.parser());
 
-        final KStream<VulnerabilityScanKey, VulnerabilityScanResult> vulnScanResultStream = streamsBuilder
-                .stream(KafkaTopic.VULN_ANALYSIS_RESULT.getName(), Consumed
-                        .with(scanKeySerde, scanResultSerde)
-                        .withName("consume_from_%s_topic".formatted(KafkaTopic.VULN_ANALYSIS_RESULT)));
+        final KStream<ScanKey, ScanCommand> vulnScanCommandStream = streamsBuilder
+                .stream(KafkaTopics.VULN_ANALYSIS_COMMAND.name(), Consumed
+                        .with(KafkaTopics.VULN_ANALYSIS_COMMAND.keySerde(), KafkaTopics.VULN_ANALYSIS_COMMAND.valueSerde())
+                        .withName("consume_from_%s_topic".formatted(KafkaTopics.VULN_ANALYSIS_COMMAND.name())));
+
+        final KStream<ScanKey, ScanResult> vulnScanResultStream = streamsBuilder
+                .stream(KafkaTopics.VULN_ANALYSIS_RESULT.name(), Consumed
+                        .with(KafkaTopics.VULN_ANALYSIS_RESULT.keySerde(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
+                        .withName("consume_from_%s_topic".formatted(KafkaTopics.VULN_ANALYSIS_RESULT.name())));
 
         // Count the components submitted for vulnerability analysis under the same scan token,
         // and persist this number in a KTable.
-        final KTable<String, Long> expectedVulnScanResultsTable = vulnScanComponentStream
-                .selectKey((scanKey, component) -> scanKey.token(),
+        final KTable<String, Long> expectedVulnScanResultsTable = vulnScanCommandStream
+                .selectKey((scanKey, component) -> scanKey.getScanToken(),
                         Named.as("re-key_component_to_scan_token"))
-                .groupByKey(Grouped.with(Serdes.String(), componentSerde))
+                .groupByKey(Grouped.with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_COMMAND.valueSerde()))
                 .count(Named.as("count_components"), Materialized
                         .<String, Long, KeyValueStore<Bytes, byte[]>>as(KafkaStateStoreNames.EXPECTED_VULNERABILITY_SCAN_RESULTS)
                         .withKeySerde(Serdes.String())
@@ -72,19 +72,19 @@ class KafkaStreamsTopologyFactory {
         //
         // Results with status COMPLETE are re-keyed back to scan keys
         // and forwarded, all other results are dropped after successful processing.
-        final KStream<VulnerabilityScanKey, VulnerabilityScanResult> processedVulnScanResulStream = vulnScanResultStream
-                .selectKey((scanKey, scanResult) -> scanKey.component(),
+        final KStream<ScanKey, ScanResult> processedVulnScanResulStream = vulnScanResultStream
+                .selectKey((scanKey, scanResult) -> UUID.fromString(scanKey.getComponentUuid()),
                         Named.as("re-key_vuln_scan_result_to_component_uuid"))
                 .repartition(Repartitioned
-                        .with(Serdes.UUID(), scanResultSerde)
+                        .with(Serdes.UUID(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("vuln-scan-result-by-component-uuid"))
                 .process(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
         // Count the processed vulnerability scanner results with status COMPLETE that have been emitted for the same scan token.
         final KTable<String, Long> completedProcessedVulnScanResultsTable = processedVulnScanResulStream
-                .selectKey((scanKey, scanResult) -> scanKey.token(),
+                .selectKey((scanKey, scanResult) -> scanKey.getScanToken(),
                         Named.as("re-key_vuln_scan_result_to_scan_token"))
                 .groupByKey(Grouped
-                        .with(Serdes.String(), scanResultSerde)
+                        .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("completed-vuln-scans-by-scan-token"))
                 .count(Named.as("count_completed_vuln_scans"), Materialized
                         .<String, Long, KeyValueStore<Bytes, byte[]>>as(KafkaStateStoreNames.RECEIVED_VULNERABILITY_SCAN_RESULTS)
@@ -98,41 +98,49 @@ class KafkaStreamsTopologyFactory {
         // the scan overall can be considered to be completed.
         completedProcessedVulnScanResultsTable
                 .toStream(Named.as("stream_received_vuln_scan_result_count"))
-                .join(expectedVulnScanResultsTable, (received, expected) -> expected - received, Joined
-                        .with(Serdes.String(), Serdes.Long(), Serdes.Long())
-                        .withName("join_result_counts"))
-                .mapValues(count -> count == 0
-                                ? VulnerabilityScanCompletionStatus.COMPLETE
-                                : VulnerabilityScanCompletionStatus.PENDING,
+                .join(expectedVulnScanResultsTable,
+                        (received, expected) -> ScanResultsExpectedReceived.newBuilder()
+                                .setReceived(received)
+                                .setExpected(expected)
+                                .build(),
+                        Joined.with(Serdes.String(), Serdes.Long(), Serdes.Long())
+                                .withName("join_result_counts"))
+                .mapValues(expectedReceived -> ScanCompletion.newBuilder()
+                                .setResults(expectedReceived)
+                                .setStatus(expectedReceived.getExpected() - expectedReceived.getReceived() == 0
+                                        ? ScanCompletionStatus.SCAN_COMPLETION_STATUS_COMPLETE
+                                        : ScanCompletionStatus.SCAN_COMPLETION_STATUS_PENDING
+                                )
+                                .build(),
                         Named.as("map_to_completion_status"))
                 .toTable(Named.as("materialize_vuln_scan_completion_status"), Materialized
-                        .<String, VulnerabilityScanCompletionStatus, KeyValueStore<Bytes, byte[]>>as(KafkaStateStoreNames.VULNERABILITY_SCAN_STATUS)
+                        .<String, ScanCompletion, KeyValueStore<Bytes, byte[]>>as(KafkaStateStoreNames.VULNERABILITY_SCAN_COMPLETION)
                         .withKeySerde(Serdes.String())
-                        .withValueSerde(new VulnerabilityScanCompletionStatusSerde())
+                        .withValueSerde(vulnScanCompletionSerde)
                         .withStoreType(Materialized.StoreType.ROCKS_DB));
 
         streamsBuilder
-                .stream(KafkaTopic.REPO_META_ANALYSIS_RESULT.getName(),
-                        Consumed.with(Serdes.UUID(), new JacksonSerde<>(MetaModel.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.REPO_META_ANALYSIS_RESULT)))
+                .stream(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(),
+                        Consumed.with(KafkaTopics.REPO_META_ANALYSIS_RESULT.keySerde(), KafkaTopics.REPO_META_ANALYSIS_RESULT.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())))
                 .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
 
         streamsBuilder
-                .stream(KafkaTopic.NEW_VULNERABILITY.getName(),
-                        Consumed.with(Serdes.String(), new JacksonSerde<>(Bom.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.NEW_VULNERABILITY)))
+                .stream(KafkaTopics.NEW_VULNERABILITY.name(),
+                        Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         streamsBuilder
-                .stream(KafkaTopic.PROJECT_METRICS.getName(),
-                        Consumed.with(Serdes.String(), new JacksonSerde<>(ProjectMetrics.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PROJECT_METRICS)))
+                .stream(KafkaTopics.PROJECT_METRICS.name(),
+                        Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS)))
                 .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
 
         streamsBuilder
-                .stream(KafkaTopic.PORTFOLIO_METRICS.getName(),
-                        Consumed.with(Serdes.String(), new JacksonSerde<>(PortfolioMetrics.class))
-                                .withName("consume_from_%s_topic".formatted(KafkaTopic.PORTFOLIO_METRICS)))
+                .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
+                        Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS)))
                 .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
 
         return streamsBuilder.build(streamsProperties);

@@ -8,10 +8,9 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -22,7 +21,7 @@ import java.util.Properties;
 public class KafkaProducerInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaProducerInitializer.class);
-    private static Producer<String, Object> PRODUCER;
+    private static Producer<byte[], byte[]> PRODUCER;
     private static KafkaClientMetrics PRODUCER_METRICS;
 
     @Override
@@ -57,12 +56,12 @@ public class KafkaProducerInitializer implements ServletContextListener {
         }
     }
 
-    public static Producer<String, Object> getProducer() {
+    public static Producer<byte[], byte[]> getProducer() {
         if (PRODUCER == null && Config.isUnitTestsEnabled()) {
             // Workaround for tests, as we can't use dependency injection in JerseyTest.
             // Analog to how it's done for instantiation of PersistenceManagerFactory:
             // https://github.com/stevespringett/Alpine/blob/alpine-parent-2.2.0/alpine-server/src/main/java/alpine/server/persistence/PersistenceManagerFactory.java#L127-L135
-            PRODUCER = new MockProducer<>(true, new StringSerializer(), new JacksonSerializer<>());
+            PRODUCER = new MockProducer<>(true, new ByteArraySerializer(), new ByteArraySerializer());
         }
 
         return PRODUCER;
@@ -81,12 +80,12 @@ public class KafkaProducerInitializer implements ServletContextListener {
         }
     }
 
-    private static Producer<String, Object> createProducer() {
+    private static Producer<byte[], byte[]> createProducer() {
         final var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
         properties.put(ProducerConfig.CLIENT_ID_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
-        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonSerializer.class.getName());
+        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         return new KafkaProducer<>(properties);

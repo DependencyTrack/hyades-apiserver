@@ -26,6 +26,7 @@ import alpine.server.filters.AuthorizationFilter;
 import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -59,6 +60,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
@@ -217,9 +219,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key;
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -267,9 +269,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(jsonObject.getJsonArray("analysisComments")).isEmpty();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -335,9 +337,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
@@ -443,9 +445,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
                 .doesNotContainKey("commenter"); // Not set when authenticating via API key
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
-        final Notification projectNotification = (Notification) kafkaMockProducer.history().get(0).value();
+        final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
-        final Notification notification = (Notification) kafkaMockProducer.history().get(1).value();
+        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
         assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());

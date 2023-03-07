@@ -95,6 +95,7 @@
         <lib.lucene.version>8.11.2</lib.lucene.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
+        <lib.protobuf-java.version>3.21.12</lib.protobuf-java.version>
         <lib.testcontainers.version>1.17.6</lib.testcontainers.version>
         <lib.unirest.version>3.14.1</lib.unirest.version>
         <lib.vulndb-data-mirror.version>1.0.1</lib.vulndb-data-mirror.version>
@@ -110,8 +111,12 @@
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
         <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
+        <!-- Maven Plugin Versions -->
+        <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
+        <!-- Tool Versions -->
+        <tool.protoc.version>3.21.12</tool.protoc.version>
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
@@ -196,7 +201,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20220924</version>
+            <version>20230227</version>
         </dependency>
         <!-- Package URL -->
         <dependency>
@@ -249,6 +254,17 @@
             <groupId>io.pebbletemplates</groupId>
             <artifactId>pebble</artifactId>
             <version>${lib.pebble.version}</version>
+        </dependency>
+        <!-- Protobuf -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${lib.protobuf-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>${lib.protobuf-java.version}</version>
         </dependency>
         <!-- VulnDB data mirroring and parsing -->
         <dependency>
@@ -448,6 +464,30 @@
         </testResources>
         <plugins>
             <plugin>
+                <groupId>com.github.os72</groupId>
+                <artifactId>protoc-jar-maven-plugin</artifactId>
+                <version>${plugin.protoc-jar.version}</version>
+                <executions>
+                    <execution>
+                        <id>protobuf</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <includeMavenTypes>direct</includeMavenTypes>
+                            <inputDirectories>
+                                <inputDirectory>src/main/proto</inputDirectory>
+                            </inputDirectories>
+                            <includeDirectories>
+                                <includeDirectory>src/main/proto</includeDirectory>
+                            </includeDirectories>
+                            <protocVersion>${tool.protoc.version}</protocVersion>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <executions>
@@ -494,7 +534,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
-                <version>10.0.13</version>
+                <version>11.0.14</version>
                 <configuration>
                     <webApp>
                         <contextPath>/</contextPath>

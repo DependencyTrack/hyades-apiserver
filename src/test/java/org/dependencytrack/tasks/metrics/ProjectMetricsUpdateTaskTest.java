@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -33,6 +34,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
@@ -85,13 +87,13 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
                     assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
                     assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-c");
                     assertThat(eventMetrics.getSuppressed()).isEqualTo(1);
                 },
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
                     assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
                     assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-b");
                     assertThat(eventMetrics.getHigh()).isEqualTo(1);
@@ -103,7 +105,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
 
                 },
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
                     assertThat(eventMetrics.getProject().getName()).isEqualTo("acme-app");
                     assertThat(eventMetrics.getComponent().getName()).isEqualTo("acme-lib-a");
                     assertThat(eventMetrics.getHigh()).isEqualTo(1);
@@ -146,10 +148,10 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);;
                 },
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);;
                     assertThat(eventMetrics.getPolicyViolationsWarn()).isEqualTo(1);
                     assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
                     assertThat(eventMetrics.getPolicyViolationsAudited()).isEqualTo(1);
@@ -158,7 +160,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
 
                 },
                 record -> {
-                    final var eventMetrics = (org.dependencytrack.model.DependencyMetrics) record.value();
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);;
                     assertThat(eventMetrics.getPolicyViolationsFail()).isEqualTo(1);
                     assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
                     assertThat(eventMetrics.getPolicyViolationsUnaudited()).isEqualTo(1);

@@ -32,29 +32,29 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
         kafka = ExternalKafkaCluster.at(container.getBootstrapServers());
 
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.VULN_ANALYSIS_COMPONENT.getName())
+                .withName(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.VULN_ANALYSIS_RESULT.getName())
+                .withName(KafkaTopics.VULN_ANALYSIS_RESULT.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.REPO_META_ANALYSIS_RESULT.getName())
+                .withName(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.NEW_VULNERABILITY.getName())
-                .withNumberOfPartitions(3)
-                .withNumberOfReplicas(1));
-
-        kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.PROJECT_METRICS.getName())
+                .withName(KafkaTopics.NEW_VULNERABILITY.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
 
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopic.PORTFOLIO_METRICS.getName())
+                .withName(KafkaTopics.PROJECT_METRICS.name())
+                .withNumberOfPartitions(3)
+                .withNumberOfReplicas(1));
+
+        kafka.createTopic(TopicConfig
+                .withName(KafkaTopics.PORTFOLIO_METRICS.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
 
