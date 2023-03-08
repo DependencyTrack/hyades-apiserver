@@ -57,6 +57,7 @@ public class PolicyEngine {
         evaluators.add(new VersionPolicyEvaluator());
         evaluators.add(new ComponentHashPolicyEvaluator());
         evaluators.add(new CwePolicyEvaluator());
+        evaluators.add(new VulnerabilityIdPolicyEvaluator());
     }
 
     public List<PolicyViolation> evaluate(final List<Component> components) {
@@ -126,6 +127,7 @@ public class PolicyEngine {
         switch(subject) {
             case CWE:
             case SEVERITY:
+            case VULNERABILITY_ID:
                 return PolicyViolation.Type.SECURITY;
             case COORDINATES:
             case PACKAGE_URL:
