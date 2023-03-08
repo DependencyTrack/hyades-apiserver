@@ -127,13 +127,13 @@ public class PolicyEngine {
         switch(subject) {
             case CWE:
             case SEVERITY:
+            case VULNERABILITY_ID:
                 return PolicyViolation.Type.SECURITY;
             case COORDINATES:
             case PACKAGE_URL:
             case CPE:
             case SWID_TAGID:
             case COMPONENT_HASH:
-            case VULNERABILITY_ID:
             case VERSION:
                 return PolicyViolation.Type.OPERATIONAL;
             case LICENSE:
