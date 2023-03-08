@@ -15,6 +15,8 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
+import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
+import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
@@ -73,9 +75,6 @@ class KafkaStreamsTopologyFactory {
                         .with(Serdes.UUID(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("vuln-scan-result-by-component-uuid"))
                 .process(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
-        // TODO: Kick off policy evaluation when vulnerability analysis completed,
-        // as some policies may check for things like severities etc.
-
         // Count the processed vulnerability scanner results with status COMPLETE that have been emitted for the same scan token.
         final KTable<String, Long> completedProcessedVulnScanResultsTable = processedVulnScanResulStream
                 .selectKey((scanKey, scanResult) -> scanKey.getScanToken(),
@@ -127,6 +126,18 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
+
+        streamsBuilder
+                .stream(KafkaTopics.PROJECT_METRICS.name(),
+                        Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS.name())))
+                .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
+
+        streamsBuilder
+                .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
+                        Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS.name())))
+                .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
 
         return streamsBuilder.build(streamsProperties);
     }

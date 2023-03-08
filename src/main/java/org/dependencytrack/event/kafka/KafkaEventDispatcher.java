@@ -8,6 +8,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.apache.kafka.common.errors.SerializationException;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -84,6 +85,10 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
         } else if (event instanceof final OsvMirrorEvent omEvent) {
             return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
+        } else if (event instanceof final NistMirrorEvent nmEvent) {
+            return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+        } else if (event instanceof final ComponentMetricsUpdateEvent componentMetricsUpdateEvent) {
+            return dispatchInternal(KafkaTopics.COMPONENT_METRICS, componentMetricsUpdateEvent.uuid().toString(), componentMetricsUpdateEvent.dependencyMetrics(), null);
         } else if (event instanceof NistMirrorEvent) {
             return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
         }

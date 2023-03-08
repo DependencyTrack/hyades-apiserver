@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.FetchGroup;
+import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
@@ -38,11 +40,21 @@ import java.util.Date;
  * @since 3.1.0
  */
 @PersistenceCapable
+@FetchGroups({
+        @FetchGroup(name = "METRICS_UPDATE_KAFKA", members = {
+                @Persistent(name = "component"),
+                @Persistent(name = "project")
+        })
+})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Index(name = "DEPENDENCYMETRICS_COMPOSITE_IDX", members = {"project", "component"})
 public class DependencyMetrics implements Serializable {
 
     private static final long serialVersionUID = 5231823328085979791L;
+
+    public enum FetchGroup {
+        METRICS_UPDATE_KAFKA
+    }
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
@@ -116,51 +128,63 @@ public class DependencyMetrics implements Serializable {
     private Integer policyViolationsInfo;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_AUDITED", allowsNull = "true") // New column, must allow nulls on existing databases)
+    @Column(name = "POLICYVIOLATIONS_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing databases)
     private Integer policyViolationsAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing databases)
+    @Column(name = "POLICYVIOLATIONS_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing databases)
     private Integer policyViolationsUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalUnaudited;
 
     @Persistent

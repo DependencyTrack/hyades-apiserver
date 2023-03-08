@@ -32,6 +32,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
@@ -39,6 +40,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.tasks.metrics.ComponentMetricsUpdateTask;
 import org.dependencytrack.util.DateUtil;
 
 import javax.ws.rs.GET;
@@ -375,7 +377,8 @@ public class MetricsResource extends AlpineResource {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
                 if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    Event.dispatch(new ComponentMetricsUpdateEvent(component.getUuid()));
+                    DependencyMetrics latestMetrics = ComponentMetricsUpdateTask.getComponentMetrics(component.getUuid());
+                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), latestMetrics));
                     return Response.ok().build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
@@ -383,6 +386,8 @@ public class MetricsResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

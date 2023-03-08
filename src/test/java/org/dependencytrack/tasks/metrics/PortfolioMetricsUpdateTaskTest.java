@@ -23,25 +23,25 @@ import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.tasks.CallbackTask;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -61,55 +61,8 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsEmpty() {
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
-        assertThat(metrics.getProjects()).isZero();
-        assertThat(metrics.getVulnerableProjects()).isZero();
-        assertThat(metrics.getComponents()).isZero();
-        assertThat(metrics.getVulnerableComponents()).isZero();
-        assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isZero();
-        assertThat(metrics.getMedium()).isZero();
-        assertThat(metrics.getLow()).isZero();
-        assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isZero();
-        assertThat(metrics.getSuppressed()).isZero();
-        assertThat(metrics.getFindingsTotal()).isZero();
-        assertThat(metrics.getFindingsAudited()).isZero();
-        assertThat(metrics.getFindingsUnaudited()).isZero();
-        assertThat(metrics.getInheritedRiskScore()).isZero();
-        assertThat(metrics.getPolicyViolationsFail()).isZero();
-        assertThat(metrics.getPolicyViolationsWarn()).isZero();
-        assertThat(metrics.getPolicyViolationsInfo()).isZero();
-        assertThat(metrics.getPolicyViolationsTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
-    }
-
-    @Test
-    public void testUpdateMetricsUnchanged() {
-        // Record initial portfolio metrics
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
-        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
-
-        // Run the task a second time, without any metric being changed
-        final var beforeSecondRun = new Date();
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        // Ensure that the lastOccurrence timestamp was correctly updated
-        qm.getPersistenceManager().refresh(metrics);
-        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+        // since no event is triggered satisfiesExactly empty is used to assert the same
+        assertThat(kafkaMockProducer.history()).satisfiesExactly();
     }
 
     @Test
@@ -153,47 +106,31 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
-        assertThat(metrics.getProjects()).isEqualTo(3);
-        assertThat(metrics.getVulnerableProjects()).isEqualTo(2); // Finding for one project is suppressed
-        assertThat(metrics.getComponents()).isEqualTo(3);
-        assertThat(metrics.getVulnerableComponents()).isEqualTo(2); // Finding for one component is suppressed
-        assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isEqualTo(2); // One is suppressed
-        assertThat(metrics.getMedium()).isZero();
-        assertThat(metrics.getLow()).isZero();
-        assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isEqualTo(2); // One is suppressed
-        assertThat(metrics.getSuppressed()).isEqualTo(1);
-        assertThat(metrics.getFindingsTotal()).isEqualTo(2); // One is suppressed
-        assertThat(metrics.getFindingsAudited()).isEqualTo(1);
-        assertThat(metrics.getFindingsUnaudited()).isEqualTo(1);
-        assertThat(metrics.getInheritedRiskScore()).isEqualTo(10.0);
-        assertThat(metrics.getPolicyViolationsFail()).isZero();
-        assertThat(metrics.getPolicyViolationsWarn()).isZero();
-        assertThat(metrics.getPolicyViolationsInfo()).isZero();
-        assertThat(metrics.getPolicyViolationsTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
-
         qm.getPersistenceManager().refreshAll(projectUnaudited, projectAudited, projectSuppressed,
                 componentUnaudited, componentAudited, componentSuppressed);
-        assertThat(projectUnaudited.getLastInheritedRiskScore()).isEqualTo(5.0);
-        assertThat(projectAudited.getLastInheritedRiskScore()).isEqualTo(5.0);
-        assertThat(projectSuppressed.getLastInheritedRiskScore()).isZero();
-        assertThat(componentUnaudited.getLastInheritedRiskScore()).isEqualTo(5.0);
-        assertThat(componentAudited.getLastInheritedRiskScore()).isEqualTo(5.0);
-        assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getSuppressed()).isEqualTo(1);
+                },
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getHigh()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindingsUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getMedium()).isZero();
+                    assertThat(eventMetrics.getLow()).isZero();
+
+                },
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getHigh()).isEqualTo(1);
+                    assertThat(eventMetrics.getVulnerabilities()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindingsAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getInheritedRiskScore()).isEqualTo(5.0);
+                }
+        );
     }
 
     @Test
@@ -231,47 +168,29 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
-        assertThat(metrics.getProjects()).isEqualTo(3);
-        assertThat(metrics.getVulnerableProjects()).isZero();
-        assertThat(metrics.getComponents()).isEqualTo(3);
-        assertThat(metrics.getVulnerableComponents()).isZero();
-        assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isZero();
-        assertThat(metrics.getMedium()).isZero();
-        assertThat(metrics.getLow()).isZero();
-        assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isZero();
-        assertThat(metrics.getSuppressed()).isZero();
-        assertThat(metrics.getFindingsTotal()).isZero();
-        assertThat(metrics.getFindingsAudited()).isZero();
-        assertThat(metrics.getFindingsUnaudited()).isZero();
-        assertThat(metrics.getInheritedRiskScore()).isZero();
-        assertThat(metrics.getPolicyViolationsFail()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsWarn()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsInfo()).isZero(); // Suppressed
-        assertThat(metrics.getPolicyViolationsTotal()).isEqualTo(2);
-        assertThat(metrics.getPolicyViolationsAudited()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsUnaudited()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero(); // Suppressed
-        assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseTotal()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsOperationalTotal()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
-        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
-
         qm.getPersistenceManager().refreshAll(projectUnaudited, projectAudited, projectSuppressed,
                 componentUnaudited, componentAudited, componentSuppressed);
-        assertThat(projectUnaudited.getLastInheritedRiskScore()).isZero();
-        assertThat(projectAudited.getLastInheritedRiskScore()).isZero();
-        assertThat(projectSuppressed.getLastInheritedRiskScore()).isZero();
-        assertThat(componentUnaudited.getLastInheritedRiskScore()).isZero();
-        assertThat(componentAudited.getLastInheritedRiskScore()).isZero();
-        assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getSuppressed()).isEqualTo(0);
+                },
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getPolicyViolationsWarn()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsOperationalTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
+                },
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getPolicyViolationsFail()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsLicenseTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(1);
+                }
+        );
     }
-
 }

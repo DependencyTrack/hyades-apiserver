@@ -33,6 +33,7 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
@@ -418,6 +419,7 @@ public class ComponentResource extends AlpineResource {
                 if (! qm.hasAccess(super.getPrincipal(), component.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
+                new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
                 qm.recursivelyDelete(component, false);
                 qm.commitSearchIndex(Component.class);
                 return Response.status(Response.Status.NO_CONTENT).build();

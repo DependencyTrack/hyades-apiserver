@@ -67,13 +67,11 @@ public class ComponentMetricsUpdateTask implements Subscriber {
         }
     }
 
-    static Counters updateMetrics(final UUID uuid) throws Exception {
+    public static void updateMetrics(final UUID uuid) throws Exception {
         LOGGER.debug("Executing metrics update for component " + uuid);
         final var counters = new Counters();
-
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
-
             final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
             if (component == null) {
                 throw new NoSuchElementException("Component " + uuid + " does not exist");
@@ -105,7 +103,6 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                     case UNASSIGNED -> counters.unassigned++;
                 }
             }
-
             counters.findingsTotal = toIntExact(counters.vulnerabilities);
             counters.findingsAudited = toIntExact(getTotalAuditedFindings(pm, component));
             counters.findingsUnaudited = counters.findingsTotal - counters.findingsAudited;
@@ -167,8 +164,18 @@ public class ComponentMetricsUpdateTask implements Subscriber {
 
         LOGGER.debug("Completed metrics update for component " + uuid + " in " +
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
-        return counters;
+
     }
+
+    public static DependencyMetrics getComponentMetrics(final UUID uuid) throws Exception {
+        try (final var qm = new QueryManager()) {
+            updateMetrics(uuid);
+            final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
+            return qm.getMostRecentDependencyMetrics(component, List.of(DependencyMetrics.FetchGroup.METRICS_UPDATE_KAFKA.name()));
+
+        }
+    }
+
 
     @SuppressWarnings("unchecked")
     private static List<Vulnerability> getVulnerabilities(final PersistenceManager pm, final Component component) throws Exception {

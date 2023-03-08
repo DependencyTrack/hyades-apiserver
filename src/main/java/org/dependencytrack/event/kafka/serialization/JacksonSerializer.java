@@ -25,6 +25,9 @@ public class JacksonSerializer<T> implements Serializer<T> {
     @Override
     public byte[] serialize(final String topic, final T data) {
         try {
+            if (data == null) {
+                return null;
+            }
             return objectMapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
             throw new SerializationException(e);

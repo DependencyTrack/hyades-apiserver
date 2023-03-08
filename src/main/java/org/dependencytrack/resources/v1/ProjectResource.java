@@ -39,11 +39,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
-
-import java.security.Principal;
-import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -58,6 +54,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.security.Principal;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * JAX-RS resources for processing projects.
@@ -244,13 +244,13 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                 Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
-                    jsonProject.setParent(parent);
+                jsonProject.setParent(parent);
             }
             Project project = qm.getProject(StringUtils.trimToNull(jsonProject.getName()), StringUtils.trimToNull(jsonProject.getVersion()));
             if (project == null) {
                 try {
                     project = qm.createProject(jsonProject, jsonProject.getTags(), true);
-                } catch (IllegalArgumentException e){
+                } catch (IllegalArgumentException e) {
                     LOGGER.debug(e.getMessage());
                     return Response.status(Response.Status.CONFLICT).entity("An inactive Parent cannot be selected as parent").build();
                 }
@@ -307,7 +307,7 @@ public class ProjectResource extends AlpineResource {
                     }
                     try {
                         project = qm.updateProject(jsonProject, true);
-                    } catch (IllegalArgumentException e){
+                    } catch (IllegalArgumentException e) {
                         LOGGER.debug(e.getMessage());
                         return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
                     }
@@ -321,7 +321,7 @@ public class ProjectResource extends AlpineResource {
             }
         }
     }
-    
+
     @PATCH
     @Path("/{uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -381,7 +381,7 @@ public class ProjectResource extends AlpineResource {
                 if (modified) {
                     try {
                         project = qm.updateProject(project, true);
-                    } catch (IllegalArgumentException e){
+                    } catch (IllegalArgumentException e) {
                         LOGGER.debug(e.getMessage());
                         return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
                     }
@@ -401,11 +401,11 @@ public class ProjectResource extends AlpineResource {
      * only if the new value is not {@code null} and it is not
      * {@link Object#equals(java.lang.Object) equal to} the old value.
      *
-     * @param <T> the type of the old and new value
+     * @param <T>    the type of the old and new value
      * @param source the source object that contains the new value
      * @param target the target object that should be updated
      * @param getter the method to retrieve the new value from {@code source}
-     * and the old value from {@code target}
+     *               and the old value from {@code target}
      * @param setter the method to set the new value on {@code target}
      * @return {@code true} if {@code target} has been changed, else
      * {@code false}
@@ -431,7 +431,8 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
+            @ApiResponse(code = 500, message = "Unable to delete components of the project")
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProject(
@@ -442,6 +443,7 @@ public class ProjectResource extends AlpineResource {
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
+                    ProjectMetricsUpdateTask.deleteComponents(project.getUuid());
                     qm.recursivelyDelete(project, true);
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
@@ -450,6 +452,8 @@ public class ProjectResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Unable to delete components of the project").build();
         }
     }
 
@@ -501,7 +505,7 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getChildrenProjects(@ApiParam(value = "The UUID of the project to get the children from", required = true)
-                                            @PathParam("uuid") String uuid,
+                                        @PathParam("uuid") String uuid,
                                         @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
                                         @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -611,19 +615,19 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectsWithoutDescendantsOf(
-                                @ApiParam(value = "The UUID of the project which descendants will be excluded", required = true)
-                                @PathParam("uuid") String uuid,
-                                @ApiParam(value = "The optional name of the project to query on", required = false)
-                                @QueryParam("name") String name,
-                                @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
-                                @QueryParam("excludeInactive") boolean excludeInactive) {
+            @ApiParam(value = "The UUID of the project which descendants will be excluded", required = true)
+            @PathParam("uuid") String uuid,
+            @ApiParam(value = "The optional name of the project to query on", required = false)
+            @QueryParam("name") String name,
+            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     final PaginatedResult result = (name != null) ? qm.getProjectsWithoutDescendantsOf(name, excludeInactive, project) : qm.getProjectsWithoutDescendantsOf(excludeInactive, project);
                     return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else{
+                } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
             } else {

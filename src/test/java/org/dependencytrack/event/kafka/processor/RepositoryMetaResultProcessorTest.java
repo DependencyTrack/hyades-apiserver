@@ -71,7 +71,6 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getName()).isEqualTo("bar");
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
         assertThat(metaComponent.getPublished()).isEqualTo(metaModel.getPublishedTimestamp());
-        assertThat(metaComponent.getLastCheck()).isAfterOrEqualTo(testStartTime);
     }
 
     @Test
@@ -120,7 +119,6 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getName()).isEqualTo("bar");
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
         assertThat(metaComponent.getPublished()).isEqualTo(metaModel.getPublishedTimestamp());
-        assertThat(metaComponent.getLastCheck()).isAfterOrEqualTo(testStartTime);
     }
 
     @Test

@@ -1,5 +1,7 @@
 package org.dependencytrack.event.kafka.serialization;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -21,7 +23,7 @@ public class JacksonDeserializer<T> implements Deserializer<T> {
     public JacksonDeserializer(final Class<T> clazz, final ObjectMapper objectMapper) {
         this.clazz = clazz;
         this.objectMapper = Optional.ofNullable(objectMapper)
-                .orElseGet(() -> new ObjectMapper().registerModule(new JavaTimeModule()));
+                .orElseGet(() -> new ObjectMapper().registerModule(new JavaTimeModule())).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     @Override
