@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -9,6 +10,7 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
@@ -49,6 +51,10 @@ class KafkaStreamsTopologyFactory {
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
         // TODO: Kick off policy evaluation when vulnerability analysis completed,
         // as some policies may check for things like severities etc.
+
+        // Trigger metrics updates for components that completed a vulnerability scan.
+        processedVulnScanResulStream
+                .foreach((componentUuid, scanResult) -> Event.dispatch(new ComponentMetricsUpdateEvent(componentUuid)));
 
         // Re-key processed results to their respective scan token, and record their arrival.
         processedVulnScanResulStream

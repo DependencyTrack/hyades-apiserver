@@ -87,6 +87,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -1286,6 +1287,27 @@ public class QueryManager extends AlpineQueryManager {
             trx.begin();
             runnable.run();
             trx.commit();
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
+    /**
+     * Convenience method to execute a given {@link Supplier} within the context of a {@link Transaction}.
+     *
+     * @param supplier The {@link Supplier} to execute
+     * @param <T>      Type of the result of {@code supplier}
+     * @return The result of the execution of {@code supplier}
+     */
+    public <T> T runInTransaction(final Supplier<T> supplier) {
+        final Transaction trx = pm.currentTransaction();
+        try {
+            trx.begin();
+            final T result = supplier.get();
+            trx.commit();
+            return result;
         } finally {
             if (trx.isActive()) {
                 trx.rollback();

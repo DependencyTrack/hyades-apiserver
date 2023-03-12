@@ -22,7 +22,9 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.dependencytrack.event.ComponentMetricsEvent;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
@@ -143,15 +145,17 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                     counters.policyViolationsSecurityAudited;
             counters.policyViolationsUnaudited = counters.policyViolationsTotal - counters.policyViolationsAudited;
 
-            qm.runInTransaction(() -> {
+
+            final DependencyMetrics persistedMetrics = qm.runInTransaction(() -> {
                 final DependencyMetrics latestMetrics = qm.getMostRecentDependencyMetrics(component);
                 if (!counters.hasChanged(latestMetrics)) {
                     LOGGER.debug("Metrics of component " + uuid + " did not change");
                     latestMetrics.setLastOccurrence(counters.measuredAt);
+                    return latestMetrics;
                 } else {
                     LOGGER.debug("Metrics of component " + uuid + " changed");
                     final DependencyMetrics metrics = counters.createComponentMetrics(component);
-                    pm.makePersistent(metrics);
+                    return pm.makePersistent(metrics);
                 }
             });
 
@@ -160,11 +164,14 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                 LOGGER.debug("Updating inherited risk score of component " + uuid);
                 qm.runInTransaction(() -> component.setLastInheritedRiskScore(counters.inheritedRiskScore));
             }
+
+            // Share the result of this metrics calculation with Kafka :)
+            new KafkaEventDispatcher().dispatch(new ComponentMetricsEvent(component.getUuid(),
+                    component.getProject().getUuid(), qm.getPersistenceManager().detachCopy(persistedMetrics)));
         }
 
         LOGGER.debug("Completed metrics update for component " + uuid + " in " +
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
-
     }
 
     public static DependencyMetrics getComponentMetrics(final UUID uuid) throws Exception {
@@ -175,7 +182,6 @@ public class ComponentMetricsUpdateTask implements Subscriber {
 
         }
     }
-
 
     @SuppressWarnings("unchecked")
     private static List<Vulnerability> getVulnerabilities(final PersistenceManager pm, final Component component) throws Exception {

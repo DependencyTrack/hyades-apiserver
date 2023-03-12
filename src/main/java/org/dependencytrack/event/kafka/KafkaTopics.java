@@ -6,16 +6,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.processor.To;
 import org.cyclonedx.model.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.MetaModel;
-import org.dependencytrack.model.PortfolioMetrics;
-import org.dependencytrack.model.ProjectMetrics;
+import org.hyades.proto.metrics.v1.ComponentMetrics;
+import org.hyades.proto.metrics.v1.PortfolioMetrics;
+import org.hyades.proto.metrics.v1.ProjectMetrics;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -49,10 +48,8 @@ public final class KafkaTopics {
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
 
-    public static final Topic<String, DependencyMetrics> COMPONENT_METRICS;
-
+    public static final Topic<String, ComponentMetrics> COMPONENT_METRICS;
     public static final Topic<String, ProjectMetrics> PROJECT_METRICS;
-
     public static final Topic<String, PortfolioMetrics> PORTFOLIO_METRICS;
 
     // As ObjectMapper construction is rather expensive, share a common instance across all JSON Serdes.
@@ -84,10 +81,9 @@ public final class KafkaTopics {
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.UUID(), new JacksonSerde<>(MetaModel.class, OBJECT_MAPPER));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));
-        COMPONENT_METRICS = new Topic<>("dtrack.metrics.component", Serdes.String(), new JacksonSerde<>(DependencyMetrics.class, OBJECT_MAPPER));
-        PROJECT_METRICS = new Topic<>("dtrack.metrics.project", Serdes.String(), new JacksonSerde<>(ProjectMetrics.class, OBJECT_MAPPER));
-        PORTFOLIO_METRICS = new Topic<>("dtrack.metrics.portfolio", Serdes.String(), new JacksonSerde<>(PortfolioMetrics.class, OBJECT_MAPPER));
-
+        COMPONENT_METRICS = new Topic<>("dtrack.metrics.component", Serdes.String(), new KafkaProtobufSerde<>(ComponentMetrics.parser()));
+        PROJECT_METRICS = new Topic<>("dtrack.metrics.project", Serdes.String(), new KafkaProtobufSerde<>(ProjectMetrics.parser()));
+        PORTFOLIO_METRICS = new Topic<>("dtrack.metrics.portfolio", Serdes.String(), new KafkaProtobufSerde<>(PortfolioMetrics.parser()));
     }
 
     public record Topic<K, V>(String name, Serde<K> keySerde, Serde<V> valueSerde) {

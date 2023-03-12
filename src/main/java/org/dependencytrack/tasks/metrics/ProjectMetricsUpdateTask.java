@@ -21,11 +21,11 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import org.dependencytrack.event.ComponentMetricsEvent;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -55,7 +55,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         }
     }
 
-    public static void updateMetrics(final UUID uuid) throws Exception {
+    private static void updateMetrics(final UUID uuid) throws Exception {
         LOGGER.info("Executing metrics update for project " + uuid);
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -70,8 +70,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
             while (!components.isEmpty()) {
                 for (final Component component : components) {
-                    DependencyMetrics metrics = ComponentMetricsUpdateTask.getComponentMetrics(component.getUuid());
-                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), metrics));
+                    Event.dispatch(new ComponentMetricsUpdateEvent(component.getUuid()));
                 }
 
                 LOGGER.debug("Fetching next components page for project " + uuid);
@@ -96,7 +95,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
             while (!components.isEmpty()) {
                 for (final Component component : components) {
-                    new KafkaEventDispatcher().dispatch(new ComponentMetricsUpdateEvent(component.getUuid(), null));
+                    new KafkaEventDispatcher().dispatch(new ComponentMetricsEvent(component.getUuid(), project.getUuid(), null));
                 }
                 LOGGER.debug("Fetching next components page for project " + uuid);
                 final long lastId = components.get(components.size() - 1).getId();
