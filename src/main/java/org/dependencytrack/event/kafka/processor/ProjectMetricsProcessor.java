@@ -40,6 +40,8 @@ public class ProjectMetricsProcessor implements Processor<String, org.hyades.pro
                 } else {
                     LOGGER.debug("Metrics of project " + uuid + " changed");
                     eventMetrics.setProject(project);
+                    eventMetrics.setFirstOccurrence(new Date(record.timestamp()));
+                    eventMetrics.setLastOccurrence(new Date(record.timestamp()));
                     qm.getPersistenceManager().makePersistent(eventMetrics);
                 }
             });
