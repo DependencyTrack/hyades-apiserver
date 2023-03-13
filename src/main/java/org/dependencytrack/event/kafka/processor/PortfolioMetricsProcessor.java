@@ -29,6 +29,8 @@ public class PortfolioMetricsProcessor implements Processor<String, org.hyades.p
                     latestMetrics.setLastOccurrence(new Date(record.timestamp()));
                 } else {
                     LOGGER.debug("Portfolio metrics changed");
+                    eventMetrics.setFirstOccurrence(new Date(record.timestamp()));
+                    eventMetrics.setLastOccurrence(new Date(record.timestamp()));
                     qm.getPersistenceManager().makePersistent(eventMetrics);
                 }
             });
