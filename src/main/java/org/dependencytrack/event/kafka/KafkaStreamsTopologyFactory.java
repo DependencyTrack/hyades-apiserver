@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -9,6 +10,7 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
+import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
@@ -50,6 +52,10 @@ class KafkaStreamsTopologyFactory {
         // TODO: Kick off policy evaluation when vulnerability analysis completed,
         // as some policies may check for things like severities etc.
 
+        // Trigger metrics updates for components that completed a vulnerability scan.
+        processedVulnScanResulStream
+                .foreach((componentUuid, scanResult) -> Event.dispatch(new ComponentMetricsUpdateEvent(componentUuid)));
+
         // Re-key processed results to their respective scan token, and record their arrival.
         processedVulnScanResulStream
                 .selectKey((componentUuid, scanResult) -> scanResult.getKey().getScanToken())
@@ -80,13 +86,13 @@ class KafkaStreamsTopologyFactory {
                 .stream(KafkaTopics.PROJECT_METRICS.name(),
                         Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS.name())))
-                .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
+                .process(ProjectMetricsProcessor::new, Named.as("process_project_metrics"));
 
         streamsBuilder
                 .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
                         Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS.name())))
-                .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
+                .process(PortfolioMetricsProcessor::new, Named.as("process_portfolio_metrics"));
 
         return streamsBuilder.build(streamsProperties);
     }

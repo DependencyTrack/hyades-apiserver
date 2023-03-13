@@ -7,38 +7,38 @@ import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.kafka.serialization.JacksonDeserializer;
-import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.hyades.proto.metrics.v1.FindingsMetrics;
+import org.hyades.proto.metrics.v1.PolicyViolationsMetrics;
+import org.hyades.proto.metrics.v1.VulnerabilitiesMetrics;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.jdo.PersistenceManager;
-import java.util.Date;
-import java.util.UUID;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ProjectMetricsProcessorTest extends PersistenceCapableTest {
+
     private TopologyTestDriver testDriver;
-    UUID uuid = UUID.fromString("426df471-eda9-429a-9172-2df8ed290b33");
-    private TestInputTopic<String, ProjectMetrics> inputTopic;
+    private TestInputTopic<String, org.hyades.proto.metrics.v1.ProjectMetrics> inputTopic;
 
     @Before
     public void setUp() throws JsonProcessingException {
         final var topology = new Topology();
         topology.addSource("sourceProcessor",
-                new StringDeserializer(), new JacksonDeserializer<>(ProjectMetrics.class), "input-topic");
+                new StringDeserializer(), new KafkaProtobufDeserializer<>(org.hyades.proto.metrics.v1.ProjectMetrics.parser()), "input-topic");
         topology.addProcessor("projectMetricsProcessor",
                 ProjectMetricsProcessor::new, "sourceProcessor");
 
         testDriver = new TopologyTestDriver(topology);
         inputTopic = testDriver.createInputTopic("input-topic",
-                new StringSerializer(), new JacksonSerializer<>());
+                new StringSerializer(), new KafkaProtobufSerializer<>());
     }
-
 
     @After
     public void tearDown() {
@@ -50,93 +50,216 @@ public class ProjectMetricsProcessorTest extends PersistenceCapableTest {
     @Test
     public void testProjectWithNoMetrics() {
         Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
-        ProjectMetrics projectMetrics = setProjectMetrics(1, 2, 3, 2, 5, 2);
-        projectMetrics.setProject(project);
-        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
-        qm.getPersistenceManager().refreshAll();
+        var eventMetrics = org.hyades.proto.metrics.v1.ProjectMetrics.newBuilder()
+                .setProjectUuid(project.getUuid().toString())
+                .setComponents(2)
+                .setVulnerableComponents(1)
+                .setVulnerabilities(VulnerabilitiesMetrics.newBuilder()
+                        .setTotal(8)
+                        .setCritical(1)
+                        .setHigh(2)
+                        .setMedium(3)
+                        .setUnassigned(2))
+                .setFindings(FindingsMetrics.newBuilder()
+                        .setTotal(8)
+                        .setAudited(2)
+                        .setUnaudited(6))
+                .setPolicyViolations(PolicyViolationsMetrics.newBuilder()
+                        .setTotal(9)
+                        .setFail(3)
+                        .setWarn(3)
+                        .setInfo(3)
+                        .setAudited(3)
+                        .setUnaudited(6)
+                        .setLicenseTotal(3)
+                        .setLicenseAudited(1)
+                        .setLicenseUnaudited(2)
+                        .setOperationalTotal(3)
+                        .setOperationalAudited(1)
+                        .setOperationalUnaudited(2)
+                        .setSecurityTotal(3)
+                        .setSecurityAudited(1)
+                        .setSecurityUnaudited(2))
+                .build();
+
+        inputTopic.pipeInput(project.getUuid().toString(), eventMetrics);
+
         ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getComponents()).isEqualTo(2);
+        assertThat(metrics.getVulnerableComponents()).isEqualTo(1);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(8);
         assertThat(metrics.getCritical()).isEqualTo(1);
         assertThat(metrics.getHigh()).isEqualTo(2);
         assertThat(metrics.getMedium()).isEqualTo(3);
         assertThat(metrics.getLow()).isZero();
-
-
+        assertThat(metrics.getUnassigned()).isEqualTo(2);
+        assertThat(metrics.getFindingsTotal()).isEqualTo(8);
+        assertThat(metrics.getFindingsAudited()).isEqualTo(2);
+        assertThat(metrics.getFindingsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsTotal()).isEqualTo(9);
+        assertThat(metrics.getPolicyViolationsFail()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsWarn()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsInfo()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsAudited()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsLicenseTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsLicenseAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsOperationalTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsSecurityTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsSecurityAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isEqualTo(2);
+        assertThat(metrics.getFirstOccurrence()).hasSameTimeAs(metrics.getLastOccurrence());
     }
 
     @Test
     public void testProjectWithSameExistingMetrics() {
-        final PersistenceManager pm = qm.getPersistenceManager();
-        ProjectMetrics projectMetrics1 = setProjectMetrics(1,2,3,2,5,2);
         Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
-        projectMetrics1.setProject(project);
-        qm.runInTransaction(() -> {
-            projectMetrics1.setProject(project);
-            pm.makePersistent(projectMetrics1);
-        });
-        ProjectMetrics projectMetrics = setProjectMetrics(1,2,3,2,5,2);
-        projectMetrics.setProject(project);
-        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
-        qm.getPersistenceManager().refreshAll();
+        var eventMetrics = org.hyades.proto.metrics.v1.ProjectMetrics.newBuilder()
+                .setProjectUuid(project.getUuid().toString())
+                .setComponents(2)
+                .setVulnerableComponents(1)
+                .setVulnerabilities(VulnerabilitiesMetrics.newBuilder()
+                        .setTotal(8)
+                        .setCritical(1)
+                        .setHigh(2)
+                        .setMedium(3)
+                        .setUnassigned(2))
+                .setFindings(FindingsMetrics.newBuilder()
+                        .setTotal(8)
+                        .setAudited(2)
+                        .setUnaudited(6))
+                .setPolicyViolations(PolicyViolationsMetrics.newBuilder()
+                        .setTotal(9)
+                        .setFail(3)
+                        .setWarn(3)
+                        .setInfo(3)
+                        .setAudited(3)
+                        .setUnaudited(6)
+                        .setLicenseTotal(3)
+                        .setLicenseAudited(1)
+                        .setLicenseUnaudited(2)
+                        .setOperationalTotal(3)
+                        .setOperationalAudited(1)
+                        .setOperationalUnaudited(2)
+                        .setSecurityTotal(3)
+                        .setSecurityAudited(1)
+                        .setSecurityUnaudited(2))
+                .build();
+
+        var eventTime1 = Instant.ofEpochSecond(1678720347);
+        var eventTime2 = Instant.ofEpochSecond(1678720400);
+
+        inputTopic.pipeInput(project.getUuid().toString(), eventMetrics, eventTime1);
+        inputTopic.pipeInput(project.getUuid().toString(), eventMetrics, eventTime2);
+
         ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getComponents()).isEqualTo(2);
+        assertThat(metrics.getVulnerableComponents()).isEqualTo(1);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(8);
         assertThat(metrics.getCritical()).isEqualTo(1);
         assertThat(metrics.getHigh()).isEqualTo(2);
         assertThat(metrics.getMedium()).isEqualTo(3);
         assertThat(metrics.getLow()).isZero();
+        assertThat(metrics.getUnassigned()).isEqualTo(2);
+        assertThat(metrics.getFindingsTotal()).isEqualTo(8);
+        assertThat(metrics.getFindingsAudited()).isEqualTo(2);
+        assertThat(metrics.getFindingsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsTotal()).isEqualTo(9);
+        assertThat(metrics.getPolicyViolationsFail()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsWarn()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsInfo()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsAudited()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsLicenseTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsLicenseAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsOperationalTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsSecurityTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsSecurityAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isEqualTo(2);
+        assertThat(metrics.getFirstOccurrence()).isEqualTo(eventTime1);
+        assertThat(metrics.getLastOccurrence()).isEqualTo(eventTime2);
     }
 
     @Test
     public void testProjectWithDifferentExistingMetrics() {
-        final PersistenceManager pm = qm.getPersistenceManager();
-        ProjectMetrics projectMetrics1 = setProjectMetrics(0,0,0,0,0,0);
         Project project = qm.createProject("testProject", null, null, null, null, null, true, true);
-        projectMetrics1.setProject(project);
-        qm.runInTransaction(() -> {
-            projectMetrics1.setProject(project);
-            pm.makePersistent(projectMetrics1);
-        });
-        ProjectMetrics projectMetrics = setProjectMetrics(1,2,3,2,5,2);
-        projectMetrics.setProject(project);
-        inputTopic.pipeInput(project.getUuid().toString(), projectMetrics);
-        qm.getPersistenceManager().refreshAll();
+        var eventMetrics1 = org.hyades.proto.metrics.v1.ProjectMetrics.newBuilder()
+                .setProjectUuid(project.getUuid().toString())
+                .build();
+        var eventMetrics2 = org.hyades.proto.metrics.v1.ProjectMetrics.newBuilder()
+                .setProjectUuid(project.getUuid().toString())
+                .setComponents(2)
+                .setVulnerableComponents(1)
+                .setVulnerabilities(VulnerabilitiesMetrics.newBuilder()
+                        .setTotal(8)
+                        .setCritical(1)
+                        .setHigh(2)
+                        .setMedium(3)
+                        .setUnassigned(2))
+                .setFindings(FindingsMetrics.newBuilder()
+                        .setTotal(8)
+                        .setAudited(2)
+                        .setUnaudited(6))
+                .setPolicyViolations(PolicyViolationsMetrics.newBuilder()
+                        .setTotal(9)
+                        .setFail(3)
+                        .setWarn(3)
+                        .setInfo(3)
+                        .setAudited(3)
+                        .setUnaudited(6)
+                        .setLicenseTotal(3)
+                        .setLicenseAudited(1)
+                        .setLicenseUnaudited(2)
+                        .setOperationalTotal(3)
+                        .setOperationalAudited(1)
+                        .setOperationalUnaudited(2)
+                        .setSecurityTotal(3)
+                        .setSecurityAudited(1)
+                        .setSecurityUnaudited(2))
+                .build();
+
+        var eventTime1 = Instant.ofEpochSecond(1678720347);
+        var eventTime2 = Instant.ofEpochSecond(1678720400);
+
+        inputTopic.pipeInput(project.getUuid().toString(), eventMetrics1, eventTime1);
+        inputTopic.pipeInput(project.getUuid().toString(), eventMetrics2, eventTime2);
+
+        qm.getPersistenceManager().refresh(project);
         ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-        assertThat(metrics.getProject().getName()).isEqualTo(project.getName());
+        assertThat(metrics.getComponents()).isEqualTo(2);
+        assertThat(metrics.getVulnerableComponents()).isEqualTo(1);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(8);
         assertThat(metrics.getCritical()).isEqualTo(1);
         assertThat(metrics.getHigh()).isEqualTo(2);
         assertThat(metrics.getMedium()).isEqualTo(3);
         assertThat(metrics.getLow()).isZero();
-    }
-
-    public static ProjectMetrics setProjectMetrics(int critical, int high, int medium,
-                                                   int unassigned, int findingsTotal, int findingsAudited) {
-        ProjectMetrics projectMetrics = new ProjectMetrics();
-        projectMetrics.setCritical(critical);
-        projectMetrics.setHigh(high);
-        projectMetrics.setMedium(medium);
-        projectMetrics.setLow(0);
-        projectMetrics.setUnassigned(unassigned);
-        projectMetrics.setFindingsTotal(findingsTotal);
-        projectMetrics.setFindingsAudited(findingsAudited);
-        projectMetrics.setFirstOccurrence(new Date());
-        projectMetrics.setFindingsUnaudited(0);
-        projectMetrics.setPolicyViolationsFail(0);
-        projectMetrics.setPolicyViolationsWarn(0);
-        projectMetrics.setPolicyViolationsInfo(0);
-        projectMetrics.setPolicyViolationsAudited(0);
-        projectMetrics.setPolicyViolationsUnaudited(0);
-        projectMetrics.setPolicyViolationsTotal(0);
-        projectMetrics.setPolicyViolationsSecurityTotal(0);
-        projectMetrics.setPolicyViolationsSecurityAudited(0);
-        projectMetrics.setPolicyViolationsSecurityUnaudited(0);
-        projectMetrics.setPolicyViolationsLicenseTotal(0);
-        projectMetrics.setPolicyViolationsLicenseAudited(0);
-        projectMetrics.setPolicyViolationsLicenseUnaudited(0);
-        projectMetrics.setPolicyViolationsOperationalAudited(0);
-        projectMetrics.setPolicyViolationsOperationalTotal(0);
-        projectMetrics.setPolicyViolationsOperationalUnaudited(0);
-        projectMetrics.setLastOccurrence(new Date(new Date().getTime() - (1000 * 60 * 60 * 24)));
-        return projectMetrics;
+        assertThat(metrics.getUnassigned()).isEqualTo(2);
+        assertThat(metrics.getFindingsTotal()).isEqualTo(8);
+        assertThat(metrics.getFindingsAudited()).isEqualTo(2);
+        assertThat(metrics.getFindingsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsTotal()).isEqualTo(9);
+        assertThat(metrics.getPolicyViolationsFail()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsWarn()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsInfo()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsAudited()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsUnaudited()).isEqualTo(6);
+        assertThat(metrics.getPolicyViolationsLicenseTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsLicenseAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsOperationalTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isEqualTo(2);
+        assertThat(metrics.getPolicyViolationsSecurityTotal()).isEqualTo(3);
+        assertThat(metrics.getPolicyViolationsSecurityAudited()).isEqualTo(1);
+        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isEqualTo(2);
+        assertThat(metrics.getFirstOccurrence()).isEqualTo(eventTime2);
+        assertThat(metrics.getLastOccurrence()).isEqualTo(eventTime2);
     }
 
 }

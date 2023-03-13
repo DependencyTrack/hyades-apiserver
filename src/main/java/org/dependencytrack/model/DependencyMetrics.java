@@ -22,8 +22,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.FetchGroup;
-import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
@@ -40,21 +38,11 @@ import java.util.Date;
  * @since 3.1.0
  */
 @PersistenceCapable
-@FetchGroups({
-        @FetchGroup(name = "METRICS_UPDATE_KAFKA", members = {
-                @Persistent(name = "component"),
-                @Persistent(name = "project")
-        })
-})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Index(name = "DEPENDENCYMETRICS_COMPOSITE_IDX", members = {"project", "component"})
 public class DependencyMetrics implements Serializable {
 
     private static final long serialVersionUID = 5231823328085979791L;
-
-    public enum FetchGroup {
-        METRICS_UPDATE_KAFKA
-    }
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)

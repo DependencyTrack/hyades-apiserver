@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka.serialization;
 
+import com.google.protobuf.AbstractMessageLite;
 import org.apache.kafka.common.errors.SerializationException;
 import org.hyades.proto.vulnanalysis.v1.Component;
 import org.junit.Test;
@@ -8,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class KafkaProtobufSerdeTest {
 
@@ -34,12 +37,17 @@ public class KafkaProtobufSerdeTest {
     }
 
     @Test
-    @SuppressWarnings("resource")
+    @SuppressWarnings({"resource", "rawtypes"})
     public void testSerializationException() {
-        final var serde = new KafkaProtobufSerde<>(Component.parser());
+        final var serializer = new KafkaProtobufSerializer<AbstractMessageLite>();
+
+        final var mockMessage = mock(AbstractMessageLite.class);
+        when(mockMessage.toByteArray())
+                .thenThrow(IllegalStateException.class);
 
         assertThatExceptionOfType(SerializationException.class)
-                .isThrownBy(() -> serde.serializer().serialize("topic", null));
+                .isThrownBy(() -> serializer.serialize("topic", mockMessage))
+                .withCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -50,5 +58,22 @@ public class KafkaProtobufSerdeTest {
         assertThatExceptionOfType(SerializationException.class)
                 .isThrownBy(() -> serde.deserializer().deserialize("topic", "[]".getBytes(StandardCharsets.UTF_8)));
     }
+
+    @Test
+    @SuppressWarnings("resource")
+    public void testSerializeNull() {
+        final var serde = new KafkaProtobufSerde<>(Component.parser());
+
+        assertThat(serde.serializer().serialize("topic", null)).isNull();
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    public void testDeserializeNull() {
+        final var serde = new KafkaProtobufSerde<>(Component.parser());
+
+        assertThat(serde.deserializer().deserialize("topic", null)).isEqualTo(null);
+    }
+
 
 }
