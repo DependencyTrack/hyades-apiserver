@@ -95,7 +95,7 @@
         <lib.lucene.version>8.11.2</lib.lucene.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
-        <lib.protobuf-java.version>3.21.12</lib.protobuf-java.version>
+        <lib.protobuf-java.version>3.22.2</lib.protobuf-java.version>
         <lib.testcontainers.version>1.17.6</lib.testcontainers.version>
         <lib.unirest.version>3.14.1</lib.unirest.version>
         <lib.vulndb-data-mirror.version>1.0.1</lib.vulndb-data-mirror.version>
