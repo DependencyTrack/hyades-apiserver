@@ -1068,10 +1068,6 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getMostRecentDependencyMetrics(component);
     }
 
-    public DependencyMetrics getMostRecentDependencyMetrics(Component component, final List<String> fetchGroups) {
-        return getMetricsQueryManager().getMostRecentDependencyMetrics(component, fetchGroups);
-    }
-
     public PaginatedResult getDependencyMetrics(Component component) {
         return getMetricsQueryManager().getDependencyMetrics(component);
     }

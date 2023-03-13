@@ -30,85 +30,16 @@ import java.util.Date;
  *
  * @since 4.6.0
  */
-public final class Counters {
+final class Counters {
 
     int critical, high, medium, low, unassigned;
     double inheritedRiskScore;
-    int components, projects;
     int vulnerabilities, suppressions, findingsTotal, findingsAudited, findingsUnaudited;
     int policyViolationsFail, policyViolationsWarn, policyViolationsInfo,
             policyViolationsTotal, policyViolationsAudited, policyViolationsUnaudited,
             policyViolationsSecurityTotal, policyViolationsSecurityAudited, policyViolationsSecurityUnaudited,
             policyViolationsLicenseTotal, policyViolationsLicenseAudited, policyViolationsLicenseUnaudited,
             policyViolationsOperationalTotal, policyViolationsOperationalAudited, policyViolationsOperationalUnaudited;
-
-    public int getCritical() {
-        return critical;
-    }
-
-    public void setCritical(int critical) {
-        this.critical = critical;
-    }
-
-    public int getHigh() {
-        return high;
-    }
-
-    public void setHigh(int high) {
-        this.high = high;
-    }
-
-    public int getMedium() {
-        return medium;
-    }
-
-    public void setMedium(int medium) {
-        this.medium = medium;
-    }
-
-    public int getLow() {
-        return low;
-    }
-
-    public void setLow(int low) {
-        this.low = low;
-    }
-
-    public int getUnassigned() {
-        return unassigned;
-    }
-
-    public void setUnassigned(int unassigned) {
-        this.unassigned = unassigned;
-    }
-
-    public double getInheritedRiskScore() {
-        return inheritedRiskScore;
-    }
-
-    public int getComponents() {
-        return components;
-    }
-
-    public void setComponents(int components) {
-        this.components = components;
-    }
-
-    public int getProjects() {
-        return projects;
-    }
-
-    public void setProjects(int projects) {
-        this.projects = projects;
-    }
-
-    public int getVulnerabilities() {
-        return vulnerabilities;
-    }
-
-    public void setVulnerabilities(int vulnerabilities) {
-        this.vulnerabilities = vulnerabilities;
-    }
 
     final Date measuredAt;
 

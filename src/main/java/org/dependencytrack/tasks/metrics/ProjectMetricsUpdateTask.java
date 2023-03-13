@@ -70,7 +70,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
             while (!components.isEmpty()) {
                 for (final Component component : components) {
-                    Event.dispatch(new ComponentMetricsUpdateEvent(component.getUuid()));
+                    ComponentMetricsUpdateTask.updateMetrics(component.getUuid());
                 }
 
                 LOGGER.debug("Fetching next components page for project " + uuid);

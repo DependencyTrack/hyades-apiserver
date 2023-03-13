@@ -86,13 +86,13 @@ class KafkaStreamsTopologyFactory {
                 .stream(KafkaTopics.PROJECT_METRICS.name(),
                         Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS.name())))
-                .process(ProjectMetricsProcessor::new, Named.as("project_metrics_result"));
+                .process(ProjectMetricsProcessor::new, Named.as("process_project_metrics"));
 
         streamsBuilder
                 .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
                         Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS.name())))
-                .process(PortfolioMetricsProcessor::new, Named.as("portfolio_metrics_result"));
+                .process(PortfolioMetricsProcessor::new, Named.as("process_portfolio_metrics"));
 
         return streamsBuilder.build(streamsProperties);
     }

@@ -174,15 +174,6 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
     }
 
-    public static DependencyMetrics getComponentMetrics(final UUID uuid) throws Exception {
-        try (final var qm = new QueryManager()) {
-            updateMetrics(uuid);
-            final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));
-            return qm.getMostRecentDependencyMetrics(component, List.of(DependencyMetrics.FetchGroup.METRICS_UPDATE_KAFKA.name()));
-
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private static List<Vulnerability> getVulnerabilities(final PersistenceManager pm, final Component component) throws Exception {
         // Using the JDO single-string syntax here because we need to pass the parameter
