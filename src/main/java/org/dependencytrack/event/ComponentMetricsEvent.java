@@ -13,7 +13,7 @@ import java.util.UUID;
  *
  * @param componentUuid {@link UUID} of the {@link Component}
  * @param projectUuid   {@link UUID} of the {@link Project} the {@link Component} belongs to
- * @param metrics       The computed {@link DependencyMetrics}
+ * @param metrics       The computed {@link DependencyMetrics}, may be {@code null} to signal the deletion of a {@link Component}
  */
 public record ComponentMetricsEvent(UUID componentUuid, UUID projectUuid, DependencyMetrics metrics) implements Event {
 
