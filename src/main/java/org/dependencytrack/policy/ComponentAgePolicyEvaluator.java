@@ -77,7 +77,6 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
         if (metaComponent == null || metaComponent.getPublished() == null) {
             return violations;
         }
-
         for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
             if (evaluate(condition, metaComponent.getPublished())) {
                 violations.add(new PolicyConditionViolation(condition, component));

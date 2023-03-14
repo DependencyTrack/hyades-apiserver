@@ -31,6 +31,7 @@ import org.dependencytrack.util.NotificationUtil;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A lightweight policy engine that evaluates a list of components against
@@ -61,21 +62,20 @@ public class PolicyEngine {
         evaluators.add(new VulnerabilityIdPolicyEvaluator());
     }
 
-    public List<PolicyViolation> evaluate(Long componentId) {
+    public List<PolicyViolation> evaluate(UUID componentId) {
         List<PolicyViolation> violations = new ArrayList<>();
         try (final QueryManager qm = new QueryManager()) {
             final List<Policy> policies = qm.getAllPolicies();
-            final Component componentFromDb = qm.getObjectById(Component.class, componentId);
+            final Component componentFromDb = qm.getObjectByUuid(Component.class, componentId);
             LOGGER.info("Evaluating " + componentFromDb.getName() + " component against applicable policies");
             violations.addAll(this.evaluate(qm, policies, componentFromDb));
         }
-        LOGGER.info("Policy analysis complete");
         return violations;
     }
 
-    private List<PolicyViolation> evaluate(final QueryManager qm, final List<Policy> policies, final Component component) {
+    private List<PolicyViolation> evaluate(final QueryManager qm, final List<Policy> policies, Component component) {
         final List<PolicyViolation> policyViolations = new ArrayList<>();
-        for (final Policy policy : policies) {
+        for (Policy policy : policies) {
             if (policy.isGlobal() || isPolicyAssignedToProject(policy, component.getProject())
                     || isPolicyAssignedToProjectTag(policy, component.getProject())) {
                 LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy (" + policy.getUuid() + ")");
