@@ -102,6 +102,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 final long lastId = components.get(components.size() - 1).getId();
                 components = fetchNextComponentsPage(pm, project, lastId);
             }
+            new KafkaEventDispatcher().dispatch(new ProjectMetricsUpdateEvent(project.getUuid()));
         }
     }
 

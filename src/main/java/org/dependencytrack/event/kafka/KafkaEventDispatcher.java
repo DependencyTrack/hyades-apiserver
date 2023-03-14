@@ -14,6 +14,7 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.notification.NotificationGroup;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
@@ -91,6 +92,8 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopics.COMPONENT_METRICS, componentMetricsUpdateEvent.uuid().toString(), componentMetricsUpdateEvent.dependencyMetrics(), null);
         } else if (event instanceof NistMirrorEvent) {
             return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+        } else if (event instanceof final ProjectMetricsUpdateEvent projectMetricsUpdateEvent) {
+            return dispatchInternal(KafkaTopics.PROJECT_METRICS, projectMetricsUpdateEvent.getUuid().toString(), null, null);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");

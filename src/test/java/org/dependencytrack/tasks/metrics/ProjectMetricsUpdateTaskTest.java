@@ -216,6 +216,10 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
                 },
                 record -> {
                     assertThat(record.value() == null);
+                },
+                //tombstone for project
+                record -> {
+                    assertThat(record.value() == null);
                 }
         );
     }

@@ -17,6 +17,10 @@ public class ProjectMetricsProcessor implements Processor<String, ProjectMetrics
 
     @Override
     public void process(Record<String, ProjectMetrics> record) {
+        //do nothing for tombstone event which has been dispatched by hyades api server
+        if(record.value() == null) {
+            return;
+        }
         UUID uuid = UUID.fromString(record.key());
         Counters counters = new Counters();
         try (final QueryManager qm = new QueryManager()) {
