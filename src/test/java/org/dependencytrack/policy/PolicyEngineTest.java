@@ -61,7 +61,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         qm.persist(vulnerability);
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEngine policyEngine = new PolicyEngine();
-        List<PolicyViolation> violations = policyEngine.evaluate(component);
+        List<PolicyViolation> violations = policyEngine.evaluate(component.getId());
         Assert.assertEquals(1, violations.size());
     }
 
@@ -84,7 +84,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         qm.persist(vulnerability);
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEngine policyEngine = new PolicyEngine();
-        List<PolicyViolation> violations = policyEngine.evaluate(component);
+        List<PolicyViolation> violations = policyEngine.evaluate(component.getId());
         Assert.assertEquals(0, violations.size());
     }
 
@@ -112,7 +112,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         qm.persist(vulnerability);
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEngine policyEngine = new PolicyEngine();
-        List<PolicyViolation> violations = policyEngine.evaluate(component);
+        List<PolicyViolation> violations = policyEngine.evaluate(component.getId());
         Assert.assertEquals(1, violations.size());
     }
 
@@ -139,7 +139,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         qm.persist(vulnerability);
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEngine policyEngine = new PolicyEngine();
-        List<PolicyViolation> violations = policyEngine.evaluate(component);
+        List<PolicyViolation> violations = policyEngine.evaluate(component.getId());
         Assert.assertEquals(0, violations.size());
     }
 
@@ -199,7 +199,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         PolicyEngine policyEngine = new PolicyEngine();
         List<PolicyViolation> violations = new ArrayList<>();
         for(var component1: components){
-            violations.addAll(policyEngine.evaluate(component1));
+            violations.addAll(policyEngine.evaluate(component1.getId()));
         }
         Assert.assertEquals(3, violations.size());
         PolicyViolation policyViolation = violations.get(0);
@@ -261,7 +261,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         PolicyEngine policyEngine = new PolicyEngine();
         List<PolicyViolation> violations = new ArrayList<>();
         for(var component1: components){
-            violations.addAll(policyEngine.evaluate(component1));
+            violations.addAll(policyEngine.evaluate(component1.getId()));
         }
         Assert.assertEquals(2, violations.size());
         PolicyViolation policyViolation = violations.get(0);

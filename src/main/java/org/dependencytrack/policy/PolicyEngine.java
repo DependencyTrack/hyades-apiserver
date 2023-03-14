@@ -61,12 +61,12 @@ public class PolicyEngine {
         evaluators.add(new VulnerabilityIdPolicyEvaluator());
     }
 
-    public List<PolicyViolation> evaluate(Component component) {
-        LOGGER.info("Evaluating " + component.getName() + " component against applicable policies");
+    public List<PolicyViolation> evaluate(Long componentId) {
         List<PolicyViolation> violations = new ArrayList<>();
         try (final QueryManager qm = new QueryManager()) {
             final List<Policy> policies = qm.getAllPolicies();
-            final Component componentFromDb = qm.getObjectById(Component.class, component.getId());
+            final Component componentFromDb = qm.getObjectById(Component.class, componentId);
+            LOGGER.info("Evaluating " + componentFromDb.getName() + " component against applicable policies");
             violations.addAll(this.evaluate(qm, policies, componentFromDb));
         }
         LOGGER.info("Policy analysis complete");

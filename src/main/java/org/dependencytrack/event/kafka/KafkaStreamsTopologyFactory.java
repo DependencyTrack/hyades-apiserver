@@ -16,7 +16,9 @@ import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.PolicyEngine;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
@@ -51,6 +53,17 @@ class KafkaStreamsTopologyFactory {
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
         // TODO: Kick off policy evaluation when vulnerability analysis completed,
         // as some policies may check for things like severities etc.
+
+        //perform policy evaluation on components with completed vulnerability scan
+        PolicyEngine policyEngine = new PolicyEngine();
+
+        processedVulnScanResulStream
+                .foreach((componentUuid, scanResult) -> {
+                    try (QueryManager qm = new QueryManager()) {
+                        Component component = qm.getObjectByUuid(Component.class, componentUuid);
+                        policyEngine.evaluate(component.getId());
+                    }
+                });
 
         // Trigger metrics updates for components that completed a vulnerability scan.
         processedVulnScanResulStream
