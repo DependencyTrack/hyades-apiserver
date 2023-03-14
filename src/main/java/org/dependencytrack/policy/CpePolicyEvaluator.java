@@ -50,21 +50,17 @@ public class CpePolicyEvaluator extends AbstractPolicyEvaluator {
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
-        if (component.getCpe() == null) {
-            return violations;
-        }
-        for (final PolicyCondition condition: super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             if (PolicyCondition.Operator.MATCHES == condition.getOperator()) {
-                if (component.getCpe() != null && component.getCpe().contains(condition.getValue())) {
+                if (Matcher.matches(component.getCpe(), condition.getValue())) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
-            } else if (PolicyCondition.Operator.NO_MATCH == condition.getOperator()) {
-                if (component.getCpe() != null && !component.getCpe().contains(condition.getValue())) {
-                    violations.add(new PolicyConditionViolation(condition, component));
-                }
+            } else if (PolicyCondition.Operator.NO_MATCH == condition.getOperator() && !Matcher.matches(component.getCpe(), condition.getValue())) {
+                violations.add(new PolicyConditionViolation(condition, component));
             }
         }
+
         return violations;
     }
 

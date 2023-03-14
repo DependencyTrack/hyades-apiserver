@@ -44,6 +44,20 @@ public class CpePolicyEvaluatorTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void hasMatchNullCpe() {
+        Policy policy = qm.createPolicy("Test Policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
+        PolicyCondition condition = qm.createPolicyCondition(policy, PolicyCondition.Subject.CPE, PolicyCondition.Operator.NO_MATCH, ".+");
+        Component component = new Component();
+        component.setCpe(null);
+        PolicyEvaluator evaluator = new CpePolicyEvaluator();
+        List<PolicyConditionViolation> violations = evaluator.evaluate(policy, component);
+        Assert.assertEquals(1, violations.size());
+        PolicyConditionViolation violation = violations.get(0);
+        Assert.assertEquals(component, violation.getComponent());
+        Assert.assertEquals(condition, violation.getPolicyCondition());
+    }
+
+    @Test
     public void noMatch() {
         Policy policy = qm.createPolicy("Test Policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.CPE, PolicyCondition.Operator.MATCHES, "cpe:/a:acme:application:1.0.0");

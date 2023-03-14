@@ -52,19 +52,17 @@ public class SeverityPolicyEvaluator extends AbstractPolicyEvaluator {
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
-        //final Component component = qm.getObjectById(Component.class, c.getId());
         for (final Vulnerability vulnerability : qm.getAllVulnerabilities(component, false)) {
-            for (final PolicyCondition condition: policyConditions) {
+            for (final PolicyCondition condition : policyConditions) {
                 LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
                 if (PolicyCondition.Operator.IS == condition.getOperator()) {
                     if (vulnerability.getSeverity().name().equals(condition.getValue())) {
                         violations.add(new PolicyConditionViolation(condition, component));
                     }
-                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
-                    if (! vulnerability.getSeverity().name().equals(condition.getValue())) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
+                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator() && !vulnerability.getSeverity().name().equals(condition.getValue())) {
+                    violations.add(new PolicyConditionViolation(condition, component));
                 }
+
             }
         }
         return violations;

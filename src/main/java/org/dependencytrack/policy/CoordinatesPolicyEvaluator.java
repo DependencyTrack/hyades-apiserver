@@ -74,22 +74,11 @@ public class CoordinatesPolicyEvaluator extends AbstractPolicyEvaluator {
             return true;
         }
         final String p = StringUtils.trimToNull(part);
-        if (PolicyCondition.Operator.MATCHES == operator) {
-            if (p != null) {
-                if ("*".equals(conditionValue)) {
-                    return true;
-                } else if (conditionValue != null && p.contains(conditionValue)) {
-                    return true;
-                }
-            }
-        } else if (PolicyCondition.Operator.NO_MATCH == operator) {
-            if (p != null) {
-                if ("*".equals(conditionValue)) {
-                    return false;
-                } else if (conditionValue != null && p.contains(conditionValue)) {
-                    return false;
-                }
-                return true;
+        if (p != null) {
+            if (PolicyCondition.Operator.MATCHES == operator) {
+                return org.dependencytrack.policy.Matcher.matches(p, conditionValue);
+            } else if (PolicyCondition.Operator.NO_MATCH == operator) {
+                return !org.dependencytrack.policy.Matcher.matches(p, conditionValue);
             }
         }
         return false;
@@ -102,30 +91,15 @@ public class CoordinatesPolicyEvaluator extends AbstractPolicyEvaluator {
             return matches(conditionOperator, conditionValue, part);
         }
 
-        final PolicyCondition.Operator versionOperator;
-        switch (versionOperatorMatcher.group(1)) {
-            case "==":
-                versionOperator = PolicyCondition.Operator.NUMERIC_EQUAL;
-                break;
-            case "!=":
-                versionOperator = PolicyCondition.Operator.NUMERIC_NOT_EQUAL;
-                break;
-            case "<":
-                versionOperator = PolicyCondition.Operator.NUMERIC_LESS_THAN;
-                break;
-            case "<=":
-                versionOperator = PolicyCondition.Operator.NUMERIC_LESSER_THAN_OR_EQUAL;
-                break;
-            case ">":
-                versionOperator = PolicyCondition.Operator.NUMERIC_GREATER_THAN;
-                break;
-            case ">=":
-                versionOperator = PolicyCondition.Operator.NUMERIC_GREATER_THAN_OR_EQUAL;
-                break;
-            default:
-                versionOperator = null;
-                break;
-        }
+        final PolicyCondition.Operator versionOperator = switch (versionOperatorMatcher.group(1)) {
+            case "==" -> PolicyCondition.Operator.NUMERIC_EQUAL;
+            case "!=" -> PolicyCondition.Operator.NUMERIC_NOT_EQUAL;
+            case "<" -> PolicyCondition.Operator.NUMERIC_LESS_THAN;
+            case "<=" -> PolicyCondition.Operator.NUMERIC_LESSER_THAN_OR_EQUAL;
+            case ">" -> PolicyCondition.Operator.NUMERIC_GREATER_THAN;
+            case ">=" -> PolicyCondition.Operator.NUMERIC_GREATER_THAN_OR_EQUAL;
+            default -> null;
+        };
         if (versionOperator == null) {
             // Shouldn't ever happen because the regex won't match anything else
             LOGGER.error("Failed to infer version operator from " + versionOperatorMatcher.group(1));

@@ -67,12 +67,11 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
                     if (containsLicense) {
                         violations.add(new PolicyConditionViolation(condition, component));
                     }
-                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
-                    if (!containsLicense) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
+                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator() && !containsLicense) {
+                    violations.add(new PolicyConditionViolation(condition, component));
                 }
             }
+
         }
         return violations;
     }
