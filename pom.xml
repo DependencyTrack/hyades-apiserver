@@ -116,7 +116,7 @@
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
-        <tool.protoc.version>3.21.12</tool.protoc.version>
+        <tool.protoc.version>com.google.protobuf:protoc:3.21.12</tool.protoc.version>
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
@@ -482,7 +482,7 @@
                             <includeDirectories>
                                 <includeDirectory>src/main/proto</includeDirectory>
                             </includeDirectories>
-                            <protocVersion>${tool.protoc.version}</protocVersion>
+                            <protocArtifact>${tool.protoc.version}</protocArtifact>
                         </configuration>
                     </execution>
                 </executions>
