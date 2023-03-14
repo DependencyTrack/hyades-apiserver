@@ -42,6 +42,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+import static org.hyades.proto.metrics.v1.Status.STATUS_UNKNOWN;
 
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -62,7 +63,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     public void testUpdateMetricsEmpty() {
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         // since no event is triggered satisfiesExactly empty is used to assert the same
-        assertThat(kafkaMockProducer.history()).satisfiesExactly();
+        assertThat(kafkaMockProducer.history()).isEmpty();
     }
 
     @Test
@@ -105,30 +106,65 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
         qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
+        final Project finalProjectUnaudited = projectUnaudited;
+        final Project finalProjectAudited = projectAudited;
+        final Project finalProjectSuppressed = projectSuppressed;
+        final Component finalComponentUnaudited = componentUnaudited;
+        final Component finalComponentAudited = componentAudited;
+        final Component finalComponentSuppressed = componentSuppressed;
+
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        qm.getPersistenceManager().refreshAll(projectUnaudited, projectAudited, projectSuppressed,
-                componentUnaudited, componentAudited, componentSuppressed);
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
                     final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getSuppressed()).isEqualTo(1);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectSuppressed.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentSuppressed.getUuid().toString());
+                    assertThat(eventMetrics.getStatus()).isEqualTo(STATUS_UNKNOWN);
+                    assertThat(eventMetrics.getInheritedRiskScore()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getCritical()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getHigh()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getMedium()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getLow()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getUnassigned()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getSuppressed()).isEqualTo(1);
                 },
                 record -> {
                     final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getHigh()).isEqualTo(1);
-                    assertThat(eventMetrics.getFindingsUnaudited()).isEqualTo(1);
-                    assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);
-                    assertThat(eventMetrics.getMedium()).isZero();
-                    assertThat(eventMetrics.getLow()).isZero();
-
-                },
-                record -> {
-                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getHigh()).isEqualTo(1);
-                    assertThat(eventMetrics.getVulnerabilities()).isEqualTo(1);
-                    assertThat(eventMetrics.getFindingsAudited()).isEqualTo(1);
-                    assertThat(eventMetrics.getFindingsTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectAudited.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentAudited.getUuid().toString());
+                    assertThat(eventMetrics.getStatus()).isEqualTo(STATUS_UNKNOWN);
                     assertThat(eventMetrics.getInheritedRiskScore()).isEqualTo(5.0);
+                    assertThat(eventMetrics.getVulnerabilities().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getVulnerabilities().getCritical()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getHigh()).isEqualTo(1);
+                    assertThat(eventMetrics.getVulnerabilities().getMedium()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getLow()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getUnassigned()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindings().getAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindings().getUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getSuppressed()).isEqualTo(0);
+                },
+                record -> {
+                    final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectUnaudited.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentUnaudited.getUuid().toString());
+                    assertThat(eventMetrics.getStatus()).isEqualTo(STATUS_UNKNOWN);
+                    assertThat(eventMetrics.getInheritedRiskScore()).isEqualTo(5.0);
+                    assertThat(eventMetrics.getVulnerabilities().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getVulnerabilities().getCritical()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getHigh()).isEqualTo(1);
+                    assertThat(eventMetrics.getVulnerabilities().getMedium()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getLow()).isEqualTo(0);
+                    assertThat(eventMetrics.getVulnerabilities().getUnassigned()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindings().getAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getFindings().getUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getFindings().getSuppressed()).isEqualTo(0);
                 }
         );
     }
@@ -167,29 +203,75 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
 
+        final Project finalProjectUnaudited = projectUnaudited;
+        final Project finalProjectAudited = projectAudited;
+        final Project finalProjectSuppressed = projectSuppressed;
+        final Component finalComponentUnaudited = componentUnaudited;
+        final Component finalComponentAudited = componentAudited;
+        final Component finalComponentSuppressed = componentSuppressed;
+
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        qm.getPersistenceManager().refreshAll(projectUnaudited, projectAudited, projectSuppressed,
-                componentUnaudited, componentAudited, componentSuppressed);
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
                     final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getSuppressed()).isEqualTo(0);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectSuppressed.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentSuppressed.getUuid().toString());
+                    assertThat(eventMetrics.getPolicyViolations().getTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getFail()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getWarn()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getInfo()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityUnaudited()).isEqualTo(0);
                 },
                 record -> {
                     final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getPolicyViolationsWarn()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsAudited()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsOperationalTotal()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsOperationalAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectAudited.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentAudited.getUuid().toString());
+                    assertThat(eventMetrics.getPolicyViolations().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getFail()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getWarn()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getInfo()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalAudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityUnaudited()).isEqualTo(0);
+
                 },
                 record -> {
                     final var eventMetrics = deserializeValue(KafkaTopics.COMPONENT_METRICS, record);
-                    assertThat(eventMetrics.getPolicyViolationsFail()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsTotal()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsUnaudited()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsLicenseTotal()).isEqualTo(1);
-                    assertThat(eventMetrics.getPolicyViolationsLicenseUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getProjectUuid()).isEqualTo(finalProjectUnaudited.getUuid().toString());
+                    assertThat(eventMetrics.getComponentUuid()).isEqualTo(finalComponentUnaudited.getUuid().toString());
+                    assertThat(eventMetrics.getPolicyViolations().getTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getFail()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getWarn()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getInfo()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseTotal()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getLicenseUnaudited()).isEqualTo(1);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getOperationalUnaudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityTotal()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityAudited()).isEqualTo(0);
+                    assertThat(eventMetrics.getPolicyViolations().getSecurityUnaudited()).isEqualTo(0);
                 }
         );
     }
