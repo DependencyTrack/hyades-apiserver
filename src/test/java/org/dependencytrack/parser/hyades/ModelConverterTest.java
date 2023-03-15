@@ -7,8 +7,6 @@ import org.dependencytrack.persistence.CweImporter;
 import org.hyades.proto.vuln.v1.Alias;
 import org.hyades.proto.vuln.v1.Rating;
 import org.hyades.proto.vuln.v1.Reference;
-import org.hyades.proto.vuln.v1.ScoreMethod;
-import org.hyades.proto.vuln.v1.Source;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -16,6 +14,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_NVD;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_SNYK;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_UNKNOWN;
 
 public class ModelConverterTest extends PersistenceCapableTest {
 
@@ -31,24 +35,31 @@ public class ModelConverterTest extends PersistenceCapableTest {
 
     @Test
     public void testConvert() {
+        // Create a vulnerability that was reported by Snyk.
+        // It is a CVE, with the authoritative source being the NVD.
+        // Snyk provides multiple risk ratings, including the "official" ones
+        // from the NVD, but also its own, custom ones.
+        //
+        // In this case, because the NVD is the authoritative source,
+        // we choose to use the NVD's risk ratings over Snyk's.
         final var hyadesVuln = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
                 .setId("CVE-2021-44228")
-                .setSource(Source.SOURCE_NVD)
+                .setSource(SOURCE_NVD)
                 .setTitle("Foo Bar")
                 .setDescription("Foo Bar Baz Qux Quux")
                 .addRatings(Rating.newBuilder()
-                        .setMethod(ScoreMethod.SCORE_METHOD_CVSSV2)
-                        .setSource(Source.SOURCE_NVD)
+                        .setMethod(SCORE_METHOD_CVSSV2)
+                        .setSource(SOURCE_NVD)
                         .setVector("(AV:N/AC:M/Au:N/C:C/I:C/A:C)")
                         .setScore(9.3))
                 .addRatings(Rating.newBuilder()
-                        .setMethod(ScoreMethod.SCORE_METHOD_CVSSV31)
-                        .setSource(Source.SOURCE_NVD)
+                        .setMethod(SCORE_METHOD_CVSSV31)
+                        .setSource(SOURCE_NVD)
                         .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H")
                         .setScore(10.0))
                 .addRatings(Rating.newBuilder()
-                        .setMethod(ScoreMethod.SCORE_METHOD_CVSSV3)
-                        .setSource(Source.SOURCE_SNYK)
+                        .setMethod(SCORE_METHOD_CVSSV3)
+                        .setSource(SOURCE_SNYK)
                         .setVector("snykVector"))
                 .setPublished(Timestamp.newBuilder()
                         .setSeconds(1639098000)) // 2021-12-10
@@ -62,7 +73,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
                 .addAllCwes(List.of(20, 400, 502, 917, 9999999)) // 9999999 is invalid
                 .addAliases(Alias.newBuilder()
                         .setId("SNYK-JAVA-ORGAPACHELOGGINGLOG4J-2314720")
-                        .setSource(Source.SOURCE_SNYK))
+                        .setSource(SOURCE_SNYK))
                 .build();
 
         final Vulnerability vuln = ModelConverter.convert(hyadesVuln);
@@ -88,6 +99,45 @@ public class ModelConverterTest extends PersistenceCapableTest {
                     assertThat(alias.getSnykId()).isEqualTo("SNYK-JAVA-ORGAPACHELOGGINGLOG4J-2314720");
                 }
         );
+    }
+
+    @Test
+    public void testConvert2() {
+        // Create a vulnerability that was reported by Snyk.
+        // It has a SNYK identifier, with the authoritative source being Snyk itself.
+        // In this case, Snyk's own risk rating is used.
+        final var hyadesVuln = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SNYK-PYTHON-DJANGO-2968205")
+                .setSource(SOURCE_SNYK)
+                .addRatings(Rating.newBuilder()
+                        .setMethod(SCORE_METHOD_CVSSV31)
+                        .setSource(SOURCE_NVD)
+                        .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H")
+                        .setScore(8.8))
+                .addRatings(Rating.newBuilder()
+                        .setMethod(SCORE_METHOD_CVSSV31)
+                        .setSource(SOURCE_SNYK)
+                        .setVector("CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L")
+                        .setScore(7))
+                .addRatings(Rating.newBuilder()
+                        .setMethod(SCORE_METHOD_CVSSV31)
+                        .setSource(SOURCE_UNKNOWN)
+                        .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H")
+                        .setScore(8.8))
+                .build();
+
+        final Vulnerability vuln = ModelConverter.convert(hyadesVuln);
+        assertThat(vuln).isNotNull();
+        assertThat(vuln.getVulnId()).isEqualTo("SNYK-PYTHON-DJANGO-2968205");
+        assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.SNYK.name());
+        assertThat(vuln.getCvssV3Vector()).isEqualTo("CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L");
+        assertThat(vuln.getCvssV3BaseScore()).isEqualTo("7.0");
+        assertThat(vuln.getCvssV3ImpactSubScore()).isEqualTo("4.7");
+        assertThat(vuln.getCvssV3ExploitabilitySubScore()).isEqualTo("2.2");
+        assertThat(vuln.getCvssV2Vector()).isNull();
+        assertThat(vuln.getCvssV2BaseScore()).isNull();
+        assertThat(vuln.getCvssV2ImpactSubScore()).isNull();
+        assertThat(vuln.getCvssV2ExploitabilitySubScore()).isNull();
     }
 
 }
