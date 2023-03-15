@@ -29,6 +29,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -94,7 +95,7 @@ public class PolicyEngine {
                     }
                 }
                 List<PolicyViolation> result = addToPolicyViolation(qm, policy, policyConditionsViolated, policyConditionViolations);
-                if (result != null)
+                if (!result.isEmpty())
                     policyViolations.addAll(result);
             }
         }
@@ -113,7 +114,7 @@ public class PolicyEngine {
         } else if (Policy.Operator.ALL == policy.getOperator() && policyConditionsViolated == policy.getPolicyConditions().size()) {
             return createPolicyViolations(qm, policyConditionViolations);
         }
-        return null;
+        return Collections.emptyList();
     }
 
     private boolean isPolicyAssignedToProject(Policy policy, Project project) {

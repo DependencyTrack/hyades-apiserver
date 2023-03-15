@@ -43,7 +43,7 @@ class KafkaStreamsTopologyFactory {
         //
         // Results with status COMPLETE are re-keyed back to scan keys
         // and forwarded, all other results are dropped after successful processing.
-        final KStream<UUID, ScanResult> processedVulnScanResulStream = vulnScanResultStream
+        final KStream<UUID, ScanResult> processedVulnScanResultStream = vulnScanResultStream
                 .selectKey((scanKey, scanResult) -> UUID.fromString(scanKey.getComponentUuid()),
                         Named.as("re-key_vuln_scan_result_to_component_uuid"))
                 .repartition(Repartitioned
@@ -52,18 +52,18 @@ class KafkaStreamsTopologyFactory {
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
 
         //perform policy evaluation on components with completed vulnerability scan
-        processedVulnScanResulStream
+        processedVulnScanResultStream
                 .foreach((componentUuid, scanResult) -> {
                     PolicyEngine policyEngine = new PolicyEngine();
                     policyEngine.evaluate(componentUuid);
                 });
 
         // Trigger metrics updates for components that completed a vulnerability scan.
-        processedVulnScanResulStream
+        processedVulnScanResultStream
                 .foreach((componentUuid, scanResult) -> Event.dispatch(new ComponentMetricsUpdateEvent(componentUuid)));
 
         // Re-key processed results to their respective scan token, and record their arrival.
-        processedVulnScanResulStream
+        processedVulnScanResultStream
                 .selectKey((componentUuid, scanResult) -> scanResult.getKey().getScanToken())
                 .repartition(Repartitioned
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
