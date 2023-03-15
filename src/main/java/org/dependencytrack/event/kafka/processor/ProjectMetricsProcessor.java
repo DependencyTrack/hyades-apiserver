@@ -19,7 +19,7 @@ public class ProjectMetricsProcessor implements Processor<String, org.hyades.pro
         final UUID uuid = UUID.fromString(record.key());
 
         if (record.value() == null) {
-            LOGGER.warn("Received tombstone event for project %s, but tombstones are currently not processed");
+            LOGGER.warn("Received tombstone event for project %s");
             return;
         }
 

@@ -286,6 +286,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> assertThat(record.value()).isNull(),
                 record -> assertThat(record.value()).isNull(),
+                record -> assertThat(record.value()).isNull(),
                 record -> assertThat(record.value()).isNull()
         );
     }
