@@ -75,9 +75,9 @@ public class CoordinatesPolicyEvaluator extends AbstractPolicyEvaluator {
         }
         final String p = StringUtils.trimToNull(part);
         if (p != null) {
-            if (PolicyCondition.Operator.MATCHES == operator) {
+            if (operator == PolicyCondition.Operator.MATCHES) {
                 return org.dependencytrack.policy.Matcher.matches(p, conditionValue);
-            } else if (PolicyCondition.Operator.NO_MATCH == operator) {
+            } else if (operator == PolicyCondition.Operator.NO_MATCH) {
                 return !org.dependencytrack.policy.Matcher.matches(p, conditionValue);
             }
         }

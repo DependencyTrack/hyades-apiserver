@@ -106,7 +106,7 @@ public class PolicyEngine {
     }
 
     private List<PolicyViolation> addToPolicyViolation(QueryManager qm, Policy policy, int policyConditionsViolated, List<PolicyConditionViolation> policyConditionViolations) {
-        if (Policy.Operator.ANY == policy.getOperator()) {
+        if (policy.getOperator() == Policy.Operator.ANY) {
             if (policyConditionsViolated > 0) {
                 return createPolicyViolations(qm, policyConditionViolations);
             }

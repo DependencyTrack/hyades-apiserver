@@ -59,7 +59,7 @@ public class SeverityPolicyEvaluator extends AbstractPolicyEvaluator {
                     if (vulnerability.getSeverity().name().equals(condition.getValue())) {
                         violations.add(new PolicyConditionViolation(condition, component));
                     }
-                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator() && !vulnerability.getSeverity().name().equals(condition.getValue())) {
+                } else if (condition.getOperator() == PolicyCondition.Operator.IS_NOT && !vulnerability.getSeverity().name().equals(condition.getValue())) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
 
