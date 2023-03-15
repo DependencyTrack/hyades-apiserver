@@ -8,13 +8,26 @@ import org.hyades.proto.vuln.v1.Alias;
 import org.hyades.proto.vuln.v1.Rating;
 import org.hyades.proto.vuln.v1.Reference;
 import org.hyades.proto.vuln.v1.ScoreMethod;
+import org.hyades.proto.vuln.v1.Source;
+import us.springett.cvss.Cvss;
+import us.springett.owasp.riskrating.MissingFactorException;
+import us.springett.owasp.riskrating.OwaspRiskRating;
 
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_NULL;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_OTHER;
+import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_OWASP;
 
 /**
  * Helper class to convert from the Hyades model (largely defined via Protocol Buffers) to the internal model of the API server.
@@ -29,19 +42,9 @@ public final class ModelConverter {
             return null;
         }
 
-        final var vuln = new Vulnerability();
+        var vuln = new Vulnerability();
         vuln.setVulnId(hyadesVuln.getId());
-        vuln.setSource(switch (hyadesVuln.getSource()) {
-            case SOURCE_GITHUB -> Vulnerability.Source.GITHUB;
-            case SOURCE_INTERNAL -> Vulnerability.Source.INTERNAL;
-            case SOURCE_NVD -> Vulnerability.Source.NVD;
-            case SOURCE_OSSINDEX -> Vulnerability.Source.OSSINDEX;
-            case SOURCE_OSV -> Vulnerability.Source.OSV;
-            case SOURCE_SNYK -> Vulnerability.Source.SNYK;
-            case SOURCE_VULNDB -> Vulnerability.Source.VULNDB;
-            default ->
-                    throw new IllegalArgumentException("Invalid vulnerability source %s".formatted(hyadesVuln.getSource()));
-        });
+        vuln.setSource(convert(hyadesVuln.getSource()));
         vuln.setTitle(hyadesVuln.getTitle());
         vuln.setDescription(hyadesVuln.getDescription());
         if (hyadesVuln.hasCreated()) {
@@ -54,25 +57,9 @@ public final class ModelConverter {
             vuln.setUpdated(Date.from(Instant.ofEpochSecond(hyadesVuln.getUpdated().getSeconds())));
         }
 
-        // Vulnerabilities can have multiple risk ratings of the same type, but DT currently only supports one.
-        // For now, we simply use the first one per type. We also only consider ratings from the authoritative
-        // source of the vulnerability. Third-party ratings are ignored for now.
-        for (final Rating rating : hyadesVuln.getRatingsList()) {
-            if (rating.getSource() == hyadesVuln.getSource()) {
-                if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV31 && vuln.getCvssV3Vector() == null) {
-                    vuln.setCvssV3Vector(rating.getVector());
-                    vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
-                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV3 && vuln.getCvssV3Vector() == null) {
-                    vuln.setCvssV3Vector(rating.getVector());
-                    vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
-                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_CVSSV2 && vuln.getCvssV2Vector() == null) {
-                    vuln.setCvssV2Vector(rating.getVector());
-                    vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
-                } else if (rating.getMethod() == ScoreMethod.SCORE_METHOD_OWASP && vuln.getOwaspRRVector() == null) {
-                    vuln.setOwaspRRVector(rating.getVector());
-                }
-            }
-        }
+        hyadesVuln.getRatingsList().stream()
+                .sorted(compareRatings(hyadesVuln.getSource()))
+                .forEach(rating -> applyRating(vuln, rating));
 
         final var cwes = new ArrayList<Integer>();
         for (final Integer cweId : hyadesVuln.getCwesList()) {
@@ -100,6 +87,19 @@ public final class ModelConverter {
         }
 
         return vuln;
+    }
+
+    private static Vulnerability.Source convert(final Source source) {
+        return switch (source) {
+            case SOURCE_GITHUB -> Vulnerability.Source.GITHUB;
+            case SOURCE_INTERNAL -> Vulnerability.Source.INTERNAL;
+            case SOURCE_NVD -> Vulnerability.Source.NVD;
+            case SOURCE_OSSINDEX -> Vulnerability.Source.OSSINDEX;
+            case SOURCE_OSV -> Vulnerability.Source.OSV;
+            case SOURCE_SNYK -> Vulnerability.Source.SNYK;
+            case SOURCE_VULNDB -> Vulnerability.Source.VULNDB;
+            default -> throw new IllegalArgumentException("Invalid vulnerability source %s".formatted(source));
+        };
     }
 
     private static VulnerabilityAlias convert(final org.hyades.proto.vuln.v1.Vulnerability hyadesVuln, final Alias hyadesAlias) {
@@ -133,6 +133,79 @@ public final class ModelConverter {
         }
 
         return alias;
+    }
+
+    private static final List<ScoreMethod> SCORE_METHOD_PRIORITY = List.of(
+            SCORE_METHOD_CVSSV31,
+            SCORE_METHOD_CVSSV3,
+            SCORE_METHOD_CVSSV2,
+            SCORE_METHOD_OWASP,
+            SCORE_METHOD_OTHER,
+            SCORE_METHOD_NULL,
+            ScoreMethod.UNRECOGNIZED
+    );
+
+    /**
+     * Vulnerabilities can have multiple risk ratings of the same type, but DT currently only supports one.
+     *
+     * @param vulnSource (Authoritative) {@link Source} of the vulnerability
+     * @return A {@link Consumer} that sets the selected {@link Rating}
+     */
+    private static Comparator<Rating> compareRatings(final Source vulnSource) {
+        return (left, right) -> {
+            // Prefer ratings from the vulnerability's authoritative source.
+            if (left.getSource() == vulnSource && right.getSource() != vulnSource) {
+                return -1;
+            } else if (left.getSource() != vulnSource && right.getSource() == vulnSource) {
+                return 1;
+            }
+
+            // Prefer specified method over no / unknown methods.
+            if (left.hasMethod() && !right.hasMethod()) {
+                return -1;
+            } else if (!left.hasMethod() && right.hasMethod()) {
+                return 1;
+            }
+
+            return Integer.compare(
+                    SCORE_METHOD_PRIORITY.indexOf(left.getMethod()),
+                    SCORE_METHOD_PRIORITY.indexOf(right.getMethod())
+            );
+        };
+    }
+
+    private static void applyRating(final Vulnerability vuln, final Rating rating) {
+        if (vuln.getCvssV3Vector() == null
+                && (rating.getMethod() == SCORE_METHOD_CVSSV31 || rating.getMethod() == SCORE_METHOD_CVSSV3)) {
+            final Cvss cvss = Cvss.fromVector(rating.getVector());
+            if (cvss != null) {
+                final us.springett.cvss.Score score = cvss.calculateScore();
+                vuln.setCvssV3Vector(cvss.getVector());
+                vuln.setCvssV3BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
+                vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
+            }
+        } else if (vuln.getCvssV2Vector() == null && rating.getMethod() == SCORE_METHOD_CVSSV2) {
+            final Cvss cvss = Cvss.fromVector(rating.getVector());
+            if (cvss != null) {
+                final us.springett.cvss.Score score = cvss.calculateScore();
+                vuln.setCvssV2Vector(cvss.getVector());
+                vuln.setCvssV2BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
+                vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
+            }
+        } else if (vuln.getOwaspRRVector() == null && rating.getMethod() == SCORE_METHOD_OWASP) {
+            try {
+                final OwaspRiskRating orr = OwaspRiskRating.fromVector(rating.getVector());
+                final us.springett.owasp.riskrating.Score orrScore = orr.calculateScore();
+                vuln.setOwaspRRVector(rating.getVector());
+                vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(orrScore.getLikelihoodScore()));
+                vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(orrScore.getBusinessImpactScore()));
+                vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(orrScore.getTechnicalImpactScore()));
+            } catch (MissingFactorException e) {
+                // Ignore
+            }
+        }
     }
 
     private static String convert(final List<Reference> references) {

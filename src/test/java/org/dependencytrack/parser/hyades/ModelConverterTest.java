@@ -37,15 +37,15 @@ public class ModelConverterTest extends PersistenceCapableTest {
                 .setTitle("Foo Bar")
                 .setDescription("Foo Bar Baz Qux Quux")
                 .addRatings(Rating.newBuilder()
-                        .setMethod(ScoreMethod.SCORE_METHOD_CVSSV31)
-                        .setSource(Source.SOURCE_NVD)
-                        .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H")
-                        .setScore(10.0))
-                .addRatings(Rating.newBuilder()
                         .setMethod(ScoreMethod.SCORE_METHOD_CVSSV2)
                         .setSource(Source.SOURCE_NVD)
                         .setVector("(AV:N/AC:M/Au:N/C:C/I:C/A:C)")
                         .setScore(9.3))
+                .addRatings(Rating.newBuilder()
+                        .setMethod(ScoreMethod.SCORE_METHOD_CVSSV31)
+                        .setSource(Source.SOURCE_NVD)
+                        .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H")
+                        .setScore(10.0))
                 .addRatings(Rating.newBuilder()
                         .setMethod(ScoreMethod.SCORE_METHOD_CVSSV3)
                         .setSource(Source.SOURCE_SNYK)
@@ -70,7 +70,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.NVD.name());
         assertThat(vuln.getTitle()).isEqualTo("Foo Bar");
         assertThat(vuln.getDescription()).isEqualTo("Foo Bar Baz Qux Quux");
-        assertThat(vuln.getCvssV3Vector()).isEqualTo("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H");
+        assertThat(vuln.getCvssV3Vector()).isEqualTo("CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H");
         assertThat(vuln.getCvssV3BaseScore()).isEqualTo(BigDecimal.valueOf(10.0));
         assertThat(vuln.getCvssV2Vector()).isEqualTo("(AV:N/AC:M/Au:N/C:C/I:C/A:C)");
         assertThat(vuln.getCvssV2BaseScore()).isEqualTo(BigDecimal.valueOf(9.3));
