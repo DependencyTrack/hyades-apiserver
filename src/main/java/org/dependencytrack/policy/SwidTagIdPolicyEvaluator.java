@@ -50,19 +50,15 @@ public class SwidTagIdPolicyEvaluator extends AbstractPolicyEvaluator {
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
-        if (component.getSwidTagId() == null) {
-            return violations;
-        }
-        for (final PolicyCondition condition: super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             if (PolicyCondition.Operator.MATCHES == condition.getOperator()) {
-                if (component.getSwidTagId() != null && component.getSwidTagId().contains(condition.getValue())) {
+                if (Matcher.matches(component.getSwidTagId(), condition.getValue())) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
-            } else if (PolicyCondition.Operator.NO_MATCH == condition.getOperator()) {
-                if (component.getSwidTagId() != null && !component.getSwidTagId().contains(condition.getValue())) {
-                    violations.add(new PolicyConditionViolation(condition, component));
-                }
+            } else if (condition.getOperator() == PolicyCondition.Operator.NO_MATCH && !Matcher.matches(component.getSwidTagId(), condition.getValue())) {
+                violations.add(new PolicyConditionViolation(condition, component));
+
             }
         }
         return violations;

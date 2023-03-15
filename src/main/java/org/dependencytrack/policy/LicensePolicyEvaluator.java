@@ -53,12 +53,11 @@ public class LicensePolicyEvaluator extends AbstractPolicyEvaluator {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final License license = component.getResolvedLicense();
 
-        for (final PolicyCondition condition: super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             if (condition.getValue().equals("unresolved")) {
-                if (license == null && PolicyCondition.Operator.IS == condition.getOperator()) {
-                    violations.add(new PolicyConditionViolation(condition, component));
-                } else if (license != null && PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
+                if ((license == null && PolicyCondition.Operator.IS == condition.getOperator()) ||
+                        (license != null && condition.getOperator() == PolicyCondition.Operator.IS_NOT)) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
             } else if (license != null) {
@@ -67,10 +66,8 @@ public class LicensePolicyEvaluator extends AbstractPolicyEvaluator {
                     if (component.getResolvedLicense().getId() == l.getId()) {
                         violations.add(new PolicyConditionViolation(condition, component));
                     }
-                } else if (l != null && PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
-                    if (component.getResolvedLicense().getId() != l.getId()) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
+                } else if (l != null && condition.getOperator() == PolicyCondition.Operator.IS_NOT && component.getResolvedLicense().getId() != l.getId()) {
+                    violations.add(new PolicyConditionViolation(condition, component));
                 }
             }
         }
