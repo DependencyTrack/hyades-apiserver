@@ -63,7 +63,7 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
                 }
             } else {
                 final boolean containsLicense = qm.doesLicenseGroupContainLicense(lg, license);
-                if ((PolicyCondition.Operator.IS == condition.getOperator() && containsLicense)
+                if ((condition.getOperator() == PolicyCondition.Operator.IS && containsLicense)
                         || (condition.getOperator() == PolicyCondition.Operator.IS_NOT && !containsLicense)) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }

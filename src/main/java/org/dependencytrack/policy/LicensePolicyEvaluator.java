@@ -63,7 +63,7 @@ public class LicensePolicyEvaluator extends AbstractPolicyEvaluator {
                 final License licenseFromDb = qm.getObjectByUuid(License.class, condition.getValue());
                 boolean condition2 = licenseFromDb != null && condition.getOperator() == PolicyCondition.Operator.IS_NOT &&
                         component.getResolvedLicense().getId() != licenseFromDb.getId();
-                boolean condition1 = licenseFromDb != null && PolicyCondition.Operator.IS == condition.getOperator()
+                boolean condition1 = licenseFromDb != null && condition.getOperator() == PolicyCondition.Operator.IS
                         && component.getResolvedLicense().getId() == licenseFromDb.getId();
                 if (condition1 || condition2) {
                     violations.add(new PolicyConditionViolation(condition, component));
