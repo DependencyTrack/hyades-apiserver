@@ -17,6 +17,7 @@ import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.PolicyEngine;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
@@ -42,22 +43,27 @@ class KafkaStreamsTopologyFactory {
         //
         // Results with status COMPLETE are re-keyed back to scan keys
         // and forwarded, all other results are dropped after successful processing.
-        final KStream<UUID, ScanResult> processedVulnScanResulStream = vulnScanResultStream
+        final KStream<UUID, ScanResult> processedVulnScanResultStream = vulnScanResultStream
                 .selectKey((scanKey, scanResult) -> UUID.fromString(scanKey.getComponentUuid()),
                         Named.as("re-key_vuln_scan_result_to_component_uuid"))
                 .repartition(Repartitioned
                         .with(Serdes.UUID(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("vuln-scan-result-by-component-uuid"))
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
-        // TODO: Kick off policy evaluation when vulnerability analysis completed,
-        // as some policies may check for things like severities etc.
+
+        //perform policy evaluation on components with completed vulnerability scan
+        processedVulnScanResultStream
+                .foreach((componentUuid, scanResult) -> {
+                    PolicyEngine policyEngine = new PolicyEngine();
+                    policyEngine.evaluate(componentUuid);
+                });
 
         // Trigger metrics updates for components that completed a vulnerability scan.
-        processedVulnScanResulStream
+        processedVulnScanResultStream
                 .foreach((componentUuid, scanResult) -> Event.dispatch(new ComponentMetricsUpdateEvent(componentUuid)));
 
         // Re-key processed results to their respective scan token, and record their arrival.
-        processedVulnScanResulStream
+        processedVulnScanResultStream
                 .selectKey((componentUuid, scanResult) -> scanResult.getKey().getScanToken())
                 .repartition(Repartitioned
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())

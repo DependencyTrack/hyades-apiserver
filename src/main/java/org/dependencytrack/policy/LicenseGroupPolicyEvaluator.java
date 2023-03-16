@@ -58,21 +58,17 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             final LicenseGroup lg = qm.getObjectByUuid(LicenseGroup.class, condition.getValue());
             if (license == null) {
-                if (PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
+                if (condition.getOperator() == PolicyCondition.Operator.IS_NOT) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
             } else {
                 final boolean containsLicense = qm.doesLicenseGroupContainLicense(lg, license);
-                if (PolicyCondition.Operator.IS == condition.getOperator()) {
-                    if (containsLicense) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
-                } else if (PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
-                    if (!containsLicense) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
+                if ((condition.getOperator() == PolicyCondition.Operator.IS && containsLicense)
+                        || (condition.getOperator() == PolicyCondition.Operator.IS_NOT && !containsLicense)) {
+                    violations.add(new PolicyConditionViolation(condition, component));
                 }
             }
+
         }
         return violations;
     }
