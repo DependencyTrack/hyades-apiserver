@@ -1,6 +1,6 @@
 package org.dependencytrack.parser.hyades;
 
-import org.dependencytrack.model.Cwe;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -16,7 +16,6 @@ import us.springett.owasp.riskrating.OwaspRiskRating;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -25,8 +24,6 @@ import java.util.stream.Collectors;
 import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV2;
 import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_NULL;
-import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_OTHER;
 import static org.hyades.proto.vuln.v1.ScoreMethod.SCORE_METHOD_OWASP;
 
 /**
@@ -45,7 +42,7 @@ public final class ModelConverter {
         var vuln = new Vulnerability();
         vuln.setVulnId(hyadesVuln.getId());
         vuln.setSource(convert(hyadesVuln.getSource()));
-        vuln.setTitle(hyadesVuln.getTitle());
+        vuln.setTitle(StringUtils.abbreviate(hyadesVuln.getTitle(), 255));
         vuln.setDescription(hyadesVuln.getDescription());
         if (hyadesVuln.hasCreated()) {
             vuln.setCreated(Date.from(Instant.ofEpochSecond(hyadesVuln.getCreated().getSeconds())));
@@ -61,30 +58,19 @@ public final class ModelConverter {
                 .sorted(compareRatings(hyadesVuln.getSource()))
                 .forEach(rating -> applyRating(vuln, rating));
 
-        final var cwes = new ArrayList<Integer>();
-        for (final Integer cweId : hyadesVuln.getCwesList()) {
-            // Only use the CWE if we can find it in our dictionary
-            final Cwe cwe = CweResolver.getInstance().lookup(cweId);
-            if (cwe != null) {
-                cwes.add(cweId);
-            }
-        }
-        if (!cwes.isEmpty()) {
-            vuln.setCwes(cwes);
-        }
+        vuln.setCwes(hyadesVuln.getCwesList().stream()
+                // Only use the CWE if we can find it in our dictionary
+                .filter(cweId -> CweResolver.getInstance().lookup(cweId) != null)
+                .toList());
 
-        final String references = convert(hyadesVuln.getReferencesList());
+        final String references = convertReferences(hyadesVuln.getReferencesList());
         if (!references.isEmpty()) {
             vuln.setReferences(references);
         }
 
-        final var aliases = new ArrayList<VulnerabilityAlias>();
-        for (final Alias hyadesAlias : hyadesVuln.getAliasesList()) {
-            aliases.add(convert(hyadesVuln, hyadesAlias));
-        }
-        if (!aliases.isEmpty()) {
-            vuln.setAliases(aliases);
-        }
+        vuln.setAliases(hyadesVuln.getAliasesList().stream()
+                .map(alias -> convert(hyadesVuln, alias))
+                .toList());
 
         return vuln;
     }
@@ -135,18 +121,26 @@ public final class ModelConverter {
         return alias;
     }
 
-    private static final List<ScoreMethod> SCORE_METHOD_PRIORITY = List.of(
-            SCORE_METHOD_CVSSV31,
-            SCORE_METHOD_CVSSV3,
-            SCORE_METHOD_CVSSV2,
-            SCORE_METHOD_OWASP,
-            SCORE_METHOD_OTHER,
-            SCORE_METHOD_NULL,
-            ScoreMethod.UNRECOGNIZED
-    );
+    /**
+     * Determines the priority of {@link ScoreMethod}s, as used by {@link #compareRatings(Source)}.
+     * <p>
+     * A lower number signals a higher priority.
+     *
+     * @return Priority of the {@link ScoreMethod}
+     */
+    private static int scoreMethodPriority(final ScoreMethod method) {
+        return switch (method) {
+            case SCORE_METHOD_CVSSV31 -> 0;
+            case SCORE_METHOD_CVSSV3 -> 1;
+            case SCORE_METHOD_CVSSV2 -> 2;
+            case SCORE_METHOD_OWASP -> 3;
+            default -> 999;
+        };
+    }
 
     /**
-     * Vulnerabilities can have multiple risk ratings of the same type, but DT currently only supports one.
+     * Vulnerabilities can have multiple risk ratings of the same type, and by multiple sources,
+     * but DT currently only supports one per type.
      *
      * @param vulnSource (Authoritative) {@link Source} of the vulnerability
      * @return A {@link Consumer} that sets the selected {@link Rating}
@@ -155,21 +149,29 @@ public final class ModelConverter {
         return (left, right) -> {
             // Prefer ratings from the vulnerability's authoritative source.
             if (left.getSource() == vulnSource && right.getSource() != vulnSource) {
-                return -1;
+                return -1; // left wins
             } else if (left.getSource() != vulnSource && right.getSource() == vulnSource) {
-                return 1;
+                return 1; // right wins
             }
 
             // Prefer specified method over no / unknown methods.
             if (left.hasMethod() && !right.hasMethod()) {
-                return -1;
+                return -1; // left wins
             } else if (!left.hasMethod() && right.hasMethod()) {
-                return 1;
+                return 1; // right wins
             }
 
+            // Prefer ratings with vector
+            if (left.hasVector() && !right.hasVector()) {
+                return -1; // left wins
+            } else if (!left.hasVector() && right.hasVector()) {
+                return 1; // right wins
+            }
+
+            // Leave the final decision up to the respective method's priorities.
             return Integer.compare(
-                    SCORE_METHOD_PRIORITY.indexOf(left.getMethod()),
-                    SCORE_METHOD_PRIORITY.indexOf(right.getMethod())
+                    scoreMethodPriority(left.getMethod()),
+                    scoreMethodPriority(right.getMethod())
             );
         };
     }
@@ -202,13 +204,13 @@ public final class ModelConverter {
                 vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(orrScore.getLikelihoodScore()));
                 vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(orrScore.getBusinessImpactScore()));
                 vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(orrScore.getTechnicalImpactScore()));
-            } catch (MissingFactorException e) {
+            } catch (IllegalArgumentException | MissingFactorException e) {
                 // Ignore
             }
         }
     }
 
-    private static String convert(final List<Reference> references) {
+    private static String convertReferences(final List<Reference> references) {
         return references.stream()
                 .map(reference -> {
                     if (reference.hasDisplayName()) {
