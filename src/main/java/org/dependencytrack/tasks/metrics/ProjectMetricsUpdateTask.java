@@ -56,7 +56,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         }
     }
 
-    private void updateMetrics(final UUID uuid) throws Exception {
+    private static void updateMetrics(final UUID uuid) throws Exception {
         LOGGER.info("Executing metrics update for project " + uuid);
         final var counters = new Counters();
 
@@ -150,7 +150,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
     }
 
-    private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
+    private static List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
             if (lastId == null) {
                 query.setFilter("project == :project");
