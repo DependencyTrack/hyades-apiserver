@@ -9,17 +9,12 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.SerializationException;
-import org.dependencytrack.event.ComponentMetricsEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.notification.NotificationGroup;
-import org.hyades.proto.metrics.v1.ComponentMetrics;
-import org.hyades.proto.metrics.v1.FindingsMetrics;
-import org.hyades.proto.metrics.v1.PolicyViolationsMetrics;
-import org.hyades.proto.metrics.v1.VulnerabilitiesMetrics;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 
@@ -28,8 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-
-import static java.lang.Math.toIntExact;
 
 /**
  * An {@link Event} dispatcher that wraps a Kafka {@link Producer}.
@@ -93,49 +86,7 @@ public class KafkaEventDispatcher {
             return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
         } else if (event instanceof NistMirrorEvent) {
             return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
-        } else if (event instanceof final ComponentMetricsEvent cmEvent) {
-            final ComponentMetrics componentMetrics;
-            if (cmEvent.metrics() == null) {
-                componentMetrics = null;
-            } else {
-                componentMetrics = ComponentMetrics.newBuilder()
-                        .setComponentUuid(cmEvent.componentUuid().toString())
-                        .setProjectUuid(cmEvent.projectUuid().toString())
-                        .setInheritedRiskScore(cmEvent.metrics().getInheritedRiskScore())
-                        .setVulnerabilities(VulnerabilitiesMetrics.newBuilder()
-                                .setTotal(toIntExact(cmEvent.metrics().getVulnerabilities()))
-                                .setCritical(toIntExact(cmEvent.metrics().getCritical()))
-                                .setHigh(toIntExact(cmEvent.metrics().getHigh()))
-                                .setMedium(toIntExact(cmEvent.metrics().getMedium()))
-                                .setLow(toIntExact(cmEvent.metrics().getLow()))
-                                .setUnassigned(toIntExact(cmEvent.metrics().getUnassigned())))
-                        .setFindings(FindingsMetrics.newBuilder()
-                                .setTotal(toIntExact(cmEvent.metrics().getFindingsTotal()))
-                                .setAudited(toIntExact(cmEvent.metrics().getFindingsAudited()))
-                                .setUnaudited(toIntExact(cmEvent.metrics().getFindingsUnaudited()))
-                                .setSuppressed(toIntExact(cmEvent.metrics().getSuppressed())))
-                        .setPolicyViolations(PolicyViolationsMetrics.newBuilder()
-                                .setTotal(toIntExact(cmEvent.metrics().getPolicyViolationsTotal()))
-                                .setFail(toIntExact(cmEvent.metrics().getPolicyViolationsFail()))
-                                .setWarn(toIntExact(cmEvent.metrics().getPolicyViolationsWarn()))
-                                .setInfo(toIntExact(cmEvent.metrics().getPolicyViolationsInfo()))
-                                .setAudited(toIntExact(cmEvent.metrics().getPolicyViolationsAudited()))
-                                .setUnaudited(toIntExact(cmEvent.metrics().getPolicyViolationsUnaudited()))
-                                .setLicenseTotal(toIntExact(cmEvent.metrics().getPolicyViolationsLicenseTotal()))
-                                .setLicenseAudited(toIntExact(cmEvent.metrics().getPolicyViolationsLicenseAudited()))
-                                .setLicenseUnaudited(toIntExact(cmEvent.metrics().getPolicyViolationsLicenseUnaudited()))
-                                .setOperationalTotal(toIntExact(cmEvent.metrics().getPolicyViolationsOperationalTotal()))
-                                .setOperationalAudited(toIntExact(cmEvent.metrics().getPolicyViolationsOperationalAudited()))
-                                .setOperationalUnaudited(toIntExact(cmEvent.metrics().getPolicyViolationsOperationalUnaudited()))
-                                .setSecurityTotal(toIntExact(cmEvent.metrics().getPolicyViolationsSecurityTotal()))
-                                .setSecurityAudited(toIntExact(cmEvent.metrics().getPolicyViolationsSecurityAudited()))
-                                .setSecurityUnaudited(toIntExact(cmEvent.metrics().getPolicyViolationsSecurityUnaudited()))
-                        )
-                        .build();
-            }
-            return dispatchInternal(KafkaTopics.COMPONENT_METRICS, cmEvent.componentUuid().toString(), componentMetrics, null);
         }
-
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 

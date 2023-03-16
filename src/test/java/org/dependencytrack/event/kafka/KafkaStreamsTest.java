@@ -48,16 +48,6 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
 
-        kafka.createTopic(TopicConfig
-                .withName(KafkaTopics.PROJECT_METRICS.name())
-                .withNumberOfPartitions(3)
-                .withNumberOfReplicas(1));
-
-        kafka.createTopic(TopicConfig
-                .withName(KafkaTopics.PORTFOLIO_METRICS.name())
-                .withNumberOfPartitions(3)
-                .withNumberOfReplicas(1));
-
         kafkaStreamsStateDirectory = Files.createTempDirectory(getClass().getSimpleName());
 
         final var streamsConfig = KafkaStreamsInitializer.getDefaultProperties();

@@ -39,7 +39,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
-import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -443,7 +442,6 @@ public class ProjectResource extends AlpineResource {
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
-                    ProjectMetricsUpdateTask.deleteComponents(project.getUuid());
                     qm.recursivelyDelete(project, true);
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
