@@ -63,13 +63,17 @@ public class PolicyEngine {
         evaluators.add(new VulnerabilityIdPolicyEvaluator());
     }
 
-    public List<PolicyViolation> evaluate(UUID componentId) {
+    public List<PolicyViolation> evaluate(UUID componentUuid) {
         List<PolicyViolation> violations = new ArrayList<>();
         try (final QueryManager qm = new QueryManager()) {
             final List<Policy> policies = qm.getAllPolicies();
-            final Component componentFromDb = qm.getObjectByUuid(Component.class, componentId);
-            LOGGER.info("Evaluating " + componentFromDb.getName() + " component against applicable policies");
-            violations.addAll(this.evaluate(qm, policies, componentFromDb));
+            final Component component = qm.getObjectByUuid(Component.class, componentUuid);
+            if (component != null) {
+                LOGGER.debug("Evaluating component " + componentUuid + " against applicable policies");
+                violations.addAll(this.evaluate(qm, policies, component));
+            } else {
+                LOGGER.warn("Unable to evaluate component " + componentUuid + " against applicable policies, because it does not exist");
+            }
         }
         return violations;
     }
