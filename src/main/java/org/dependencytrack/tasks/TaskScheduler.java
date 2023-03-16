@@ -93,6 +93,9 @@ public final class TaskScheduler extends AlpineTaskScheduler {
             scheduleEvent(new VulnDbSyncEvent(), 60000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_VULNDB_MIRROR_CADENCE));
 
             // Creates a new event that executes every 1 hour (3600000) by default after an initial 10 second (10000) delay
+            scheduleEvent(new PortfolioMetricsUpdateEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_PORTFOLIO_METRICS_UPDATE_CADENCE));
+
+            // Creates a new event that executes every 1 hour (3600000) by default after an initial 10 second (10000) delay
             scheduleEvent(new VulnerabilityMetricsUpdateEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_VULNERABILITY_METRICS_UPDATE_CADENCE));
 
             // Creates a new event that executes every 24 hours (86400000) by default after an initial 6 hour (21600000) delay

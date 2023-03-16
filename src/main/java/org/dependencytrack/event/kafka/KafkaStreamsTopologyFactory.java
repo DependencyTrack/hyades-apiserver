@@ -12,8 +12,6 @@ import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
-import org.dependencytrack.event.kafka.processor.PortfolioMetricsProcessor;
-import org.dependencytrack.event.kafka.processor.ProjectMetricsProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.persistence.QueryManager;
@@ -87,18 +85,6 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
-
-        streamsBuilder
-                .stream(KafkaTopics.PROJECT_METRICS.name(),
-                        Consumed.with(KafkaTopics.PROJECT_METRICS.keySerde(), KafkaTopics.PROJECT_METRICS.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PROJECT_METRICS.name())))
-                .process(ProjectMetricsProcessor::new, Named.as("process_project_metrics"));
-
-        streamsBuilder
-                .stream(KafkaTopics.PORTFOLIO_METRICS.name(),
-                        Consumed.with(KafkaTopics.PORTFOLIO_METRICS.keySerde(), KafkaTopics.PORTFOLIO_METRICS.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.PORTFOLIO_METRICS.name())))
-                .process(PortfolioMetricsProcessor::new, Named.as("process_portfolio_metrics"));
 
         return streamsBuilder.build(streamsProperties);
     }
