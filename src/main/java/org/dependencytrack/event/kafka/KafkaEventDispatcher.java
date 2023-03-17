@@ -77,7 +77,7 @@ public class KafkaEventDispatcher {
                     ScanCommand.newBuilder()
                             .setComponent(componentBuilder)
                             .build(),
-                    null
+                    Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, vaEvent.level().name())
             );
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
             final var component = new Component(rmaEvent.component());

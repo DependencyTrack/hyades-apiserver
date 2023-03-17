@@ -11,13 +11,10 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.hyades.proto.vuln.v1.Source;
 import org.hyades.proto.vulnanalysis.v1.Component;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
-import org.hyades.proto.vulnanalysis.v1.ScanStatus;
-import org.hyades.proto.vulnanalysis.v1.Scanner;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -31,6 +28,14 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_OSSINDEX;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_SNYK;
+import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_COMPLETE;
+import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
+import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
+import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_NONE;
+import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
+import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
 public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
@@ -102,27 +107,27 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setComponentUuid(componentB.getUuid().toString())
                 .build();
         final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
-                .setId("INT-001")
-                .setSource(Source.SOURCE_INTERNAL)
+                .setId("SNYK-001")
+                .setSource(SOURCE_SNYK)
                 .build();
         final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
                 .setId("SONATYPE-001")
-                .setSource(Source.SOURCE_OSSINDEX)
+                .setSource(SOURCE_OSSINDEX)
                 .build();
 
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
                         new KeyValue<>(scanKeyComponentA,
                                 ScanResult.newBuilder()
                                         .setKey(scanKeyComponentA)
-                                        .setScanner(Scanner.SCANNER_INTERNAL)
-                                        .setStatus(ScanStatus.SCAN_STATUS_SUCCESSFUL)
+                                        .setScanner(SCANNER_SNYK)
+                                        .setStatus(SCAN_STATUS_SUCCESSFUL)
                                         .addVulnerabilities(vulnComponentA)
                                         .build()),
                         new KeyValue<>(scanKeyComponentB,
                                 ScanResult.newBuilder()
                                         .setKey(scanKeyComponentB)
-                                        .setScanner(Scanner.SCANNER_OSSINDEX)
-                                        .setStatus(ScanStatus.SCAN_STATUS_SUCCESSFUL)
+                                        .setScanner(SCANNER_OSSINDEX)
+                                        .setStatus(SCAN_STATUS_SUCCESSFUL)
                                         .addVulnerabilities(vulnComponentB)
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
@@ -172,8 +177,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                     scanKey,
                                     ScanResult.newBuilder()
                                             .setKey(scanKey)
-                                            .setScanner(Scanner.SCANNER_NONE)
-                                            .setStatus(ScanStatus.SCAN_STATUS_COMPLETE)
+                                            .setScanner(SCANNER_NONE)
+                                            .setStatus(SCAN_STATUS_COMPLETE)
                                             .build()))
                     )
                     .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
