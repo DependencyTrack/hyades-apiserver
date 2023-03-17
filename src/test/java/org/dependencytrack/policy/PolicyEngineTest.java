@@ -19,6 +19,7 @@
 package org.dependencytrack.policy;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
@@ -29,15 +30,15 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+
+import static org.junit.Assert.assertNull;
 
 public class PolicyEngineTest extends PersistenceCapableTest {
 
@@ -148,7 +149,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         PolicyCondition policyCondition = new PolicyCondition();
         policyCondition.setSubject(null);
         PolicyEngine policyEngine = new PolicyEngine();
-        Assertions.assertNull(policyEngine.determineViolationType(policyCondition.getSubject()));
+        assertNull(policyEngine.determineViolationType(policyCondition.getSubject()));
     }
     @Test
     public void issue1924() {
