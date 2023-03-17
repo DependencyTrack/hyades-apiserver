@@ -91,8 +91,12 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                 persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(purl));
                 persistentRepoMetaComponent.setNamespace(purl.getNamespace());
                 persistentRepoMetaComponent.setName(purl.getName());
-                persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
-                persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
+                if (result.hasLatestVersion()) {
+                    persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
+                }
+                if (result.hasPublished()) {
+                    persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
+                }
                 persistentRepoMetaComponent.setLastCheck(new Date(record.timestamp()));
                 pm.makePersistent(persistentRepoMetaComponent);
 

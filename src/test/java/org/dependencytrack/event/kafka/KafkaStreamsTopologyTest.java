@@ -3,14 +3,14 @@ package org.dependencytrack.event.kafka;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.UUIDSerializer;
-import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
-import org.dependencytrack.model.MetaModel;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.hyades.proto.vuln.v1.Source;
 import org.hyades.proto.vulnanalysis.v1.Component;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -51,18 +51,17 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
     public void repoMetaAnalysisResultProcessingTest() throws Exception {
         final Date beforeTestTimestamp = Date.from(Instant.now());
 
-        final var component = new org.dependencytrack.model.Component();
-        component.setUuid(UUID.randomUUID());
-        component.setPurl("pkg:golang/github.com/foo/bar@1.2.3");
-
-        final var metaModel = new MetaModel(component);
-        metaModel.setLatestVersion("1.2.4");
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:golang/github.com/foo/bar@1.2.3"))
+                .setLatestVersion("1.2.4")
+                .build();
 
         kafka.send(SendKeyValues.to(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), List.of(
-                        new KeyValue<>(component.getUuid(), metaModel)
+                        new KeyValue<>("pkg:golang/github.com/foo/bar", result)
                 ))
-                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class)
-                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonSerializer.class));
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
         final Supplier<RepositoryMetaComponent> repoMetaSupplier =
                 () -> qm.getRepositoryMetaComponent(RepositoryType.GO_MODULES, "github.com/foo", "bar");

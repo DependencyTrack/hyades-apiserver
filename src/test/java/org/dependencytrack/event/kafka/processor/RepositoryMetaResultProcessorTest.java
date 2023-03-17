@@ -1,45 +1,46 @@
 package org.dependencytrack.event.kafka.processor;
 
-import org.apache.kafka.common.serialization.UUIDDeserializer;
-import org.apache.kafka.common.serialization.UUIDSerializer;
+import com.google.protobuf.Timestamp;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.test.TestRecord;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.kafka.serialization.JacksonDeserializer;
-import org.dependencytrack.event.kafka.serialization.JacksonSerializer;
-import org.dependencytrack.model.Component;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.MetaModel;
+import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.jdo.Query;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
     private TopologyTestDriver testDriver;
-    private TestInputTopic<UUID, MetaModel> inputTopic;
+    private TestInputTopic<String, AnalysisResult> inputTopic;
 
     @Before
     public void setUp() {
         final var topology = new Topology();
         topology.addSource("sourceProcessor",
-                new UUIDDeserializer(), new JacksonDeserializer<>(MetaModel.class), "input-topic");
+                new StringDeserializer(), new KafkaProtobufDeserializer<>(AnalysisResult.parser()), "input-topic");
         topology.addProcessor("metaResultProcessor",
                 RepositoryMetaResultProcessor::new, "sourceProcessor");
 
         testDriver = new TopologyTestDriver(topology);
         inputTopic = testDriver.createInputTopic("input-topic",
-                new UUIDSerializer(), new JacksonSerializer<>());
+                new StringSerializer(), new KafkaProtobufSerializer<>());
     }
 
     @After
@@ -51,17 +52,17 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
     @Test
     public void processNewMetaModelTest() {
-        final var testStartTime = new Date();
+        final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
-        component.setPurl("pkg:maven/foo/bar@1.2.3");
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setLatestVersion("1.2.4")
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(published.getEpochSecond()))
+                .build();
 
-        final var metaModel = new MetaModel(component);
-        metaModel.setLatestVersion("1.2.4");
-        metaModel.setPublishedTimestamp(new Date());
-
-        inputTopic.pipeInput(component.getUuid(), metaModel);
+        inputTopic.pipeInput("pkg:maven/foo/bar", result);
 
         final RepositoryMetaComponent metaComponent =
                 qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
@@ -70,29 +71,27 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getNamespace()).isEqualTo("foo");
         assertThat(metaComponent.getName()).isEqualTo("bar");
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
-        assertThat(metaComponent.getPublished()).isEqualTo(metaModel.getPublishedTimestamp());
+        assertThat(metaComponent.getPublished()).isEqualToIgnoringMillis(Date.from(published));
     }
 
     @Test
     public void processWithoutComponentDetailsTest() {
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
+        final var result = AnalysisResult.newBuilder()
+                .setLatestVersion("1.2.4")
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(Instant.now().getEpochSecond()))
+                .build();
 
-        final var metaModel = new MetaModel(component);
-        metaModel.setLatestVersion("1.2.4");
-        metaModel.setPublishedTimestamp(new Date());
+        inputTopic.pipeInput("foo", result);
 
-        inputTopic.pipeInput(component.getUuid(), metaModel);
+        final Query<RepositoryMetaComponent> query = qm.getPersistenceManager().newQuery(RepositoryMetaComponent.class);
+        query.setResult("count(this)");
 
-        final RepositoryMetaComponent metaComponent =
-                qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
-        assertThat(metaComponent).isNull();
+        assertThat(query.executeResultUnique(Long.class)).isZero();
     }
 
     @Test
     public void processUpdateExistingMetaModelTest() {
-        final var testStartTime = new Date();
-
         final var metaComponent = new RepositoryMetaComponent();
         metaComponent.setRepositoryType(RepositoryType.MAVEN);
         metaComponent.setNamespace("foo");
@@ -102,15 +101,17 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         metaComponent.setLastCheck(Date.from(Instant.now().minus(Duration.ofMinutes(5))));
         qm.persist(metaComponent);
 
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
-        component.setPurl("pkg:maven/foo/bar@1.2.3");
+        final var published = Instant.now();
 
-        final var metaModel = new MetaModel(component);
-        metaModel.setLatestVersion("1.2.4");
-        metaModel.setPublishedTimestamp(new Date());
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setLatestVersion("1.2.4")
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(published.getEpochSecond()))
+                .build();
 
-        inputTopic.pipeInput(component.getUuid(), metaModel);
+        inputTopic.pipeInput("pkg:maven/foo/bar", result);
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -118,7 +119,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getNamespace()).isEqualTo("foo");
         assertThat(metaComponent.getName()).isEqualTo("bar");
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
-        assertThat(metaComponent.getPublished()).isEqualTo(metaModel.getPublishedTimestamp());
+        assertThat(metaComponent.getPublished()).isEqualToIgnoringMillis(Date.from(published));
     }
 
     @Test
@@ -134,16 +135,18 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         metaComponent.setLastCheck(Date.from(Instant.now().minusSeconds(5)));
         qm.persist(metaComponent);
 
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
-        component.setPurl("pkg:maven/foo/bar@1.2.3");
+        final var published = Instant.now();
 
-        final var metaModel = new MetaModel(component);
-        metaModel.setLatestVersion("1.2.4");
-        metaModel.setPublishedTimestamp(new Date());
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setLatestVersion("1.2.4")
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(published.getEpochSecond()))
+                .build();
 
         // Pipe in a record that was produced 10 seconds ago, 5 seconds before metaComponent's lastCheck.
-        inputTopic.pipeInput(new TestRecord<>(component.getUuid(), metaModel, Instant.now().minusSeconds(10)));
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now().minusSeconds(10)));
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -151,7 +154,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getNamespace()).isEqualTo("foo");
         assertThat(metaComponent.getName()).isEqualTo("bar");
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.5"); // Must not have been updated
-        assertThat(metaComponent.getPublished()).isNotEqualTo(metaModel.getPublishedTimestamp()); // Must not have been updated
+        assertThat(metaComponent.getPublished()).isNotEqualTo(Date.from(published)); // Must not have been updated
         assertThat(metaComponent.getLastCheck()).isBefore(testStartTime); // Must not have been updated
     }
 
