@@ -118,7 +118,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "project.active == :projectActive";
+            var filter = "project.active == :projectActive && purl != null";
             var params = new HashMap<String, Object>();
             params.put("projectActive", true);
             if (project != null) {

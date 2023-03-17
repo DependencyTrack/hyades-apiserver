@@ -21,7 +21,6 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
         componentProjectA.setProject(projectA);
-        componentProjectA.setGroup("acme");
         componentProjectA.setName("acme-lib-a");
         componentProjectA.setVersion("1.0.1");
         componentProjectA.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
@@ -31,7 +30,6 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         final var projectB = qm.createProject("acme-app-b", null, "2.0.0", null, null, null, true, false);
         final var componentProjectB = new Component();
         componentProjectB.setProject(projectB);
-        componentProjectB.setGroup("acme");
         componentProjectB.setName("acme-lib-b");
         componentProjectB.setVersion("2.0.1");
         componentProjectB.setCpe("cpe:2.3:a:acme:acme-lib-b:2.0.1:*:*:*:*:*:*:*");
@@ -41,9 +39,9 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         final var projectC = qm.createProject("acme-app-c", null, "3.0.0", null, null, null, false, false);
         final var componentProjectC = new Component();
         componentProjectC.setProject(projectC);
-        componentProjectC.setGroup("acme");
         componentProjectC.setName("acme-lib-c");
         componentProjectC.setVersion("3.0.1");
+        componentProjectA.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
         qm.persist(componentProjectC);
 
         new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
@@ -53,26 +51,12 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
-                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
-                    assertThat(eventComponent.uuid()).isEqualTo(componentProjectB.getUuid());
-                    assertThat(eventComponent.group()).isEqualTo(componentProjectB.getGroup());
-                    assertThat(eventComponent.name()).isEqualTo(componentProjectB.getName());
-                    assertThat(eventComponent.version()).isEqualTo(componentProjectB.getVersion());
-                    assertThat(eventComponent.cpe()).isNull();
-                    assertThat(eventComponent.purl()).isNull();
-                },
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
-                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
-                    assertThat(eventComponent.uuid()).isEqualTo(componentProjectA.getUuid());
-                    assertThat(eventComponent.group()).isEqualTo(componentProjectA.getGroup());
-                    assertThat(eventComponent.name()).isEqualTo(componentProjectA.getName());
-                    assertThat(eventComponent.version()).isEqualTo(componentProjectA.getVersion());
-                    assertThat(eventComponent.cpe()).isNull();
-                    assertThat(eventComponent.purl()).isEqualTo(componentProjectA.getPurl().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo(componentProjectA.getPurl().toString());
                 }
-                // Component of inactive project must not have been submitted for analysis
+                // componentB must not have been submitted, because it does not have a PURL
+                // componentC must not have been submitted, because it belongs to an inactive project
         );
     }
 
@@ -107,34 +91,15 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
-                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
-                    assertThat(eventComponent.uuid()).isEqualTo(componentC.getUuid());
-                    assertThat(eventComponent.group()).isEqualTo(componentC.getGroup());
-                    assertThat(eventComponent.name()).isEqualTo(componentC.getName());
-                    assertThat(eventComponent.version()).isEqualTo(componentC.getVersion());
-                    assertThat(eventComponent.cpe()).isNull();
-                    assertThat(eventComponent.purl()).isEqualTo(componentC.getPurl().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo(componentC.getPurl().toString());
                 },
+                // componentB must not have been submitted, because it does not have a PURL
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
-                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
-                    assertThat(eventComponent.uuid()).isEqualTo(componentB.getUuid());
-                    assertThat(eventComponent.group()).isEqualTo(componentB.getGroup());
-                    assertThat(eventComponent.name()).isEqualTo(componentB.getName());
-                    assertThat(eventComponent.version()).isEqualTo(componentB.getVersion());
-                    assertThat(eventComponent.cpe()).isNull();
-                    assertThat(eventComponent.purl()).isNull();
-                },
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMPONENT.name());
-                    final var eventComponent = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, record);
-                    assertThat(eventComponent.uuid()).isEqualTo(componentA.getUuid());
-                    assertThat(eventComponent.group()).isEqualTo(componentA.getGroup());
-                    assertThat(eventComponent.name()).isEqualTo(componentA.getName());
-                    assertThat(eventComponent.version()).isEqualTo(componentA.getVersion());
-                    assertThat(eventComponent.cpe()).isNull();
-                    assertThat(eventComponent.purl()).isEqualTo(componentA.getPurl().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo(componentA.getPurl().toString());
                 }
         );
     }

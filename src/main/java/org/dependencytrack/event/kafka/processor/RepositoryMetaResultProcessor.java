@@ -1,13 +1,15 @@
 package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.model.MetaModel;
+import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDODataStoreException;
@@ -16,18 +18,17 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.sql.SQLException;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
  */
-public class RepositoryMetaResultProcessor implements Processor<UUID, MetaModel, Void, Void> {
+public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult, Void, Void> {
 
     private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
 
     @Override
-    public void process(final Record<UUID, MetaModel> record) {
-        if (record.value().getLatestVersion() != null) {
+    public void process(final Record<String, AnalysisResult> record) {
+        if (record.value().hasLatestVersion()) {
             try (final var qm = new QueryManager()) {
                 synchronizeRepositoryMetaComponent(qm.getPersistenceManager(), record);
             } catch (Exception e) {
@@ -36,13 +37,24 @@ public class RepositoryMetaResultProcessor implements Processor<UUID, MetaModel,
         }
     }
 
-    private void synchronizeRepositoryMetaComponent(final PersistenceManager pm, final Record<UUID, MetaModel> record) {
-        final MetaModel metaModel = record.value();
-        if (metaModel.getComponent() == null || metaModel.getComponent().getPurl() == null) {
+    private void synchronizeRepositoryMetaComponent(final PersistenceManager pm, final Record<String, AnalysisResult> record) {
+        final AnalysisResult result = record.value();
+        if (!result.hasComponent()) {
             LOGGER.warn("""
-                    Received repository meta information without component or PURL details,\s
+                    Received repository meta information without component,\s
                     will not be able to correlate; Dropping
                     """);
+            return;
+        }
+
+        final PackageURL purl;
+        try {
+            purl = new PackageURL(result.getComponent().getPurl());
+        } catch (MalformedPackageURLException e) {
+            LOGGER.warn("""
+                    Received repository meta information with invalid PURL,\s
+                    will not be able to correlate; Dropping
+                    """, e);
             return;
         }
 
@@ -58,9 +70,9 @@ public class RepositoryMetaResultProcessor implements Processor<UUID, MetaModel,
                 final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class);
                 query.setFilter("repositoryType == :repositoryType && namespace == :namespace && name == :name");
                 query.setParameters(
-                        RepositoryType.resolve(metaModel.getComponent().getPurl()),
-                        metaModel.getComponent().getPurl().getNamespace(),
-                        metaModel.getComponent().getPurl().getName()
+                        RepositoryType.resolve(purl),
+                        purl.getNamespace(),
+                        purl.getName()
                 );
                 RepositoryMetaComponent persistentRepoMetaComponent = query.executeUnique();
                 if (persistentRepoMetaComponent == null) {
@@ -72,15 +84,19 @@ public class RepositoryMetaResultProcessor implements Processor<UUID, MetaModel,
                     LOGGER.warn("""
                             Received repository meta information for %s that is older\s
                             than what's already in the database; Discarding
-                            """.formatted(metaModel.getComponent()));
+                            """.formatted(purl));
                     return;
                 }
 
-                persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(metaModel.getComponent().getPurl()));
-                persistentRepoMetaComponent.setNamespace(metaModel.getComponent().getPurl().getNamespace());
-                persistentRepoMetaComponent.setName(metaModel.getComponent().getPurl().getName());
-                persistentRepoMetaComponent.setLatestVersion(metaModel.getLatestVersion());
-                persistentRepoMetaComponent.setPublished(metaModel.getPublishedTimestamp());
+                persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(purl));
+                persistentRepoMetaComponent.setNamespace(purl.getNamespace());
+                persistentRepoMetaComponent.setName(purl.getName());
+                if (result.hasLatestVersion()) {
+                    persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
+                }
+                if (result.hasPublished()) {
+                    persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
+                }
                 persistentRepoMetaComponent.setLastCheck(new Date(record.timestamp()));
                 pm.makePersistent(persistentRepoMetaComponent);
 
