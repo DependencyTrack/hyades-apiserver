@@ -14,6 +14,7 @@ import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.notification.NotificationGroup;
+import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 
@@ -85,7 +86,7 @@ public class KafkaEventDispatcher {
 
             return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMMAND,
                     rmaEvent.component().getPurl().canonicalize(),
-                    org.hyades.proto.repometaanalysis.v1.AnalysisCommand.newBuilder()
+                    AnalysisCommand.newBuilder()
                             .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                                     .setPurl(rmaEvent.component().getPurl().canonicalize())
                                     .setInternal(rmaEvent.component().isInternal()))
