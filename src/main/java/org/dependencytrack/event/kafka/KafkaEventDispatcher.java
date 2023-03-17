@@ -13,7 +13,6 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.event.kafka.dto.Component;
 import org.dependencytrack.notification.NotificationGroup;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -55,7 +54,7 @@ public class KafkaEventDispatcher {
      * This call is blocking and will wait for the server to acknowledge the event.
      *
      * @param event The {@link Event} to dispatch
-     * @return A {@link RecordMetadata} instance for the dispatched event
+     * @return A {@link RecordMetadata} instance for the dispatched event, or {@code null} when the event was not dispatched
      * @throws IllegalArgumentException When dispatching the given {@link Event} to Kafka is not supported
      * @throws KafkaException           When dispatching failed
      */
@@ -80,8 +79,18 @@ public class KafkaEventDispatcher {
                     Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, vaEvent.level().name())
             );
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
-            final var component = new Component(rmaEvent.component());
-            return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMPONENT, component.uuid().toString(), component, null);
+            if (rmaEvent.component() == null || rmaEvent.component().getPurl() == null) {
+                return null;
+            }
+
+            return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMMAND,
+                    rmaEvent.component().getPurl().canonicalize(),
+                    org.hyades.proto.repometaanalysis.v1.AnalysisCommand.newBuilder()
+                            .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                                    .setPurl(rmaEvent.component().getPurl().canonicalize())
+                                    .setInternal(rmaEvent.component().isInternal()))
+                            .build(),
+                    null);
         } else if (event instanceof final OsvMirrorEvent omEvent) {
             return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
         } else if (event instanceof NistMirrorEvent) {
