@@ -70,7 +70,7 @@ public class NotificationPublisher implements Serializable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
-    private int id;
+    private long id;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "NAME", allowsNull = "false")
@@ -114,11 +114,11 @@ public class NotificationPublisher implements Serializable {
     @NotNull
     private UUID uuid;
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
