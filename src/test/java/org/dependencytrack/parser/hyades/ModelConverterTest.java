@@ -11,7 +11,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,7 +22,7 @@ import static org.hyades.proto.vuln.v1.Source.SOURCE_GITHUB;
 import static org.hyades.proto.vuln.v1.Source.SOURCE_NVD;
 import static org.hyades.proto.vuln.v1.Source.SOURCE_OSSINDEX;
 import static org.hyades.proto.vuln.v1.Source.SOURCE_SNYK;
-import static org.hyades.proto.vuln.v1.Source.SOURCE_UNKNOWN;
+import static org.hyades.proto.vuln.v1.Source.SOURCE_UNSPECIFIED;
 
 public class ModelConverterTest extends PersistenceCapableTest {
 
@@ -117,7 +116,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
                         .setScore(7))
                 .addRatings(Rating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV31)
-                        .setSource(SOURCE_UNKNOWN)
+                        .setSource(SOURCE_UNSPECIFIED)
                         .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H")
                         .setScore(8.8))
                 .build();
@@ -143,16 +142,16 @@ public class ModelConverterTest extends PersistenceCapableTest {
                 .setSource(SOURCE_SNYK)
                 .addRatings(Rating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV31)
-                        .setSource(SOURCE_UNKNOWN)
+                        .setSource(SOURCE_UNSPECIFIED)
                         .setScore(8.8))
                 .addRatings(Rating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV31)
-                        .setSource(SOURCE_UNKNOWN)
+                        .setSource(SOURCE_UNSPECIFIED)
                         .setVector("CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L")
                         .setScore(7))
                 .addRatings(Rating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV31)
-                        .setSource(SOURCE_UNKNOWN)
+                        .setSource(SOURCE_UNSPECIFIED)
                         .setScore(8.8))
                 .build();
 
