@@ -22,7 +22,6 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileDeleteStrategy;
@@ -248,19 +247,23 @@ public abstract class IndexManager implements AutoCloseable {
         } catch (IOException e) {
             LOGGER.error("Error committing index", e);
             String content = "Error committing index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(
+                    NotificationScope.SYSTEM,
+                    NotificationGroup.INDEXING_SERVICE,
+                    NotificationConstants.Title.CORE_INDEXING_SERVICES,
+                    content,
+                    NotificationLevel.ERROR);
         }
     }
 
     protected void handleCorruptIndexException(CorruptIndexException e) {
         LOGGER.error("Corrupted Lucene index detected", e);
-        Notification.dispatch(new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.INDEXING_SERVICE)
-                .title(NotificationConstants.Title.CORE_INDEXING_SERVICES + "(" + indexType.name().toLowerCase() + ")")
-                .content("Corrupted Lucene index detected. Check log for details. " + e.getMessage())
-                .level(NotificationLevel.ERROR)
-        );
+        NotificationUtil.dispatchExceptionNotifications(
+                NotificationScope.SYSTEM,
+                NotificationGroup.INDEXING_SERVICE,
+                NotificationConstants.Title.CORE_INDEXING_SERVICES,
+                "Corrupted Lucene index detected. Check log for details. " + e.getMessage(),
+                NotificationLevel.ERROR);
         LOGGER.info("Trying to rebuild the corrupted index " + indexType.name());
         Event.dispatch(new IndexEvent(IndexEvent.Action.REINDEX, indexType.getClazz()));
     }
@@ -491,13 +494,12 @@ public abstract class IndexManager implements AutoCloseable {
                 }
             } catch (IOException e) {
                 LOGGER.error("An I/O exception occurred while trying to read Lucene index", e);
-                Notification.dispatch(new Notification()
-                        .scope(NotificationScope.SYSTEM)
-                        .group(NotificationGroup.INDEXING_SERVICE)
-                        .title(NotificationConstants.Title.CORE_INDEXING_SERVICES)
-                        .content("An I/O exception occurred while searching Lucene index. Check log for details. " + e.getMessage())
-                        .level(NotificationLevel.ERROR)
-                );
+                NotificationUtil.dispatchExceptionNotifications(
+                        NotificationScope.SYSTEM,
+                        NotificationGroup.INDEXING_SERVICE,
+                        NotificationConstants.Title.CORE_INDEXING_SERVICES,
+                        "An I/O exception occurred while searching Lucene index. Check log for details. " + e.getMessage(),
+                        NotificationLevel.ERROR);
             }
         });
     }

@@ -2,7 +2,6 @@ package org.dependencytrack.event.kafka;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
-import alpine.notification.Notification;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -14,6 +13,8 @@ import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.parser.hyades.NotificationModelConverter;
+import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -100,8 +101,10 @@ public class KafkaEventDispatcher {
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
-    public RecordMetadata dispatchNotification(final Notification notification) {
-        return switch (NotificationGroup.valueOf(notification.getGroup())) {
+    public RecordMetadata dispatchNotification(final alpine.notification.Notification alpineNotification) {
+        final Notification notification = NotificationModelConverter.convert(alpineNotification);
+
+        return switch (NotificationGroup.valueOf(alpineNotification.getGroup())) {
             case CONFIGURATION -> dispatchInternal(KafkaTopics.NOTIFICATION_CONFIGURATION, null, notification, null);
             case DATASOURCE_MIRRORING ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);

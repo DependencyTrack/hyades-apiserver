@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
@@ -38,14 +36,13 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.hyades.proto.notification.v1.Notification;
 import org.junit.Test;
 
 import javax.json.Json;
@@ -61,6 +58,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
@@ -223,9 +223,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(projectNotification).isNotNull();
         final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
-        assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
-        assertThat(notification.getLevel()).isEqualTo(NotificationLevel.INFORMATIONAL);
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
         assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_APPROVED, project));
         assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
     }
@@ -273,9 +273,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(projectNotification).isNotNull();
         final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
-        assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
-        assertThat(notification.getLevel()).isEqualTo(NotificationLevel.INFORMATIONAL);
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
         assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET, project));
         assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
     }
@@ -341,9 +341,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(projectNotification).isNotNull();
         final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
-        assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
-        assertThat(notification.getLevel()).isEqualTo(NotificationLevel.INFORMATIONAL);
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
         assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_REJECTED, project));
         assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
     }
@@ -449,9 +449,9 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(projectNotification).isNotNull();
         final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(NotificationScope.PORTFOLIO.name());
-        assertThat(notification.getGroup()).isEqualTo(NotificationGroup.PROJECT_AUDIT_CHANGE.name());
-        assertThat(notification.getLevel()).isEqualTo(NotificationLevel.INFORMATIONAL);
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
         assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET, project));
         assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
     }
