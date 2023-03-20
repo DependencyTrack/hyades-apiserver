@@ -5,7 +5,6 @@ import com.github.packageurl.PackageURL;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -13,6 +12,7 @@ import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
+import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -27,7 +27,9 @@ import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.Policy;
 import org.hyades.proto.notification.v1.PolicyCondition;
 import org.hyades.proto.notification.v1.PolicyViolation;
+import org.hyades.proto.notification.v1.PolicyViolationAnalysis;
 import org.hyades.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
+import org.hyades.proto.notification.v1.PolicyViolationSubject;
 import org.hyades.proto.notification.v1.Project;
 import org.hyades.proto.notification.v1.Scope;
 import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
@@ -154,6 +156,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(bcop)));
         } else if (subject instanceof final VexConsumedOrProcessed vcop) {
             return Optional.of(Any.pack(convert(vcop)));
+        } else if (subject instanceof final PolicyViolationIdentified pvi) {
+            return Optional.of(Any.pack(convert(pvi)));
         }
 
         return Optional.empty();
@@ -199,6 +203,7 @@ public final class NotificationModelConverter {
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
                 .setPolicyViolation(convert(subject.getPolicyViolation()))
+                .setAnalysis(convert(subject.getViolationAnalysis()))
                 .build();
     }
 
@@ -217,6 +222,14 @@ public final class NotificationModelConverter {
                 .setVex(ByteString.copyFromUtf8(subject.getVex()))
                 .setFormat(subject.getFormat().getFormatShortName())
                 .setSpecVersion(subject.getSpecVersion())
+                .build();
+    }
+
+    private static PolicyViolationSubject convert(final PolicyViolationIdentified subject) {
+        return PolicyViolationSubject.newBuilder()
+                .setProject(convert(subject.getProject()))
+                .setComponent(convert(subject.getComponent()))
+                .setPolicyViolation(convert(subject.getPolicyViolation()))
                 .build();
     }
 
@@ -243,6 +256,7 @@ public final class NotificationModelConverter {
 
         Optional.ofNullable(project.getVersion()).ifPresent(builder::setVersion);
         Optional.ofNullable(project.getDescription()).ifPresent(builder::setDescription);
+        Optional.ofNullable(project.getPurl()).map(PackageURL::canonicalize).ifPresent(builder::setPurl);
         Optional.ofNullable(project.getTags())
                 .orElseGet(Collections::emptyList).stream()
                 .map(Tag::getName)
@@ -312,11 +326,23 @@ public final class NotificationModelConverter {
                 .build();
     }
 
-    private static VulnerabilityAnalysis convert(final Analysis analysis) {
+    private static VulnerabilityAnalysis convert(final org.dependencytrack.model.Analysis analysis) {
         final VulnerabilityAnalysis.Builder builder = VulnerabilityAnalysis.newBuilder()
                 .setComponent(convert(analysis.getComponent()))
                 .setProject(convert(analysis.getProject()))
                 .setVulnerability(convert(analysis.getVulnerability()))
+                .setSuppressed(analysis.isSuppressed());
+
+        Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
+
+        return builder.build();
+    }
+
+    private static PolicyViolationAnalysis convert(final org.dependencytrack.model.ViolationAnalysis analysis) {
+        final PolicyViolationAnalysis.Builder builder = PolicyViolationAnalysis.newBuilder()
+                .setComponent(convert(analysis.getComponent()))
+                .setProject(convert(analysis.getComponent().getProject()))
+                .setPolicyViolation(convert(analysis.getPolicyViolation()))
                 .setSuppressed(analysis.isSuppressed());
 
         Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
