@@ -68,7 +68,7 @@ public class NotificationRule implements Serializable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
-    private int id;
+    private long id;
 
     /**
      * The String representation of the name of the notification.
@@ -136,11 +136,11 @@ public class NotificationRule implements Serializable {
     @NotNull
     private UUID uuid;
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
