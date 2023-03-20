@@ -241,6 +241,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertProject(subject.getProject());
         assertVulnerability(subject.getVulnerability());
         assertThat(subject.getAffectedProjectsList()).satisfiesExactly(this::assertProject);
+        assertThat(subject.getVulnerabilityAnalysisLevel()).isEqualTo("BOM_UPLOAD_ANALYSIS");
     }
 
     @Test
@@ -577,7 +578,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
     private void assertVulnerability(final Vulnerability vuln) {
         assertThat(vuln.getUuid()).isEqualTo("418d9be1-f888-446a-8f03-f3253e5b5361");
-        assertThat(vuln.getId()).isEqualTo("INT-001");
+        assertThat(vuln.getVulnId()).isEqualTo("INT-001");
         assertThat(vuln.getSource()).isEqualTo("INTERNAL");
         assertThat(vuln.getAliasesList()).satisfiesExactly(
                 alias -> {
@@ -597,11 +598,11 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertThat(vuln.getSeverity()).isEqualTo("MEDIUM");
         assertThat(vuln.getCwesList()).satisfiesExactly(
                 cwe -> {
-                    assertThat(cwe.getId()).isEqualTo(666);
+                    assertThat(cwe.getCweId()).isEqualTo(666);
                     assertThat(cwe.getName()).isEqualTo("Operation on Resource in Wrong Phase of Lifetime");
                 },
                 cwe -> {
-                    assertThat(cwe.getId()).isEqualTo(777);
+                    assertThat(cwe.getCweId()).isEqualTo(777);
                     assertThat(cwe.getName()).isEqualTo("Regular Expression without Anchors");
                 }
         );

@@ -36,7 +36,6 @@ import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.Vulnerability;
 import org.hyades.proto.notification.v1.VulnerabilityAnalysis;
 import org.hyades.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
-import org.hyades.proto.notification.v1.VulnerabilityAnalysisLevel;
 
 import java.math.BigDecimal;
 import java.time.ZoneOffset;
@@ -67,9 +66,6 @@ import static org.hyades.proto.notification.v1.Level.LEVEL_WARNING;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_SYSTEM;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
-import static org.hyades.proto.notification.v1.VulnerabilityAnalysisLevel.VULNERABILITY_ANALYSIS_LEVEL_BOM_UPLOAD;
-import static org.hyades.proto.notification.v1.VulnerabilityAnalysisLevel.VULNERABILITY_ANALYSIS_LEVEL_PERIODIC;
-import static org.hyades.proto.notification.v1.VulnerabilityAnalysisLevel.VULNERABILITY_ANALYSIS_LEVEL_UNSPECIFIED;
 
 public final class NotificationModelConverter {
 
@@ -167,12 +163,15 @@ public final class NotificationModelConverter {
         final NewVulnerabilitySubject.Builder builder = NewVulnerabilitySubject.newBuilder()
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
-                .setVulnerability(convert(subject.getVulnerability()))
-                .setAnalysisLevel(convert(subject.getVulnerabilityAnalysisLevel()));
+                .setVulnerability(convert(subject.getVulnerability()));
 
         subject.getAffectedProjects().stream()
                 .map(NotificationModelConverter::convert)
                 .forEach(builder::addAffectedProjects);
+
+        Optional.ofNullable(subject.getVulnerabilityAnalysisLevel())
+                .map(Enum::name)
+                .ifPresent(builder::setVulnerabilityAnalysisLevel);
 
         return builder.build();
     }
@@ -268,7 +267,7 @@ public final class NotificationModelConverter {
     private static Vulnerability convert(final org.dependencytrack.model.Vulnerability vulnerability) {
         final Vulnerability.Builder builder = Vulnerability.newBuilder()
                 .setUuid(vulnerability.getUuid().toString())
-                .setId(vulnerability.getVulnId())
+                .setVulnId(vulnerability.getVulnId())
                 .setSource(vulnerability.getSource());
 
         if (vulnerability.getAliases() != null) {
@@ -352,17 +351,9 @@ public final class NotificationModelConverter {
 
     private static Vulnerability.Cwe convert(final org.dependencytrack.model.Cwe cwe) {
         return Vulnerability.Cwe.newBuilder()
-                .setId(cwe.getCweId())
+                .setCweId(cwe.getCweId())
                 .setName(cwe.getName())
                 .build();
-    }
-
-    private static VulnerabilityAnalysisLevel convert(final org.dependencytrack.model.VulnerabilityAnalysisLevel level) {
-        return switch (level) {
-            case BOM_UPLOAD_ANALYSIS -> VULNERABILITY_ANALYSIS_LEVEL_BOM_UPLOAD;
-            case PERIODIC_ANALYSIS -> VULNERABILITY_ANALYSIS_LEVEL_PERIODIC;
-            default -> VULNERABILITY_ANALYSIS_LEVEL_UNSPECIFIED;
-        };
     }
 
 }
