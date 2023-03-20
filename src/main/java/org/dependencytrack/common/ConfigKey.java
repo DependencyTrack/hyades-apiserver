@@ -22,6 +22,12 @@ public enum ConfigKey implements Config.Key {
     KAFKA_APPLICATION_ID("kafka.application.id", "dependencytrack-apiserver"),
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
+
+    KAFKA_SSL_PROTOCOL("kafka.security.protocol", "SSL"),
+
+    TRUST_STORE_PATH("kafka.truststore.path", ""),
+
+    TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
     KAFKA_TOPIC_PREFIX("api.topic.prefix", "");
 
