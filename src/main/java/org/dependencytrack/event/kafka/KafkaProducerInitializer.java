@@ -90,9 +90,11 @@ public class KafkaProducerInitializer implements ServletContextListener {
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
-        properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_SSL_PROTOCOL));
-        properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PATH));
-        properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.KAFKA_SSL_ENABLED)) {
+            properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_SSL_PROTOCOL));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PATH));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+        }
         return new KafkaProducer<>(properties);
     }
 

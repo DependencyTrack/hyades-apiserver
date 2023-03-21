@@ -23,8 +23,9 @@ public enum ConfigKey implements Config.Key {
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
 
-    KAFKA_SSL_PROTOCOL("kafka.security.protocol", "SSL"),
+    KAFKA_SSL_PROTOCOL("kafka.security.protocol", ""),
 
+    KAFKA_SSL_ENABLED("kafka.ssl.enabled", false),
     TRUST_STORE_PATH("kafka.truststore.path", ""),
 
     TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
