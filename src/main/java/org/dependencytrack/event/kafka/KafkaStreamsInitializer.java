@@ -64,7 +64,9 @@ public class KafkaStreamsInitializer implements ServletContextListener {
     static Properties getDefaultProperties() {
         final var properties = new Properties();
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
-        properties.put(StreamsConfig.APPLICATION_ID_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
+        StringBuilder applicationName = new StringBuilder(Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX)).append(Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
+        properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName.toString());
+
         properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
         properties.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_NUM_STREAM_THREADS));
         properties.put(StreamsConfig.STATE_DIR_CONFIG, Paths.get(Config.getInstance().getDataDirectorty().getAbsolutePath(), "kafka-streams").toString());
