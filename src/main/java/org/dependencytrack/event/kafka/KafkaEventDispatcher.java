@@ -2,7 +2,6 @@ package org.dependencytrack.event.kafka;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
-import alpine.notification.Notification;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -13,7 +12,8 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.parser.hyades.NotificationModelConverter;
+import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -100,31 +100,42 @@ public class KafkaEventDispatcher {
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
-    public RecordMetadata dispatchNotification(final Notification notification) {
-        return switch (NotificationGroup.valueOf(notification.getGroup())) {
-            case CONFIGURATION -> dispatchInternal(KafkaTopics.NOTIFICATION_CONFIGURATION, null, notification, null);
-            case DATASOURCE_MIRRORING ->
+    public RecordMetadata dispatchNotification(final alpine.notification.Notification alpineNotification) {
+        final Notification notification = NotificationModelConverter.convert(alpineNotification);
+
+        return switch (notification.getGroup()) {
+            case GROUP_CONFIGURATION ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_CONFIGURATION, null, notification, null);
+            case GROUP_DATASOURCE_MIRRORING ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);
-            case REPOSITORY -> dispatchInternal(KafkaTopics.NOTIFICATION_REPOSITORY, null, notification, null);
-            case INTEGRATION -> dispatchInternal(KafkaTopics.NOTIFICATION_INTEGRATION, null, notification, null);
-            case ANALYZER -> dispatchInternal(KafkaTopics.NOTIFICATION_ANALYZER, null, notification, null);
-            case BOM_CONSUMED -> dispatchInternal(KafkaTopics.NOTIFICATION_BOM_CONSUMED, null, notification, null);
-            case BOM_PROCESSED -> dispatchInternal(KafkaTopics.NOTIFICATION_BOM_PROCESSED, null, notification, null);
-            case FILE_SYSTEM -> dispatchInternal(KafkaTopics.NOTIFICATION_FILE_SYSTEM, null, notification, null);
-            case INDEXING_SERVICE ->
+            case GROUP_REPOSITORY -> dispatchInternal(KafkaTopics.NOTIFICATION_REPOSITORY, null, notification, null);
+            case GROUP_INTEGRATION -> dispatchInternal(KafkaTopics.NOTIFICATION_INTEGRATION, null, notification, null);
+            case GROUP_ANALYZER -> dispatchInternal(KafkaTopics.NOTIFICATION_ANALYZER, null, notification, null);
+            case GROUP_BOM_CONSUMED ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_BOM_CONSUMED, null, notification, null);
+            case GROUP_BOM_PROCESSED ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_BOM_PROCESSED, null, notification, null);
+            case GROUP_FILE_SYSTEM -> dispatchInternal(KafkaTopics.NOTIFICATION_FILE_SYSTEM, null, notification, null);
+            case GROUP_INDEXING_SERVICE ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_INDEXING_SERVICE, null, notification, null);
-            case NEW_VULNERABILITY ->
+            case GROUP_NEW_VULNERABILITY ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY, null, notification, null);
-            case NEW_VULNERABLE_DEPENDENCY ->
+            case GROUP_NEW_VULNERABLE_DEPENDENCY ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY, null, notification, null);
-            case POLICY_VIOLATION ->
+            case GROUP_POLICY_VIOLATION ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
-            case PROJECT_AUDIT_CHANGE ->
+            case GROUP_PROJECT_AUDIT_CHANGE ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
-            case PROJECT_CREATED ->
+            case GROUP_PROJECT_CREATED ->
                     dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_CREATED, null, notification, null);
-            case VEX_CONSUMED -> dispatchInternal(KafkaTopics.NOTIFICATION_VEX_CONSUMED, null, notification, null);
-            case VEX_PROCESSED -> dispatchInternal(KafkaTopics.NOTIFICATION_VEX_PROCESSED, null, notification, null);
+            case GROUP_VEX_CONSUMED ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_VEX_CONSUMED, null, notification, null);
+            case GROUP_VEX_PROCESSED ->
+                    dispatchInternal(KafkaTopics.NOTIFICATION_VEX_PROCESSED, null, notification, null);
+            default -> {
+                LOGGER.warn("A notification with group %s was dispatched, but there's no destination Kafka topic defined for it".formatted(notification.getGroup()));
+                yield null;
+            }
         };
     }
 

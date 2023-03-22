@@ -1,7 +1,6 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.Config;
-import alpine.notification.Notification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.serialization.Serde;
@@ -10,6 +9,7 @@ import org.cyclonedx.model.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
+import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
@@ -46,7 +46,7 @@ public final class KafkaTopics {
 
     // As ObjectMapper construction is rather expensive, share a common instance across all JSON Serdes.
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
-    private static final Serde<Notification> NOTIFICATION_SERDE = new JacksonSerde<>(Notification.class, OBJECT_MAPPER);
+    private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
         NOTIFICATION_ANALYZER = new Topic<>("dtrack.notification.analyzer", Serdes.String(), NOTIFICATION_SERDE);

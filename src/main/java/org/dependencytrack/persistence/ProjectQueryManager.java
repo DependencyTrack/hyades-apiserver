@@ -24,7 +24,6 @@ import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
-import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
