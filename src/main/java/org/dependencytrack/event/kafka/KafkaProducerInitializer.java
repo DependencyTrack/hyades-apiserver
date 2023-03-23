@@ -85,7 +85,7 @@ public class KafkaProducerInitializer implements ServletContextListener {
     private static Producer<byte[], byte[]> createProducer() {
         final var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
-        properties.put(ProducerConfig.CLIENT_ID_CONFIG,Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
+        properties.put(ProducerConfig.CLIENT_ID_CONFIG,Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
