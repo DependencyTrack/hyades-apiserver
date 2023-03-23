@@ -19,9 +19,16 @@ public enum ConfigKey implements Config.Key {
     REPO_META_ANALYZER_CACHE_STAMPEDE_BLOCKER_LOCK_BUCKETS("repo.meta.analyzer.cacheStampedeBlocker.lock.buckets", 1000),
     REPO_META_ANALYZER_CACHE_STAMPEDE_BLOCKER_MAX_ATTEMPTS("repo.meta.analyzer.cacheStampedeBlocker.max.attempts", 10),
     SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
-    KAFKA_APPLICATION_ID("kafka.application.id", "dependencytrack-apiserver"),
+    APPLICATION_ID("application.id", "dependencytrack-apiserver"),
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
+
+    KAFKA_SSL_PROTOCOL("kafka.security.protocol", ""),
+
+    KAFKA_SSL_ENABLED("kafka.ssl.enabled", false),
+    TRUST_STORE_PATH("kafka.truststore.path", ""),
+
+    TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
     KAFKA_TOPIC_PREFIX("api.topic.prefix", "");
 

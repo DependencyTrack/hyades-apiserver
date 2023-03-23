@@ -6,6 +6,7 @@ import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaStreamsMetrics;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
@@ -63,11 +64,18 @@ public class KafkaStreamsInitializer implements ServletContextListener {
     static Properties getDefaultProperties() {
         final var properties = new Properties();
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
-        properties.put(StreamsConfig.APPLICATION_ID_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
+        StringBuilder applicationName = new StringBuilder(Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX)).append(Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
+        properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName.toString());
+
         properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
         properties.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_NUM_STREAM_THREADS));
         properties.put(StreamsConfig.STATE_DIR_CONFIG, Paths.get(Config.getInstance().getDataDirectorty().getAbsolutePath(), "kafka-streams").toString());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_AUTO_OFFSET_RESET));
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.KAFKA_SSL_ENABLED)) {
+            properties.put(StreamsConfig.SECURITY_PROTOCOL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_SSL_PROTOCOL));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PATH));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+        }
         properties.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");

@@ -4,10 +4,12 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
@@ -83,11 +85,16 @@ public class KafkaProducerInitializer implements ServletContextListener {
     private static Producer<byte[], byte[]> createProducer() {
         final var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
-        properties.put(ProducerConfig.CLIENT_ID_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_APPLICATION_ID));
+        properties.put(ProducerConfig.CLIENT_ID_CONFIG,Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.KAFKA_SSL_ENABLED)) {
+            properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_SSL_PROTOCOL));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PATH));
+            properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+        }
         return new KafkaProducer<>(properties);
     }
 
