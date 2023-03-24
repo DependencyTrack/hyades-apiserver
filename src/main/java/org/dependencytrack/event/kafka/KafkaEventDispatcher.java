@@ -10,8 +10,10 @@ import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.SerializationException;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
@@ -93,9 +95,11 @@ public class KafkaEventDispatcher {
                             .build(),
                     null);
         } else if (event instanceof final OsvMirrorEvent omEvent) {
-            return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
+            return dispatchInternal(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), omEvent.ecosystem(), null);
         } else if (event instanceof NistMirrorEvent) {
-            return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+            return dispatchInternal(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.NVD.name(), "", null);
+        } else if (event instanceof GitHubAdvisoryMirrorEvent) {
+            return dispatchInternal(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.GITHUB.name(), "", null);
         }
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }

@@ -37,6 +37,7 @@ public final class KafkaTopics {
 
     public static final Topic<String, String> MIRROR_NVD;
     public static final Topic<String, String> MIRROR_OSV;
+    public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
     public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
@@ -68,6 +69,7 @@ public final class KafkaTopics {
 
         MIRROR_NVD = new Topic<>("dtrack.vulnerability.mirror.nvd", Serdes.String(), Serdes.String());
         MIRROR_OSV = new Topic<>("dtrack.vulnerability.mirror.osv", Serdes.String(), Serdes.String());
+        VULNERABILITY_MIRROR_COMMAND = new Topic<>("dtrack.vulnerability.mirror.command", Serdes.String(), Serdes.String());
         NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new JacksonSerde<>(Bom.class, OBJECT_MAPPER));
         REPO_META_ANALYSIS_COMMAND = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
