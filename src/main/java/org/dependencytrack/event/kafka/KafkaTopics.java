@@ -31,9 +31,6 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_REPOSITORY;
     public static final Topic<String, Notification> NOTIFICATION_VEX_CONSUMED;
     public static final Topic<String, Notification> NOTIFICATION_VEX_PROCESSED;
-
-    public static final Topic<String, String> MIRROR_NVD;
-    public static final Topic<String, String> MIRROR_OSV;
     public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
     public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
@@ -59,9 +56,6 @@ public final class KafkaTopics {
         NOTIFICATION_REPOSITORY = new Topic<>("dtrack.notification.repository", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_VEX_CONSUMED = new Topic<>("dtrack.notification.vex-consumed", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_VEX_PROCESSED = new Topic<>("dtrack.notification.vex-processed", Serdes.String(), NOTIFICATION_SERDE);
-
-        MIRROR_NVD = new Topic<>("dtrack.vulnerability.mirror.nvd", Serdes.String(), Serdes.String());
-        MIRROR_OSV = new Topic<>("dtrack.vulnerability.mirror.osv", Serdes.String(), Serdes.String());
         VULNERABILITY_MIRROR_COMMAND = new Topic<>("dtrack.vulnerability.mirror.command", Serdes.String(), Serdes.String());
         NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new KafkaProtobufSerde<>(Bom.parser()));
         REPO_META_ANALYSIS_COMMAND = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
