@@ -61,6 +61,10 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         }
     }
 
+    public static KafkaStreams getKafkaStreams() {
+        return STREAMS;
+    }
+
     static Properties getDefaultProperties() {
         final var properties = new Properties();
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));

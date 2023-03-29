@@ -93,6 +93,7 @@
         <lib.kafka-junit.version>3.3.0</lib.kafka-junit.version>
         <lib.kafka-streams.version>3.4.0</lib.kafka-streams.version>
         <lib.lucene.version>8.11.2</lib.lucene.version>
+        <lib.microprofile-health-api.version>3.1</lib.microprofile-health-api.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
         <lib.protobuf-java.version>3.22.2</lib.protobuf-java.version>
@@ -175,7 +176,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.13.4</version>
+            <version>2.14.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+            <version>2.14.2</version>
         </dependency>
         <!-- OWASP Risk Rating calculator -->
         <dependency>
@@ -213,6 +219,12 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20230227</version>
+        </dependency>
+        <!-- MicroProfile Health -->
+        <dependency>
+            <groupId>org.eclipse.microprofile.health</groupId>
+            <artifactId>microprofile-health-api</artifactId>
+            <version>${lib.microprofile-health-api.version}</version>
         </dependency>
         <!-- Package URL -->
         <dependency>
