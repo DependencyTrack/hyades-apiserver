@@ -1,8 +1,10 @@
 package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
@@ -25,14 +27,20 @@ import java.util.Date;
 public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult, Void, Void> {
 
     private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
+    private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
+            .description("Time taken to process repository meta analysis results")
+            .register(Metrics.getRegistry());
 
     @Override
     public void process(final Record<String, AnalysisResult> record) {
         if (record.value().hasLatestVersion()) {
+            final Timer.Sample timerSample = Timer.start();
             try (final var qm = new QueryManager()) {
                 synchronizeRepositoryMetaComponent(qm.getPersistenceManager(), record);
             } catch (Exception e) {
                 LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
+            } finally {
+                timerSample.stop(TIMER);
             }
         }
     }
