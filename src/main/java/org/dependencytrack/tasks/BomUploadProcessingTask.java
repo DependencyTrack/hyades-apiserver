@@ -155,8 +155,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 // the vulnerability analysis hasn't taken place yet).
                 qm.createVulnerabilityScan(event.getChainIdentifier().toString(), flattenedComponents.size());
                 for (final Component component : flattenedComponents) {
-                    kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(event.getChainIdentifier(),
-                            component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                    kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
+                            event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
                 }
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
@@ -187,7 +188,6 @@ public class BomUploadProcessingTask implements Subscriber {
         if (isNew) {
             newComponents.add(qm.detach(Component.class, component.getId()));
         }
-        kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
         if (component.getChildren() != null) {
             for (final Component child : component.getChildren()) {
                 processComponent(qm, child, flattenedComponents, newComponents);

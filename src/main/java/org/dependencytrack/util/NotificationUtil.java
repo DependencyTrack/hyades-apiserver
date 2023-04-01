@@ -613,6 +613,6 @@ public final class NotificationUtil {
     }
 
     private static void sendNotificationToKafka(Notification notification){
-        new KafkaEventDispatcher().dispatchNotification(notification);
+        new KafkaEventDispatcher().dispatchAsync(notification);
     }
 }

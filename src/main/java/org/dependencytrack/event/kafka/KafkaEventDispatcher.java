@@ -1,35 +1,29 @@
 package org.dependencytrack.event.kafka;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
-import com.github.packageurl.PackageURL;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.serialization.Serde;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.parser.hyades.NotificationModelConverter;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
-import org.hyades.proto.vulnanalysis.v1.ScanCommand;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
 
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * An {@link Event} dispatcher that wraps a Kafka {@link Producer}.
  */
 public class KafkaEventDispatcher {
-
-    private static final Logger LOGGER = Logger.getLogger(KafkaEventDispatcher.class);
 
     private final Producer<byte[], byte[]> producer;
 
@@ -50,122 +44,104 @@ public class KafkaEventDispatcher {
     }
 
     /**
-     * Dispatch a given {@link Event} to Kafka.
-     * <p>
-     * This call is blocking and will wait for the server to acknowledge the event.
+     * Asynchronously dispatch a given {@link Event} to Kafka.
      *
-     * @param event The {@link Event} to dispatch
-     * @return A {@link RecordMetadata} instance for the dispatched event, or {@code null} when the event was not dispatched
+     * @param event    The {@link Event} to dispatch
+     * @param callback A {@link Callback} to execute once the record has been acknowledged by the broker,
+     *                 or sending the record failed
+     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched event,
+     * or {@code null} when the event was not dispatched
      * @throws IllegalArgumentException When dispatching the given {@link Event} to Kafka is not supported
-     * @throws KafkaException           When dispatching failed
+     * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord, Callback)
      */
-    public RecordMetadata dispatch(final Event event) {
-        if (event instanceof final ComponentVulnerabilityAnalysisEvent vaEvent) {
-            final var componentBuilder = org.hyades.proto.vulnanalysis.v1.Component.newBuilder()
-                    .setUuid(vaEvent.component().getUuid().toString())
-                    .setInternal(vaEvent.component().isInternal());
-            Optional.ofNullable(vaEvent.component().getCpe()).ifPresent(componentBuilder::setCpe);
-            Optional.ofNullable(vaEvent.component().getPurl()).map(PackageURL::canonicalize).ifPresent(componentBuilder::setPurl);
-            Optional.ofNullable(vaEvent.component().getSwidTagId()).ifPresent(componentBuilder::setSwidTagId);
-
-            return dispatchInternal(
-                    KafkaTopics.VULN_ANALYSIS_COMMAND,
-                    ScanKey.newBuilder()
-                            .setScanToken(vaEvent.token().toString())
-                            .setComponentUuid(vaEvent.component().getUuid().toString())
-                            .build(),
-                    ScanCommand.newBuilder()
-                            .setComponent(componentBuilder)
-                            .build(),
-                    Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, vaEvent.level().name())
-            );
-        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent rmaEvent) {
-            if (rmaEvent.component() == null || rmaEvent.component().getPurl() == null) {
-                return null;
-            }
-
-            return dispatchInternal(KafkaTopics.REPO_META_ANALYSIS_COMMAND,
-                    rmaEvent.component().getPurl().canonicalize(),
-                    AnalysisCommand.newBuilder()
-                            .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
-                                    .setPurl(rmaEvent.component().getPurl().canonicalize())
-                                    .setInternal(rmaEvent.component().isInternal()))
-                            .build(),
-                    null);
-        } else if (event instanceof final OsvMirrorEvent omEvent) {
-            return dispatchInternal(KafkaTopics.MIRROR_OSV, omEvent.ecosystem(), "", null);
+    public Future<RecordMetadata> dispatchAsync(final Event event, final Callback callback) {
+        if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
+            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
+        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
+            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
+        } else if (event instanceof final OsvMirrorEvent e) {
+            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.MIRROR_OSV, e.ecosystem(), "", null), callback);
         } else if (event instanceof NistMirrorEvent) {
-            return dispatchInternal(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null);
+            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null), callback);
         }
+
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
-    public RecordMetadata dispatchNotification(final alpine.notification.Notification alpineNotification) {
-        final Notification notification = NotificationModelConverter.convert(alpineNotification);
-
-        return switch (notification.getGroup()) {
-            case GROUP_CONFIGURATION ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_CONFIGURATION, null, notification, null);
-            case GROUP_DATASOURCE_MIRRORING ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING, null, notification, null);
-            case GROUP_REPOSITORY -> dispatchInternal(KafkaTopics.NOTIFICATION_REPOSITORY, null, notification, null);
-            case GROUP_INTEGRATION -> dispatchInternal(KafkaTopics.NOTIFICATION_INTEGRATION, null, notification, null);
-            case GROUP_ANALYZER -> dispatchInternal(KafkaTopics.NOTIFICATION_ANALYZER, null, notification, null);
-            case GROUP_BOM_CONSUMED ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_BOM_CONSUMED, null, notification, null);
-            case GROUP_BOM_PROCESSED ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_BOM_PROCESSED, null, notification, null);
-            case GROUP_FILE_SYSTEM -> dispatchInternal(KafkaTopics.NOTIFICATION_FILE_SYSTEM, null, notification, null);
-            case GROUP_INDEXING_SERVICE ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_INDEXING_SERVICE, null, notification, null);
-            case GROUP_NEW_VULNERABILITY ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY, null, notification, null);
-            case GROUP_NEW_VULNERABLE_DEPENDENCY ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY, null, notification, null);
-            case GROUP_POLICY_VIOLATION ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, null, notification, null);
-            case GROUP_PROJECT_AUDIT_CHANGE ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, null, notification, null);
-            case GROUP_PROJECT_CREATED ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_PROJECT_CREATED, null, notification, null);
-            case GROUP_VEX_CONSUMED ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_VEX_CONSUMED, null, notification, null);
-            case GROUP_VEX_PROCESSED ->
-                    dispatchInternal(KafkaTopics.NOTIFICATION_VEX_PROCESSED, null, notification, null);
-            default -> {
-                LOGGER.warn("A notification with group %s was dispatched, but there's no destination Kafka topic defined for it".formatted(notification.getGroup()));
-                yield null;
-            }
-        };
+    /**
+     * Asynchronously dispatch a given {@link Event} to Kafka.
+     *
+     * @param event The {@link Event} to dispatch
+     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched event,
+     * or {@code null} when the event was not dispatched
+     * @see #dispatchAsync(Event, Callback)
+     */
+    public Future<RecordMetadata> dispatchAsync(final Event event) {
+        return dispatchAsync(event, null);
     }
 
-
-    private <K, V> RecordMetadata dispatchInternal(final KafkaTopics.Topic<K, V> topic, final K key, final V value, final Map<String, String> headers) {
-        final byte[] keyBytes;
+    /**
+     * Dispatch a given {@link Event} to Kafka, and wait for the broker to acknowledge it.
+     * <p>
+     * Should only be used when successful delivery must be guaranteed, as it will have a
+     * negative impact on the producer's internal batching mechanism.
+     *
+     * @param event The {@link Event} to dispatch
+     * @return A {@link RecordMetadata} instance for the dispatched event, or {@code null} when the event was not dispatched
+     */
+    public RecordMetadata dispatchBlocking(final Event event) {
         try {
-            keyBytes = topic.keySerde().serializer().serialize(topic.name(), key);
-        } catch (SerializationException e) {
-            throw new KafkaException(e);
-        }
-
-        final byte[] valueBytes;
-        try {
-            valueBytes = topic.valueSerde().serializer().serialize(topic.name(), value);
-        } catch (SerializationException e) {
-            throw new KafkaException(e);
-        }
-
-        try {
-            final var record = new ProducerRecord<>(topic.name(), keyBytes, valueBytes);
-            Optional.ofNullable(headers)
-                    .orElseGet(Collections::emptyMap)
-                    .forEach((k, v) -> record.headers().add(k, v.getBytes()));
-            final RecordMetadata recordMeta = producer.send(record).get();
-            LOGGER.debug("Dispatched event (Topic: " + recordMeta.topic() + ", Partition: " + recordMeta.partition() + ", Offset: " + recordMeta.offset() + ")");
-            return recordMeta;
+            return dispatchAsync(event, null).get();
         } catch (ExecutionException | InterruptedException e) {
             throw new KafkaException(e);
         }
+    }
+
+    /**
+     * Asynchronously dispatch a given {@link alpine.notification.Notification} to Kafka.
+     *
+     * @param alpineNotification The {@link alpine.notification.Notification} to dispatch
+     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched notification,
+     * or {@code null} when the event was not dispatched
+     * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord)
+     */
+    public Future<RecordMetadata> dispatchAsync(final alpine.notification.Notification alpineNotification) {
+        return dispatchAsyncInternal(KafkaEventConverter.convert(alpineNotification), null);
+    }
+
+    private <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
+        if (event == null) {
+            if (callback != null) {
+                // Callers are expecting that their callback will be executed,
+                // no matter if sending the record failed or succeeded.
+                callback.onCompletion(null, null);
+            }
+
+            return CompletableFuture.completedFuture(null);
+        }
+
+        final byte[] keyBytes;
+        try (final Serde<K> keySerde = event.topic().keySerde()) {
+            keyBytes = keySerde.serializer().serialize(event.topic().name(), event.key());
+        } catch (SerializationException e) {
+            throw new KafkaException("Failed to serialize key", e);
+        }
+
+        final byte[] valueBytes;
+        try (final Serde<V> valueSerde = event.topic().valueSerde()) {
+            valueBytes = valueSerde.serializer().serialize(event.topic().name(), event.value());
+        } catch (SerializationException e) {
+            throw new KafkaException("Failed to serialize value", e);
+        }
+
+        final var record = new ProducerRecord<>(event.topic().name(), keyBytes, valueBytes);
+        if (event.headers() != null) {
+            for (final Map.Entry<String, String> header : event.headers().entrySet()) {
+                record.headers().add(header.getKey(), header.getValue().getBytes(StandardCharsets.UTF_8));
+            }
+        }
+
+        return producer.send(record, callback);
     }
 
 }

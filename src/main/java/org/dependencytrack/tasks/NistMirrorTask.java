@@ -31,7 +31,7 @@ public class NistMirrorTask implements LoggableSubscriber {
         if (e instanceof NistMirrorEvent && this.isEnabled) {
             final long start = System.currentTimeMillis();
             LOGGER.info("Starting NIST mirroring task");
-            new KafkaEventDispatcher().dispatch(new NistMirrorEvent());
+            new KafkaEventDispatcher().dispatchBlocking(new NistMirrorEvent());
             final long end = System.currentTimeMillis();
             LOGGER.info("NIST mirroring complete. Time spent (total): " + (end - start) + "ms");
             Event.dispatch(new EpssMirrorEvent());
