@@ -302,8 +302,8 @@ public class ComponentResource extends AlpineResource {
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
             component = qm.createComponent(component, true);
-            kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
-            kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
+            kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
+            kafkaEventDispatcher.dispatchBlocking(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
     }
@@ -386,8 +386,8 @@ public class ComponentResource extends AlpineResource {
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);
-                kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(component));
-                kafkaEventDispatcher.dispatch(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
+                kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
+                kafkaEventDispatcher.dispatchBlocking(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
                 return Response.ok(component).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

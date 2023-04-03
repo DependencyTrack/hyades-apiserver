@@ -50,7 +50,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
         if (e instanceof OsvMirrorEvent) {
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
                 for (String ecosystem : this.ecosystems) {
-                    new KafkaEventDispatcher().dispatch(new OsvMirrorEvent(ecosystem));
+                    new KafkaEventDispatcher().dispatchBlocking(new OsvMirrorEvent(ecosystem));
                 }
             }
             else {

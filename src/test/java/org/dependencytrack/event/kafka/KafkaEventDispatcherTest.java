@@ -17,6 +17,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -31,7 +33,20 @@ public class KafkaEventDispatcherTest {
     }
 
     @Test
-    public void testDispatch() {
+    public void testDispatchAsyncCallback() throws Exception {
+        final var component = new Component();
+        component.setUuid(UUID.randomUUID());
+        component.setName("foobar");
+
+        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
+        final var dispatcher = new KafkaEventDispatcher(mockProducer);
+        final var countDownLatch = new CountDownLatch(1);
+        dispatcher.dispatchAsync(event, (metadata, exception) -> countDownLatch.countDown());
+        assertThat(countDownLatch.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    public void testDispatchBlocking() {
         final var component = new Component();
         component.setUuid(UUID.randomUUID());
         component.setName("foobar");
@@ -39,43 +54,43 @@ public class KafkaEventDispatcherTest {
         final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final RecordMetadata recordMeta = dispatcher.dispatch(event);
+        final RecordMetadata recordMeta = dispatcher.dispatchBlocking(event);
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
 
     @Test
-    public void testDispatchMirrorEvents() {
+    public void testDispatchBlockingMirrorEvents() {
         final var eventOsv = new OsvMirrorEvent("npm");
         var dispatcher = new KafkaEventDispatcher(mockProducer);
-        RecordMetadata recordMeta = dispatcher.dispatch(eventOsv);
+        RecordMetadata recordMeta = dispatcher.dispatchBlocking(eventOsv);
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_OSV.name());
         assertThat(mockProducer.history()).hasSize(1);
 
         final var eventNvd = new NistMirrorEvent();
         dispatcher = new KafkaEventDispatcher(mockProducer);
-        recordMeta = dispatcher.dispatch(eventNvd);
+        recordMeta = dispatcher.dispatchBlocking(eventNvd);
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_NVD.name());
         assertThat(mockProducer.history()).hasSize(2);
     }
 
     @Test
-    public void testDispatchWithUnsupportedEvent() {
+    public void testDispatchAsyncWithUnsupportedEvent() {
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> dispatcher.dispatch(new PortfolioMetricsUpdateEvent()));
+                .isThrownBy(() -> dispatcher.dispatchAsync(new PortfolioMetricsUpdateEvent()));
         assertThat(mockProducer.history()).isEmpty();
     }
 
     @Test
-    public void testDispatchNotification() {
+    public void testDispatchAsyncNotification() throws Exception {
         final var notification = new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.NEW_VULNERABILITY)
                 .level(NotificationLevel.INFORMATIONAL);
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final RecordMetadata recordMeta = dispatcher.dispatchNotification(notification);
+        final RecordMetadata recordMeta = dispatcher.dispatchAsync(notification).get();
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
