@@ -10,6 +10,7 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
@@ -88,6 +89,7 @@ public class KafkaProducerInitializer implements ServletContextListener {
         properties.put(ProducerConfig.CLIENT_ID_CONFIG,Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name);
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         if (Config.getInstance().getPropertyAsBoolean(ConfigKey.KAFKA_SSL_ENABLED)) {
