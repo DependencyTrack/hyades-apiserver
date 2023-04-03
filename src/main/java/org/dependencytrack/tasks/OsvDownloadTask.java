@@ -17,8 +17,12 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED;
@@ -27,7 +31,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
 
     private static final Logger LOGGER = Logger.getLogger(OsvDownloadTask.class);
     private String osvBaseUrl;
-    private List<String> ecosystems;
+    private Set<String> ecosystems;
 
     public OsvDownloadTask() {
         try (final QueryManager qm = new QueryManager()) {
@@ -35,7 +39,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
             if (enabled != null) {
                 final String ecosystemConfig = enabled.getPropertyValue();
                 if (ecosystemConfig != null) {
-                    ecosystems = Arrays.stream(ecosystemConfig.split(";")).map(String::trim).toList();
+                    ecosystems = Arrays.stream(ecosystemConfig.split(";")).map(String::trim).collect(Collectors.toSet());
                 }
                 this.osvBaseUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL.getPropertyName()).getPropertyValue();
                 if (this.osvBaseUrl != null && !this.osvBaseUrl.endsWith("/")) {
@@ -59,6 +63,10 @@ public class OsvDownloadTask implements LoggableSubscriber {
         }
     }
 
+    public Set<String> getEnabledEcosystems() {
+        return Optional.ofNullable(this.ecosystems)
+                .orElseGet(Collections::emptySet);
+    }
 
     public List<String> getEcosystems() {
         ArrayList<String> ecosystems = new ArrayList<>();
