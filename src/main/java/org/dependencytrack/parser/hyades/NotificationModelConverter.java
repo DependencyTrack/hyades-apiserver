@@ -17,6 +17,7 @@ import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
+import org.hyades.proto.notification.v1.BackReference;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.Component;
 import org.hyades.proto.notification.v1.Group;
@@ -164,10 +165,11 @@ public final class NotificationModelConverter {
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
                 .setVulnerability(convert(subject.getVulnerability()))
-                .setAffectedProjectsApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects"
-                        .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()))
-                .setAffectedProjectsFrontendUri("/vulnerabilities/%s/%s/affectedProjects"
-                        .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()));
+                .setAffectedProjects(BackReference.newBuilder()
+                        .setApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects"
+                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()))
+                        .setFrontendUri("/vulnerabilities/%s/%s/affectedProjects"
+                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId())));
 
         Optional.ofNullable(subject.getVulnerabilityAnalysisLevel())
                 .map(Enum::name)

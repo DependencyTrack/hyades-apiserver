@@ -51,6 +51,14 @@ enum Group {
   GROUP_PROJECT_CREATED = 16;
 }
 
+message BackReference {
+  // URI to the API endpoint from which additional information can be fetched.
+  optional string api_uri = 1;
+
+  // URI to the frontend where additional information can be seen.
+  optional string frontend_uri = 2;
+}
+
 message BomConsumedOrProcessedSubject {
   Project project = 1;
   bytes bom = 2;
@@ -62,9 +70,8 @@ message NewVulnerabilitySubject {
   Component component = 1;
   Project project = 2;
   Vulnerability vulnerability = 3;
-  string affected_projects_api_uri = 4;
-  string affected_projects_frontend_uri = 5;
-  optional string vulnerability_analysis_level = 6;
+  BackReference affected_projects = 4;
+  optional string vulnerability_analysis_level = 5;
 }
 
 message NewVulnerableDependencySubject {
