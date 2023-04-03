@@ -60,15 +60,19 @@ class KafkaStreamsTopologyFactory {
                 .mapValues((scanToken, scanResult) -> {
                     try (final var qm = new QueryManager()) {
                         qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
+                        // Detach VulnerabilityScan objects when committing changes. Without this,
+                        // all fields except the ID field will be unloaded on commit (the object will become HOLLOW),
+                        // causing the call to getStatus() to trigger a database query behind the scenes.
+                        qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_DETACH_ALL_ON_COMMIT, "true");
+
                         final VulnerabilityScan vulnScan = qm.recordVulnerabilityScanResult(scanToken);
                         if (vulnScan == null || vulnScan.getStatus() != VulnerabilityScan.Status.COMPLETED) {
-                            // When the vulnerability scan is not completed, don't bother with
-                            // detaching it from the persistence context; We'll filter out nulls
-                            // in the next filter step.
+                            // When the vulnerability scan is not completed, we don't care about it.
+                            // We'll filter out nulls in the next filter step.
                             return null;
                         }
 
-                        return qm.getPersistenceManager().detachCopy(vulnScan);
+                        return vulnScan;
                     }
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,
@@ -81,7 +85,7 @@ class KafkaStreamsTopologyFactory {
                         case COMPONENT -> policyEngine.evaluate(vulnScan.getTargetIdentifier());
                         case PROJECT -> policyEngine.evaluateProject(vulnScan.getTargetIdentifier());
                     }
-                })
+                }, Named.as("execute_policy_evaluation"))
                 .foreach((scanToken, vulnScan) -> {
                     final Event metricsUpdateEvent = switch (vulnScan.getTargetType()) {
                         case COMPONENT -> new ComponentMetricsUpdateEvent(vulnScan.getTargetIdentifier());
@@ -89,7 +93,7 @@ class KafkaStreamsTopologyFactory {
                     };
 
                     Event.dispatch(metricsUpdateEvent);
-                });
+                }, Named.as("trigger_metrics_update"));
 
         streamsBuilder
                 .stream(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(),
