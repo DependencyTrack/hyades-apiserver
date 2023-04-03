@@ -46,9 +46,7 @@ import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class NotificationRouter implements Subscriber {
 
@@ -78,9 +76,9 @@ public class NotificationRouter implements Subscriber {
                                                                  .addAll(Json.createObjectBuilder(config))
                                                                          .build();
                     if (publisherClass != SendMailPublisher.class || rule.getTeams().isEmpty() || rule.getTeams() == null){
-                        publisher.inform(restrictNotificationToRuleProjects(notification, rule), notificationPublisherConfig);
+                        publisher.inform(notification, notificationPublisherConfig);
                     } else {
-                        ((SendMailPublisher)publisher).inform(restrictNotificationToRuleProjects(notification, rule), notificationPublisherConfig, rule.getTeams());
+                        ((SendMailPublisher)publisher).inform(notification, notificationPublisherConfig, rule.getTeams());
                     }
 
 
@@ -93,32 +91,6 @@ public class NotificationRouter implements Subscriber {
                 LOGGER.error("An error occured during the publication of the notification", publisherException);
             }
         }
-    }
-
-    public Notification restrictNotificationToRuleProjects(Notification initialNotification, NotificationRule rule) {
-        Notification restrictedNotification = initialNotification;
-        if(canRestrictNotificationToRuleProjects(initialNotification, rule)) {
-            Set<String> ruleProjectsUuids = rule.getProjects().stream().map(Project::getUuid).map(UUID::toString).collect(Collectors.toSet());
-            restrictedNotification = new Notification();
-            restrictedNotification.setGroup(initialNotification.getGroup());
-            restrictedNotification.setLevel(initialNotification.getLevel());
-            restrictedNotification.scope(initialNotification.getScope());
-            restrictedNotification.setContent(initialNotification.getContent());
-            restrictedNotification.setTitle(initialNotification.getTitle());
-            restrictedNotification.setTimestamp(initialNotification.getTimestamp());
-            if(initialNotification.getSubject() instanceof final NewVulnerabilityIdentified subject) {
-                Set<Project> restrictedProjects = subject.getAffectedProjects().stream().filter(project -> ruleProjectsUuids.contains(project.getUuid().toString())).collect(Collectors.toSet());
-                NewVulnerabilityIdentified restrictedSubject = new NewVulnerabilityIdentified(subject.getVulnerability(), subject.getComponent(), restrictedProjects, null);
-                restrictedNotification.setSubject(restrictedSubject);
-            }
-        }
-        return restrictedNotification;
-    }
-
-    private boolean canRestrictNotificationToRuleProjects(Notification initialNotification, NotificationRule rule) {
-        return (initialNotification.getSubject() instanceof NewVulnerabilityIdentified || initialNotification.getSubject() instanceof AnalysisDecisionChange) &&
-                rule.getProjects() != null
-                && rule.getProjects().size() > 0;
     }
 
     List<NotificationRule> resolveRules(final Notification notification) {

@@ -163,11 +163,11 @@ public final class NotificationModelConverter {
         final NewVulnerabilitySubject.Builder builder = NewVulnerabilitySubject.newBuilder()
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
-                .setVulnerability(convert(subject.getVulnerability()));
-
-        subject.getAffectedProjects().stream()
-                .map(NotificationModelConverter::convert)
-                .forEach(builder::addAffectedProjects);
+                .setVulnerability(convert(subject.getVulnerability()))
+                .setAffectedProjectsApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects"
+                        .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()))
+                .setAffectedProjectsFrontendUri("/vulnerabilities/%s/%s/affectedProjects"
+                        .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()));
 
         Optional.ofNullable(subject.getVulnerabilityAnalysisLevel())
                 .map(Enum::name)

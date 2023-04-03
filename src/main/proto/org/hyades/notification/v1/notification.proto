@@ -62,8 +62,9 @@ message NewVulnerabilitySubject {
   Component component = 1;
   Project project = 2;
   Vulnerability vulnerability = 3;
-  repeated Project affected_projects = 4;
-  optional string vulnerability_analysis_level = 5;
+  string affected_projects_api_uri = 4;
+  string affected_projects_frontend_uri = 5;
+  optional string vulnerability_analysis_level = 6;
 }
 
 message NewVulnerableDependencySubject {
