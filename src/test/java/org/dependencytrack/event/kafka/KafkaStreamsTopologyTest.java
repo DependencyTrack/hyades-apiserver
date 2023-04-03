@@ -1,18 +1,27 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.event.framework.EventService;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.model.Policy;
+import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -35,6 +44,16 @@ import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
 public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
+
+    @BeforeClass
+    public static void setUpClass() {
+        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
+    }
 
     @Test
     @Ignore
@@ -142,9 +161,10 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
     @Test
     public void vulnScanCompletionTest() throws Exception {
+        final var projectUuid = UUID.randomUUID();
         final var scanToken = UUID.randomUUID().toString();
 
-        final VulnerabilityScan scan = qm.createVulnerabilityScan(scanToken, 500);
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, projectUuid, scanToken, 500);
 
         final var componentUuids = new ArrayList<UUID>();
         for (int i = 0; i < 500; i++) {
@@ -184,10 +204,104 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 });
 
         assertThat(scan.getToken()).isEqualTo(scanToken);
+        assertThat(scan.getTargetType()).isEqualTo(TargetType.PROJECT);
+        assertThat(scan.getTargetIdentifier()).isEqualTo(projectUuid);
         assertThat(scan.getExpectedResults()).isEqualTo(500);
         assertThat(scan.getReceivedResults()).isEqualTo(500);
         assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.COMPLETED);
         assertThat(scan.getUpdatedAt()).isAfter(scan.getStartedAt());
+    }
+
+    @Test
+    public void projectPolicyEvaluationAfterCompletedVulnScanTest() throws Exception {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.createProject(project, null, false);
+
+        final var componentA = new org.dependencytrack.model.Component();
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("1.1.0");
+        componentA.setProject(project);
+        componentA.setPurl("pkg:maven/org.acme/acme-lib-a@1.1.0");
+        qm.persist(componentA);
+
+        final var componentB = new org.dependencytrack.model.Component();
+        componentB.setName("acme-lib-b");
+        componentB.setVersion("1.2.0");
+        componentB.setProject(project);
+        qm.persist(componentB);
+
+        final var scanToken = UUID.randomUUID().toString();
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
+        final var scanKeyA = ScanKey.newBuilder()
+                .setScanToken(scanToken)
+                .setComponentUuid(componentA.getUuid().toString())
+                .build();
+        final var scanKeyB = ScanKey.newBuilder()
+                .setScanToken(scanToken)
+                .setComponentUuid(componentB.getUuid().toString())
+                .build();
+
+        final Policy policy = qm.createPolicy("Test Policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.PACKAGE_URL,
+                PolicyCondition.Operator.MATCHES,
+                "pkg:maven/org.acme/acme-lib-a@1.1.0"
+        );
+
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>(
+                                scanKeyA,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyA)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_OSSINDEX)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                        .build())))
+                )
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+
+        assertConditionWithTimeout(() -> {
+            qm.getPersistenceManager().refresh(scan);
+            return scan != null && scan.getReceivedResults() == 1;
+        }, Duration.ofSeconds(5));
+
+        // Evaluation of componentA should raise a policy violation. But because the vulnerability
+        // scan was targeting a project, evaluation of individual components should not be performed.
+        assertThat(qm.getAllPolicyViolations(project)).isEmpty();
+
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>(
+                                scanKeyB,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyB)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_OSSINDEX)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                        .build())))
+                )
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+
+        assertConditionWithTimeout(() -> {
+            qm.getPersistenceManager().refresh(scan);
+            return scan != null && scan.getReceivedResults() == 2;
+        }, Duration.ofSeconds(5));
+
+        // Vulnerability scan of the project completed. Policy evaluation of all components should
+        // have been performed, so we expect the violation for componentA to appear.
+        assertThat(qm.getAllPolicyViolations(project)).hasSize(1);
+
+        // A project metrics update should have been executed AFTER policy evaluation.
+        // It thus should include the newly discovered policy violation.
+        final Project finalProject = project;
+        assertConditionWithTimeout(() -> {
+            final ProjectMetrics projectMetrics = qm.getMostRecentProjectMetrics(finalProject);
+            return projectMetrics != null
+                    && projectMetrics.getPolicyViolationsFail() == 1;
+        }, Duration.ofSeconds(5));
     }
 
 }

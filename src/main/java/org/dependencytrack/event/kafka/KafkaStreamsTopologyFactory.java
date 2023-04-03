@@ -11,9 +11,11 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.PolicyEngine;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -49,30 +51,45 @@ class KafkaStreamsTopologyFactory {
                         .withName("vuln-scan-result-by-component-uuid"))
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
 
-        //perform policy evaluation on components with completed vulnerability scan
-        processedVulnScanResultStream
-                .foreach((componentUuid, scanResult) -> {
-                    PolicyEngine policyEngine = new PolicyEngine();
-                    policyEngine.evaluate(componentUuid);
-                });
-
-        // Trigger metrics updates for components that completed a vulnerability scan.
-        processedVulnScanResultStream
-                .foreach((componentUuid, scanResult) -> Event.dispatch(new ComponentMetricsUpdateEvent(componentUuid)));
-
         // Re-key processed results to their respective scan token, and record their arrival.
-        processedVulnScanResultStream
+        final KStream<String, VulnerabilityScan> completedVulnScanStream = processedVulnScanResultStream
                 .selectKey((componentUuid, scanResult) -> scanResult.getKey().getScanToken())
                 .repartition(Repartitioned
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("processed-vuln-scan-result-by-scan-token"))
-                .foreach((scanToken, scanResult) -> {
+                .mapValues((scanToken, scanResult) -> {
                     try (final var qm = new QueryManager()) {
-                        // Disable L2 cache, there's no need for it here
                         qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
-                        qm.recordVulnerabilityScanResult(scanToken);
+                        final VulnerabilityScan vulnScan = qm.recordVulnerabilityScanResult(scanToken);
+                        if (vulnScan == null || vulnScan.getStatus() != VulnerabilityScan.Status.COMPLETED) {
+                            // When the vulnerability scan is not completed, don't bother with
+                            // detaching it from the persistence context; We'll filter out nulls
+                            // in the next filter step.
+                            return null;
+                        }
+
+                        return qm.getPersistenceManager().detachCopy(vulnScan);
                     }
-                }, Named.as("record_processed_vuln_scan_result"));
+                }, Named.as("record_processed_vuln_scan_result"))
+                .filter((scanToken, vulnScan) -> vulnScan != null,
+                        Named.as("filter_completed_vuln_scans"));
+
+        completedVulnScanStream
+                .peek((scanToken, vulnScan) -> {
+                    final var policyEngine = new PolicyEngine();
+                    switch (vulnScan.getTargetType()) {
+                        case COMPONENT -> policyEngine.evaluate(vulnScan.getTargetIdentifier());
+                        case PROJECT -> policyEngine.evaluateProject(vulnScan.getTargetIdentifier());
+                    }
+                })
+                .foreach((scanToken, vulnScan) -> {
+                    final Event metricsUpdateEvent = switch (vulnScan.getTargetType()) {
+                        case COMPONENT -> new ComponentMetricsUpdateEvent(vulnScan.getTargetIdentifier());
+                        case PROJECT -> new ProjectMetricsUpdateEvent(vulnScan.getTargetIdentifier());
+                    };
+
+                    Event.dispatch(metricsUpdateEvent);
+                });
 
         streamsBuilder
                 .stream(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(),
