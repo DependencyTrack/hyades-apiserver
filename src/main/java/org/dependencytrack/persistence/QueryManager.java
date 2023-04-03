@@ -1321,7 +1321,7 @@ public class QueryManager extends AlpineQueryManager {
                 .build();
 
         return Retry.of("runInRetryableTransaction", retryConfig)
-                .executeSupplier(supplier);
+                .executeSupplier(() -> runInTransaction(supplier));
     }
 
     public void recursivelyDeleteTeam(Team team) {
