@@ -84,7 +84,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             List<Component> components = fetchNextComponentsPage(pm, project, null);
             while (!components.isEmpty()) {
                 for (final var component : components) {
-                    kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
+                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
                 }
 
                 final long lastId = components.get(components.size() - 1).getId();
@@ -105,7 +105,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             List<Component> components = fetchNextComponentsPage(pm, null, null);
             while (!components.isEmpty()) {
                 for (final var component : components) {
-                    kafkaEventDispatcher.dispatch(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
+                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
                 }
 
                 final long lastId = components.get(components.size() - 1).getId();
