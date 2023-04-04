@@ -35,7 +35,7 @@ public class GitHubAdvisoryMirrorTask implements LoggableSubscriber {
         if (e instanceof GitHubAdvisoryMirrorEvent && this.isEnabled) {
             if (this.accessToken != null) {
                 LOGGER.info("Starting GitHub Advisory mirroring task");
-                new KafkaEventDispatcher().dispatch(new GitHubAdvisoryMirrorEvent());
+                new KafkaEventDispatcher().dispatchBlocking(new GitHubAdvisoryMirrorEvent());
             } else {
                 LOGGER.warn("GitHub Advisory mirroring is enabled, but no personal access token is configured. Skipping.");
             }
