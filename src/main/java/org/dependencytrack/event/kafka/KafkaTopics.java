@@ -1,13 +1,10 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.Config;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.cyclonedx.model.Bom;
+import org.cyclonedx.proto.v1_4.Bom;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.kafka.serialization.JacksonSerde;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
@@ -34,18 +31,12 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_REPOSITORY;
     public static final Topic<String, Notification> NOTIFICATION_VEX_CONSUMED;
     public static final Topic<String, Notification> NOTIFICATION_VEX_PROCESSED;
-
-    public static final Topic<String, String> MIRROR_NVD;
-    public static final Topic<String, String> MIRROR_OSV;
+    public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
     public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
-
-
-    // As ObjectMapper construction is rather expensive, share a common instance across all JSON Serdes.
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
@@ -65,10 +56,8 @@ public final class KafkaTopics {
         NOTIFICATION_REPOSITORY = new Topic<>("dtrack.notification.repository", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_VEX_CONSUMED = new Topic<>("dtrack.notification.vex-consumed", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_VEX_PROCESSED = new Topic<>("dtrack.notification.vex-processed", Serdes.String(), NOTIFICATION_SERDE);
-
-        MIRROR_NVD = new Topic<>("dtrack.vulnerability.mirror.nvd", Serdes.String(), Serdes.String());
-        MIRROR_OSV = new Topic<>("dtrack.vulnerability.mirror.osv", Serdes.String(), Serdes.String());
-        NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new JacksonSerde<>(Bom.class, OBJECT_MAPPER));
+        VULNERABILITY_MIRROR_COMMAND = new Topic<>("dtrack.vulnerability.mirror.command", Serdes.String(), Serdes.String());
+        NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new KafkaProtobufSerde<>(Bom.parser()));
         REPO_META_ANALYSIS_COMMAND = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));

@@ -64,13 +64,13 @@ public class KafkaEventDispatcherTest {
         final var eventOsv = new OsvMirrorEvent("npm");
         var dispatcher = new KafkaEventDispatcher(mockProducer);
         RecordMetadata recordMeta = dispatcher.dispatchBlocking(eventOsv);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_OSV.name());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
         assertThat(mockProducer.history()).hasSize(1);
 
         final var eventNvd = new NistMirrorEvent();
         dispatcher = new KafkaEventDispatcher(mockProducer);
         recordMeta = dispatcher.dispatchBlocking(eventNvd);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.MIRROR_NVD.name());
+        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
         assertThat(mockProducer.history()).hasSize(2);
     }
 

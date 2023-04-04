@@ -10,8 +10,10 @@ import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
+import org.dependencytrack.model.Vulnerability;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -60,9 +62,11 @@ public class KafkaEventDispatcher {
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final OsvMirrorEvent e) {
-            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.MIRROR_OSV, e.ecosystem(), "", null), callback);
+            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);
         } else if (event instanceof NistMirrorEvent) {
-            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.MIRROR_NVD, UUID.randomUUID().toString(), "", null), callback);
+            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.NVD.name(), "", null), callback);
+        } else if (event instanceof GitHubAdvisoryMirrorEvent) {
+            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.GITHUB.name(), "", null), callback);
         }
 
         throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
