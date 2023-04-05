@@ -33,7 +33,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
 
     @Test
     public void testConvertNullValue() {
-        assertThat(ModelConverter.convert(null)).isNull();
+        assertThat(ModelConverter.convert((org.hyades.proto.vuln.v1.Vulnerability) null)).isNull();
     }
 
     @Test

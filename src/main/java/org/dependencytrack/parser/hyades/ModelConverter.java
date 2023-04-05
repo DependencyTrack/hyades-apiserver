@@ -1,6 +1,7 @@
 package org.dependencytrack.parser.hyades;
 
 import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -9,6 +10,7 @@ import org.hyades.proto.vuln.v1.Rating;
 import org.hyades.proto.vuln.v1.Reference;
 import org.hyades.proto.vuln.v1.ScoreMethod;
 import org.hyades.proto.vuln.v1.Source;
+import org.hyades.proto.vulnanalysis.v1.Scanner;
 import us.springett.cvss.Cvss;
 import us.springett.owasp.riskrating.MissingFactorException;
 import us.springett.owasp.riskrating.OwaspRiskRating;
@@ -73,6 +75,15 @@ public final class ModelConverter {
                 .toList());
 
         return vuln;
+    }
+
+    public static AnalyzerIdentity convert(final Scanner scanner) {
+        return switch (scanner) {
+            case SCANNER_INTERNAL -> AnalyzerIdentity.INTERNAL_ANALYZER;
+            case SCANNER_OSSINDEX -> AnalyzerIdentity.OSSINDEX_ANALYZER;
+            case SCANNER_SNYK -> AnalyzerIdentity.SNYK_ANALYZER;
+            default -> AnalyzerIdentity.NONE;
+        };
     }
 
     private static Vulnerability.Source convert(final Source source) {
