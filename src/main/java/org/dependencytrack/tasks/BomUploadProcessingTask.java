@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
@@ -38,11 +39,12 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
+import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.CompressUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
-import org.dependencytrack.util.NotificationUtil;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -75,11 +77,15 @@ public class BomUploadProcessingTask implements Subscriber {
      */
     public void inform(final Event e) {
         if (e instanceof BomUploadEvent) {
+            Project bomProcessingFailedProject = null;
+            Bom.Format bomProcessingFailedBomFormat = null;
+            String bomProcessingFailedBomVersion = null;
             final BomUploadEvent event = (BomUploadEvent) e;
             final byte[] bomBytes = CompressUtil.optionallyDecompress(event.getBom());
             final QueryManager qm = new QueryManager();
             try {
                 final Project project = qm.getObjectByUuid(Project.class, event.getProjectUuid());
+                bomProcessingFailedProject = project;
                 final List<Component> components;
                 final List<Component> newComponents = new ArrayList<>();
                 final List<Component> flattenedComponents = new ArrayList<>();
@@ -98,17 +104,19 @@ public class BomUploadProcessingTask implements Subscriber {
                     if (qm.isEnabled(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX)) {
                         LOGGER.info("Processing CycloneDX BOM uploaded to project: " + event.getProjectUuid());
                         bomFormat = Bom.Format.CYCLONEDX;
+                        bomProcessingFailedBomFormat = bomFormat;
                         final Parser parser = BomParserFactory.createParser(bomBytes);
                         cycloneDxBom = parser.parse(bomBytes);
                         bomSpecVersion = cycloneDxBom.getSpecVersion();
+                        bomProcessingFailedBomVersion = bomSpecVersion;
                         bomVersion = cycloneDxBom.getVersion();
                         if (project.getClassifier() == null) {
                             final var classifier = Optional.ofNullable(cycloneDxBom.getMetadata())
-                                .map(org.cyclonedx.model.Metadata::getComponent)
-                                .map(org.cyclonedx.model.Component::getType)
-                                .map(org.cyclonedx.model.Component.Type::name)
-                                .map(Classifier::valueOf)
-                                .orElse(Classifier.APPLICATION);
+                                    .map(org.cyclonedx.model.Metadata::getComponent)
+                                    .map(org.cyclonedx.model.Component::getType)
+                                    .map(org.cyclonedx.model.Component.Type::name)
+                                    .map(Classifier::valueOf)
+                                    .orElse(Classifier.APPLICATION);
                             project.setClassifier(classifier);
                         }
                         project.setExternalReferences(ModelConverter.convertBomMetadataExternalReferences(cycloneDxBom));
@@ -123,19 +131,21 @@ public class BomUploadProcessingTask implements Subscriber {
                     LOGGER.warn("The BOM uploaded is not in a supported format. Supported formats include CycloneDX XML and JSON");
                     return;
                 }
-                // final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
-                String content = "A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed";
-                //Object subject = new BomConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: Add reference to BOM after we have dedicated bom server
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_CONSUMED, NotificationConstants.Title.BOM_CONSUMED, content, NotificationLevel.INFORMATIONAL, "BOM_CONSUMED");
-
+                final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
+                kafkaEventDispatcher.dispatchAsync(new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_CONSUMED)
+                        .level(NotificationLevel.INFORMATIONAL)
+                        .title(NotificationConstants.Title.BOM_CONSUMED)
+                        .content("A " + bomFormat.getFormatShortName() + " BOM was consumed and will be processed")
+                        .subject(new BomConsumedOrProcessed(copyOfProject, /* bom */ "(Omitted)", bomFormat, bomSpecVersion)));
                 final Date date = new Date();
                 final Bom bom = qm.createBom(project, date, bomFormat, bomSpecVersion, bomVersion, serialNumnber, event.getChainIdentifier());
-                for (final Component component: components) {
+                for (final Component component : components) {
                     processComponent(qm, component, flattenedComponents, newComponents);
                 }
                 LOGGER.info("Identified " + newComponents.size() + " new components");
-                for (final ServiceComponent service: services) {
+                for (final ServiceComponent service : services) {
                     processService(qm, bom, service, flattenedServices);
                 }
                 if (Bom.Format.CYCLONEDX == bomFormat) {
@@ -153,20 +163,36 @@ public class BomUploadProcessingTask implements Subscriber {
                 // analysis has completed. If not chained, synchronous publishing mode will return immediately upon
                 // return from this method, resulting in inaccurate findings being returned in the response (since
                 // the vulnerability analysis hasn't taken place yet).
+                final List<Component> detachedFlattenedComponent = qm.detach(flattenedComponents);
+                final Project detachedProject = qm.detach(Project.class, project.getId());
                 qm.createVulnerabilityScan(event.getChainIdentifier().toString(), flattenedComponents.size());
-                for (final Component component : flattenedComponents) {
+                for (final Component component : detachedFlattenedComponent) {
                     kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
                             event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
                     kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
                 }
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
-                content = "A " + bomFormat.getFormatShortName() + " BOM was processed";
-                //subject = new BomConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(bomBytes), bomFormat, bomSpecVersion);
-                //FIXME:: Add reference to BOM after we have dedicated bom server
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.BOM_PROCESSED, NotificationConstants.Title.BOM_PROCESSED, content, NotificationLevel.INFORMATIONAL, "BOM_PROCESSED");
-
+                kafkaEventDispatcher.dispatchAsync(new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_PROCESSED)
+                        .level(NotificationLevel.INFORMATIONAL)
+                        .title(NotificationConstants.Title.BOM_PROCESSED)
+                        .content("A " + bomFormat.getFormatShortName() + " BOM was processed")
+                        // FIXME: Add reference to BOM after we have dedicated BOM server
+                        .subject(new BomConsumedOrProcessed(detachedProject, /* bom */ "(Omitted)", bomFormat, bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("Error while processing bom", ex);
+                if (bomProcessingFailedProject != null) {
+                    bomProcessingFailedProject = qm.detach(Project.class, bomProcessingFailedProject.getId());
+                }
+                kafkaEventDispatcher.dispatchAsync(new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                        .level(NotificationLevel.ERROR)
+                        .content("An error occurred while processing a BOM")
+                        // FIXME: Add reference to BOM after we have dedicated BOM server
+                        .subject(new BomProcessingFailed(bomProcessingFailedProject, /* bom */ "(Omitted)", ex.getMessage(), bomProcessingFailedBomFormat, bomProcessingFailedBomVersion)));
             } finally {
                 qm.commitSearchIndex(true, Component.class);
                 qm.commitSearchIndex(true, ServiceComponent.class);
@@ -196,7 +222,7 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void processService(final QueryManager qm, final Bom bom, ServiceComponent service,
-                                  final List<ServiceComponent> flattenedServices) {
+                                final List<ServiceComponent> flattenedServices) {
         service = qm.createServiceComponent(service, false);
         final long oid = service.getId();
         // Refreshing the object by querying for it again is preventative

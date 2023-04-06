@@ -25,12 +25,13 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Severity;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.util.KafkaTestUtil;
+import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
+import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -38,6 +39,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
+import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
@@ -59,27 +63,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-
-        final VulnerableSoftware vs = new VulnerableSoftware();
-        vs.setPurlType("maven");
-        vs.setPurlNamespace("com.example");
-        vs.setPurlName("xmlutil");
-        vs.setVersion("1.0.0");
-        vs.setVulnerable(true);
-
-        final var vulnerability1 = new Vulnerability();
-        vulnerability1.setVulnId("INT-001");
-        vulnerability1.setSource(Vulnerability.Source.INTERNAL);
-        vulnerability1.setSeverity(Severity.HIGH);
-        vulnerability1.setVulnerableSoftware(List.of(vs));
-        qm.createVulnerability(vulnerability1, false);
-
-        final var vulnerability2 = new Vulnerability();
-        vulnerability2.setVulnId("INT-002");
-        vulnerability2.setSource(Vulnerability.Source.INTERNAL);
-        vulnerability2.setSeverity(Severity.HIGH);
-        vulnerability2.setVulnerableSoftware(List.of(vs));
-        qm.createVulnerability(vulnerability2, false);
 
         final byte[] bomBytes = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("bom-1.xml").toURI()));
 
@@ -112,6 +95,48 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?packaging=jar");
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
+    }
+
+    @Test
+    public void informWithInvalidBomTest() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                """.getBytes(StandardCharsets.UTF_8);
+
+        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomBytes));
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> {
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED.name());
+                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED, event);
+                    assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
+                    assertThat(notification.getTitle()).isNotEmpty();
+                    assertThat(notification.getContent()).isNotEmpty();
+                    assertThat(notification.hasSubject()).isTrue();
+                    assertThat(notification.getSubject().is(BomProcessingFailedSubject.class)).isTrue();
+                    final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
+                    assertThat(subject.hasProject()).isTrue();
+                    assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
+                    assertThat(subject.getBom().toStringUtf8()).isEqualTo("(Omitted)");
+                    assertThat(subject.getFormat()).isEqualTo("CycloneDX");
+                    assertThat(subject.getSpecVersion()).isEmpty();
+                }
+        );
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getClassifier()).isNull();
+        assertThat(project.getLastBomImport()).isNull();
+        assertThat(project.getExternalReferences()).isNull();
+        assertThat(project.getExternalReferences()).isNull();
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).isEmpty();
     }
 
 }
