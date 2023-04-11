@@ -18,6 +18,7 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_ANALYZER;
     public static final Topic<String, Notification> NOTIFICATION_BOM_CONSUMED;
     public static final Topic<String, Notification> NOTIFICATION_BOM_PROCESSED;
+    public static final Topic<String, Notification> NOTIFICATION_BOM_PROCESSING_FAILED;
     public static final Topic<String, Notification> NOTIFICATION_CONFIGURATION;
     public static final Topic<String, Notification> NOTIFICATION_DATASOURCE_MIRRORING;
     public static final Topic<String, Notification> NOTIFICATION_FILE_SYSTEM;
@@ -43,6 +44,7 @@ public final class KafkaTopics {
         NOTIFICATION_ANALYZER = new Topic<>("dtrack.notification.analyzer", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_BOM_CONSUMED = new Topic<>("dtrack.notification.bom-consumed", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_BOM_PROCESSED = new Topic<>("dtrack.notification.bom-processed", Serdes.String(), NOTIFICATION_SERDE);
+        NOTIFICATION_BOM_PROCESSING_FAILED = new Topic<>("dtrack.notification.bom-processing-failed", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_CONFIGURATION = new Topic<>("dtrack.notification.configuration", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_DATASOURCE_MIRRORING = new Topic<>("dtrack.notification.datasource-mirroring", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_FILE_SYSTEM = new Topic<>("dtrack.notification.file-system", Serdes.String(), NOTIFICATION_SERDE);

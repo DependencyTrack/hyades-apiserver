@@ -5,11 +5,13 @@ import com.github.packageurl.PackageURL;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
+import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
@@ -18,6 +20,7 @@ import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
+import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Component;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Level;
@@ -46,6 +49,7 @@ import java.util.Optional;
 import static org.hyades.proto.notification.v1.Group.GROUP_ANALYZER;
 import static org.hyades.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
 import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
+import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.hyades.proto.notification.v1.Group.GROUP_CONFIGURATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
 import static org.hyades.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
@@ -132,6 +136,7 @@ public final class NotificationModelConverter {
             case PROJECT_AUDIT_CHANGE -> GROUP_PROJECT_AUDIT_CHANGE;
             case BOM_CONSUMED -> GROUP_BOM_CONSUMED;
             case BOM_PROCESSED -> GROUP_BOM_PROCESSED;
+            case BOM_PROCESSING_FAILED -> GROUP_BOM_PROCESSING_FAILED;
             case VEX_CONSUMED -> GROUP_VEX_CONSUMED;
             case VEX_PROCESSED -> GROUP_VEX_PROCESSED;
             case POLICY_VIOLATION -> GROUP_POLICY_VIOLATION;
@@ -150,6 +155,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(vadc)));
         } else if (subject instanceof final BomConsumedOrProcessed bcop) {
             return Optional.of(Any.pack(convert(bcop)));
+        } else if (subject instanceof final BomProcessingFailed bpf) {
+            return Optional.of(Any.pack(convert(bpf)));
         } else if (subject instanceof final VexConsumedOrProcessed vcop) {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
@@ -213,6 +220,18 @@ public final class NotificationModelConverter {
                 .setFormat(subject.getFormat().getFormatShortName())
                 .setSpecVersion(subject.getSpecVersion())
                 .build();
+    }
+
+    private static BomProcessingFailedSubject convert(final BomProcessingFailed subject) {
+        final BomProcessingFailedSubject.Builder builder = BomProcessingFailedSubject.newBuilder()
+                .setProject(convert(subject.getProject()))
+                .setBom(ByteString.copyFromUtf8(subject.getBom()));
+
+        Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(builder::setFormat);
+        Optional.ofNullable(subject.getSpecVersion()).ifPresent(builder::setSpecVersion);
+        Optional.ofNullable(subject.getCause()).ifPresent(builder::setCause);
+
+        return builder.build();
     }
 
     private static VexConsumedOrProcessedSubject convert(final VexConsumedOrProcessed subject) {
