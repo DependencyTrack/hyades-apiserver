@@ -19,6 +19,7 @@ import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
+import org.hyades.proto.notification.v1.BackReference;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Component;
@@ -170,11 +171,12 @@ public final class NotificationModelConverter {
         final NewVulnerabilitySubject.Builder builder = NewVulnerabilitySubject.newBuilder()
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
-                .setVulnerability(convert(subject.getVulnerability()));
-
-        subject.getAffectedProjects().stream()
-                .map(NotificationModelConverter::convert)
-                .forEach(builder::addAffectedProjects);
+                .setVulnerability(convert(subject.getVulnerability()))
+                .setAffectedProjects(BackReference.newBuilder()
+                        .setApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects"
+                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()))
+                        .setFrontendUri("/vulnerabilities/%s/%s/affectedProjects"
+                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId())));
 
         Optional.ofNullable(subject.getVulnerabilityAnalysisLevel())
                 .map(Enum::name)

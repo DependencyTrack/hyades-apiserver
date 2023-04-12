@@ -25,7 +25,6 @@ import org.apache.commons.io.FileUtils;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.NotificationPublisher;
@@ -62,8 +61,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -98,17 +95,6 @@ public final class NotificationUtil {
     }
     public static void analyzeNotificationCriteria(QueryManager qm, Vulnerability vulnerability, Component component, VulnerabilityAnalysisLevel vulnerabilityAnalysisLevel) {
         if (!qm.contains(vulnerability, component)) {
-            // Component did not previously contain this vulnerability. It could be a newly discovered vulnerability
-            // against an existing component, or it could be a newly added (and vulnerable) component. Either way,
-            // it warrants a Notification be dispatched.
-            final Map<Long,Project> affectedProjects = new HashMap<>();
-            final List<Component> components = qm.matchIdentity(new ComponentIdentity(component));
-            for (final Component c : components) {
-                if(!affectedProjects.containsKey(c.getProject().getId())) {
-                    affectedProjects.put(c.getProject().getId(), qm.detach(Project.class, c.getProject().getId()));
-                }
-            }
-
             final Vulnerability detachedVuln =  qm.detach(Vulnerability.class, vulnerability.getId());
             detachedVuln.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability))); // Aliases are lost during detach above
             final Component detachedComponent = qm.detach(Component.class, component.getId());
@@ -119,7 +105,7 @@ public final class NotificationUtil {
                     .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABILITY, component.getProject()))
                     .level(NotificationLevel.INFORMATIONAL)
                     .content(generateNotificationContent(detachedVuln))
-                    .subject(new NewVulnerabilityIdentified(detachedVuln, detachedComponent, new HashSet<>(affectedProjects.values()), vulnerabilityAnalysisLevel))
+                    .subject(new NewVulnerabilityIdentified(detachedVuln, detachedComponent, vulnerabilityAnalysisLevel))
             );
         }
     }
@@ -402,13 +388,6 @@ public final class NotificationUtil {
         }
         if (vo.getVulnerability() != null) {
             builder.add("vulnerability", toJson(vo.getVulnerability()));
-        }
-        if (vo.getAffectedProjects() != null && vo.getAffectedProjects().size() > 0) {
-            final JsonArrayBuilder projectsBuilder = Json.createArrayBuilder();
-            for (final Project project: vo.getAffectedProjects()) {
-                projectsBuilder.add(toJson(project));
-            }
-            builder.add("affectedProjects", projectsBuilder.build());
         }
         return builder.build();
     }

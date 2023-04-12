@@ -44,7 +44,6 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -227,7 +226,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
         alpineNotification.setSubject(new NewVulnerabilityIdentified(vulnerability, component,
-                Set.of(project), VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -243,7 +242,10 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertComponent(subject.getComponent());
         assertProject(subject.getProject());
         assertVulnerability(subject.getVulnerability());
-        assertThat(subject.getAffectedProjectsList()).satisfiesExactly(this::assertProject);
+        assertThat(subject.getAffectedProjects().getApiUri())
+                .isEqualTo("/api/v1/vulnerability/source/INTERNAL/vuln/INT-001/projects");
+        assertThat(subject.getAffectedProjects().getFrontendUri())
+                .isEqualTo("/vulnerabilities/INTERNAL/INT-001/affectedProjects");
         assertThat(subject.getVulnerabilityAnalysisLevel()).isEqualTo("BOM_UPLOAD_ANALYSIS");
     }
 
