@@ -29,6 +29,8 @@ import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.AffectedVersionAttribution;
@@ -87,6 +89,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -1309,6 +1312,16 @@ public class QueryManager extends AlpineQueryManager {
                 trx.rollback();
             }
         }
+    }
+
+    public <T> T runInRetryableTransaction(final Supplier<T> supplier, final Predicate<Throwable> retryOn) {
+        final var retryConfig = RetryConfig.custom()
+                .retryOnException(retryOn)
+                .maxAttempts(3)
+                .build();
+
+        return Retry.of("runInRetryableTransaction", retryConfig)
+                .executeSupplier(() -> runInTransaction(supplier));
     }
 
     public void recursivelyDeleteTeam(Team team) {

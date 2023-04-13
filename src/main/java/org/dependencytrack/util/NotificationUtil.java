@@ -546,7 +546,7 @@ public final class NotificationUtil {
         }
     }
 
-    private static String generateNotificationContent(final Vulnerability vulnerability) {
+    public static String generateNotificationContent(final Vulnerability vulnerability) {
         final String content;
         if (vulnerability.getDescription() != null) {
             content = vulnerability.getDescription();
