@@ -4,6 +4,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.dependencytrack.event.kafka.KafkaStreamsInitializer;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Liveness;
 
 /**
  * A {@link HealthCheck} for Kafka Streams.
@@ -12,6 +13,7 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
  *
  * @see <a href="https://github.com/quarkusio/quarkus/blob/2.16.5.Final/extensions/kafka-streams/runtime/src/main/java/io/quarkus/kafka/streams/runtime/health/KafkaStreamsStateHealthCheck.java">Quarkus Kafka Streams Health Check</a>
  */
+@Liveness
 class KafkaStreamsHealthCheck implements HealthCheck {
 
     @Override
