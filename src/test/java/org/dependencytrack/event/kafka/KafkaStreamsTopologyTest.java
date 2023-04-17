@@ -257,8 +257,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .setKey(scanKeyA)
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_OSSINDEX)
-                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                        .build())))
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL))
+                                        .build()))
                 )
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
@@ -279,8 +279,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .setKey(scanKeyB)
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_OSSINDEX)
-                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                        .build())))
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL))
+                                        .build()))
                 )
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
