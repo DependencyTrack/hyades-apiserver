@@ -24,7 +24,7 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>2.2.0</version>
+        <version>2.2.1</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -156,17 +156,6 @@
             <groupId>us.springett</groupId>
             <artifactId>alpine-server</artifactId>
             <version>${lib.alpine.version}</version>
-        </dependency>
-        <!-- DataNucleus -->
-        <dependency>
-            <!--
-                Temporarily forcing a newer version that what Alpine ships with.
-                We need https://github.com/datanucleus/datanucleus-rdbms/issues/455
-                for Hyades. Once Alpine has updated, remove this direct dependency.
-            -->
-            <groupId>org.datanucleus</groupId>
-            <artifactId>datanucleus-rdbms</artifactId>
-            <version>6.0.3</version>
         </dependency>
         <!-- CVSS Calculator -->
         <dependency>
