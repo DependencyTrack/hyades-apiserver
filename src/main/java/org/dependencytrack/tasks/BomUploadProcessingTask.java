@@ -36,6 +36,7 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -165,7 +166,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 // the vulnerability analysis hasn't taken place yet).
                 final List<Component> detachedFlattenedComponent = qm.detach(flattenedComponents);
                 final Project detachedProject = qm.detach(Project.class, project.getId());
-                qm.createVulnerabilityScan(event.getChainIdentifier().toString(), flattenedComponents.size());
+                qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), event.getChainIdentifier().toString(), flattenedComponents.size());
                 for (final Component component : detachedFlattenedComponent) {
                     kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
                             event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));

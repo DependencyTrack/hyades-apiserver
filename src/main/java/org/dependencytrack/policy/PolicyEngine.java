@@ -28,6 +28,8 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -61,6 +63,33 @@ public class PolicyEngine {
         evaluators.add(new ComponentHashPolicyEvaluator());
         evaluators.add(new CwePolicyEvaluator());
         evaluators.add(new VulnerabilityIdPolicyEvaluator());
+    }
+
+    public List<PolicyViolation> evaluateProject(final UUID projectUuid) {
+        final var violations = new ArrayList<PolicyViolation>();
+        try (final var qm = new QueryManager()) {
+            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+            if (project == null) {
+                LOGGER.warn("Unable to evaluate project %s against applicable policies, because it does not exist"
+                        .formatted(projectUuid));
+                return violations;
+            }
+
+            final List<Policy> policies = qm.getAllPolicies();
+
+            LOGGER.debug("Fetching first components page for project " + projectUuid);
+            List<Component> components = fetchNextComponentsPage(qm.getPersistenceManager(), project, null);
+            while (!components.isEmpty()) {
+                for (final Component component : components) {
+                    violations.addAll(evaluate(qm, policies, component));
+                }
+
+                LOGGER.debug("Fetching next components page for project " + projectUuid);
+                final long lastId = components.get(components.size() - 1).getId();
+                components = fetchNextComponentsPage(qm.getPersistenceManager(), project, lastId);
+            }
+        }
+        return violations;
     }
 
     public List<PolicyViolation> evaluate(UUID componentUuid) {
@@ -178,4 +207,24 @@ public class PolicyEngine {
         }
         return isPolicyAssignedToParentProject(policy, child.getParent());
     }
+
+    private static List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project,
+                                                           final Long lastId) {
+        final Query<Component> query = pm.newQuery(Component.class);
+        try {
+            if (lastId == null) {
+                query.setFilter("project == :project");
+                query.setParameters(project);
+            } else {
+                query.setFilter("project == :project && id < :lastId");
+                query.setParameters(project, lastId);
+            }
+            query.setOrdering("id DESC");
+            query.setRange(0, 500);
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+    }
+
 }

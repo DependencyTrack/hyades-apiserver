@@ -1349,13 +1349,17 @@ public class QueryManager extends AlpineQueryManager {
      * @param expectedResults Number of expected {@link ScanStatus#SCAN_STATUS_COMPLETE} events for this scan
      * @return The created {@link VulnerabilityScan}
      */
-    public VulnerabilityScan createVulnerabilityScan(final String scanToken, final int expectedResults) {
+    public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
+                                                     final UUID targetIdentifier, final String scanToken,
+                                                     final int expectedResults) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         try {
             trx.begin();
             final var scan = new VulnerabilityScan();
             scan.setToken(scanToken);
+            scan.setTargetType(targetType);
+            scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
             final var startDate = new Date();
             scan.setStartedAt(startDate);
@@ -1379,6 +1383,7 @@ public class QueryManager extends AlpineQueryManager {
      */
     public VulnerabilityScan getVulnerabilityScan(final String token) {
         final Transaction trx = pm.currentTransaction();
+        trx.setOptimistic(true);
         trx.setRollbackOnly(); // We won't commit anything
         try {
             trx.begin();
