@@ -24,6 +24,7 @@ import alpine.server.upgrade.AbstractUpgradeItem;
 import alpine.server.util.DbUtil;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 public class v480Updater extends AbstractUpgradeItem {
 
@@ -36,6 +37,11 @@ public class v480Updater extends AbstractUpgradeItem {
 
     @Override
     public void executeUpgrade(final AlpineQueryManager qm, final Connection connection) throws Exception {
+        changeJdbcTypeOfComponentAuthorColumn(connection);
+        setJiraPropertyValuesFromJiraToIntegrationGroup(connection);
+    }
+
+    private void changeJdbcTypeOfComponentAuthorColumn(Connection connection) throws Exception {
         // Fixes https://github.com/DependencyTrack/dependency-track/issues/2488
         // The JDBC type "CLOB" is mapped to the type CLOB for H2, MEDIUMTEXT for MySQL, and TEXT for PostgreSQL and SQL Server.
         LOGGER.info("Changing JDBC type of \"COMPONENT\".\"AUTHOR\" from VARCHAR to CLOB");
@@ -54,6 +60,16 @@ public class v480Updater extends AbstractUpgradeItem {
             DbUtil.executeUpdate(connection, "ALTER TABLE \"COMPONENT\" CHANGE \"AUTHOR_V48\" \"AUTHOR\" MEDIUMTEXT");
         } else {
             DbUtil.executeUpdate(connection, "ALTER TABLE \"COMPONENT\" RENAME COLUMN \"AUTHOR_V48\" TO \"AUTHOR\"");
+        }
+    }
+
+    private void setJiraPropertyValuesFromJiraToIntegrationGroup(Connection connection) throws Exception {
+        LOGGER.info("Setting Jira property values from Groupname 'jira' to Groupname 'integrations'");
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                UPDATE "CONFIGPROPERTY" SET "GROUPNAME" = 'integrations'
+                WHERE "GROUPNAME" = 'jira' AND "PROPERTYNAME" LIKE 'jira.%'
+                """)) {
+            ps.executeUpdate();
         }
     }
 }
