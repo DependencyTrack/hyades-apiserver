@@ -77,7 +77,7 @@ If the host environment requires ssl configuration then below configurations nee
 | Environment Variable        | Description                  | Default |  Required  |
 |:----------------------------|:-----------------------------|:--------|:----------:|
 | `API_TOPIC_PREFIX`          | Prefix for topic names       | -       |     ✅      |
-| `KAFKA_SSL_ENABLED`         | Whether ssl is enabled       | false   |     ❌      |
+| `KAFKA_TLS_ENABLED`         | Whether tls is enabled       | false   |     ❌      |
 | `KAFKA_SECURTY_PROTOCOL`    | Security protocol to be used | -       |     ❌      |
 | `KAFKA_TRUSTSTORE_PATH`     | Trust store path to be used  | -       |     ❌      |
 | `KAFKA_TRUSTSTORE_PASSWORD` | Trust store password         | -       |     ❌      |
@@ -85,7 +85,7 @@ If the host environment requires ssl configuration then below configurations nee
 | `KAFKA_KEYSTORE_PATH`       | Key store path to be used    | -       |     ❌      |
 | `KAFKA_KEYSTORE_PASSWORD`   | Key store password           | -       |     ❌      |
 
-(If ssl is enabled then the security protocol, truststore path and password would be required properties)
+(If tls is enabled then the security protocol, truststore path and password would be required properties)
 (If mtls is enabled then additional to truststore, keystore path and password would be required properties)
 
 To run a previously built executable JAR, just invoke it with `java -jar`, e.g.:
