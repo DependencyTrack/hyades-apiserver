@@ -80,6 +80,10 @@ public class KafkaStreamsInitializer implements ServletContextListener {
             properties.put(StreamsConfig.SECURITY_PROTOCOL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_SSL_PROTOCOL));
             properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PATH));
             properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.KAFKA_MTLS_ENABLED)) {
+                properties.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, Config.getInstance().getProperty(ConfigKey.KEY_STORE_PATH));
+                properties.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.KEY_STORE_PASSWORD));
+            }
         }
         properties.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
         properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name);
