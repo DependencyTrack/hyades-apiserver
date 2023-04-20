@@ -23,12 +23,16 @@ public enum ConfigKey implements Config.Key {
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
 
-    KAFKA_SSL_PROTOCOL("kafka.security.protocol", ""),
+    KAFKA_TLS_PROTOCOL("kafka.security.protocol", ""),
 
-    KAFKA_SSL_ENABLED("kafka.ssl.enabled", false),
+    KAFKA_TLS_ENABLED("kafka.tls.enabled", false),
+    KAFKA_MTLS_ENABLED("kafka.mtls.enabled", false),
     TRUST_STORE_PATH("kafka.truststore.path", ""),
 
     TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
+    KEY_STORE_PATH("kafka.keystore.path", ""),
+
+    KEY_STORE_PASSWORD("kafka.keystore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
     KAFKA_TOPIC_PREFIX("api.topic.prefix", "");
 
