@@ -133,7 +133,22 @@
             </snapshots>
         </repository>
     </repositories>
-
+     
+   <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>us.springett</groupId>
+                <artifactId>alpine-executable-war</artifactId>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-webapp-logging</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+  
     <dependencies>
         <!-- Alpine -->
         <dependency>
