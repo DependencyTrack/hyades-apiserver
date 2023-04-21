@@ -22,14 +22,14 @@ import alpine.Config;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Severity;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.CweImporter;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
@@ -50,9 +50,9 @@ public class FindingResourceTest extends ResourceTest {
     @Override
     protected DeploymentContext configureDeployment() {
         return ServletDeploymentContext.forServlet(new ServletContainer(
-                new ResourceConfig(FindingResource.class)
-                        .register(ApiFilter.class)
-                        .register(AuthenticationFilter.class)))
+                        new ResourceConfig(FindingResource.class)
+                                .register(ApiFilter.class)
+                                .register(AuthenticationFilter.class)))
                 .build();
     }
 
