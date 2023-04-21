@@ -26,6 +26,10 @@ import alpine.server.util.DbUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.JIRA_PASSWORD;
+import static org.dependencytrack.model.ConfigPropertyConstants.JIRA_URL;
+import static org.dependencytrack.model.ConfigPropertyConstants.JIRA_USERNAME;
+
 public class v480Updater extends AbstractUpgradeItem {
 
     private static final Logger LOGGER = Logger.getLogger(v480Updater.class);
@@ -38,7 +42,7 @@ public class v480Updater extends AbstractUpgradeItem {
     @Override
     public void executeUpgrade(final AlpineQueryManager qm, final Connection connection) throws Exception {
         changeJdbcTypeOfComponentAuthorColumn(connection);
-        setJiraPropertyValuesFromJiraToIntegrationGroup(connection);
+        setJiraPropertyValuesFromJiraToIntegrationGroup(qm, connection);
     }
 
     private void changeJdbcTypeOfComponentAuthorColumn(Connection connection) throws Exception {
@@ -63,13 +67,28 @@ public class v480Updater extends AbstractUpgradeItem {
         }
     }
 
-    private void setJiraPropertyValuesFromJiraToIntegrationGroup(Connection connection) throws Exception {
+    private void setJiraPropertyValuesFromJiraToIntegrationGroup(AlpineQueryManager qm, Connection connection) throws Exception {
         LOGGER.info("Setting Jira property values from Groupname 'jira' to Groupname 'integrations'");
-        try (final PreparedStatement ps = connection.prepareStatement("""
-                UPDATE "CONFIGPROPERTY" SET "GROUPNAME" = 'integrations'
-                WHERE "GROUPNAME" = 'jira' AND "PROPERTYNAME" LIKE 'jira.%'
-                """)) {
-            ps.executeUpdate();
-        }
+        final PreparedStatement ps = connection.prepareStatement("""
+                    UPDATE "CONFIGPROPERTY" SET "PROPERTYVALUE" = (
+                        SELECT "PROPERTYVALUE" FROM "CONFIGPROPERTY" 
+                        WHERE "GROUPNAME" = 'jira' AND "PROPERTYNAME" = ?
+                    ) WHERE "GROUPNAME" = 'integrations' AND "PROPERTYNAME" = ?
+                """);
+
+        ps.setString(1, JIRA_URL.getPropertyName());
+        ps.setString(2, JIRA_URL.getPropertyName());
+        ps.executeUpdate();
+
+        ps.setString(1, JIRA_USERNAME.getPropertyName());
+        ps.setString(2, JIRA_USERNAME.getPropertyName());
+        ps.executeUpdate();
+
+        ps.setString(1, JIRA_PASSWORD.getPropertyName());
+        ps.setString(2, JIRA_PASSWORD.getPropertyName());
+        ps.executeUpdate();
+
+        LOGGER.info("Removing Groupname 'jira'");
+        DbUtil.executeUpdate(connection, "DELETE FROM \"CONFIGPROPERTY\" WHERE \"GROUPNAME\" = 'jira'");
     }
 }
