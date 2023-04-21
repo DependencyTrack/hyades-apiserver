@@ -73,8 +73,8 @@ import java.util.UUID;
                 @Persistent(name = "vulnerabilities"),
         }),
         @FetchGroup(name = "IDENTITY", members = {
-            @Persistent(name = "id"),
-            @Persistent(name = "uuid")
+                @Persistent(name = "id"),
+                @Persistent(name = "uuid")
         }),
         @FetchGroup(name = "INTERNAL_IDENTIFICATION", members = {
                 @Persistent(name = "id"),
