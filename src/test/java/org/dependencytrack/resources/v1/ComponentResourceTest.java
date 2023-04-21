@@ -23,8 +23,10 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.util.KafkaTestUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
@@ -315,6 +317,14 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
+                }
+        );
     }
 
     @Test
@@ -369,6 +379,14 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test component", json.getString("description"));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
+                }
+        );
     }
 
     @Test
