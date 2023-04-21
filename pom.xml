@@ -31,7 +31,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track</artifactId>
     <packaging>war</packaging>
-    <version>4.8.0-SNAPSHOT</version>
+    <version>5.0.0-SNAPSHOT</version>
 
     <name>Dependency-Track</name>
     <url>https://dependencytrack.org/</url>
@@ -513,6 +513,17 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit4</artifactId>
+                        <version>${maven.surefire.plugin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
