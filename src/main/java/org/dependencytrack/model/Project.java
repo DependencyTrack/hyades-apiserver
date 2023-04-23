@@ -255,11 +255,6 @@ public class Project implements Serializable {
     @Serialized
     private List<ExternalReference> externalReferences;
 
-    @JsonProperty("parentUuid")
-    private UUID getParentUuid() {
-        return (this.getParent() == null) ? null : this.getParent().getUuid();
-    }
-
     private transient ProjectMetrics metrics;
 
     @JsonIgnore
