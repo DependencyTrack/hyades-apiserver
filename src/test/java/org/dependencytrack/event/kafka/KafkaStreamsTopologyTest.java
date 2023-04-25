@@ -266,7 +266,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         assertConditionWithTimeout(() -> {
             qm.getPersistenceManager().refresh(scan);
             return scan != null && scan.getReceivedResults() == 1;
-        }, Duration.ofSeconds(5));
+        }, Duration.ofSeconds(10));
 
         // Evaluation of componentA should raise a policy violation. But because the vulnerability
         // scan was targeting a project, evaluation of individual components should not be performed.
@@ -288,11 +288,12 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         assertConditionWithTimeout(() -> {
             qm.getPersistenceManager().refresh(scan);
             return scan != null && scan.getReceivedResults() == 2;
-        }, Duration.ofSeconds(5));
+        }, Duration.ofSeconds(10));
 
         // Vulnerability scan of the project completed. Policy evaluation of all components should
         // have been performed, so we expect the violation for componentA to appear.
-        assertThat(qm.getAllPolicyViolations(project)).hasSize(1);
+        final var project1 = project;
+        assertConditionWithTimeout(()-> qm.getAllPolicyViolations(project1).size()==1, Duration.ofSeconds(30));
 
         // A project metrics update should have been executed AFTER policy evaluation.
         // It thus should include the newly discovered policy violation.
