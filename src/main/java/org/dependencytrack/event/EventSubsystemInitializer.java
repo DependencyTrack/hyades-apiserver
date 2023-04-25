@@ -38,15 +38,16 @@ import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.NewVulnerableDependencyAnalysisTask;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvDownloadTask;
+import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnDbSyncTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
+import org.dependencytrack.tasks.VulnerabilityScanCleanupTask;
 import org.dependencytrack.tasks.metrics.ComponentMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
-import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -99,6 +100,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(ClearComponentAnalysisCacheEvent.class, ClearComponentAnalysisCacheTask.class);
         EVENT_SERVICE.subscribe(CallbackEvent.class, CallbackTask.class);
         EVENT_SERVICE.subscribe(NewVulnerableDependencyAnalysisEvent.class, NewVulnerableDependencyAnalysisTask.class);
+        EVENT_SERVICE.subscribe(VulnerabilityScanCleanupEvent.class, VulnerabilityScanCleanupTask.class);
 
         EVENT_SERVICE_ST.subscribe(IndexEvent.class, IndexTask.class);
         EVENT_SERVICE_ST.subscribe(NistMirrorEvent.class, NistMirrorTask.class);
@@ -134,6 +136,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(InternalComponentIdentificationTask.class);
         EVENT_SERVICE.unsubscribe(CallbackTask.class);
         EVENT_SERVICE.unsubscribe(NewVulnerableDependencyAnalysisTask.class);
+        EVENT_SERVICE.unsubscribe(VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.shutdown();
 
         EVENT_SERVICE_ST.unsubscribe(IndexTask.class);

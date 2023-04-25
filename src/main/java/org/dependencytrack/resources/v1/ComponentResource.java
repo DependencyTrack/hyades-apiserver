@@ -42,6 +42,7 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 
@@ -303,7 +304,9 @@ public class ComponentResource extends AlpineResource {
 
             component = qm.createComponent(component, true);
             kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
-            kafkaEventDispatcher.dispatchBlocking(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
+            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS);
+            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
+            kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
     }
@@ -387,7 +390,9 @@ public class ComponentResource extends AlpineResource {
 
                 component = qm.updateComponent(component, true);
                 kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
-                kafkaEventDispatcher.dispatchBlocking(new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS));
+                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS);
+                qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
+                kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
                 return Response.ok(component).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

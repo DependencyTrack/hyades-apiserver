@@ -164,13 +164,15 @@ public class BomUploadProcessingTask implements Subscriber {
                 // analysis has completed. If not chained, synchronous publishing mode will return immediately upon
                 // return from this method, resulting in inaccurate findings being returned in the response (since
                 // the vulnerability analysis hasn't taken place yet).
-                final List<Component> detachedFlattenedComponent = qm.detach(flattenedComponents);
+                final List<Component> detachedFlattenedComponents = qm.detach(flattenedComponents);
                 final Project detachedProject = qm.detach(Project.class, project.getId());
-                qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), event.getChainIdentifier().toString(), flattenedComponents.size());
-                for (final Component component : detachedFlattenedComponent) {
-                    kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
-                            event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
-                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
+                if (!detachedFlattenedComponents.isEmpty()) {
+                    qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), event.getChainIdentifier().toString(), flattenedComponents.size());
+                    for (final Component component : detachedFlattenedComponents) {
+                        kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
+                                event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
+                    }
                 }
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
                 kafkaEventDispatcher.dispatchAsync(new Notification()

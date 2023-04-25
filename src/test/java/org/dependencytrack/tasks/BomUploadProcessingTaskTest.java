@@ -25,6 +25,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.util.KafkaTestUtil;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Notification;
@@ -66,7 +67,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final byte[] bomBytes = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("bom-1.xml").toURI()));
 
-        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomBytes);
+        new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
@@ -95,6 +97,41 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?packaging=jar");
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
+
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        assertThat(vulnerabilityScan).isNotNull();
+    }
+
+    @Test
+    public void informWithEmptyBomTest() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "components": []
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomBytes);
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
+        );
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getLastBomImport()).isNotNull();
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).isEmpty();
+
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        assertThat(vulnerabilityScan).isNull();
     }
 
     @Test
