@@ -85,6 +85,7 @@ public class KafkaStreamsInitializer implements ServletContextListener {
                 properties.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.KEY_STORE_PASSWORD));
             }
         }
+        properties.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_METRICS_RECORDING_LEVEL));
         properties.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
         properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name);
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");

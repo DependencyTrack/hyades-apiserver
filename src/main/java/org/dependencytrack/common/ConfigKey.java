@@ -34,7 +34,8 @@ public enum ConfigKey implements Config.Key {
 
     KEY_STORE_PASSWORD("kafka.keystore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
-    KAFKA_TOPIC_PREFIX("api.topic.prefix", "");
+    KAFKA_TOPIC_PREFIX("api.topic.prefix", ""),
+    KAFKA_STREAMS_METRICS_RECORDING_LEVEL("kafka.streams.metrics.recording.level", "INFO");
 
     private final String propertyName;
     private final Object defaultValue;
