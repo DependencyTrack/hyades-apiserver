@@ -74,16 +74,17 @@ In case you want to provide a topic prefix to use in conjunction with hyades app
 to export is API_TOPIC_PREFIX<br/>
 If the host environment requires ssl configuration then below configurations need to be passed:
 
-| Environment Variable        | Description                  | Default |  Required  |
-|:----------------------------|:-----------------------------|:--------|:----------:|
-| `API_TOPIC_PREFIX`          | Prefix for topic names       | -       |     ✅      |
-| `KAFKA_TLS_ENABLED`         | Whether tls is enabled       | false   |     ❌      |
-| `KAFKA_SECURTY_PROTOCOL`    | Security protocol to be used | -       |     ❌      |
-| `KAFKA_TRUSTSTORE_PATH`     | Trust store path to be used  | -       |     ❌      |
-| `KAFKA_TRUSTSTORE_PASSWORD` | Trust store password         | -       |     ❌      |
-| `KAFKA_MTLS_ENABLED`        | Whether mtls is enabled      | false   |     ❌      |
-| `KAFKA_KEYSTORE_PATH`       | Key store path to be used    | -       |     ❌      |
-| `KAFKA_KEYSTORE_PASSWORD`   | Key store password           | -       |     ❌      |
+| Environment Variable                    | Description                              | Default | Required |
+|:----------------------------------------|:-----------------------------------------|:--------|:--------:|
+| `API_TOPIC_PREFIX`                      | Prefix for topic names                   | -       |    ✅     |
+| `KAFKA_TLS_ENABLED`                     | Whether tls is enabled                   | false   |    ❌     |
+| `KAFKA_SECURTY_PROTOCOL`                | Security protocol to be used             | -       |    ❌     |
+| `KAFKA_TRUSTSTORE_PATH`                 | Trust store path to be used              | -       |    ❌     |
+| `KAFKA_TRUSTSTORE_PASSWORD`             | Trust store password                     | -       |    ❌     |
+| `KAFKA_MTLS_ENABLED`                    | Whether mtls is enabled                  | false   |    ❌     |
+| `KAFKA_KEYSTORE_PATH`                   | Key store path to be used                | -       |    ❌     |
+| `KAFKA_KEYSTORE_PASSWORD`               | Key store password                       | -       |    ❌     |
+| `KAFKA_STREAMS_METRICS_RECORDING_LEVEL` | Recording level of Kafka Streams metrics | `INFO`  |    ❌     |
 
 (If tls is enabled then the security protocol, truststore path and password would be required properties)
 (If mtls is enabled then additional to truststore, keystore path and password would be required properties)
