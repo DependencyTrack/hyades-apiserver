@@ -19,6 +19,7 @@
 package org.dependencytrack.policy;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
@@ -30,14 +31,23 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.util.NotificationUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+import static org.hyades.proto.notification.v1.Group.GROUP_POLICY_VIOLATION;
+import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.junit.Assert.assertNull;
 
 public class PolicyEngineTest extends PersistenceCapableTest {
@@ -145,12 +155,13 @@ public class PolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void determineViolationTypeTest(){
+    public void determineViolationTypeTest() {
         PolicyCondition policyCondition = new PolicyCondition();
         policyCondition.setSubject(null);
         PolicyEngine policyEngine = new PolicyEngine();
         assertNull(policyEngine.determineViolationType(policyCondition.getSubject()));
     }
+
     @Test
     public void issue1924() {
         Policy policy = qm.createPolicy("Policy 1924", Policy.Operator.ALL, Policy.ViolationState.INFO);
@@ -271,5 +282,61 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         policyViolation = violations.get(1);
         Assert.assertEquals("Log4J", policyViolation.getComponent().getName());
         Assert.assertEquals(PolicyCondition.Subject.LICENSE_GROUP, policyViolation.getPolicyCondition().getSubject());
+    }
+
+    @Test
+    public void notificationTest() throws InterruptedException {
+        final var policy = qm.createPolicy("Policy-1993", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Create a policy condition that matches on any coordinates.
+        final var policyConditionA = qm.createPolicyCondition(policy, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
+                 {"group": "*", name: "*", version: "*"}
+                 """);
+
+        final var project = new Project();
+        project.setName("Test Project");
+        qm.createProject(project, Collections.emptyList(), false);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("foo");
+        component.setName("bar");
+        component.setVersion("1.2.3");
+        qm.createComponent(component, false);
+
+        // Evaluate policies and ensure that a notification has been sent.
+        final var policyEngine = new PolicyEngine();
+        assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
+
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
+        final org.hyades.proto.notification.v1.Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(0));
+        assertThat(notification).isNotNull();
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_POLICY_VIOLATION);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION, project));
+        assertThat(notification.getContent()).isEqualTo("A operational policy violation occurred");
+
+        // Create an additional policy condition that matches on the exact version of the component,
+        // and re-evaluate policies. Ensure that only one notification per newly violated condition was sent.
+        final var policyConditionB = qm.createPolicyCondition(policy, PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.2.3");
+        assertThat(policyEngine.evaluate(component.getUuid())).hasSize(2);
+
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final org.hyades.proto.notification.v1.Notification notificationPolicyA = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(0));
+        assertThat(notificationPolicyA).isNotNull();
+
+        final org.hyades.proto.notification.v1.Notification notificationPolicyB = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(1));
+        assertThat(notificationPolicyB).isNotNull();
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_POLICY_VIOLATION);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION, project));
+        assertThat(notification.getContent()).isEqualTo("A operational policy violation occurred");
+
+        // Delete a policy condition and re-evaluate policies again. No new notifications should be sent.
+        qm.deletePolicyCondition(policyConditionA);
+        assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
     }
 }
