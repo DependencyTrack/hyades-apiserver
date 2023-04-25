@@ -26,6 +26,7 @@ public class RepositoryTypeTest {
 
     @Test
     public void testEnums() {
+        Assert.assertEquals("CPAN", RepositoryType.CPAN.name());
         Assert.assertEquals("MAVEN", RepositoryType.MAVEN.name());
         Assert.assertEquals("NPM", RepositoryType.NPM.name());
         Assert.assertEquals("GEM", RepositoryType.GEM.name());
@@ -75,5 +76,11 @@ public class RepositoryTypeTest {
     public void testResolveUnsupported() throws Exception {
         PackageURL purl = new PackageURL("pkg:generic/artifact@1.0.0");
         Assert.assertEquals(RepositoryType.UNSUPPORTED, RepositoryType.resolve(purl));
+    }
+
+    @Test
+    public void testResolveCpan() throws Exception {
+        PackageURL purl = new PackageURL("pkg:cpan/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.CPAN, RepositoryType.resolve(purl));
     }
 } 

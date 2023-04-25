@@ -214,6 +214,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void loadDefaultRepositories() {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing default repositories to datastore");
+            qm.createRepository(RepositoryType.CPAN, "cpan-public-registry", "https://fastapi.metacpan.org/v1/", true, false);
             qm.createRepository(RepositoryType.GEM, "rubygems.org", "https://rubygems.org/", true, false);
             qm.createRepository(RepositoryType.HEX, "hex.pm", "https://hex.pm/", true, false);
             qm.createRepository(RepositoryType.MAVEN, "central", "https://repo1.maven.org/maven2/", true, false);
