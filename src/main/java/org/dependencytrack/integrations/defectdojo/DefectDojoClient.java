@@ -19,12 +19,14 @@
 package org.dependencytrack.integrations.defectdojo;
 
 import alpine.common.logging.Logger;
+import kong.unirest.ContentType;
 import kong.unirest.UnirestInstance;
 import kong.unirest.HttpRequestWithBody;
 import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONObject;
+import org.apache.http.entity.mime.content.StringBody;
 import org.dependencytrack.common.UnirestFactory;
 
 import java.io.InputStream;
@@ -142,7 +144,8 @@ public class DefectDojoClient {
      * A Reimport will reuse (overwrite) the existing test, instead of create a new test.
      * The Successfully reimport will also  increase the reimport counter by 1.
     */
-    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId) {
+    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson,
+                                                final String testId, final Boolean doNotReactivate) {
         LOGGER.debug("Re-reimport Dependency-Track findings to DefectDojo per Engagement");
         final UnirestInstance ui = UnirestFactory.getUnirestInstance();
         final HttpRequestWithBody request = ui.post(baseURL + "/api/v2/reimport-scan/");
@@ -157,6 +160,7 @@ public class DefectDojoClient {
                 .field("minimum_severity", "Info")
                 .field("close_old_findings", "true")
                 .field("push_to_jira", "false")
+                .field("do_not_reactivate", doNotReactivate.toString())
                 .field("test", testId)
                 .field("scan_date", DATE_FORMAT.format(new Date()))
                 .asString();

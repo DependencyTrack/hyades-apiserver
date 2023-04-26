@@ -152,7 +152,7 @@ public class DefectDojoClientTest {
                 );
         DefectDojoUploader uploader = new DefectDojoUploader();
         DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
-        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(0), testId);
+        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(0), testId, false);
         testClient.verify(
                 request()
                         .withMethod("POST")
@@ -179,7 +179,7 @@ public class DefectDojoClientTest {
                 );
         DefectDojoUploader uploader = new DefectDojoUploader();
         DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
-        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(16), testId);
+        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(16), testId, false);
         testClient.verify(
                 request()
                         .withMethod("POST")
