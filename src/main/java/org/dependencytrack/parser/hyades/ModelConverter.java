@@ -46,6 +46,7 @@ public final class ModelConverter {
         vuln.setSource(convert(hyadesVuln.getSource()));
         vuln.setTitle(StringUtils.abbreviate(hyadesVuln.getTitle(), 255));
         vuln.setDescription(hyadesVuln.getDescription());
+        vuln.setRecommendation(hyadesVuln.getRecommendation());
         if (hyadesVuln.hasCreated()) {
             vuln.setCreated(Date.from(Instant.ofEpochSecond(hyadesVuln.getCreated().getSeconds())));
         }

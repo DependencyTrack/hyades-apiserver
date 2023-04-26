@@ -43,6 +43,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
                 .setSource(SOURCE_NVD)
                 .setTitle("Foo Bar")
                 .setDescription("Foo Bar Baz Qux Quux")
+                .setRecommendation("Do this remedy as a fix")
                 .addRatings(Rating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV2)
                         .setSource(SOURCE_NVD)
@@ -79,6 +80,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.NVD.name());
         assertThat(vuln.getTitle()).isEqualTo("Foo Bar");
         assertThat(vuln.getDescription()).isEqualTo("Foo Bar Baz Qux Quux");
+        assertThat(vuln.getRecommendation()).isEqualTo("Do this remedy as a fix");
         assertThat(vuln.getCvssV3Vector()).isEqualTo("CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H");
         assertThat(vuln.getCvssV3BaseScore()).isEqualTo(BigDecimal.valueOf(10.0));
         assertThat(vuln.getCvssV2Vector()).isEqualTo("(AV:N/AC:M/Au:N/C:C/I:C/A:C)");
