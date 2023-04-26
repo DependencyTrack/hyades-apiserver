@@ -31,6 +31,7 @@ import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
+import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.AffectedVersionAttribution;
@@ -85,9 +86,12 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import javax.json.JsonObject;
 import java.security.Principal;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -334,6 +338,29 @@ public class QueryManager extends AlpineQueryManager {
             cacheQueryManager = (request == null) ? new CacheQueryManager(getPersistenceManager()) : new CacheQueryManager(getPersistenceManager(), request);
         }
         return cacheQueryManager;
+    }
+
+    /**
+     * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
+     *
+     * @return A {@link Set} of {@link Team} IDs
+     */
+    protected Set<Long> getTeamIds(final Principal principal) {
+        final Set<Long> principalTeamIds = new HashSet<>();
+
+        if (principal instanceof final UserPrincipal userPrincipal
+                && userPrincipal.getTeams() != null) {
+            for (final Team userInTeam : userPrincipal.getTeams()) {
+                principalTeamIds.add(userInTeam.getId());
+            }
+        } else if (principal instanceof final ApiKey apiKey
+                && apiKey.getTeams() != null) {
+            for (final Team userInTeam : apiKey.getTeams()) {
+                principalTeamIds.add(userInTeam.getId());
+            }
+        }
+
+        return principalTeamIds;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1234,6 +1261,16 @@ public class QueryManager extends AlpineQueryManager {
         commitSearchIndex(true, clazz);
     }
 
+    public boolean hasAccessManagementPermission(final Object principal) {
+        if (principal instanceof final UserPrincipal userPrincipal) {
+            return hasAccessManagementPermission(userPrincipal);
+        } else if (principal instanceof final ApiKey apiKey) {
+            return hasAccessManagementPermission(apiKey);
+        }
+
+        throw new IllegalArgumentException("Provided principal is of invalid type " + ClassUtils.getName(principal));
+    }
+
     public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
         return getProjectQueryManager().hasAccessManagementPermission(userPrincipal);
     }
@@ -1244,6 +1281,26 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getTags(String policyUuid) {
         return getTagQueryManager().getTags(policyUuid);
+    }
+
+    /**
+     * Fetch multiple objects from the data store by their ID.
+     *
+     * @param clazz {@link Class} of the objects to fetch
+     * @param ids   IDs of the objects to fetch
+     * @param <T>   Type of the objects to fetch
+     * @return The fetched objects
+     * @since 5.0.0
+     */
+    public <T> List<T> getObjectsById(final Class<T> clazz, final Collection<Long> ids) {
+        final Query<T> query = pm.newQuery(clazz);
+        try {
+            query.setFilter(":ids.contains(this.id)");
+            query.setNamedParameters(Map.of("ids", ids));
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**
