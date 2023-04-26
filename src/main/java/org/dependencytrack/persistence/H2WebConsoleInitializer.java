@@ -2,6 +2,7 @@ package org.dependencytrack.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import org.h2.Driver;
 import org.h2.server.web.WebServlet;
 
 import javax.servlet.ServletContext;
@@ -26,7 +27,7 @@ public class H2WebConsoleInitializer implements ServletContextListener {
         String databaseDriver = configuration.getProperty(Config.AlpineKey.DATABASE_DRIVER);
         Boolean h2ConsoleEnabled = Boolean.valueOf(event.getServletContext().getInitParameter(H2_CONSOLE_ENABLED_INIT_PARAM));
         // Misconfiguration check, if external database is used, no need to pointlessly expose the H2 console
-        if ("external".equals(databaseMode) || !org.h2.Driver.class.getName().equals(databaseDriver) || !h2ConsoleEnabled) {
+        if ("external".equals(databaseMode) || !Driver.class.getName().equals(databaseDriver) || !h2ConsoleEnabled) {
             LOGGER.debug("H2 web console will not be initialized since either database mode is external or database driver is not H2 or the console is simply disabled !");
             LOGGER.debug("Database mode : " + databaseMode);
             LOGGER.debug("Database driver : " + databaseDriver);
