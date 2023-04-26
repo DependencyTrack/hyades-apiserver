@@ -1020,8 +1020,8 @@ public class QueryManager extends AlpineQueryManager {
         return getFindingsQueryManager().getSuppressedCount(project, component);
     }
 
-    public List<Project> getProjects(Vulnerability vulnerability) {
-        return getVulnerabilityQueryManager().getProjects(vulnerability);
+    public List<Project> getProjects(final Vulnerability vulnerability, final Set<String> fetchGroups) {
+        return getVulnerabilityQueryManager().getProjects(vulnerability, fetchGroups);
     }
 
     public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {
@@ -1286,15 +1286,19 @@ public class QueryManager extends AlpineQueryManager {
     /**
      * Fetch multiple objects from the data store by their ID.
      *
-     * @param clazz {@link Class} of the objects to fetch
-     * @param ids   IDs of the objects to fetch
-     * @param <T>   Type of the objects to fetch
+     * @param clazz       {@link Class} of the objects to fetch
+     * @param ids         IDs of the objects to fetch
+     * @param fetchGroups The fetch groups to use
+     * @param <T>         Type of the objects to fetch
      * @return The fetched objects
      * @since 5.0.0
      */
-    public <T> List<T> getObjectsById(final Class<T> clazz, final Collection<Long> ids) {
+    public <T> List<T> getObjectsById(final Class<T> clazz, final Collection<Long> ids, final Collection<String> fetchGroups) {
         final Query<T> query = pm.newQuery(clazz);
         try {
+            if (fetchGroups != null && !fetchGroups.isEmpty()) {
+                query.getFetchPlan().setGroups(fetchGroups);
+            }
             query.setFilter(":ids.contains(this.id)");
             query.setNamedParameters(Map.of("ids", ids));
             return List.copyOf(query.executeList());
