@@ -24,7 +24,6 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -46,8 +45,8 @@ import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
 import javax.jdo.annotations.Serialized;
+import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
@@ -89,6 +88,13 @@ import java.util.UUID;
                 @Persistent(name = "tags"),
                 @Persistent(name = "accessTeams")
         }),
+        @FetchGroup(name = "IDENTIFIERS", members = {
+                @Persistent(name = "id"),
+                @Persistent(name = "uuid"),
+                @Persistent(name = "group"),
+                @Persistent(name = "name"),
+                @Persistent(name = "version")
+        }),
         @FetchGroup(name = "METRICS_UPDATE", members = {
                 @Persistent(name = "id"),
                 @Persistent(name = "lastInheritedRiskScore"),
@@ -105,6 +111,7 @@ public class Project implements Serializable {
      */
     public enum FetchGroup {
         ALL,
+        IDENTIFIERS,
         METRICS_UPDATE
     }
 
