@@ -99,6 +99,9 @@ import java.util.UUID;
                 @Persistent(name = "id"),
                 @Persistent(name = "lastInheritedRiskScore"),
                 @Persistent(name = "uuid")
+        }),
+        @FetchGroup(name = "PARENT", members = {
+                @Persistent(name = "parent")
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -112,7 +115,8 @@ public class Project implements Serializable {
     public enum FetchGroup {
         ALL,
         IDENTIFIERS,
-        METRICS_UPDATE
+        METRICS_UPDATE,
+        PARENT
     }
 
     @PrimaryKey
@@ -503,13 +507,13 @@ public class Project implements Serializable {
             return sb.toString();
         }
     }
-    
+
     private final static class BooleanDefaultTrueSerializer extends JsonSerializer<Boolean> {
 
         @Override
         public void serialize(Boolean value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeBoolean(value != null ? value : true);
         }
-        
+
     }
 }
