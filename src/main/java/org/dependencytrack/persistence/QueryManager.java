@@ -79,7 +79,7 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.Publisher;
+import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 
 import javax.jdo.FetchPlan;
@@ -1192,12 +1192,12 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().getNotificationPublisher(name);
     }
 
-    public NotificationPublisher getDefaultNotificationPublisher(final Class<Publisher> clazz) {
+    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
         return getNotificationQueryManager().getDefaultNotificationPublisher(clazz);
     }
 
     public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final Class<Publisher> publisherClass, final String templateContent,
+                                                             final String publisherClass, final String templateContent,
                                                              final String templateMimeType, final boolean defaultPublisher) {
         return getNotificationQueryManager().createNotificationPublisher(name, description, publisherClass, templateContent, templateMimeType, defaultPublisher);
     }

@@ -20,31 +20,35 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import io.swagger.annotations.*;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.Authorization;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.Publisher;
-import org.dependencytrack.notification.publisher.SendMailPublisher;
+import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
-import javax.json.Json;
-import javax.json.JsonObject;
 import javax.validation.Validator;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -103,30 +107,24 @@ public class NotificationPublisherResource extends AlpineResource {
 
         try (QueryManager qm = new QueryManager()) {
             NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-            if(existingNotificationPublisher != null) {
-                return Response.status(Response.Status.CONFLICT).entity("The notification with the name "+jsonNotificationPublisher.getName()+" already exist").build();
+            if (existingNotificationPublisher != null) {
+                return Response.status(Response.Status.CONFLICT).entity("The notification with the name " + jsonNotificationPublisher.getName() + " already exist").build();
             }
 
-            if(jsonNotificationPublisher.isDefaultPublisher()) {
+            if (jsonNotificationPublisher.isDefaultPublisher()) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("The creation of a new default publisher is forbidden").build();
             }
-
-            Class<?> publisherClass = Class.forName(jsonNotificationPublisher.getPublisherClass());
-
-            if (Publisher.class.isAssignableFrom(publisherClass)) {
-                Class<Publisher> castedPublisherClass = (Class<Publisher>) publisherClass;
+            if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
+                clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
                 NotificationPublisher notificationPublisherCreated = qm.createNotificationPublisher(
                         jsonNotificationPublisher.getName(), jsonNotificationPublisher.getDescription(),
-                        castedPublisherClass, jsonNotificationPublisher.getTemplate(), jsonNotificationPublisher.getTemplateMimeType(),
+                        jsonNotificationPublisher.getPublisherClass(), jsonNotificationPublisher.getTemplate(), jsonNotificationPublisher.getTemplateMimeType(),
                         jsonNotificationPublisher.isDefaultPublisher()
                 );
                 return Response.status(Response.Status.CREATED).entity(notificationPublisherCreated).build();
             } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" does not implement "+Publisher.class.getName()).build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class "+jsonNotificationPublisher.getPublisherClass()+" is not valid.").build();
             }
-
-        } catch (ClassNotFoundException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" cannot be found").build();
         }
     }
 
@@ -171,12 +169,11 @@ public class NotificationPublisherResource extends AlpineResource {
                 existingPublisher.setName(jsonNotificationPublisher.getName());
                 existingPublisher.setDescription(jsonNotificationPublisher.getDescription());
 
-                Class<?> publisherClass = Class.forName(jsonNotificationPublisher.getPublisherClass());
-
-                if (Publisher.class.isAssignableFrom(publisherClass)) {
+                if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
+                        clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
                     existingPublisher.setPublisherClass(jsonNotificationPublisher.getPublisherClass());
                 } else {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" does not implement "+Publisher.class.getCanonicalName()).build();
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class "+jsonNotificationPublisher.getPublisherClass()+" is not valid.").build();
                 }
                 existingPublisher.setTemplate(jsonNotificationPublisher.getTemplate());
                 existingPublisher.setTemplateMimeType(jsonNotificationPublisher.getTemplateMimeType());
@@ -186,8 +183,6 @@ public class NotificationPublisherResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification publisher could not be found.").build();
             }
-        } catch (ClassNotFoundException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" cannot be found").build();
         }
     }
 
@@ -246,42 +241,6 @@ public class NotificationPublisherResource extends AlpineResource {
         } catch (IOException ioException) {
             LOGGER.error(ioException.getMessage(), ioException);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while restoring default notification publisher templates.").build();
-        }
-    }
-
-    @POST
-    @Path("/test/smtp")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Dispatches a SMTP notification test"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized")
-    })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
-    public Response testSmtpPublisherConfig(@FormParam("destination") String destination) {
-        try(QueryManager qm = new QueryManager()) {
-            Class defaultEmailPublisherClass = SendMailPublisher.class;
-            NotificationPublisher emailNotificationPublisher = qm.getDefaultNotificationPublisher(defaultEmailPublisherClass);
-            final Publisher emailPublisher = (Publisher) defaultEmailPublisherClass.getDeclaredConstructor().newInstance();
-            final JsonObject config = Json.createObjectBuilder()
-                    .add(Publisher.CONFIG_DESTINATION, destination)
-                    .add(Publisher.CONFIG_TEMPLATE_KEY, emailNotificationPublisher.getTemplate())
-                    .add(Publisher.CONFIG_TEMPLATE_MIME_TYPE_KEY, emailNotificationPublisher.getTemplateMimeType())
-                    .build();
-            final Notification notification = new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.CONFIGURATION)
-                    .title(NotificationConstants.Title.NOTIFICATION_TEST)
-                    .content("SMTP configuration test")
-                    .level(NotificationLevel.INFORMATIONAL);
-            // Bypass Notification.dispatch() and go directly to the publisher itself
-            emailPublisher.inform(notification, config);
-            return Response.ok().build();
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException | NoSuchMethodException e) {
-            LOGGER.error(e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while sending test mail notification.").build();
         }
     }
 }

@@ -29,10 +29,7 @@ import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.dependencytrack.notification.publisher.Publisher;
-import org.dependencytrack.notification.publisher.SendMailPublisher;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
@@ -44,10 +41,11 @@ import org.junit.Test;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.UUID;
+
+import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
 
 public class NotificationPublisherResourceTest extends ResourceTest {
 
@@ -92,7 +90,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         publisher.setDescription("Publisher description");
         publisher.setTemplate("template");
         publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.class.getName());
+        publisher.setPublisherClass(SendMailPublisher.name());
         publisher.setDefaultPublisher(false);
         Response response = target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
@@ -106,7 +104,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertEquals("template", json.getString("template"));
         Assert.assertEquals("application/json", json.getString("templateMimeType"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals(SendMailPublisher.class.getName(), json.getString("publisherClass"));
+        Assert.assertEquals(SendMailPublisher.name(), json.getString("publisherClass"));
     }
 
     @Test
@@ -116,7 +114,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         publisher.setDescription("Publisher description");
         publisher.setTemplate("template");
         publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.class.getName());
+        publisher.setPublisherClass(SendMailPublisher.name());
         publisher.setDefaultPublisher(true);
         Response response = target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
@@ -133,7 +131,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         publisher.setDescription("Publisher description");
         publisher.setTemplate("template");
         publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.class.getName());
+        publisher.setPublisherClass(SendMailPublisher.name());
         publisher.setDefaultPublisher(true);
         Response response = target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
@@ -157,31 +155,14 @@ public class NotificationPublisherResourceTest extends ResourceTest {
                 .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The class "+NotificationPublisherResource.class.getName()+" does not implement "+ Publisher.class.getName(), body);
-    }
-
-    @Test
-    public void createNotificationPublisherClassNotFoundTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setName("Example Publisher");
-        publisher.setDescription("Publisher description");
-        publisher.setTemplate("template");
-        publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass("invalidClassFqcn");
-        publisher.setDefaultPublisher(false);
-        Response response = target(V1_NOTIFICATION_PUBLISHER).request()
-                .header(X_API_KEY, apiKey)
-                .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The class invalidClassFqcn cannot be found", body);
+        Assert.assertEquals("The publisher class "+NotificationPublisherResource.class.getName()+" is not valid.", body);
     }
 
     @Test
     public void updateNotificationPublisherTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         notificationPublisher.setName("Updated Publisher name");
@@ -197,14 +178,14 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertEquals("template", json.getString("template"));
         Assert.assertEquals("text/html", json.getString("templateMimeType"));
         Assert.assertEquals(notificationPublisher.getUuid().toString(), json.getString("uuid"));
-        Assert.assertEquals(SendMailPublisher.class.getName(), json.getString("publisherClass"));
+        Assert.assertEquals(SendMailPublisher.name(), json.getString("publisherClass"));
     }
 
     @Test
     public void updateUnknownNotificationPublisherTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         notificationPublisher = qm.detach(NotificationPublisher.class, notificationPublisher.getId());
@@ -220,7 +201,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     public void updateExistingDefaultNotificationPublisherTest() {
-        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisher((Class) SendMailPublisher.class);
+        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisher(SendMailPublisher);
         notificationPublisher.setName(notificationPublisher.getName() + " Updated");
         Response response = target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
@@ -235,7 +216,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
     public void updateNotificationPublisherWithNameOfAnotherNotificationPublisherTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         notificationPublisher = qm.detach(NotificationPublisher.class, notificationPublisher.getId());
@@ -253,7 +234,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
     public void updateNotificationPublisherWithInvalidClassTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         notificationPublisher.setPublisherClass("unknownClass");
@@ -263,31 +244,14 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertEquals(400, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The class unknownClass cannot be found", body);
-    }
-
-    @Test
-    public void updateNotificationPublisherWithClassNotImplementingPublisherInterfaceTest() {
-        NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
-                "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
-                false
-        );
-        notificationPublisher.setPublisherClass(NotificationPublisherResource.class.getName());
-        Response response = target(V1_NOTIFICATION_PUBLISHER).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The class "+NotificationPublisherResource.class.getName()+" does not implement "+ Publisher.class.getName(), body);
+        Assert.assertEquals("The publisher class unknownClass is not valid.", body);
     }
 
     @Test
     public void deleteNotificationPublisherWithNoRulesTest() {
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         Response response = target(V1_NOTIFICATION_PUBLISHER + "/" + publisher.getUuid()).request()
@@ -301,7 +265,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
     public void deleteNotificationPublisherWithLinkedNotificationRulesTest() {
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                (Class) SendMailPublisher.class, "template", "text/html",
+                SendMailPublisher.name(), "template", "text/html",
                 false
         );
         NotificationRule firstRule = qm.createNotificationRule("Example Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -325,7 +289,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     public void deleteDefaultNotificationPublisherTest() {
-        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisher((Class) SendMailPublisher.class);
+        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisher(SendMailPublisher);
         Response response = target(V1_NOTIFICATION_PUBLISHER + "/" + notificationPublisher.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -333,16 +297,6 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("Deleting a default notification publisher is forbidden.", body);
-    }
-
-    @Test
-    public void testSmtpPublisherConfigTest() {
-        Form form = new Form();
-        form.param("destination", "test@example.com");
-        Response response = target(V1_NOTIFICATION_PUBLISHER + "/test/smtp").request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-        Assert.assertEquals(200, response.getStatus(), 0);
     }
 
     @Test

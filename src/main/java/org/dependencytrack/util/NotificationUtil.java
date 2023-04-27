@@ -531,13 +531,13 @@ public final class NotificationUtil {
             if (existingPublisher == null) {
                 qm.createNotificationPublisher(
                         publisher.getPublisherName(), publisher.getPublisherDescription(),
-                        publisher.getPublisherClass(), templateContent, publisher.getTemplateMimeType(),
+                        publisher.getPublisherClass().name(), templateContent, publisher.getTemplateMimeType(),
                         publisher.isDefaultPublisher()
                 );
             } else {
                 existingPublisher.setName(publisher.getPublisherName());
                 existingPublisher.setDescription(publisher.getPublisherDescription());
-                existingPublisher.setPublisherClass(publisher.getPublisherClass().getCanonicalName());
+                existingPublisher.setPublisherClass(publisher.getPublisherClass().name());
                 existingPublisher.setTemplate(templateContent);
                 existingPublisher.setTemplateMimeType(publisher.getTemplateMimeType());
                 existingPublisher.setDefaultPublisher(publisher.isDefaultPublisher());
