@@ -114,13 +114,9 @@ public class Project implements Serializable {
      */
     public enum FetchGroup {
         ALL,
-<<<<<<< Updated upstream
         IDENTIFIERS,
-        METRICS_UPDATE
-=======
         METRICS_UPDATE,
         PARENT
->>>>>>> Stashed changes
     }
 
     @PrimaryKey
@@ -511,13 +507,13 @@ public class Project implements Serializable {
             return sb.toString();
         }
     }
-    
+
     private final static class BooleanDefaultTrueSerializer extends JsonSerializer<Boolean> {
 
         @Override
         public void serialize(Boolean value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeBoolean(value != null ? value : true);
         }
-        
+
     }
 }

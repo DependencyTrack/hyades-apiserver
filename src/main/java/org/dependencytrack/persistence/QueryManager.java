@@ -70,7 +70,6 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vex;
-import javax.jdo.FetchPlan;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
@@ -83,16 +82,13 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.Publisher;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 
+import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
 import javax.json.JsonObject;
 import java.security.Principal;
-<<<<<<< Updated upstream
 import java.util.Collection;
-=======
-import java.util.Set;
->>>>>>> Stashed changes
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -1306,7 +1302,6 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-<<<<<<< Updated upstream
      * Fetch multiple objects from the data store by their ID.
      *
      * @param clazz       {@link Class} of the objects to fetch
@@ -1327,7 +1322,10 @@ public class QueryManager extends AlpineQueryManager {
             return List.copyOf(query.executeList());
         } finally {
             query.closeAll();
-=======
+        }
+    }
+
+    /**
      * Detach a persistent object using the provided fetch groups.
      * <p>
      * {@code fetchGroups} will override any other fetch groups set on the {@link PersistenceManager},
@@ -1354,7 +1352,6 @@ public class QueryManager extends AlpineQueryManager {
             // by this persistence manager.
             pm.getFetchPlan().setDetachmentOptions(origDetachOptions);
             pm.getFetchPlan().setGroups(origFetchGroups);
->>>>>>> Stashed changes
         }
     }
 
