@@ -1,6 +1,5 @@
 package org.dependencytrack.event.kafka;
 
-import com.github.packageurl.PackageURL;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
@@ -24,15 +23,15 @@ final class KafkaEventConverter {
 
     static KafkaEvent<ScanKey, ScanCommand> convert(final ComponentVulnerabilityAnalysisEvent event) {
         final var componentBuilder = org.hyades.proto.vulnanalysis.v1.Component.newBuilder()
-                .setUuid(event.component().getUuid().toString())
-                .setInternal(event.component().isInternal());
-        Optional.ofNullable(event.component().getCpe()).ifPresent(componentBuilder::setCpe);
-        Optional.ofNullable(event.component().getPurl()).map(PackageURL::canonicalize).ifPresent(componentBuilder::setPurl);
-        Optional.ofNullable(event.component().getSwidTagId()).ifPresent(componentBuilder::setSwidTagId);
+                .setUuid(event.uuid().toString());
+        Optional.ofNullable(event.cpe()).ifPresent(componentBuilder::setCpe);
+        Optional.ofNullable(event.purl()).ifPresent(componentBuilder::setPurl);
+        Optional.ofNullable(event.swidTagId()).ifPresent(componentBuilder::setSwidTagId);
+        Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
 
         final var scanKey = ScanKey.newBuilder()
                 .setScanToken(event.token().toString())
-                .setComponentUuid(event.component().getUuid().toString())
+                .setComponentUuid(event.uuid().toString())
                 .build();
 
         final var scanCommand = ScanCommand.newBuilder()
@@ -47,18 +46,19 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event.component() == null || event.component().getPurl() == null) {
+        if (event == null || event.purl() == null) {
             return null;
         }
 
-        final String purl = event.component().getPurl().canonicalize();
+        final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setPurl(event.purl());
+        Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
+
         final var analysisCommand = AnalysisCommand.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
-                        .setPurl(event.component().getPurl().canonicalize())
-                        .setInternal(event.component().isInternal()))
+                .setComponent(componentBuilder)
                 .build();
 
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, purl, analysisCommand, null);
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purl(), analysisCommand, null);
     }
 
     static KafkaEvent<String, Notification> convert(final alpine.notification.Notification alpineNotification) {
