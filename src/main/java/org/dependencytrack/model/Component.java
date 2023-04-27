@@ -87,20 +87,6 @@ import java.util.UUID;
                 @Persistent(name = "id"),
                 @Persistent(name = "lastInheritedRiskScore"),
                 @Persistent(name = "uuid")
-        }),
-        @FetchGroup(name = "REPOSITORY_META_ANALYSIS", members = {
-                @Persistent(name = "uuid"),
-                @Persistent(name = "purl"),
-                @Persistent(name = "internal")
-        }),
-        @FetchGroup(name = "VULNERABILITY_ANALYSIS", members = {
-                @Persistent(name = "uuid"),
-                @Persistent(name = "group"),
-                @Persistent(name = "name"),
-                @Persistent(name = "version"),
-                @Persistent(name = "cpe"),
-                @Persistent(name = "purl"),
-                @Persistent(name = "internal")
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -115,9 +101,7 @@ public class Component implements Serializable {
         ALL,
         IDENTITY,
         INTERNAL_IDENTIFICATION,
-        METRICS_UPDATE,
-        REPOSITORY_META_ANALYSIS,
-        VULNERABILITY_ANALYSIS
+        METRICS_UPDATE
     }
 
     @PrimaryKey

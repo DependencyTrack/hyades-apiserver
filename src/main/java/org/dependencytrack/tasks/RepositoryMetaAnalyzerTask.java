@@ -79,15 +79,11 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
 
             final PersistenceManager pm = qm.getPersistenceManager();
-            pm.getFetchPlan().setGroup(Component.FetchGroup.REPOSITORY_META_ANALYSIS.name());
-
-            List<Component> components = fetchNextComponentsPage(pm, project, null);
+            List<ComponentProjection> components = fetchNextComponentsPage(pm, project, null);
             while (!components.isEmpty()) {
-                for (final var component : components) {
-                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
-                }
+                dispatchComponents(components);
 
-                final long lastId = components.get(components.size() - 1).getId();
+                final long lastId = components.get(components.size() - 1).id();
                 components = fetchNextComponentsPage(qm.getPersistenceManager(), project, lastId);
             }
         }
@@ -100,15 +96,12 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
-            pm.getFetchPlan().setGroup(Component.FetchGroup.REPOSITORY_META_ANALYSIS.name());
 
-            List<Component> components = fetchNextComponentsPage(pm, null, null);
+            List<ComponentProjection> components = fetchNextComponentsPage(pm, null, null);
             while (!components.isEmpty()) {
-                for (final var component : components) {
-                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(pm.detachCopy(component)));
-                }
+                dispatchComponents(components);
 
-                final long lastId = components.get(components.size() - 1).getId();
+                final long lastId = components.get(components.size() - 1).id();
                 components = fetchNextComponentsPage(qm.getPersistenceManager(), null, lastId);
             }
         }
@@ -116,7 +109,13 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
         LOGGER.info("All components in portfolio submitted for repository meta analysis");
     }
 
-    private List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
+    private void dispatchComponents(final List<ComponentProjection> components) {
+        for (final var component : components) {
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purl(), component.internal()));
+        }
+    }
+
+    private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
             var filter = "project.active == :projectActive && purl != null";
             var params = new HashMap<String, Object>();
@@ -132,9 +131,13 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             query.setFilter(filter);
             query.setNamedParameters(params);
             query.setOrdering("id DESC");
-            query.setRange(0, 500);
-            return List.copyOf(query.executeList());
+            query.setRange(0, 5000);
+            query.setResult("id, purl, internal");
+            return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
+    }
+
+    public record ComponentProjection(long id, String purl, Boolean internal) {
     }
 
 }
