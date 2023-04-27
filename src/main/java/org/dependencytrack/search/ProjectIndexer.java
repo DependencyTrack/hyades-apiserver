@@ -20,7 +20,6 @@ package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;
-import alpine.persistence.PaginatedResult;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
@@ -32,7 +31,12 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Indexer for operating on projects.
@@ -67,11 +71,15 @@ public final class ProjectIndexer extends IndexManager implements ObjectIndexer<
      * @param project A persisted Project object.
      */
     public void add(final Project project) {
+        add(new ProjectProjection(project.getId(), project.getUuid(), project.getName(), project.getVersion(), project.getDescription()));
+    }
+
+    private void add(final ProjectProjection project) {
         final Document doc = new Document();
-        addField(doc, IndexConstants.PROJECT_UUID, project.getUuid().toString(), Field.Store.YES, false);
-        addField(doc, IndexConstants.PROJECT_NAME, project.getName(), Field.Store.YES, true);
-        addField(doc, IndexConstants.PROJECT_VERSION, project.getVersion(), Field.Store.YES, false);
-        addField(doc, IndexConstants.PROJECT_DESCRIPTION, project.getDescription(), Field.Store.YES, true);
+        addField(doc, IndexConstants.PROJECT_UUID, project.uuid().toString(), Field.Store.YES, false);
+        addField(doc, IndexConstants.PROJECT_NAME, project.name(), Field.Store.YES, true);
+        addField(doc, IndexConstants.PROJECT_VERSION, project.version(), Field.Store.YES, false);
+        addField(doc, IndexConstants.PROJECT_DESCRIPTION, project.description(), Field.Store.YES, true);
 
         /*
         // There's going to potentially be confidential information in the project properties. Do not index.
@@ -93,7 +101,7 @@ public final class ProjectIndexer extends IndexManager implements ObjectIndexer<
         } catch (IOException e) {
             LOGGER.error("An error occurred while adding a project to the index", e);
             String content = "An error occurred while adding a project to the index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.PROJECT_INDEXER, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.PROJECT_INDEXER, content, NotificationLevel.ERROR);
         }
     }
 
@@ -110,32 +118,56 @@ public final class ProjectIndexer extends IndexManager implements ObjectIndexer<
         } catch (IOException e) {
             LOGGER.error("An error occurred while removing a project from the index", e);
             String content = "An error occurred while removing a project from the index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.PROJECT_INDEXER, content , NotificationLevel.ERROR);
-            }
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.PROJECT_INDEXER, content, NotificationLevel.ERROR);
+        }
     }
 
     /**
      * Re-indexes all Project objects.
+     *
      * @since 3.4.0
      */
     public void reindex() {
         LOGGER.info("Starting reindex task. This may take some time.");
         super.reindex();
         try (final QueryManager qm = new QueryManager()) {
-            final PaginatedResult result = qm.getProjects(false, true, false);
-            long count = 0;
-            boolean shouldContinue = true;
-            while (count < result.getTotal() && shouldContinue) {
-                for (final Project project: result.getList(Project.class)) {
+            final PersistenceManager pm = qm.getPersistenceManager();
+            List<ProjectProjection> projects = fetchNextProjectsPage(pm, null);
+            while (!projects.isEmpty()) {
+                for (final ProjectProjection project : projects) {
                     add(project);
                 }
-                int lastResult = result.getObjects().size();
-                count += lastResult;
-                shouldContinue = lastResult > 0;
-                qm.advancePagination();
+
+                final long lastId = projects.get(projects.size() - 1).id();
+                projects = fetchNextProjectsPage(pm, lastId);
             }
             commit();
         }
         LOGGER.info("Reindexing complete");
     }
+
+    private List<ProjectProjection> fetchNextProjectsPage(final PersistenceManager pm, final Long lastId) {
+        final Query<Project> query = pm.newQuery(Project.class);
+        try {
+            var filter = "active == :active";
+            var params = new HashMap<String, Object>();
+            params.put("active", true);
+            if (lastId != null) {
+                filter += " && id < :lastId";
+                params.put("lastId", lastId);
+            }
+            query.setFilter(filter);
+            query.setNamedParameters(params);
+            query.setOrdering("id DESC");
+            query.setRange(0, 2500);
+            query.setResult("id, uuid, name, version, description");
+            return List.copyOf(query.executeResultList(ProjectProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    public record ProjectProjection(long id, UUID uuid, String name, String version, String description) {
+    }
+
 }
