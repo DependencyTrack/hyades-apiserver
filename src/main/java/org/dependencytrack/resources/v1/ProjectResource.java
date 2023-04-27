@@ -41,11 +41,14 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 
 import javax.validation.Validator;
+import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
+
+import javax.jdo.FetchGroup;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -296,6 +299,9 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, jsonProject.getUuid());
             if (project != null) {
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                }
                 final String name = StringUtils.trimToNull(jsonProject.getName());
                 final String version = StringUtils.trimToNull(jsonProject.getVersion());
                 final Project tmpProject = qm.getProject(name, version);
@@ -356,8 +362,11 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                }
                 var modified = false;
-                project = qm.detach(Project.class, project.getId());
+                project = qm.detachWithGroups(project, List.of(FetchGroup.DEFAULT, Project.FetchGroup.PARENT.name()));
                 modified |= setIfDifferent(jsonProject, project, Project::getName, Project::setName);
                 modified |= setIfDifferent(jsonProject, project, Project::getVersion, Project::setVersion);
                 // if either name or version has been changed, verify that this new combination does not already exist
@@ -373,6 +382,17 @@ public class ProjectResource extends AlpineResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getPurl, Project::setPurl);
                 modified |= setIfDifferent(jsonProject, project, Project::getSwidTagId, Project::setSwidTagId);
                 modified |= setIfDifferent(jsonProject, project, Project::isActive, Project::setActive);
+                if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
+                    final Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
+                    if (parent == null) {
+                        return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the parent project could not be found.").build();
+                    }
+                    if (!qm.hasAccess(getPrincipal(), parent)) {
+                        return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
+                    }
+                    modified |= project.getParent() == null || !parent.getUuid().equals(project.getParent().getUuid());
+                    project.setParent(parent);
+                }
                 if (jsonProject.getTags() != null && (!Collections.isEmpty(jsonProject.getTags()) || !Collections.isEmpty(project.getTags()))) {
                     modified = true;
                     project.setTags(jsonProject.getTags());
@@ -384,6 +404,7 @@ public class ProjectResource extends AlpineResource {
                         LOGGER.debug(e.getMessage());
                         return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
                     }
+                    LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
                     return Response.ok(project).build();
                 } else {
                     return Response.notModified().build();

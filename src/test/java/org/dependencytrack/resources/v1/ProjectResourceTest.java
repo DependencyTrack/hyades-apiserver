@@ -45,6 +45,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.json.Json;
+import javax.ws.rs.HttpMethod;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ProjectResourceTest extends ResourceTest {
 
@@ -507,6 +510,60 @@ public class ProjectResourceTest extends ResourceTest {
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(new Project()));
         Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    public void patchProjectParentTest() {
+        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, true, false);
+        final Project newParent = qm.createProject("GHI", null, "3.0", null, null, null, true, false);
+
+        final JsonObject jsonProject = Json.createObjectBuilder()
+                .add("parent", Json.createObjectBuilder()
+                        .add("uuid", newParent.getUuid().toString()))
+                .build();
+
+        final Response response = target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(jsonProject.toString()));
+
+        assertThat(response.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
+
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThat(responseJson.getString("uuid")).isEqualTo(project.getUuid().toString());
+        assertThat(responseJson.getJsonObject("parent")).isNull(); // Parents are currently not returned
+
+        // Ensure the parent was updated.
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getParent()).isNotNull();
+        assertThat(project.getParent().getUuid()).isEqualTo(newParent.getUuid());
+    }
+
+    @Test
+    public void patchProjectParentNotFoundTest() {
+        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, true, false);
+
+        final JsonObject jsonProject = Json.createObjectBuilder()
+                .add("parent", Json.createObjectBuilder()
+                        .add("uuid", UUID.randomUUID().toString()))
+                .build();
+
+        final Response response = target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(jsonProject.toString()));
+
+        assertThat(response.getStatus()).isEqualTo(Response.Status.NOT_FOUND.getStatusCode());
+        assertThat(getPlainTextBody(response)).isEqualTo("The UUID of the parent project could not be found.");
+
+        // Ensure the parent was not modified.
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getParent()).isNotNull();
+        assertThat(project.getParent().getUuid()).isEqualTo(parent.getUuid());
     }
 
     @Test
