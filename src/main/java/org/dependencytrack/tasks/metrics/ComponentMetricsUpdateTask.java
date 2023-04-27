@@ -71,7 +71,7 @@ public class ComponentMetricsUpdateTask implements Subscriber {
         LOGGER.debug("Executing metrics update for component " + uuid);
         final var counters = new Counters();
 
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             final Component component = qm.getObjectByUuid(Component.class, uuid, List.of(Component.FetchGroup.METRICS_UPDATE.name()));

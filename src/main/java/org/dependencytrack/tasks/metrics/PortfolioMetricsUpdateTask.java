@@ -64,7 +64,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
         LOGGER.info("Executing portfolio metrics update");
         final var counters = new Counters();
 
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");

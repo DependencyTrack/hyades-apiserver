@@ -62,7 +62,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         LOGGER.info("Executing metrics update for project " + uuid);
         final var counters = new Counters();
 
-        try (final QueryManager qm = new QueryManager()) {
+        try (final QueryManager qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.METRICS_UPDATE.name()));
