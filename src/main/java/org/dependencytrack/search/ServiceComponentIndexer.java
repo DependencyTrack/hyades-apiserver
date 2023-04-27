@@ -20,7 +20,6 @@ package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;
-import alpine.persistence.PaginatedResult;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
@@ -32,8 +31,12 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Indexer for operating on services.
@@ -68,13 +71,18 @@ public final class ServiceComponentIndexer extends IndexManager implements Objec
      * @param service A persisted ServiceComponent object.
      */
     public void add(final ServiceComponent service) {
+        add(new ServiceComponentProjection(service.getId(), service.getUuid(), service.getGroup(),
+                service.getName(), service.getVersion(), service.getDescription()));
+    }
+
+    private void add(final ServiceComponentProjection serviceComponent) {
         final Document doc = new Document();
-        addField(doc, IndexConstants.SERVICECOMPONENT_UUID, service.getUuid().toString(), Field.Store.YES, false);
-        addField(doc, IndexConstants.SERVICECOMPONENT_NAME, service.getName(), Field.Store.YES, true);
-        addField(doc, IndexConstants.SERVICECOMPONENT_GROUP, service.getGroup(), Field.Store.YES, true);
-        addField(doc, IndexConstants.SERVICECOMPONENT_VERSION, service.getVersion(), Field.Store.YES, false);
+        addField(doc, IndexConstants.SERVICECOMPONENT_UUID, serviceComponent.uuid().toString(), Field.Store.YES, false);
+        addField(doc, IndexConstants.SERVICECOMPONENT_NAME, serviceComponent.name(), Field.Store.YES, true);
+        addField(doc, IndexConstants.SERVICECOMPONENT_GROUP, serviceComponent.group(), Field.Store.YES, true);
+        addField(doc, IndexConstants.SERVICECOMPONENT_VERSION, serviceComponent.version(), Field.Store.YES, false);
         // TODO: addField(doc, IndexConstants.SERVICECOMPONENT_URL, service.getUrl(), Field.Store.YES, true);
-        addField(doc, IndexConstants.SERVICECOMPONENT_DESCRIPTION, service.getDescription(), Field.Store.YES, true);
+        addField(doc, IndexConstants.SERVICECOMPONENT_DESCRIPTION, serviceComponent.description(), Field.Store.YES, true);
 
         try {
             getIndexWriter().addDocument(doc);
@@ -112,19 +120,38 @@ public final class ServiceComponentIndexer extends IndexManager implements Objec
         LOGGER.info("Starting reindex task. This may take some time.");
         super.reindex();
         try (QueryManager qm = new QueryManager()) {
-            final long total = qm.getCount(ServiceComponent.class);
-            long count = 0;
-            while (count < total) {
-                final PaginatedResult result = qm.getServiceComponents();
-                final List<ServiceComponent> services = result.getList(ServiceComponent.class);
-                for (final ServiceComponent service: services) {
-                    add(service);
+            final PersistenceManager pm = qm.getPersistenceManager();
+            List<ServiceComponentProjection> serviceComponents = fetchNextServiceComponentsPage(pm, null);
+            while (!serviceComponents.isEmpty()) {
+                for (final ServiceComponentProjection serviceComponent : serviceComponents) {
+                    add(serviceComponent);
                 }
-                count += result.getObjects().size();
-                qm.advancePagination();
+
+                final long lastId = serviceComponents.get(serviceComponents.size() - 1).id();
+                serviceComponents = fetchNextServiceComponentsPage(pm, lastId);
             }
             commit();
         }
         LOGGER.info("Reindexing complete");
     }
+
+    private List<ServiceComponentProjection> fetchNextServiceComponentsPage(final PersistenceManager pm, final Long lastId) {
+        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class);
+        try {
+            if (lastId != null) {
+                query.setFilter("id < :lastId");
+                query.setNamedParameters(Map.of("lastId", lastId));
+            }
+            query.setOrdering("id DESC");
+            query.setRange(0, 2500);
+            query.setResult("id, uuid, \"group\", name, version, description");
+            return List.copyOf(query.executeResultList(ServiceComponentProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    public record ServiceComponentProjection(long id, UUID uuid, String group, String name, String version, String description) {
+    }
+
 }
