@@ -1,6 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="docker/Dockerfile: Compose Deployment" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
-    <deployment type="dockerfile">
+  <configuration default="false" name="Build Bundled Image" type="docker-deploy" factoryName="dockerfile" server-name="Docker">  <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="dependencytrack/bundled:local" />
         <option name="buildArgs">
