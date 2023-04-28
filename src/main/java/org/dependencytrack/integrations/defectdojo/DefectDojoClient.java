@@ -73,6 +73,8 @@ public class DefectDojoClient {
                 .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
                 .build();
         request.setEntity(data);
+
+
         try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
                 LOGGER.debug("Successfully uploaded findings to DefectDojo");
@@ -133,7 +135,6 @@ public class DefectDojoClient {
         return new ArrayList<>();
     }
 
-
     // Given the engagement id and scan type, search for existing test id
     public String getDojoTestId(final String engagementID, final ArrayList dojoTests) {
         for (int i = 0; i < dojoTests.size(); i++) {
@@ -162,9 +163,7 @@ public class DefectDojoClient {
      * A Reimport will reuse (overwrite) the existing test, instead of create a new test.
      * The Successfully reimport will also  increase the reimport counter by 1.
      */
-    public void reimportDependencyTrackFindings(final String token, final String engagementId,
-                                                final InputStream findingsJson,
-                                                final String testId) {
+    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId) {
         LOGGER.debug("Re-reimport Dependency-Track findings to DefectDojo per Engagement");
         HttpPost request = new HttpPost(baseURL + "/api/v2/reimport-scan/");
         request.addHeader("accept", "application/json");
@@ -182,6 +181,7 @@ public class DefectDojoClient {
                 .addPart("test", new StringBody(testId, ContentType.MULTIPART_FORM_DATA))
                 .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
                 .build();
+        request.setEntity(fileData);
         try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
                 LOGGER.debug("Successfully reimport findings to DefectDojo");
@@ -191,8 +191,6 @@ public class DefectDojoClient {
         } catch (IOException ex) {
             uploader.handleException(LOGGER, ex);
         }
-        request.setEntity(fileData);
-
     }
 
 }

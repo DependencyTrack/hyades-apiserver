@@ -18,12 +18,16 @@
  */
 package org.dependencytrack.integrations.defectdojo;
 
+import alpine.Config;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.EqualToPattern;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.http.HttpHeaders;
 import org.apache.http.entity.ContentType;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -31,18 +35,26 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
 
+
 public class DefectDojoClientTest {
+    @Before
+    public void before() {
+        Config.enableUnitTests();
+    }
+    @After
+    public void after() {
+        KafkaProducerInitializer.tearDown();
+    }
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule();
-
 
     @Test
     public void testUploadFindingsPositiveCase() throws Exception {
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/defectdojo/api/v2/import-scan/"))
                 .withMultipartRequestBody(WireMock.aMultipart().withName("engagement").
                         withBody(WireMock.equalTo("12345"))));
-        InputStream stream = new ByteArrayInputStream("test input" .getBytes());
+        InputStream stream = new ByteArrayInputStream("test input".getBytes());
         String token = "db975c97-98b1-4988-8d6a-9c3e044dfff3";
         String engagementId = "12345";
         DefectDojoUploader uploader = new DefectDojoUploader();
@@ -55,7 +67,6 @@ public class DefectDojoClientTest {
                         )).withAnyRequestBodyPart(WireMock.aMultipart().withName("file")
                         .withBody(WireMock.equalTo("test input")).withHeader("Content-Type", WireMock.equalTo(ContentType.APPLICATION_OCTET_STREAM.getMimeType()))));
     }
-
 
     @Test
     public void testUploadFindingsNegativeCase() throws Exception {
