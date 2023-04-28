@@ -186,7 +186,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
     }
 
     private List<VulnerableSoftware> fuzzySearch(QueryManager qm, String luceneQuery) {
-        List<VulnerableSoftware> fuzzyList = new LinkedList<>();
+        List<VulnerableSoftware> fuzzyList = new ArrayList<>();
         SearchResult sr = searchIndex(luceneQuery);
         if (sr.getResults().containsKey("vulnerablesoftware")) {
             for (Map<String, String> result : sr.getResults().get("vulnerablesoftware")) {

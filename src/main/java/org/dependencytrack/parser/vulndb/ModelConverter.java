@@ -135,7 +135,7 @@ public final class ModelConverter {
         }
 
         CvssV2 cvssV2;
-        for (final org.dependencytrack.parser.vulndb.model.CvssV2Metric metric : vulnDbVuln.cvssV2Metrics()) {
+        for (final CvssV2Metric metric : vulnDbVuln.cvssV2Metrics()) {
             cvssV2 = toNormalizedMetric(metric);
             final Score score = cvssV2.calculateScore();
             vuln.setCvssV2Vector(cvssV2.getVector());
