@@ -21,6 +21,7 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
@@ -69,6 +70,7 @@ public class ComponentMetricsUpdateTask implements Subscriber {
 
     static Counters updateMetrics(final UUID uuid) throws Exception {
         LOGGER.debug("Executing metrics update for component " + uuid);
+        final Timer.Sample timerSample = Timer.start();
         final var counters = new Counters();
 
         try (final var qm = new QueryManager().withL2CacheDisabled()) {
@@ -163,6 +165,11 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                 LOGGER.debug("Updating inherited risk score of component " + uuid);
                 qm.runInTransaction(() -> component.setLastInheritedRiskScore(counters.inheritedRiskScore));
             }
+        } finally {
+            timerSample.stop(Timer
+                    .builder("metrics_update")
+                    .tag("target", "component")
+                    .register(alpine.common.metrics.Metrics.getRegistry()));
         }
 
         LOGGER.debug("Completed metrics update for component " + uuid + " in " +

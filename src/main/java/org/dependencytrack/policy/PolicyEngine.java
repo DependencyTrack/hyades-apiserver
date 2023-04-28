@@ -19,6 +19,8 @@
 package org.dependencytrack.policy;
 
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -66,6 +68,7 @@ public class PolicyEngine {
     }
 
     public List<PolicyViolation> evaluateProject(final UUID projectUuid) {
+        final Timer.Sample timerSample = Timer.start();
         final var violations = new ArrayList<PolicyViolation>();
         try (final var qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);
@@ -88,11 +91,17 @@ public class PolicyEngine {
                 final long lastId = components.get(components.size() - 1).getId();
                 components = fetchNextComponentsPage(qm.getPersistenceManager(), project, lastId);
             }
+        } finally {
+            timerSample.stop(Timer
+                    .builder("policy_evaluation")
+                    .tag("target", "project")
+                    .register(Metrics.getRegistry()));
         }
         return violations;
     }
 
     public List<PolicyViolation> evaluate(UUID componentUuid) {
+        final Timer.Sample timerSample = Timer.start();
         List<PolicyViolation> violations = new ArrayList<>();
         try (final QueryManager qm = new QueryManager()) {
             final List<Policy> policies = qm.getAllPolicies();
@@ -103,6 +112,11 @@ public class PolicyEngine {
             } else {
                 LOGGER.warn("Unable to evaluate component " + componentUuid + " against applicable policies, because it does not exist");
             }
+        } finally {
+            timerSample.stop(Timer
+                    .builder("policy_evaluation")
+                    .tag("target", "component")
+                    .register(Metrics.getRegistry()));
         }
         return violations;
     }
