@@ -30,27 +30,30 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.InputStream;
 
-import static org.apache.xerces.jaxp.JAXPConstants.*;
+import static org.apache.xerces.jaxp.JAXPConstants.JAXP_SCHEMA_LANGUAGE;
+import static org.apache.xerces.jaxp.JAXPConstants.JAXP_SCHEMA_SOURCE;
+import static org.apache.xerces.jaxp.JAXPConstants.W3C_XML_SCHEMA;
 
 public final class XmlUtil {
 
-    private XmlUtil() { }
+    private XmlUtil() {
+    }
 
     /**
      * Constructs a validating secure SAX Parser.
      *
      * @param schemaStream One or more inputStreams with the schema(s) that the
-     * parser should be able to validate the XML against, one InputStream per
-     * schema
+     *                     parser should be able to validate the XML against, one InputStream per
+     *                     schema
      * @return a SAX Parser
      * @throws javax.xml.parsers.ParserConfigurationException is thrown if there
-     * is a parser configuration exception
-     * @throws org.xml.sax.SAXNotRecognizedException thrown if there is an
-     * unrecognized feature
-     * @throws org.xml.sax.SAXNotSupportedException thrown if there is a
-     * non-supported feature
-     * @throws org.xml.sax.SAXException is thrown if there is a
-     * org.xml.sax.SAXException
+     *                                                        is a parser configuration exception
+     * @throws org.xml.sax.SAXNotRecognizedException          thrown if there is an
+     *                                                        unrecognized feature
+     * @throws org.xml.sax.SAXNotSupportedException           thrown if there is a
+     *                                                        non-supported feature
+     * @throws org.xml.sax.SAXException                       is thrown if there is a
+     *                                                        org.xml.sax.SAXException
      */
     public static SAXParser buildSecureSaxParser(InputStream... schemaStream) throws ParserConfigurationException,
             SAXNotRecognizedException, SAXNotSupportedException, SAXException {
@@ -76,13 +79,13 @@ public final class XmlUtil {
      *
      * @return a SAX Parser
      * @throws javax.xml.parsers.ParserConfigurationException thrown if there is
-     * a parser configuration exception
-     * @throws org.xml.sax.SAXNotRecognizedException thrown if there is an
-     * unrecognized feature
-     * @throws org.xml.sax.SAXNotSupportedException thrown if there is a
-     * non-supported feature
-     * @throws org.xml.sax.SAXException is thrown if there is a
-     * org.xml.sax.SAXException
+     *                                                        a parser configuration exception
+     * @throws org.xml.sax.SAXNotRecognizedException          thrown if there is an
+     *                                                        unrecognized feature
+     * @throws org.xml.sax.SAXNotSupportedException           thrown if there is a
+     *                                                        non-supported feature
+     * @throws org.xml.sax.SAXException                       is thrown if there is a
+     *                                                        org.xml.sax.SAXException
      */
     public static SAXParser buildSecureSaxParser() throws ParserConfigurationException,
             SAXNotRecognizedException, SAXNotSupportedException, SAXException {
@@ -98,7 +101,7 @@ public final class XmlUtil {
      *
      * @return a new document builder
      * @throws javax.xml.parsers.ParserConfigurationException thrown if there is
-     * a parser configuration exception
+     *                                                        a parser configuration exception
      */
     public static DocumentBuilder buildSecureDocumentBuilder() throws ParserConfigurationException {
         final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();

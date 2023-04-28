@@ -210,7 +210,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEngine policyEngine = new PolicyEngine();
         List<PolicyViolation> violations = new ArrayList<>();
-        for(var component1: components){
+        for (var component1 : components) {
             violations.addAll(policyEngine.evaluate(component1.getUuid()));
         }
         Assert.assertEquals(3, violations.size());
@@ -272,7 +272,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
 
         PolicyEngine policyEngine = new PolicyEngine();
         List<PolicyViolation> violations = new ArrayList<>();
-        for(var component1: components){
+        for (var component1 : components) {
             violations.addAll(policyEngine.evaluate(component1.getUuid()));
         }
         Assert.assertEquals(2, violations.size());
@@ -290,8 +290,8 @@ public class PolicyEngineTest extends PersistenceCapableTest {
 
         // Create a policy condition that matches on any coordinates.
         final var policyConditionA = qm.createPolicyCondition(policy, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
-                 {"group": "*", name: "*", version: "*"}
-                 """);
+                {"group": "*", name: "*", version: "*"}
+                """);
 
         final var project = new Project();
         project.setName("Test Project");

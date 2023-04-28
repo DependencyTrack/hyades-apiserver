@@ -24,7 +24,12 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import io.swagger.annotations.*;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.Authorization;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
@@ -40,7 +45,15 @@ import org.dependencytrack.util.NotificationUtil;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.validation.Validator;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -103,11 +116,11 @@ public class NotificationPublisherResource extends AlpineResource {
 
         try (QueryManager qm = new QueryManager()) {
             NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-            if(existingNotificationPublisher != null) {
-                return Response.status(Response.Status.CONFLICT).entity("The notification with the name "+jsonNotificationPublisher.getName()+" already exist").build();
+            if (existingNotificationPublisher != null) {
+                return Response.status(Response.Status.CONFLICT).entity("The notification with the name " + jsonNotificationPublisher.getName() + " already exist").build();
             }
 
-            if(jsonNotificationPublisher.isDefaultPublisher()) {
+            if (jsonNotificationPublisher.isDefaultPublisher()) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("The creation of a new default publisher is forbidden").build();
             }
 
@@ -122,11 +135,11 @@ public class NotificationPublisherResource extends AlpineResource {
                 );
                 return Response.status(Response.Status.CREATED).entity(notificationPublisherCreated).build();
             } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" does not implement "+Publisher.class.getName()).build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("The class " + jsonNotificationPublisher.getPublisherClass() + " does not implement " + Publisher.class.getName()).build();
             }
 
         } catch (ClassNotFoundException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" cannot be found").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("The class " + jsonNotificationPublisher.getPublisherClass() + " cannot be found").build();
         }
     }
 
@@ -158,14 +171,14 @@ public class NotificationPublisherResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             NotificationPublisher existingPublisher = qm.getObjectByUuid(NotificationPublisher.class, jsonNotificationPublisher.getUuid());
             if (existingPublisher != null) {
-                if(existingPublisher.isDefaultPublisher()) {
+                if (existingPublisher.isDefaultPublisher()) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("The modification of a default publisher is forbidden").build();
                 }
 
-                if(!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
+                if (!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
                     NotificationPublisher existingNotificationPublisherWithModifiedName = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-                    if(existingNotificationPublisherWithModifiedName != null) {
-                        return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '"+existingNotificationPublisherWithModifiedName.getName()+"' already exist").build();
+                    if (existingNotificationPublisherWithModifiedName != null) {
+                        return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '" + existingNotificationPublisherWithModifiedName.getName() + "' already exist").build();
                     }
                 }
                 existingPublisher.setName(jsonNotificationPublisher.getName());
@@ -176,7 +189,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 if (Publisher.class.isAssignableFrom(publisherClass)) {
                     existingPublisher.setPublisherClass(jsonNotificationPublisher.getPublisherClass());
                 } else {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" does not implement "+Publisher.class.getCanonicalName()).build();
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The class " + jsonNotificationPublisher.getPublisherClass() + " does not implement " + Publisher.class.getCanonicalName()).build();
                 }
                 existingPublisher.setTemplate(jsonNotificationPublisher.getTemplate());
                 existingPublisher.setTemplateMimeType(jsonNotificationPublisher.getTemplateMimeType());
@@ -187,7 +200,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification publisher could not be found.").build();
             }
         } catch (ClassNotFoundException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The class "+jsonNotificationPublisher.getPublisherClass()+" cannot be found").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("The class " + jsonNotificationPublisher.getPublisherClass() + " cannot be found").build();
         }
     }
 
@@ -206,11 +219,11 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteNotificationPublisher(@ApiParam(value = "The UUID of the notification publisher to delete", required = true)
-                                               @PathParam("notificationPublisherUuid") String notificationPublisherUuid) {
+                                                @PathParam("notificationPublisherUuid") String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
             if (notificationPublisher != null) {
-                if(notificationPublisher.isDefaultPublisher()) {
+                if (notificationPublisher.isDefaultPublisher()) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("Deleting a default notification publisher is forbidden.").build();
                 } else {
                     qm.deleteNotificationPublisher(notificationPublisher);
@@ -261,7 +274,7 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response testSmtpPublisherConfig(@FormParam("destination") String destination) {
-        try(QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager()) {
             Class defaultEmailPublisherClass = SendMailPublisher.class;
             NotificationPublisher emailNotificationPublisher = qm.getDefaultNotificationPublisher(defaultEmailPublisherClass);
             final Publisher emailPublisher = (Publisher) defaultEmailPublisherClass.getDeclaredConstructor().newInstance();
@@ -279,7 +292,8 @@ public class NotificationPublisherResource extends AlpineResource {
             // Bypass Notification.dispatch() and go directly to the publisher itself
             emailPublisher.inform(notification, config);
             return Response.ok().build();
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException | NoSuchMethodException e) {
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException |
+                 NoSuchMethodException e) {
             LOGGER.error(e.getMessage(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while sending test mail notification.").build();
         }

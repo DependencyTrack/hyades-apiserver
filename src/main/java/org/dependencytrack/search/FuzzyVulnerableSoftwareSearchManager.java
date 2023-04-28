@@ -27,7 +27,15 @@ import us.springett.parsers.cpe.exceptions.CpeValidationException;
 import us.springett.parsers.cpe.values.Part;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 public class FuzzyVulnerableSoftwareSearchManager {
 
@@ -36,6 +44,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
 
     private final boolean excludeComponentsWithPurl;
     private final Set<String> SKIP_LUCENE_FUZZING_FOR_TYPE = Sets.newHashSet("golang");
+
     public FuzzyVulnerableSoftwareSearchManager(boolean excludeComponentsWithPurl) {
         this.excludeComponentsWithPurl = excludeComponentsWithPurl;
     }
@@ -44,7 +53,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
         private String product;
         private String vendor;
 
-        public SearchTerm(String vendor,String product) {
+        public SearchTerm(String vendor, String product) {
             this.product = product;
             this.vendor = StringUtils.isBlank(vendor) ? "*" : vendor;
         }
@@ -72,7 +81,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
     }
 
     public List<VulnerableSoftware> fuzzyAnalysis(QueryManager qm, final Component component, us.springett.parsers.cpe.Cpe parsedCpe) {
-        List<VulnerableSoftware>  fuzzyList = Collections.emptyList();
+        List<VulnerableSoftware> fuzzyList = Collections.emptyList();
         if (component.getPurl() == null || !excludeComponentsWithPurl || "deb".equals(component.getPurl().getType())) {
             Set<SearchTerm> searches = new LinkedHashSet<>();
             try {
@@ -121,7 +130,8 @@ public class FuzzyVulnerableSoftwareSearchManager {
         }
         return fuzzyList;
     }
-    private List<VulnerableSoftware> fuzzySearch(QueryManager qm, Part part, String vendor, String product)  {
+
+    private List<VulnerableSoftware> fuzzySearch(QueryManager qm, Part part, String vendor, String product) {
         try {
             us.springett.parsers.cpe.Cpe cpe = new us.springett.parsers.cpe.Cpe(part, escape(vendor), escape(product), "*", "*", "*", "*", "*", "*", "*", "*");
             String cpeSearch = getLuceneCpeRegexp(cpe.toCpe23FS());
@@ -138,16 +148,16 @@ public class FuzzyVulnerableSoftwareSearchManager {
         IndexManager indexManager = VulnerableSoftwareIndexer.getInstance();
         try {
             final Query query = indexManager.getQueryParser().parse(luceneQuery);
-            final TopDocs results = indexManager.getIndexSearcher().search(query,1000);
+            final TopDocs results = indexManager.getIndexSearcher().search(query, 1000);
 
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Searching for: " + luceneQuery + " - Total Hits: " + results.totalHits);
             }
 
-            for (final ScoreDoc scoreDoc: results.scoreDocs) {
+            for (final ScoreDoc scoreDoc : results.scoreDocs) {
                 final Document doc = indexManager.getIndexSearcher().doc(scoreDoc.doc);
                 final Map<String, String> fields = new HashMap<>();
-                for (final IndexableField field: doc.getFields()) {
+                for (final IndexableField field : doc.getFields()) {
                     if (StringUtils.isNotBlank(field.stringValue())) {
                         fields.put(field.name(), field.stringValue());
                     }
@@ -158,17 +168,17 @@ public class FuzzyVulnerableSoftwareSearchManager {
         } catch (ParseException e) {
             LOGGER.error("Failed to parse search string", e);
             String content = "Failed to parse search string. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content, NotificationLevel.ERROR);
         } catch (CorruptIndexException e) {
             LOGGER.error("Corrupted Lucene index detected", e);
             String content = "Corrupted Lucene index detected. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
-            LOGGER.info("Trying to rebuild the corrupted index "+indexManager.getIndexType().name());
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content, NotificationLevel.ERROR);
+            LOGGER.info("Trying to rebuild the corrupted index " + indexManager.getIndexType().name());
             Event.dispatch(new IndexEvent(IndexEvent.Action.REINDEX, indexManager.getIndexType().getClazz()));
         } catch (IOException e) {
             LOGGER.error("An I/O Exception occurred while searching Lucene index", e);
             String content = "An I/O Exception occurred while searching Lucene index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.CORE_INDEXING_SERVICES, content, NotificationLevel.ERROR);
         }
 
         indexManager.close();
@@ -176,7 +186,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
     }
 
     private List<VulnerableSoftware> fuzzySearch(QueryManager qm, String luceneQuery) {
-        List<VulnerableSoftware>  fuzzyList = new LinkedList<>();
+        List<VulnerableSoftware> fuzzyList = new LinkedList<>();
         SearchResult sr = searchIndex(luceneQuery);
         if (sr.getResults().containsKey("vulnerablesoftware")) {
             for (Map<String, String> result : sr.getResults().get("vulnerablesoftware")) {
@@ -225,7 +235,7 @@ public class FuzzyVulnerableSoftwareSearchManager {
     }
 
     private static String escape(final String input) {
-        if(input == null) {
+        if (input == null) {
             return null;
         } else if (input.equals(".*")) {
             return input;
