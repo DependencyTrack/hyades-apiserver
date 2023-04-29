@@ -1,8 +1,12 @@
 package org.dependencytrack.util;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.datanucleus.api.jdo.JDOQuery;
+import org.datanucleus.store.rdbms.query.StoredProcedureQuery;
+import org.dependencytrack.persistence.QueryManager;
 import org.postgresql.util.PSQLState;
 
+import javax.jdo.Query;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -46,6 +50,24 @@ public final class PersistenceUtil {
         // to do the same for at least H2 and MSSQL.
         return ExceptionUtils.getRootCause(throwable) instanceof final SQLException se
                 && PSQLState.UNIQUE_VIOLATION.getState().equals(se.getSQLState());
+    }
+
+    public static void executeStoredProcedure(final String name) {
+        executeStoredProcedure(name, query -> {
+        });
+    }
+
+    public static void executeStoredProcedure(final String name, final Consumer<StoredProcedureQuery> queryConsumer) {
+        try (final var qm = new QueryManager()) {
+            final Query<?> query = qm.getPersistenceManager().newQuery("STOREDPROC", "\"%s\"".formatted(name));
+            try {
+                final var spQuery = (StoredProcedureQuery) ((JDOQuery<?>) query).getInternalQuery();
+                queryConsumer.accept(spQuery);
+                spQuery.execute();
+            } finally {
+                query.closeAll();
+            }
+        }
     }
 
 }
