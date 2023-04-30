@@ -35,7 +35,9 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 final class PolicyQueryManager extends QueryManager implements IQueryManager {
 
@@ -84,6 +86,71 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
             query.setOrdering("name asc");
         }
         return query.executeList();
+    }
+
+    /**
+     * Fetch all {@link Policy}s that are applicable to a given {@link Project}.
+     *
+     * @param project The {@link Project} to fetch {@link Policy}s for
+     * @return A {@link List} of {@link Policy}s.
+     * @since 5.0.0
+     */
+    public List<Policy> getApplicablePolicies(final Project project) {
+        var filter = """
+                (this.projects.isEmpty() && this.tags.isEmpty())
+                    || (this.projects.contains(:project)
+                """;
+        var params = new HashMap<String, Object>();
+        params.put("project", project);
+
+        // To compensate for missing support for recursion of Common Table Expressions (CTEs)
+        // in JDO, we have to fetch the UUIDs of all parent projects upfront. Otherwise, we'll
+        // not be able to evaluate whether the policy is inherited from parent projects.
+        var variables = "";
+        final List<UUID> parentUuids = getParents(project);
+        if (!parentUuids.isEmpty()) {
+            filter += """
+                    || (this.includeChildren
+                        && this.projects.contains(parentVar)
+                        && :parentUuids.contains(parentVar.uuid))
+                    """;
+            variables += "org.dependencytrack.model.Project parentVar";
+            params.put("parentUuids", parentUuids);
+        }
+        filter += ")";
+
+        // DataNucleus generates an invalid SQL query when using the idiomatic solution.
+        // The following works, but it's ugly and likely doesn't perform well if the project
+        // has many tags. Worth trying the idiomatic way again once DN has been updated to > 6.0.4.
+        //
+        // filter += "m|| (this.tags.contains(commonTag) && :project.tags.contains(commonTag))";
+        // variables += "org.dependencytrack.model.Tag commonTag";
+        if (project.getTags() != null && !project.getTags().isEmpty()) {
+            filter += " || (";
+            for (int i = 0; i < project.getTags().size(); i++) {
+                filter += "this.tags.contains(:tag" + i + ")";
+                params.put("tag" + i, project.getTags().get(i));
+                if (i < (project.getTags().size() - 1)) {
+                    filter += " || ";
+                }
+            }
+            filter += ")";
+        }
+
+        final List<Policy> policies;
+        final Query<Policy> query = pm.newQuery(Policy.class);
+        try {
+            query.setFilter(filter);
+            query.setNamedParameters(params);
+            if (!variables.isEmpty()) {
+                query.declareVariables(variables);
+            }
+            policies = List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+
+        return policies;
     }
 
     /**
@@ -493,9 +560,20 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
      * Deleted all PolicyViolation associated for the specified Project.
      * @param project the Project to delete PolicyViolation for
      */
-    void deletePolicyViolations(Project project) {
+    public void deletePolicyViolations(final Project project) {
         final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "project == :project");
         query.deletePersistentAll(project);
+    }
+
+    /**
+     * Deleted all {@link PolicyViolation}s associated with the specified {@link Component}.
+     *
+     * @param component The {@link Component} to delete {@link PolicyViolation}s for
+     * @since 5.0.0
+     */
+    public void deletePolicyViolationsOfComponent(final Component component) {
+        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "component == :component");
+        query.deletePersistentAll(component);
     }
 
     /**
