@@ -1,6 +1,5 @@
 package org.dependencytrack.event.kafka;
 
-import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -10,11 +9,10 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
-import org.dependencytrack.event.ComponentMetricsUpdateEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
+import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.PolicyEngine;
@@ -87,12 +85,10 @@ class KafkaStreamsTopologyFactory {
                     }
                 }, Named.as("execute_policy_evaluation"))
                 .foreach((scanToken, vulnScan) -> {
-                    final Event metricsUpdateEvent = switch (vulnScan.getTargetType()) {
-                        case COMPONENT -> new ComponentMetricsUpdateEvent(vulnScan.getTargetIdentifier());
-                        case PROJECT -> new ProjectMetricsUpdateEvent(vulnScan.getTargetIdentifier());
-                    };
-
-                    Event.dispatch(metricsUpdateEvent);
+                    switch (vulnScan.getTargetType()) {
+                        case COMPONENT -> Metrics.updateComponentMetrics(vulnScan.getTargetIdentifier());
+                        case PROJECT -> Metrics.updateProjectMetrics(vulnScan.getTargetIdentifier());
+                    }
                 }, Named.as("trigger_metrics_update"));
 
         streamsBuilder

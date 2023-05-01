@@ -1,42 +1,6 @@
 DROP FUNCTION IF EXISTS "CVSSV2_TO_SEVERITY"(numeric);
 DROP FUNCTION IF EXISTS "CVSSV3_TO_SEVERITY"(numeric);
 
--- CREATE MATERIALIZED VIEW "PORTFOLIO_METRICS_VIEW"
--- AS
--- SELECT COUNT(*)::INT                                      AS "PROJECTS",
---        2                                                  AS "VULNERABLEPROJECTS", -- TODO
---        SUM("COMPONENTS")::INT                             AS "COMPONENTS",
---        SUM("VULNERABLECOMPONENTS")::INT                   AS "VULNERABLECOMPONENTS",
---        SUM("VULNERABILITIES")::INT                        AS "VULNERABILITIES",
---        SUM("CRITICAL")::INT                               AS "CRITICAL",
---        SUM("HIGH")::INT                                   AS "HIGH",
---        SUM("MEDIUM")::INT                                 AS "MEDIUM",
---        SUM("LOW")::INT                                    AS "LOW",
---        SUM("UNASSIGNED_SEVERITY")::INT                    AS "UNASSIGNED_SEVERITY",
---        SUM("FINDINGS_TOTAL")::INT                         AS "FINDINGS_TOTAL",
---        SUM("FINDINGS_AUDITED")::INT                       AS "FINDINGS_AUDITED",
---        SUM("FINDINGS_UNAUDITED")::INT                     AS "FINDINGS_UNAUDITED",
---        SUM("SUPPRESSED")::INT                             AS "SUPPRESSED",
---        SUM("POLICYVIOLATIONS_TOTAL")::INT                 AS "POLICYVIOLATIONS_TOTAL",
---        SUM("POLICYVIOLATIONS_FAIL")::INT                  AS "POLICYVIOLATIONS_FAIL",
---        SUM("POLICYVIOLATIONS_WARN")::INT                  AS "POLICYVIOLATIONS_WARN",
---        SUM("POLICYVIOLATIONS_INFO")::INT                  AS "POLICYVIOLATIONS_INFO",
---        SUM("POLICYVIOLATIONS_AUDITED")::INT               AS "POLICYVIOLATIONS_AUDITED",
---        SUM("POLICYVIOLATIONS_UNAUDITED")::INT             AS "POLICYVIOLATIONS_UNAUDITED",
---        SUM("POLICYVIOLATIONS_LICENSE_TOTAL")::INT         AS "POLICYVIOLATIONS_LICENSE_TOTAL",
---        SUM("POLICYVIOLATIONS_LICENSE_AUDITED")::INT       AS "POLICYVIOLATIONS_LICENSE_AUDITED",
---        SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED")::INT     AS "POLICYVIOLATIONS_LICENSE_UNAUDITED",
---        SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL")::INT     AS "POLICYVIOLATIONS_OPERATIONAL_TOTAL",
---        SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED")::INT   AS "POLICYVIOLATIONS_OPERATIONAL_AUDITED",
---        SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED")::INT AS "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED",
---        SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT        AS "POLICYVIOLATIONS_SECURITY_TOTAL",
---        SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT      AS "POLICYVIOLATIONS_SECURITY_AUDITED",
---        SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT    AS "POLICYVIOLATIONS_SECURITY_UNAUDITED"
--- FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
---       FROM "PROJECTMETRICS" AS "PM"
---       ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
--- WITH NO DATA;
-
 CREATE OR REPLACE FUNCTION "CVSSV2_TO_SEVERITY"(
     "base_score" NUMERIC
 ) RETURNS VARCHAR
@@ -117,31 +81,32 @@ DECLARE
     "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
     "v_severity"                                VARCHAR; -- Loop variable for the current vulnerability's severity
     "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
-    "v_vulnerabilities"                         INT := 0; -- Total number of vulnerabilities
-    "v_critical"                                INT := 0; -- Number of vulnerabilities with critical severity
-    "v_high"                                    INT := 0; -- Number of vulnerabilities with high severity
-    "v_medium"                                  INT := 0; -- Number of vulnerabilities with medium severity
-    "v_low"                                     INT := 0; -- Number of vulnerabilities with low severity
-    "v_unassigned"                              INT := 0; -- Number of vulnerabilities with unassigned severity
-    "v_findings_total"                          INT := 0; -- Total number of findings
-    "v_findings_audited"                        INT := 0; -- Number of audited findings
-    "v_findings_unaudited"                      INT := 0; -- Number of unaudited findings
-    "v_findings_suppressed"                     INT := 0; -- Number of suppressed findings
-    "v_policy_violations_total"                 INT := 0; -- Total number of policy violations
-    "v_policy_violations_fail"                  INT := 0; -- Number of policy violations with level fail
-    "v_policy_violations_warn"                  INT := 0; -- Number of policy violations with level warn
-    "v_policy_violations_info"                  INT := 0; -- Number of policy violations with level info
-    "v_policy_violations_audited"               INT := 0; -- Number of audited policy violations
-    "v_policy_violations_unaudited"             INT := 0; -- Number of unaudited policy violations
-    "v_policy_violations_license_total"         INT := 0; -- Total number of policy violations of type license
-    "v_policy_violations_license_audited"       INT := 0; -- Number of audited policy violations of type license
-    "v_policy_violations_license_unaudited"     INT := 0; -- Number of unaudited policy violations of type license
-    "v_policy_violations_operational_total"     INT := 0; -- Total number of policy violations of type operational
-    "v_policy_violations_operational_audited"   INT := 0; -- Number of audited policy violations of type operational
-    "v_policy_violations_operational_unaudited" INT := 0; -- Number of unaudited policy violations of type operational
-    "v_policy_violations_security_total"        INT := 0; -- Total number of policy violations of type security
-    "v_policy_violations_security_audited"      INT := 0; -- Number of audited policy violations of type security
-    "v_policy_violations_security_unaudited"    INT := 0; -- Number of unaudited policy violations of type security
+    "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
+    "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
+    "v_high"                                    INT     := 0; -- Number of vulnerabilities with high severity
+    "v_medium"                                  INT     := 0; -- Number of vulnerabilities with medium severity
+    "v_low"                                     INT     := 0; -- Number of vulnerabilities with low severity
+    "v_unassigned"                              INT     := 0; -- Number of vulnerabilities with unassigned severity
+    "v_risk_score"                              NUMERIC := 0; -- Inherited risk score
+    "v_findings_total"                          INT     := 0; -- Total number of findings
+    "v_findings_audited"                        INT     := 0; -- Number of audited findings
+    "v_findings_unaudited"                      INT     := 0; -- Number of unaudited findings
+    "v_findings_suppressed"                     INT     := 0; -- Number of suppressed findings
+    "v_policy_violations_total"                 INT     := 0; -- Total number of policy violations
+    "v_policy_violations_fail"                  INT     := 0; -- Number of policy violations with level fail
+    "v_policy_violations_warn"                  INT     := 0; -- Number of policy violations with level warn
+    "v_policy_violations_info"                  INT     := 0; -- Number of policy violations with level info
+    "v_policy_violations_audited"               INT     := 0; -- Number of audited policy violations
+    "v_policy_violations_unaudited"             INT     := 0; -- Number of unaudited policy violations
+    "v_policy_violations_license_total"         INT     := 0; -- Total number of policy violations of type license
+    "v_policy_violations_license_audited"       INT     := 0; -- Number of audited policy violations of type license
+    "v_policy_violations_license_unaudited"     INT     := 0; -- Number of unaudited policy violations of type license
+    "v_policy_violations_operational_total"     INT     := 0; -- Total number of policy violations of type operational
+    "v_policy_violations_operational_audited"   INT     := 0; -- Number of audited policy violations of type operational
+    "v_policy_violations_operational_unaudited" INT     := 0; -- Number of unaudited policy violations of type operational
+    "v_policy_violations_security_total"        INT     := 0; -- Total number of policy violations of type security
+    "v_policy_violations_security_audited"      INT     := 0; -- Number of audited policy violations of type security
+    "v_policy_violations_security_unaudited"    INT     := 0; -- Number of unaudited policy violations of type security
     "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
     "v_now"                                     DATE; -- The date to be set as last occurrence of this data point
     "v_foo"                                     RECORD;
@@ -185,6 +150,8 @@ BEGIN
             END IF;
 
         END LOOP;
+
+    "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
     SELECT COUNT(*)
     FROM "ANALYSIS" AS "A"
@@ -249,6 +216,7 @@ BEGIN
       AND "MEDIUM" = "v_medium"
       AND "LOW" = "v_low"
       AND "UNASSIGNED_SEVERITY" = "v_unassigned"
+      AND "RISKSCORE" = "v_risk_score"
       AND "FINDINGS_TOTAL" = "v_findings_total"
       AND "FINDINGS_AUDITED" = "v_findings_audited"
       AND "FINDINGS_UNAUDITED" = "v_findings_unaudited"
@@ -284,6 +252,7 @@ BEGIN
                                          "MEDIUM",
                                          "LOW",
                                          "UNASSIGNED_SEVERITY",
+                                         "RISKSCORE",
                                          "FINDINGS_TOTAL",
                                          "FINDINGS_AUDITED",
                                          "FINDINGS_UNAUDITED",
@@ -303,7 +272,6 @@ BEGIN
                                          "POLICYVIOLATIONS_SECURITY_TOTAL",
                                          "POLICYVIOLATIONS_SECURITY_AUDITED",
                                          "POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                                         "RISKSCORE",
                                          "FIRST_OCCURRENCE",
                                          "LAST_OCCURRENCE")
         VALUES ("v_component"."ID",
@@ -314,6 +282,7 @@ BEGIN
                 "v_medium",
                 "v_low",
                 "v_unassigned",
+                "v_risk_score",
                 "v_findings_total",
                 "v_findings_audited",
                 "v_findings_unaudited",
@@ -333,9 +302,10 @@ BEGIN
                 "v_policy_violations_security_total",
                 "v_policy_violations_security_audited",
                 "v_policy_violations_security_unaudited",
-                "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned"),
                 "v_now",
                 "v_now");
+
+        UPDATE "COMPONENT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_component"."ID";
     END IF;
 END;
 $$;
@@ -350,6 +320,7 @@ DECLARE
     "v_project_id"     BIGINT;
     "v_component_uuid" VARCHAR;
     "v_aggregate"      RECORD;
+    "v_risk_score"     NUMERIC := 0;
     "v_existing_id"    BIGINT;
     "v_now"            DATE;
 BEGIN
@@ -398,6 +369,9 @@ BEGIN
           ORDER BY "DM"."COMPONENT_ID", "DM"."LAST_OCCURRENCE" DESC) AS "LATEST_COMPONENT_METRICS"
     INTO "v_aggregate";
 
+    "v_risk_score" = "CALC_RISK_SCORE"("v_aggregate"."CRITICAL", "v_aggregate"."HIGH", "v_aggregate"."MEDIUM",
+                                       "v_aggregate"."LOW", "v_aggregate"."UNASSIGNED_SEVERITY");
+
     SELECT "ID"
     FROM "PROJECTMETRICS"
     WHERE "PROJECT_ID" = "v_project_id"
@@ -409,6 +383,7 @@ BEGIN
       AND "MEDIUM" = "v_aggregate"."MEDIUM"
       AND "LOW" = "v_aggregate"."LOW"
       AND "UNASSIGNED_SEVERITY" = "v_aggregate"."UNASSIGNED_SEVERITY"
+      AND "RISKSCORE" = "v_risk_score"
       AND "FINDINGS_TOTAL" = "v_aggregate"."FINDINGS_TOTAL"
       AND "FINDINGS_AUDITED" = "v_aggregate"."FINDINGS_AUDITED"
       AND "FINDINGS_UNAUDITED" = "v_aggregate"."FINDINGS_UNAUDITED"
@@ -445,6 +420,7 @@ BEGIN
                                       "MEDIUM",
                                       "LOW",
                                       "UNASSIGNED_SEVERITY",
+                                      "RISKSCORE",
                                       "FINDINGS_TOTAL",
                                       "FINDINGS_AUDITED",
                                       "FINDINGS_UNAUDITED",
@@ -464,7 +440,6 @@ BEGIN
                                       "POLICYVIOLATIONS_SECURITY_TOTAL",
                                       "POLICYVIOLATIONS_SECURITY_AUDITED",
                                       "POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                                      "RISKSCORE",
                                       "FIRST_OCCURRENCE",
                                       "LAST_OCCURRENCE")
         VALUES ("v_project_id",
@@ -476,6 +451,7 @@ BEGIN
                 "v_aggregate"."MEDIUM",
                 "v_aggregate"."LOW",
                 "v_aggregate"."UNASSIGNED_SEVERITY",
+                "v_risk_score",
                 "v_aggregate"."FINDINGS_TOTAL",
                 "v_aggregate"."FINDINGS_AUDITED",
                 "v_aggregate"."FINDINGS_UNAUDITED",
@@ -495,13 +471,10 @@ BEGIN
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL",
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "CALC_RISK_SCORE"("v_aggregate"."CRITICAL",
-                                  "v_aggregate"."HIGH",
-                                  "v_aggregate"."MEDIUM",
-                                  "v_aggregate"."LOW",
-                                  "v_aggregate"."UNASSIGNED_SEVERITY"),
                 "v_now",
                 "v_now");
+
+        UPDATE "PROJECT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_project_id";
     END IF;
 end;
 $$;
@@ -546,6 +519,9 @@ BEGIN
            SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT        AS "POLICYVIOLATIONS_SECURITY_UNAUDITED"
     FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
           FROM "PROJECTMETRICS" AS "PM"
+                   INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
+          WHERE "P"."ACTIVE" IS NULL
+             OR "P"."ACTIVE" = TRUE
           ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
     INTO "v_aggregate";
 

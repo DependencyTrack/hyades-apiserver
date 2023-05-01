@@ -50,13 +50,10 @@ public final class Metrics {
     }
 
     public static void updatePortfolioMetrics() {
-        LOGGER.info("Updating portfolio metrics");
         PersistenceUtil.executeStoredProcedure("UPDATE_PORTFOLIO_METRICS");
-        LOGGER.info("Updating portfolio metrics completed");
     }
 
     public static void updateProjectMetrics(final UUID projectUuid) {
-        LOGGER.info("Updating metrics of project " + projectUuid);
         PersistenceUtil.executeStoredProcedure("UPDATE_PROJECT_METRICS", query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
             query.setImplicitParameter(1, projectUuid.toString());
@@ -64,7 +61,6 @@ public final class Metrics {
     }
 
     public static void updateComponentMetrics(final UUID componentUuid) {
-        LOGGER.debug("Updating metrics of component " + componentUuid);
         PersistenceUtil.executeStoredProcedure("UPDATE_COMPONENT_METRICS", query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
             query.setImplicitParameter(1, componentUuid.toString());
