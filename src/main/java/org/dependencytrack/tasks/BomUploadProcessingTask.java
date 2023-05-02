@@ -83,7 +83,7 @@ public class BomUploadProcessingTask implements Subscriber {
             String bomProcessingFailedBomVersion = null;
             final BomUploadEvent event = (BomUploadEvent) e;
             final byte[] bomBytes = CompressUtil.optionallyDecompress(event.getBom());
-            final QueryManager qm = new QueryManager();
+            final QueryManager qm = new QueryManager().withL2CacheDisabled();
             try {
                 final Project project = qm.getObjectByUuid(Project.class, event.getProjectUuid());
                 if (project == null) {
