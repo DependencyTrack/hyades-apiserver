@@ -119,8 +119,6 @@ DECLARE
     "v_policy_violations_security_audited"      INT     := 0; -- Number of audited policy violations of type security
     "v_policy_violations_security_unaudited"    INT     := 0; -- Number of unaudited policy violations of type security
     "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
-    "v_now"                                     DATE; -- The date to be set as last occurrence of this data point
-    "v_foo"                                     RECORD;
 BEGIN
     SELECT "ID", "PROJECT_ID" INTO "v_component" FROM "COMPONENT" WHERE "UUID" = "component_uuid";
     IF "v_component" IS NULL THEN
@@ -185,6 +183,11 @@ BEGIN
                                 FROM "POLICYVIOLATION" AS "PV"
                                          INNER JOIN "POLICYCONDITION" AS "PC" ON "PV"."POLICYCONDITION_ID" = "PC"."ID"
                                          INNER JOIN "POLICY" AS "P" ON "PC"."POLICY_ID" = "P"."ID"
+                                         LEFT JOIN "VIOLATIONANALYSIS" AS "VA"
+                                                   ON "VA"."COMPONENT_ID" = "v_component"."ID" AND
+                                                      "VA"."POLICYVIOLATION_ID" = "PV"."ID"
+                                WHERE "PV"."COMPONENT_ID" = "v_component"."ID"
+                                  AND ("VA" IS NULL OR "VA"."SUPPRESSED" = FALSE)
         LOOP
             "v_policy_violations_total" := "v_policy_violations_total" + 1;
 
@@ -209,14 +212,43 @@ BEGIN
             end if;
         END LOOP;
 
-    SELECT "PV"."TYPE", COUNT(*)
+    SELECT COUNT(*)
     FROM "VIOLATIONANALYSIS" AS "VA"
              INNER JOIN "POLICYVIOLATION" AS "PV" ON "PV"."ID" = "VA"."POLICYVIOLATION_ID"
     WHERE "VA"."COMPONENT_ID" = "v_component"."ID"
+      AND "PV"."TYPE" = 'LICENSE'
       AND "VA"."SUPPRESSED" = FALSE
       AND "VA"."STATE" != 'NOT_SET'
-    GROUP BY "PV"."TYPE"
-    INTO "v_foo";
+    INTO "v_policy_violations_license_audited";
+    "v_policy_violations_license_unaudited" =
+                "v_policy_violations_license_total" - "v_policy_violations_license_audited";
+
+    SELECT COUNT(*)
+    FROM "VIOLATIONANALYSIS" AS "VA"
+             INNER JOIN "POLICYVIOLATION" AS "PV" ON "PV"."ID" = "VA"."POLICYVIOLATION_ID"
+    WHERE "VA"."COMPONENT_ID" = "v_component"."ID"
+      AND "PV"."TYPE" = 'OPERATIONAL'
+      AND "VA"."SUPPRESSED" = FALSE
+      AND "VA"."STATE" != 'NOT_SET'
+    INTO "v_policy_violations_operational_audited";
+    "v_policy_violations_operational_unaudited" =
+                "v_policy_violations_operational_total" - "v_policy_violations_operational_audited";
+
+    SELECT COUNT(*)
+    FROM "VIOLATIONANALYSIS" AS "VA"
+             INNER JOIN "POLICYVIOLATION" AS "PV" ON "PV"."ID" = "VA"."POLICYVIOLATION_ID"
+    WHERE "VA"."COMPONENT_ID" = "v_component"."ID"
+      AND "PV"."TYPE" = 'SECURITY'
+      AND "VA"."SUPPRESSED" = FALSE
+      AND "VA"."STATE" != 'NOT_SET'
+    INTO "v_policy_violations_security_audited";
+    "v_policy_violations_security_unaudited" =
+                "v_policy_violations_security_total" - "v_policy_violations_security_audited";
+
+    "v_policy_violations_audited" = "v_policy_violations_license_audited"
+        + "v_policy_violations_operational_audited"
+        + "v_policy_violations_security_audited";
+    "v_policy_violations_unaudited" = "v_policy_violations_total" - "v_policy_violations_audited";
 
     SELECT DISTINCT ON ("ID") "ID"
     FROM "DEPENDENCYMETRICS"
@@ -251,9 +283,8 @@ BEGIN
     LIMIT 1
     INTO "v_existing_id";
 
-    "v_now" = NOW();
     IF "v_existing_id" IS NOT NULL THEN
-        UPDATE "DEPENDENCYMETRICS" SET "LAST_OCCURRENCE" = "v_now" WHERE "ID" = "v_existing_id";
+        UPDATE "DEPENDENCYMETRICS" SET "LAST_OCCURRENCE" = NOW() WHERE "ID" = "v_existing_id";
     ELSE
         INSERT INTO "DEPENDENCYMETRICS" ("COMPONENT_ID",
                                          "PROJECT_ID",
@@ -313,8 +344,8 @@ BEGIN
                 "v_policy_violations_security_total",
                 "v_policy_violations_security_audited",
                 "v_policy_violations_security_unaudited",
-                "v_now",
-                "v_now");
+                NOW(),
+                NOW());
 
         UPDATE "COMPONENT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_component"."ID";
     END IF;
@@ -328,91 +359,141 @@ CREATE OR REPLACE PROCEDURE "UPDATE_PROJECT_METRICS"(
 AS
 $$
 DECLARE
-    "v_project_id"  BIGINT;
-    "v_aggregate"   RECORD;
-    "v_risk_score"  NUMERIC; -- Inherited risk score
-    "v_existing_id" BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
-    "v_now"         DATE; -- The date to be set as last occurrence of this data point
+    "v_project_id"                              BIGINT;
+    "v_components"                              INT     := 0; -- Total number of components in the project
+    "v_vulnerable_components"                   INT     := 0; -- Number of vulnerable components in the project
+    "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
+    "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
+    "v_high"                                    INT     := 0; -- Number of vulnerabilities with high severity
+    "v_medium"                                  INT     := 0; -- Number of vulnerabilities with medium severity
+    "v_low"                                     INT     := 0; -- Number of vulnerabilities with low severity
+    "v_unassigned"                              INT     := 0; -- Number of vulnerabilities with unassigned severity
+    "v_risk_score"                              NUMERIC := 0; -- Inherited risk score
+    "v_findings_total"                          INT     := 0; -- Total number of findings
+    "v_findings_audited"                        INT     := 0; -- Number of audited findings
+    "v_findings_unaudited"                      INT     := 0; -- Number of unaudited findings
+    "v_findings_suppressed"                     INT     := 0; -- Number of suppressed findings
+    "v_policy_violations_total"                 INT     := 0; -- Total number of policy violations
+    "v_policy_violations_fail"                  INT     := 0; -- Number of policy violations with level fail
+    "v_policy_violations_warn"                  INT     := 0; -- Number of policy violations with level warn
+    "v_policy_violations_info"                  INT     := 0; -- Number of policy violations with level info
+    "v_policy_violations_audited"               INT     := 0; -- Number of audited policy violations
+    "v_policy_violations_unaudited"             INT     := 0; -- Number of unaudited policy violations
+    "v_policy_violations_license_total"         INT     := 0; -- Total number of policy violations of type license
+    "v_policy_violations_license_audited"       INT     := 0; -- Number of audited policy violations of type license
+    "v_policy_violations_license_unaudited"     INT     := 0; -- Number of unaudited policy violations of type license
+    "v_policy_violations_operational_total"     INT     := 0; -- Total number of policy violations of type operational
+    "v_policy_violations_operational_audited"   INT     := 0; -- Number of audited policy violations of type operational
+    "v_policy_violations_operational_unaudited" INT     := 0; -- Number of unaudited policy violations of type operational
+    "v_policy_violations_security_total"        INT     := 0; -- Total number of policy violations of type security
+    "v_policy_violations_security_audited"      INT     := 0; -- Number of audited policy violations of type security
+    "v_policy_violations_security_unaudited"    INT     := 0; -- Number of unaudited policy violations of type security
+    "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
     SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
     IF "v_project_id" IS NULL THEN
         RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
     END IF;
 
-    SELECT COUNT(*)::INT                                          AS "COMPONENTS",
-           SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END) AS "VULNERABLECOMPONENTS",
-           SUM("VULNERABILITIES")::INT                            AS "VULNERABILITIES",
-           SUM("CRITICAL")::INT                                   AS "CRITICAL",
-           SUM("HIGH")::INT                                       AS "HIGH",
-           SUM("MEDIUM")::INT                                     AS "MEDIUM",
-           SUM("LOW")::INT                                        AS "LOW",
-           SUM("UNASSIGNED_SEVERITY")::INT                        AS "UNASSIGNED_SEVERITY",
-           SUM("FINDINGS_TOTAL")::INT                             AS "FINDINGS_TOTAL",
-           SUM("FINDINGS_AUDITED")::INT                           AS "FINDINGS_AUDITED",
-           SUM("FINDINGS_UNAUDITED")::INT                         AS "FINDINGS_UNAUDITED",
-           SUM("SUPPRESSED")::INT                                 AS "SUPPRESSED",
-           SUM("POLICYVIOLATIONS_TOTAL")::INT                     AS "POLICYVIOLATIONS_TOTAL",
-           SUM("POLICYVIOLATIONS_FAIL")::INT                      AS "POLICYVIOLATIONS_FAIL",
-           SUM("POLICYVIOLATIONS_WARN")::INT                      AS "POLICYVIOLATIONS_WARN",
-           SUM("POLICYVIOLATIONS_INFO")::INT                      AS "POLICYVIOLATIONS_INFO",
-           SUM("POLICYVIOLATIONS_AUDITED")::INT                   AS "POLICYVIOLATIONS_AUDITED",
-           SUM("POLICYVIOLATIONS_UNAUDITED")::INT                 AS "POLICYVIOLATIONS_UNAUDITED",
-           SUM("POLICYVIOLATIONS_LICENSE_TOTAL")::INT             AS "POLICYVIOLATIONS_LICENSE_TOTAL",
-           SUM("POLICYVIOLATIONS_LICENSE_AUDITED")::INT           AS "POLICYVIOLATIONS_LICENSE_AUDITED",
-           SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED")::INT         AS "POLICYVIOLATIONS_LICENSE_UNAUDITED",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL")::INT         AS "POLICYVIOLATIONS_OPERATIONAL_TOTAL",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED")::INT       AS "POLICYVIOLATIONS_OPERATIONAL_AUDITED",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED")::INT     AS "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED",
-           SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT            AS "POLICYVIOLATIONS_SECURITY_TOTAL",
-           SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT          AS "POLICYVIOLATIONS_SECURITY_AUDITED",
-           SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT        AS "POLICYVIOLATIONS_SECURITY_UNAUDITED"
+    SELECT COUNT(*)::INT,
+           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
+           COALESCE(SUM("VULNERABILITIES")::INT, 0),
+           COALESCE(SUM("CRITICAL")::INT, 0),
+           COALESCE(SUM("HIGH")::INT, 0),
+           COALESCE(SUM("MEDIUM")::INT, 0),
+           COALESCE(SUM("LOW")::INT, 0),
+           COALESCE(SUM("UNASSIGNED_SEVERITY")::INT, 0),
+           COALESCE(SUM("FINDINGS_TOTAL")::INT, 0),
+           COALESCE(SUM("FINDINGS_AUDITED")::INT, 0),
+           COALESCE(SUM("FINDINGS_UNAUDITED")::INT, 0),
+           COALESCE(SUM("SUPPRESSED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_FAIL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_WARN")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_INFO")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT, 0)
     FROM (SELECT DISTINCT ON ("DM"."COMPONENT_ID") *
           FROM "DEPENDENCYMETRICS" AS "DM"
           WHERE "PROJECT_ID" = "v_project_id"
           ORDER BY "DM"."COMPONENT_ID", "DM"."LAST_OCCURRENCE" DESC) AS "LATEST_COMPONENT_METRICS"
-    INTO "v_aggregate";
+    INTO
+        "v_components",
+        "v_vulnerable_components",
+        "v_vulnerabilities",
+        "v_critical",
+        "v_high",
+        "v_medium",
+        "v_low",
+        "v_unassigned",
+        "v_findings_total",
+        "v_findings_audited",
+        "v_findings_unaudited",
+        "v_findings_suppressed",
+        "v_policy_violations_total",
+        "v_policy_violations_fail",
+        "v_policy_violations_warn",
+        "v_policy_violations_info",
+        "v_policy_violations_audited",
+        "v_policy_violations_unaudited",
+        "v_policy_violations_license_total",
+        "v_policy_violations_license_audited",
+        "v_policy_violations_license_unaudited",
+        "v_policy_violations_operational_total",
+        "v_policy_violations_operational_audited",
+        "v_policy_violations_operational_unaudited",
+        "v_policy_violations_security_total",
+        "v_policy_violations_security_audited",
+        "v_policy_violations_security_unaudited";
 
-    "v_risk_score" = "CALC_RISK_SCORE"("v_aggregate"."CRITICAL", "v_aggregate"."HIGH", "v_aggregate"."MEDIUM",
-                                       "v_aggregate"."LOW", "v_aggregate"."UNASSIGNED_SEVERITY");
+    "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
-    SELECT "ID"
+    SELECT DISTINCT ON ("ID") "ID"
     FROM "PROJECTMETRICS"
     WHERE "PROJECT_ID" = "v_project_id"
-      AND "COMPONENTS" = "v_aggregate"."COMPONENTS"
-      AND "VULNERABLECOMPONENTS" = "v_aggregate"."VULNERABLECOMPONENTS"
-      AND "VULNERABILITIES" = "v_aggregate"."VULNERABILITIES"
-      AND "CRITICAL" = "v_aggregate"."CRITICAL"
-      AND "HIGH" = "v_aggregate"."HIGH"
-      AND "MEDIUM" = "v_aggregate"."MEDIUM"
-      AND "LOW" = "v_aggregate"."LOW"
-      AND "UNASSIGNED_SEVERITY" = "v_aggregate"."UNASSIGNED_SEVERITY"
+      AND "COMPONENTS" = "v_components"
+      AND "VULNERABLECOMPONENTS" = "v_vulnerable_components"
+      AND "VULNERABILITIES" = "v_vulnerabilities"
+      AND "CRITICAL" = "v_critical"
+      AND "HIGH" = "v_high"
+      AND "MEDIUM" = "v_medium"
+      AND "LOW" = "v_low"
+      AND "UNASSIGNED_SEVERITY" = "v_unassigned"
       AND "RISKSCORE" = "v_risk_score"
-      AND "FINDINGS_TOTAL" = "v_aggregate"."FINDINGS_TOTAL"
-      AND "FINDINGS_AUDITED" = "v_aggregate"."FINDINGS_AUDITED"
-      AND "FINDINGS_UNAUDITED" = "v_aggregate"."FINDINGS_UNAUDITED"
-      AND "SUPPRESSED" = "v_aggregate"."SUPPRESSED"
-      AND "POLICYVIOLATIONS_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_TOTAL"
-      AND "POLICYVIOLATIONS_FAIL" = "v_aggregate"."POLICYVIOLATIONS_FAIL"
-      AND "POLICYVIOLATIONS_WARN" = "v_aggregate"."POLICYVIOLATIONS_WARN"
-      AND "POLICYVIOLATIONS_INFO" = "v_aggregate"."POLICYVIOLATIONS_INFO"
-      AND "POLICYVIOLATIONS_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_AUDITED"
-      AND "POLICYVIOLATIONS_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_UNAUDITED"
-      AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_TOTAL"
-      AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_AUDITED"
-      AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_UNAUDITED"
-      AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_TOTAL"
-      AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_AUDITED"
-      AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"
-      AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL"
-      AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED"
-      AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED"
-    ORDER BY "LAST_OCCURRENCE" DESC
+      AND "FINDINGS_TOTAL" = "v_findings_total"
+      AND "FINDINGS_AUDITED" = "v_findings_audited"
+      AND "FINDINGS_UNAUDITED" = "v_findings_unaudited"
+      AND "SUPPRESSED" = "v_findings_suppressed"
+      AND "POLICYVIOLATIONS_TOTAL" = "v_policy_violations_total"
+      AND "POLICYVIOLATIONS_FAIL" = "v_policy_violations_fail"
+      AND "POLICYVIOLATIONS_WARN" = "v_policy_violations_warn"
+      AND "POLICYVIOLATIONS_INFO" = "v_policy_violations_info"
+      AND "POLICYVIOLATIONS_AUDITED" = "v_policy_violations_audited"
+      AND "POLICYVIOLATIONS_UNAUDITED" = "v_policy_violations_unaudited"
+      AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_policy_violations_license_total"
+      AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_policy_violations_license_audited"
+      AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_policy_violations_license_unaudited"
+      AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_policy_violations_operational_total"
+      AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_policy_violations_operational_audited"
+      AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_policy_violations_operational_unaudited"
+      AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
+      AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
+      AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
+    ORDER BY "ID", "LAST_OCCURRENCE" DESC
     LIMIT 1
     INTO "v_existing_id";
 
-    "v_now" = NOW();
     IF "v_existing_id" IS NOT NULL THEN
-        UPDATE "PROJECTMETRICS" SET "LAST_OCCURRENCE" = "v_now" WHERE "ID" = "v_existing_id";
+        UPDATE "PROJECTMETRICS" SET "LAST_OCCURRENCE" = NOW() WHERE "ID" = "v_existing_id";
     ELSE
         INSERT INTO "PROJECTMETRICS" ("PROJECT_ID",
                                       "COMPONENTS",
@@ -446,36 +527,36 @@ BEGIN
                                       "FIRST_OCCURRENCE",
                                       "LAST_OCCURRENCE")
         VALUES ("v_project_id",
-                "v_aggregate"."COMPONENTS",
-                "v_aggregate"."VULNERABLECOMPONENTS",
-                "v_aggregate"."VULNERABILITIES",
-                "v_aggregate"."CRITICAL",
-                "v_aggregate"."HIGH",
-                "v_aggregate"."MEDIUM",
-                "v_aggregate"."LOW",
-                "v_aggregate"."UNASSIGNED_SEVERITY",
+                "v_components",
+                "v_vulnerable_components",
+                "v_vulnerabilities",
+                "v_critical",
+                "v_high",
+                "v_medium",
+                "v_low",
+                "v_unassigned",
                 "v_risk_score",
-                "v_aggregate"."FINDINGS_TOTAL",
-                "v_aggregate"."FINDINGS_AUDITED",
-                "v_aggregate"."FINDINGS_UNAUDITED",
-                "v_aggregate"."SUPPRESSED",
-                "v_aggregate"."POLICYVIOLATIONS_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_FAIL",
-                "v_aggregate"."POLICYVIOLATIONS_WARN",
-                "v_aggregate"."POLICYVIOLATIONS_INFO",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "v_now",
-                "v_now");
+                "v_findings_total",
+                "v_findings_audited",
+                "v_findings_unaudited",
+                "v_findings_suppressed",
+                "v_policy_violations_total",
+                "v_policy_violations_fail",
+                "v_policy_violations_warn",
+                "v_policy_violations_info",
+                "v_policy_violations_audited",
+                "v_policy_violations_unaudited",
+                "v_policy_violations_license_total",
+                "v_policy_violations_license_audited",
+                "v_policy_violations_license_unaudited",
+                "v_policy_violations_operational_total",
+                "v_policy_violations_operational_audited",
+                "v_policy_violations_operational_unaudited",
+                "v_policy_violations_security_total",
+                "v_policy_violations_security_audited",
+                "v_policy_violations_security_unaudited",
+                NOW(),
+                NOW());
 
         UPDATE "PROJECT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_project_id";
     END IF;
@@ -488,90 +569,144 @@ CREATE OR REPLACE PROCEDURE "UPDATE_PORTFOLIO_METRICS"()
 AS
 $$
 DECLARE
-    "v_aggregate"   RECORD; -- Result of the project metrics aggregation
-    "v_risk_score"  NUMERIC; -- Inherited risk score
-    "v_existing_id" BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
-    "v_now"         DATE; -- The date to be set as last occurrence of this data point
+    "v_projects"                                INT; -- Total number of projects in the portfolio
+    "v_vulnerable_projects"                     INT; -- Number of vulnerable projects in the portfolio
+    "v_components"                              INT; -- Total number of components in the portfolio
+    "v_vulnerable_components"                   INT; -- Number of vulnerable components in the portfolio
+    "v_vulnerabilities"                         INT; -- Total number of vulnerabilities
+    "v_critical"                                INT; -- Number of vulnerabilities with critical severity
+    "v_high"                                    INT; -- Number of vulnerabilities with high severity
+    "v_medium"                                  INT; -- Number of vulnerabilities with medium severity
+    "v_low"                                     INT; -- Number of vulnerabilities with low severity
+    "v_unassigned"                              INT; -- Number of vulnerabilities with unassigned severity
+    "v_risk_score"                              NUMERIC; -- Inherited risk score
+    "v_findings_total"                          INT; -- Total number of findings
+    "v_findings_audited"                        INT; -- Number of audited findings
+    "v_findings_unaudited"                      INT; -- Number of unaudited findings
+    "v_findings_suppressed"                     INT; -- Number of suppressed findings
+    "v_policy_violations_total"                 INT; -- Total number of policy violations
+    "v_policy_violations_fail"                  INT; -- Number of policy violations with level fail
+    "v_policy_violations_warn"                  INT; -- Number of policy violations with level warn
+    "v_policy_violations_info"                  INT; -- Number of policy violations with level info
+    "v_policy_violations_audited"               INT; -- Number of audited policy violations
+    "v_policy_violations_unaudited"             INT; -- Number of unaudited policy violations
+    "v_policy_violations_license_total"         INT; -- Total number of policy violations of type license
+    "v_policy_violations_license_audited"       INT; -- Number of audited policy violations of type license
+    "v_policy_violations_license_unaudited"     INT; -- Number of unaudited policy violations of type license
+    "v_policy_violations_operational_total"     INT; -- Total number of policy violations of type operational
+    "v_policy_violations_operational_audited"   INT; -- Number of audited policy violations of type operational
+    "v_policy_violations_operational_unaudited" INT; -- Number of unaudited policy violations of type operational
+    "v_policy_violations_security_total"        INT; -- Total number of policy violations of type security
+    "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
+    "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
+    "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
-    SELECT COUNT(*)::INT                                          AS "PROJECTS",
-           SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END) AS "VULNERABLEPROJECTS",
-           SUM("COMPONENTS")::INT                                 AS "COMPONENTS",
-           SUM("VULNERABLECOMPONENTS")::INT                       AS "VULNERABLECOMPONENTS",
-           SUM("VULNERABILITIES")::INT                            AS "VULNERABILITIES",
-           SUM("CRITICAL")::INT                                   AS "CRITICAL",
-           SUM("HIGH")::INT                                       AS "HIGH",
-           SUM("MEDIUM")::INT                                     AS "MEDIUM",
-           SUM("LOW")::INT                                        AS "LOW",
-           SUM("UNASSIGNED_SEVERITY")::INT                        AS "UNASSIGNED_SEVERITY",
-           SUM("FINDINGS_TOTAL")::INT                             AS "FINDINGS_TOTAL",
-           SUM("FINDINGS_AUDITED")::INT                           AS "FINDINGS_AUDITED",
-           SUM("FINDINGS_UNAUDITED")::INT                         AS "FINDINGS_UNAUDITED",
-           SUM("SUPPRESSED")::INT                                 AS "SUPPRESSED",
-           SUM("POLICYVIOLATIONS_TOTAL")::INT                     AS "POLICYVIOLATIONS_TOTAL",
-           SUM("POLICYVIOLATIONS_FAIL")::INT                      AS "POLICYVIOLATIONS_FAIL",
-           SUM("POLICYVIOLATIONS_WARN")::INT                      AS "POLICYVIOLATIONS_WARN",
-           SUM("POLICYVIOLATIONS_INFO")::INT                      AS "POLICYVIOLATIONS_INFO",
-           SUM("POLICYVIOLATIONS_AUDITED")::INT                   AS "POLICYVIOLATIONS_AUDITED",
-           SUM("POLICYVIOLATIONS_UNAUDITED")::INT                 AS "POLICYVIOLATIONS_UNAUDITED",
-           SUM("POLICYVIOLATIONS_LICENSE_TOTAL")::INT             AS "POLICYVIOLATIONS_LICENSE_TOTAL",
-           SUM("POLICYVIOLATIONS_LICENSE_AUDITED")::INT           AS "POLICYVIOLATIONS_LICENSE_AUDITED",
-           SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED")::INT         AS "POLICYVIOLATIONS_LICENSE_UNAUDITED",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL")::INT         AS "POLICYVIOLATIONS_OPERATIONAL_TOTAL",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED")::INT       AS "POLICYVIOLATIONS_OPERATIONAL_AUDITED",
-           SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED")::INT     AS "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED",
-           SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT            AS "POLICYVIOLATIONS_SECURITY_TOTAL",
-           SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT          AS "POLICYVIOLATIONS_SECURITY_AUDITED",
-           SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT        AS "POLICYVIOLATIONS_SECURITY_UNAUDITED"
+    SELECT COUNT(*)::INT,
+           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
+           COUNT(*)::INT,
+           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
+           COALESCE(SUM("VULNERABILITIES")::INT, 0),
+           COALESCE(SUM("CRITICAL")::INT, 0),
+           COALESCE(SUM("HIGH")::INT, 0),
+           COALESCE(SUM("MEDIUM")::INT, 0),
+           COALESCE(SUM("LOW")::INT, 0),
+           COALESCE(SUM("UNASSIGNED_SEVERITY")::INT, 0),
+           COALESCE(SUM("FINDINGS_TOTAL")::INT, 0),
+           COALESCE(SUM("FINDINGS_AUDITED")::INT, 0),
+           COALESCE(SUM("FINDINGS_UNAUDITED")::INT, 0),
+           COALESCE(SUM("SUPPRESSED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_FAIL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_WARN")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_INFO")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT, 0),
+           COALESCE(SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT, 0)
     FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
           FROM "PROJECTMETRICS" AS "PM"
                    INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
           WHERE "P"."ACTIVE" = TRUE  -- Only consider active projects
              OR "P"."ACTIVE" IS NULL -- ACTIVE is nullable, assume TRUE per default
           ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
-    INTO "v_aggregate";
+    INTO
+        "v_projects",
+        "v_vulnerable_projects",
+        "v_components",
+        "v_vulnerable_components",
+        "v_vulnerabilities",
+        "v_critical",
+        "v_high",
+        "v_medium",
+        "v_low",
+        "v_unassigned",
+        "v_findings_total",
+        "v_findings_audited",
+        "v_findings_unaudited",
+        "v_findings_suppressed",
+        "v_policy_violations_total",
+        "v_policy_violations_fail",
+        "v_policy_violations_warn",
+        "v_policy_violations_info",
+        "v_policy_violations_audited",
+        "v_policy_violations_unaudited",
+        "v_policy_violations_license_total",
+        "v_policy_violations_license_audited",
+        "v_policy_violations_license_unaudited",
+        "v_policy_violations_operational_total",
+        "v_policy_violations_operational_audited",
+        "v_policy_violations_operational_unaudited",
+        "v_policy_violations_security_total",
+        "v_policy_violations_security_audited",
+        "v_policy_violations_security_unaudited";
 
-    "v_risk_score" = "CALC_RISK_SCORE"("v_aggregate"."CRITICAL", "v_aggregate"."HIGH", "v_aggregate"."MEDIUM",
-                                       "v_aggregate"."LOW", "v_aggregate"."UNASSIGNED_SEVERITY");
+    "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
-    SELECT "ID"
+    SELECT DISTINCT ON ("ID") "ID"
     FROM "PORTFOLIOMETRICS"
-    WHERE "PROJECTS" = "v_aggregate"."PROJECTS"
-      AND "VULNERABLEPROJECTS" = "v_aggregate"."VULNERABLEPROJECTS"
-      AND "COMPONENTS" = "v_aggregate"."COMPONENTS"
-      AND "VULNERABLECOMPONENTS" = "v_aggregate"."VULNERABLECOMPONENTS"
-      AND "VULNERABILITIES" = "v_aggregate"."VULNERABILITIES"
-      AND "CRITICAL" = "v_aggregate"."CRITICAL"
-      AND "HIGH" = "v_aggregate"."HIGH"
-      AND "MEDIUM" = "v_aggregate"."MEDIUM"
-      AND "LOW" = "v_aggregate"."LOW"
-      AND "UNASSIGNED_SEVERITY" = "v_aggregate"."UNASSIGNED_SEVERITY"
+    WHERE "PROJECTS" = "v_projects"
+      AND "VULNERABLEPROJECTS" = "v_vulnerable_projects"
+      AND "COMPONENTS" = "v_components"
+      AND "VULNERABLECOMPONENTS" = "v_vulnerable_components"
+      AND "VULNERABILITIES" = "v_vulnerabilities"
+      AND "CRITICAL" = "v_critical"
+      AND "HIGH" = "v_high"
+      AND "MEDIUM" = "v_medium"
+      AND "LOW" = "v_low"
+      AND "UNASSIGNED_SEVERITY" = "v_unassigned"
       AND "RISKSCORE" = "v_risk_score"
-      AND "FINDINGS_TOTAL" = "v_aggregate"."FINDINGS_TOTAL"
-      AND "FINDINGS_AUDITED" = "v_aggregate"."FINDINGS_AUDITED"
-      AND "FINDINGS_UNAUDITED" = "v_aggregate"."FINDINGS_UNAUDITED"
-      AND "SUPPRESSED" = "v_aggregate"."SUPPRESSED"
-      AND "POLICYVIOLATIONS_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_TOTAL"
-      AND "POLICYVIOLATIONS_FAIL" = "v_aggregate"."POLICYVIOLATIONS_FAIL"
-      AND "POLICYVIOLATIONS_WARN" = "v_aggregate"."POLICYVIOLATIONS_WARN"
-      AND "POLICYVIOLATIONS_INFO" = "v_aggregate"."POLICYVIOLATIONS_INFO"
-      AND "POLICYVIOLATIONS_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_AUDITED"
-      AND "POLICYVIOLATIONS_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_UNAUDITED"
-      AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_TOTAL"
-      AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_AUDITED"
-      AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_LICENSE_UNAUDITED"
-      AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_TOTAL"
-      AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_AUDITED"
-      AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"
-      AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL"
-      AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED"
-      AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED"
-    ORDER BY "LAST_OCCURRENCE" DESC
+      AND "FINDINGS_TOTAL" = "v_findings_total"
+      AND "FINDINGS_AUDITED" = "v_findings_audited"
+      AND "FINDINGS_UNAUDITED" = "v_findings_unaudited"
+      AND "SUPPRESSED" = "v_findings_suppressed"
+      AND "POLICYVIOLATIONS_TOTAL" = "v_policy_violations_total"
+      AND "POLICYVIOLATIONS_FAIL" = "v_policy_violations_fail"
+      AND "POLICYVIOLATIONS_WARN" = "v_policy_violations_warn"
+      AND "POLICYVIOLATIONS_INFO" = "v_policy_violations_info"
+      AND "POLICYVIOLATIONS_AUDITED" = "v_policy_violations_audited"
+      AND "POLICYVIOLATIONS_UNAUDITED" = "v_policy_violations_unaudited"
+      AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_policy_violations_license_total"
+      AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_policy_violations_license_audited"
+      AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_policy_violations_license_unaudited"
+      AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_policy_violations_operational_total"
+      AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_policy_violations_operational_audited"
+      AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_policy_violations_operational_unaudited"
+      AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
+      AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
+      AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
+    ORDER BY "ID", "LAST_OCCURRENCE" DESC
     LIMIT 1
     INTO "v_existing_id";
 
-    "v_now" = NOW();
     IF "v_existing_id" IS NOT NULL THEN
-        UPDATE "PORTFOLIOMETRICS" SET "LAST_OCCURRENCE" = "v_now" WHERE "ID" = "v_existing_id";
+        UPDATE "PORTFOLIOMETRICS" SET "LAST_OCCURRENCE" = NOW() WHERE "ID" = "v_existing_id";
     ELSE
         INSERT INTO "PORTFOLIOMETRICS" ("PROJECTS",
                                         "VULNERABLEPROJECTS",
@@ -605,38 +740,38 @@ BEGIN
                                         "POLICYVIOLATIONS_SECURITY_UNAUDITED",
                                         "FIRST_OCCURRENCE",
                                         "LAST_OCCURRENCE")
-        VALUES ("v_aggregate"."PROJECTS",
-                "v_aggregate"."VULNERABLEPROJECTS",
-                "v_aggregate"."COMPONENTS",
-                "v_aggregate"."VULNERABLECOMPONENTS",
-                "v_aggregate"."VULNERABILITIES",
-                "v_aggregate"."CRITICAL",
-                "v_aggregate"."HIGH",
-                "v_aggregate"."MEDIUM",
-                "v_aggregate"."LOW",
-                "v_aggregate"."UNASSIGNED_SEVERITY",
+        VALUES ("v_projects",
+                "v_vulnerable_projects",
+                "v_components",
+                "v_vulnerable_components",
+                "v_vulnerabilities",
+                "v_critical",
+                "v_high",
+                "v_medium",
+                "v_low",
+                "v_unassigned",
                 "v_risk_score",
-                "v_aggregate"."FINDINGS_TOTAL",
-                "v_aggregate"."FINDINGS_AUDITED",
-                "v_aggregate"."FINDINGS_UNAUDITED",
-                "v_aggregate"."SUPPRESSED",
-                "v_aggregate"."POLICYVIOLATIONS_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_FAIL",
-                "v_aggregate"."POLICYVIOLATIONS_WARN",
-                "v_aggregate"."POLICYVIOLATIONS_INFO",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_LICENSE_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_OPERATIONAL_UNAUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
-                "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "v_now",
-                "v_now");
+                "v_findings_total",
+                "v_findings_audited",
+                "v_findings_unaudited",
+                "v_findings_suppressed",
+                "v_policy_violations_total",
+                "v_policy_violations_fail",
+                "v_policy_violations_warn",
+                "v_policy_violations_info",
+                "v_policy_violations_audited",
+                "v_policy_violations_unaudited",
+                "v_policy_violations_license_total",
+                "v_policy_violations_license_audited",
+                "v_policy_violations_license_unaudited",
+                "v_policy_violations_operational_total",
+                "v_policy_violations_operational_audited",
+                "v_policy_violations_operational_unaudited",
+                "v_policy_violations_security_total",
+                "v_policy_violations_security_audited",
+                "v_policy_violations_security_unaudited",
+                NOW(),
+                NOW());
     END IF;
 END;
 $$;
