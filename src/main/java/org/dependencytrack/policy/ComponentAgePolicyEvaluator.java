@@ -59,7 +59,8 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
-        if(super.extractSupportedConditions(policy).isEmpty()){
+        List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
+        if(policyConditions.isEmpty()){
             return Collections.emptyList();
         }
         final var violations = new ArrayList<PolicyConditionViolation>();
@@ -81,7 +82,7 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
         if (metaComponent == null || metaComponent.getPublished() == null) {
             return violations;
         }
-        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : policyConditions) {
             if (evaluate(condition, metaComponent.getPublished())) {
                 violations.add(new PolicyConditionViolation(condition, component));
             }

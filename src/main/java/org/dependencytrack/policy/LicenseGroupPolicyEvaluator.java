@@ -52,13 +52,14 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
-        if(super.extractSupportedConditions(policy).isEmpty()){
+        List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
+        if(policyConditions.isEmpty()){
             return Collections.emptyList();
         }
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final License license = component.getResolvedLicense();
 
-        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : policyConditions) {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             final LicenseGroup lg = qm.getObjectByUuid(LicenseGroup.class, condition.getValue());
             if (lg == null) {
