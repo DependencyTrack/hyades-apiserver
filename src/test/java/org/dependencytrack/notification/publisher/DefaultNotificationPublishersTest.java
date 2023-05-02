@@ -23,6 +23,14 @@ import org.junit.Test;
 
 import javax.ws.rs.core.MediaType;
 
+import static org.dependencytrack.notification.publisher.PublisherClass.ConsolePublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.JiraPublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.MattermostPublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.MsTeamsPublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.SlackPublisher;
+import static org.dependencytrack.notification.publisher.PublisherClass.WebhookPublisher;
+
 public class DefaultNotificationPublishersTest {
 
     @Test
@@ -40,7 +48,7 @@ public class DefaultNotificationPublishersTest {
     public void testSlack() {
         Assert.assertEquals("Slack", DefaultNotificationPublishers.SLACK.getPublisherName());
         Assert.assertEquals("Publishes notifications to a Slack channel", DefaultNotificationPublishers.SLACK.getPublisherDescription());
-        Assert.assertEquals(SlackPublisher.class, DefaultNotificationPublishers.SLACK.getPublisherClass());
+        Assert.assertEquals(SlackPublisher, DefaultNotificationPublishers.SLACK.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/slack.peb", DefaultNotificationPublishers.SLACK.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.APPLICATION_JSON, DefaultNotificationPublishers.SLACK.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.SLACK.isDefaultPublisher());
@@ -50,7 +58,7 @@ public class DefaultNotificationPublishersTest {
     public void testMsTeams() {
         Assert.assertEquals("Microsoft Teams", DefaultNotificationPublishers.MS_TEAMS.getPublisherName());
         Assert.assertEquals("Publishes notifications to a Microsoft Teams channel", DefaultNotificationPublishers.MS_TEAMS.getPublisherDescription());
-        Assert.assertEquals(MsTeamsPublisher.class, DefaultNotificationPublishers.MS_TEAMS.getPublisherClass());
+        Assert.assertEquals(MsTeamsPublisher, DefaultNotificationPublishers.MS_TEAMS.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/msteams.peb", DefaultNotificationPublishers.MS_TEAMS.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.APPLICATION_JSON, DefaultNotificationPublishers.MS_TEAMS.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.MS_TEAMS.isDefaultPublisher());
@@ -60,7 +68,7 @@ public class DefaultNotificationPublishersTest {
     public void testMattermost() {
         Assert.assertEquals("Mattermost", DefaultNotificationPublishers.MATTERMOST.getPublisherName());
         Assert.assertEquals("Publishes notifications to a Mattermost channel", DefaultNotificationPublishers.MATTERMOST.getPublisherDescription());
-        Assert.assertEquals(MattermostPublisher.class, DefaultNotificationPublishers.MATTERMOST.getPublisherClass());
+        Assert.assertEquals(MattermostPublisher, DefaultNotificationPublishers.MATTERMOST.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/mattermost.peb", DefaultNotificationPublishers.MATTERMOST.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.APPLICATION_JSON, DefaultNotificationPublishers.MATTERMOST.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.MATTERMOST.isDefaultPublisher());
@@ -70,7 +78,7 @@ public class DefaultNotificationPublishersTest {
     public void testEmail() {
         Assert.assertEquals("Email", DefaultNotificationPublishers.EMAIL.getPublisherName());
         Assert.assertEquals("Sends notifications to an email address", DefaultNotificationPublishers.EMAIL.getPublisherDescription());
-        Assert.assertEquals(SendMailPublisher.class, DefaultNotificationPublishers.EMAIL.getPublisherClass());
+        Assert.assertEquals(SendMailPublisher, DefaultNotificationPublishers.EMAIL.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/email.peb", DefaultNotificationPublishers.EMAIL.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.TEXT_PLAIN, DefaultNotificationPublishers.EMAIL.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.EMAIL.isDefaultPublisher());
@@ -80,7 +88,7 @@ public class DefaultNotificationPublishersTest {
     public void testConsole() {
         Assert.assertEquals("Console", DefaultNotificationPublishers.CONSOLE.getPublisherName());
         Assert.assertEquals("Displays notifications on the system console", DefaultNotificationPublishers.CONSOLE.getPublisherDescription());
-        Assert.assertEquals(ConsolePublisher.class, DefaultNotificationPublishers.CONSOLE.getPublisherClass());
+        Assert.assertEquals(ConsolePublisher, DefaultNotificationPublishers.CONSOLE.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/console.peb", DefaultNotificationPublishers.CONSOLE.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.TEXT_PLAIN, DefaultNotificationPublishers.CONSOLE.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.CONSOLE.isDefaultPublisher());
@@ -90,7 +98,7 @@ public class DefaultNotificationPublishersTest {
     public void testWebhook() {
         Assert.assertEquals("Outbound Webhook", DefaultNotificationPublishers.WEBHOOK.getPublisherName());
         Assert.assertEquals("Publishes notifications to a configurable endpoint", DefaultNotificationPublishers.WEBHOOK.getPublisherDescription());
-        Assert.assertEquals(WebhookPublisher.class, DefaultNotificationPublishers.WEBHOOK.getPublisherClass());
+        Assert.assertEquals(WebhookPublisher, DefaultNotificationPublishers.WEBHOOK.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/webhook.peb", DefaultNotificationPublishers.WEBHOOK.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.APPLICATION_JSON, DefaultNotificationPublishers.WEBHOOK.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.WEBHOOK.isDefaultPublisher());
@@ -100,7 +108,7 @@ public class DefaultNotificationPublishersTest {
     public void testJira() {
         Assert.assertEquals("Jira", DefaultNotificationPublishers.JIRA.getPublisherName());
         Assert.assertEquals("Creates a Jira issue in a configurable Jira instance and queue", DefaultNotificationPublishers.JIRA.getPublisherDescription());
-        Assert.assertEquals(JiraPublisher.class, DefaultNotificationPublishers.JIRA.getPublisherClass());
+        Assert.assertEquals(JiraPublisher, DefaultNotificationPublishers.JIRA.getPublisherClass());
         Assert.assertEquals("/templates/notification/publisher/jira.peb", DefaultNotificationPublishers.JIRA.getPublisherTemplateFile());
         Assert.assertEquals(MediaType.APPLICATION_JSON, DefaultNotificationPublishers.JIRA.getTemplateMimeType());
         Assert.assertTrue(DefaultNotificationPublishers.JIRA.isDefaultPublisher());

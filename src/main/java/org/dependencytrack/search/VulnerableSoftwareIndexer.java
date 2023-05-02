@@ -20,7 +20,6 @@ package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;
-import alpine.persistence.PaginatedResult;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
@@ -32,8 +31,12 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Indexer for operating on VulnerableSoftware.
@@ -68,13 +71,18 @@ public final class VulnerableSoftwareIndexer extends IndexManager implements Obj
      * @param vs A persisted VulnerableSoftware object.
      */
     public void add(final VulnerableSoftware vs) {
+        add(new VulnerableSoftwareProjection(vs.getId(), vs.getUuid(), vs.getCpe22(),
+                vs.getCpe23(), vs.getVendor(), vs.getProduct(), vs.getVersion()));
+    }
+
+    private void add(final VulnerableSoftwareProjection vs) {
         final Document doc = new Document();
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_UUID, vs.getUuid().toString(), Field.Store.YES, false);
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_CPE_22, vs.getCpe22(), Field.Store.YES, false);
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_CPE_23, vs.getCpe23(), Field.Store.YES, false);
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_VENDOR, vs.getVendor(), Field.Store.YES, true);
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_PRODUCT, vs.getProduct(), Field.Store.YES, true);
-        addField(doc, IndexConstants.VULNERABLESOFTWARE_VERSION, vs.getVersion(), Field.Store.YES, true);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_UUID, vs.uuid().toString(), Field.Store.YES, false);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_CPE_22, vs.cpe22(), Field.Store.YES, false);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_CPE_23, vs.cpe23(), Field.Store.YES, false);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_VENDOR, vs.vendor(), Field.Store.YES, true);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_PRODUCT, vs.product(), Field.Store.YES, true);
+        addField(doc, IndexConstants.VULNERABLESOFTWARE_VERSION, vs.version(), Field.Store.YES, true);
         //todo: index the affected version range fields as well
 
         try {
@@ -84,7 +92,7 @@ public final class VulnerableSoftwareIndexer extends IndexManager implements Obj
         } catch (IOException e) {
             LOGGER.error("An error occurred while adding a VulnerableSoftware to the index", e);
             String content = "An error occurred while adding a VulnerableSoftware to the index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.VULNERABLESOFTWARE_INDEXER, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.VULNERABLESOFTWARE_INDEXER, content, NotificationLevel.ERROR);
         }
     }
 
@@ -101,7 +109,7 @@ public final class VulnerableSoftwareIndexer extends IndexManager implements Obj
         } catch (IOException e) {
             LOGGER.error("An error occurred while removing a VulnerableSoftware from the index", e);
             String content = "An error occurred while removing a VulnerableSoftware from the index. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.VULNERABLESOFTWARE_INDEXER, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.INDEXING_SERVICE, NotificationConstants.Title.VULNERABLESOFTWARE_INDEXER, content, NotificationLevel.ERROR);
         }
     }
 
@@ -112,19 +120,39 @@ public final class VulnerableSoftwareIndexer extends IndexManager implements Obj
         LOGGER.info("Starting reindex task. This may take some time.");
         super.reindex();
         try (QueryManager qm = new QueryManager()) {
-            final long total = qm.getCount(VulnerableSoftware.class);
-            long count = 0;
-            while (count < total) {
-                final PaginatedResult result = qm.getVulnerableSoftware();
-                final List<VulnerableSoftware> vsList = result.getList(VulnerableSoftware.class);
-                for (final VulnerableSoftware vs: vsList) {
-                    add(vs);
+            final PersistenceManager pm = qm.getPersistenceManager();
+            List<VulnerableSoftwareProjection> vulnerableSoftwares = fetchNextVulnerableSoftwarePage(pm, null);
+            while (!vulnerableSoftwares.isEmpty()) {
+                for (final VulnerableSoftwareProjection vulnerableSoftware : vulnerableSoftwares) {
+                    add(vulnerableSoftware);
                 }
-                count += result.getObjects().size();
-                qm.advancePagination();
+
+                final long lastId = vulnerableSoftwares.get(vulnerableSoftwares.size() - 1).id();
+                vulnerableSoftwares = fetchNextVulnerableSoftwarePage(pm, lastId);
             }
             commit();
         }
         LOGGER.info("Reindexing complete");
     }
+
+    private List<VulnerableSoftwareProjection> fetchNextVulnerableSoftwarePage(final PersistenceManager pm, final Long lastId) {
+        final Query<VulnerableSoftware> query = pm.newQuery(VulnerableSoftware.class);
+        try {
+            if (lastId != null) {
+                query.setFilter("id < :lastId");
+                query.setNamedParameters(Map.of("lastId", lastId));
+            }
+            query.setOrdering("id DESC");
+            query.setRange(0, 2500);
+            query.setResult("id, uuid, cpe22, cpe23, vendor, product, version");
+            return List.copyOf(query.executeResultList(VulnerableSoftwareProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    public record VulnerableSoftwareProjection(long id, UUID uuid, String cpe22, String cpe23, String vendor,
+                                               String product, String version) {
+    }
+
 }

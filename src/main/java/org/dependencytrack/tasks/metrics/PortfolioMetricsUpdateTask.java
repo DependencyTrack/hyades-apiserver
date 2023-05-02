@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -62,9 +63,10 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private void updateMetrics() throws Exception {
         LOGGER.info("Executing portfolio metrics update");
+        final Timer.Sample timerSample = Timer.start();
         final var counters = new Counters();
 
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
@@ -160,6 +162,11 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                     pm.makePersistent(metrics);
                 }
             });
+        } finally {
+            timerSample.stop(Timer
+                    .builder("metrics_update")
+                    .tag("target", "portfolio")
+                    .register(alpine.common.metrics.Metrics.getRegistry()));
         }
 
         LOGGER.info("Completed portfolio metrics update in " +

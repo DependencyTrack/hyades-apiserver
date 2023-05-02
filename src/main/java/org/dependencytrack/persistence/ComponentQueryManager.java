@@ -38,16 +38,16 @@ import org.dependencytrack.model.RepositoryType;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
-import javax.json.Json;
-import javax.json.JsonValue;
-import javax.json.JsonArray;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -583,9 +583,21 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             transientComponent.setUuid(entry.getValue().getUuid());
             transientComponent.setName(entry.getValue().getName());
             transientComponent.setVersion(entry.getValue().getVersion());
+            transientComponent.setPurl(entry.getValue().getPurl());
             transientComponent.setPurlCoordinates(entry.getValue().getPurlCoordinates());
             transientComponent.setDependencyGraph(entry.getValue().getDependencyGraph());
             transientComponent.setExpandDependencyGraph(entry.getValue().isExpandDependencyGraph());
+            if (transientComponent.getPurl() != null) {
+                final RepositoryType type = RepositoryType.resolve(transientComponent.getPurl());
+                if (RepositoryType.UNSUPPORTED != type) {
+                    final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, transientComponent.getPurl().getNamespace(), transientComponent.getPurl().getName());
+                    if (repoMetaComponent != null) {
+                        RepositoryMetaComponent transientRepoMetaComponent = new RepositoryMetaComponent();
+                        transientRepoMetaComponent.setLatestVersion(repoMetaComponent.getLatestVersion());
+                        transientComponent.setRepositoryMeta(transientRepoMetaComponent);
+                    }
+                }
+            }
             dependencyGraph.put(entry.getKey(), transientComponent);
         }
         return dependencyGraph;

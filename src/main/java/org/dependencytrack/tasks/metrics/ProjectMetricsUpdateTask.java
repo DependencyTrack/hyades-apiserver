@@ -21,6 +21,7 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
@@ -60,9 +61,10 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
     private static void updateMetrics(final UUID uuid) throws Exception {
         LOGGER.info("Executing metrics update for project " + uuid);
+        final Timer.Sample timerSample = Timer.start();
         final var counters = new Counters();
 
-        try (final QueryManager qm = new QueryManager()) {
+        try (final QueryManager qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.METRICS_UPDATE.name()));
@@ -146,6 +148,11 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 LOGGER.debug("Updating inherited risk score of project " + uuid);
                 qm.runInTransaction(() -> project.setLastInheritedRiskScore(counters.inheritedRiskScore));
             }
+        } finally {
+            timerSample.stop(Timer
+                    .builder("metrics_update")
+                    .tag("target", "project")
+                    .register(alpine.common.metrics.Metrics.getRegistry()));
         }
 
         LOGGER.debug("Completed metrics update for project " + uuid + " in " +

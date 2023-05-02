@@ -79,9 +79,10 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.Publisher;
+import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 
+import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
@@ -1191,12 +1192,12 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().getNotificationPublisher(name);
     }
 
-    public NotificationPublisher getDefaultNotificationPublisher(final Class<Publisher> clazz) {
+    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
         return getNotificationQueryManager().getDefaultNotificationPublisher(clazz);
     }
 
     public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final Class<Publisher> publisherClass, final String templateContent,
+                                                             final String publisherClass, final String templateContent,
                                                              final String templateMimeType, final boolean defaultPublisher) {
         return getNotificationQueryManager().createNotificationPublisher(name, description, publisherClass, templateContent, templateMimeType, defaultPublisher);
     }
@@ -1325,6 +1326,36 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Detach a persistent object using the provided fetch groups.
+     * <p>
+     * {@code fetchGroups} will override any other fetch groups set on the {@link PersistenceManager},
+     * even the default one. If inclusion of the default fetch group is desired, it must be
+     * included in {@code fetchGroups} explicitly.
+     * <p>
+     * Eventually, this may be moved to {@link alpine.persistence.AbstractAlpineQueryManager}.
+     *
+     * @param object      The persistent object to detach
+     * @param fetchGroups Fetch groups to use for this operation
+     * @param <T>         Type of the object
+     * @return The detached object
+     * @since 4.8.0
+     */
+    public <T> T detachWithGroups(final T object, final List<String> fetchGroups) {
+        final int origDetachOptions = pm.getFetchPlan().getDetachmentOptions();
+        final Set<?> origFetchGroups = pm.getFetchPlan().getGroups();
+        try {
+            pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
+            pm.getFetchPlan().setGroups(fetchGroups);
+            return pm.detachCopy(object);
+        } finally {
+            // Restore previous settings to not impact other operations performed
+            // by this persistence manager.
+            pm.getFetchPlan().setDetachmentOptions(origDetachOptions);
+            pm.getFetchPlan().setGroups(origFetchGroups);
+        }
+    }
+
+    /**
      * Fetch an object from the datastore by its {@link UUID}, using the provided fetch groups.
      * <p>
      * {@code fetchGroups} will override any other fetch groups set on the {@link PersistenceManager},
@@ -1424,7 +1455,7 @@ public class QueryManager extends AlpineQueryManager {
      * locking to be used.
      *
      * @param scanToken       The token that uniquely identifies the scan for clients
-     * @param expectedResults Number of expected {@link ScanStatus#SCAN_STATUS_COMPLETE} events for this scan
+     * @param expectedResults Number of expected {@link ScanStatus #SCAN_STATUS_COMPLETE} events for this scan
      * @return The created {@link VulnerabilityScan}
      */
     public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
@@ -1475,7 +1506,7 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Record the successful receipt of a {@link ScanStatus#SCAN_STATUS_COMPLETE} event for a given {@link VulnerabilityScan}.
+     * Record the successful receipt of a {@link ScanStatus #SCAN_STATUS_COMPLETE} event for a given {@link VulnerabilityScan}.
      * <p>
      * This method expects that access to the {@link VulnerabilityScan} table is serialized
      * through Kafka events, keyed by the scan's token. This assumption allows for optimistic

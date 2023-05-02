@@ -20,7 +20,6 @@ package org.dependencytrack.search;
 
 import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;
-import alpine.persistence.PaginatedResult;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
@@ -32,8 +31,12 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Indexer for operating on CPEs.
@@ -68,13 +71,18 @@ public final class CpeIndexer extends IndexManager implements ObjectIndexer<Cpe>
      * @param cpe A persisted Cpe object.
      */
     public void add(final Cpe cpe) {
+        add(new CpeProjection(cpe.getId(), cpe.getUuid(), cpe.getCpe22(), cpe.getCpe23(),
+                cpe.getVendor(), cpe.getProduct(), cpe.getVersion()));
+    }
+
+    private void add(final CpeProjection cpe) {
         final Document doc = new Document();
-        addField(doc, IndexConstants.CPE_UUID, cpe.getUuid().toString(), Field.Store.YES, false);
-        addField(doc, IndexConstants.CPE_22, cpe.getCpe22(), Field.Store.YES, true);
-        addField(doc, IndexConstants.CPE_23, cpe.getCpe23(), Field.Store.YES, true);
-        addField(doc, IndexConstants.CPE_VENDOR, cpe.getVendor(), Field.Store.YES, true);
-        addField(doc, IndexConstants.CPE_PRODUCT, cpe.getProduct(), Field.Store.YES, true);
-        addField(doc, IndexConstants.CPE_VERSION, cpe.getVersion(), Field.Store.YES, true);
+        addField(doc, IndexConstants.CPE_UUID, cpe.uuid().toString(), Field.Store.YES, false);
+        addField(doc, IndexConstants.CPE_22, cpe.cpe22(), Field.Store.YES, true);
+        addField(doc, IndexConstants.CPE_23, cpe.cpe23(), Field.Store.YES, true);
+        addField(doc, IndexConstants.CPE_VENDOR, cpe.vendor(), Field.Store.YES, true);
+        addField(doc, IndexConstants.CPE_PRODUCT, cpe.product(), Field.Store.YES, true);
+        addField(doc, IndexConstants.CPE_VERSION, cpe.version(), Field.Store.YES, true);
 
         try {
             getIndexWriter().addDocument(doc);
@@ -111,19 +119,39 @@ public final class CpeIndexer extends IndexManager implements ObjectIndexer<Cpe>
         LOGGER.info("Starting reindex task. This may take some time.");
         super.reindex();
         try (QueryManager qm = new QueryManager()) {
-            final long total = qm.getCount(Cpe.class);
-            long count = 0;
-            while (count < total) {
-                final PaginatedResult result = qm.getCpes();
-                final List<Cpe> cpes = result.getList(Cpe.class);
-                for (final Cpe cpe: cpes) {
+            final PersistenceManager pm = qm.getPersistenceManager();
+            List<CpeProjection> cpes = fetchNextCpesPage(pm, null);
+            while (!cpes.isEmpty()) {
+                for (final CpeProjection cpe : cpes) {
                     add(cpe);
                 }
-                count += result.getObjects().size();
-                qm.advancePagination();
+
+                final long lastId = cpes.get(cpes.size() - 1).id();
+                cpes = fetchNextCpesPage(pm, lastId);
             }
             commit();
         }
         LOGGER.info("Reindexing complete");
     }
+
+    private List<CpeProjection> fetchNextCpesPage(final PersistenceManager pm, final Long lastId) {
+        final Query<Cpe> query = pm.newQuery(Cpe.class);
+        try {
+            if (lastId != null) {
+                query.setFilter("id < :lastId");
+                query.setNamedParameters(Map.of("lastId", lastId));
+            }
+            query.setOrdering("id DESC");
+            query.setRange(0, 2500);
+            query.setResult("id, uuid, cpe22, cpe23, vendor, product, version");
+            return List.copyOf(query.executeResultList(CpeProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    public record CpeProjection(long id, UUID uuid, String cpe22, String cpe23, String vendor,
+                                String product, String version) {
+    }
+
 }

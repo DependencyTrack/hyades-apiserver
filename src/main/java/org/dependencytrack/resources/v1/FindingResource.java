@@ -30,6 +30,7 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.model.Finding;
@@ -132,6 +133,25 @@ public class FindingResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
         }
+    }
+
+    @POST
+    @Path("/portfolio/analyze")
+    @ApiOperation(value = "Triggers Vulnerability Analysis for the entire portfolio")
+    @ApiResponses(value = {
+            @ApiResponse(code = 304, message = "Analysis is already in progress"),
+            @ApiResponse(code = 401, message = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION) // Require admin privileges due to system impact
+    public Response analyzePortfolio() {
+        LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
+        if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {
+            LOGGER.info("Another portfolio analysis event is already being processed; Dropping");
+            return Response.status(Response.Status.NOT_MODIFIED).build();
+        }
+
+        Event.dispatch(new PortfolioRepositoryMetaAnalysisEvent());
+        return Response.ok().build();
     }
 
     @POST

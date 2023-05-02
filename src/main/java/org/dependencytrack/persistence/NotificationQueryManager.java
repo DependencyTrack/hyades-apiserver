@@ -26,12 +26,11 @@ import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.Publisher;
+import org.dependencytrack.notification.publisher.PublisherClass;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.List;
-import java.util.UUID;
 
 public class NotificationQueryManager extends QueryManager implements IQueryManager {
 
@@ -134,8 +133,8 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
      * @param clazz The Class of the NotificationPublisher
      * @return a NotificationPublisher
      */
-    public NotificationPublisher getDefaultNotificationPublisher(final Class<Publisher> clazz) {
-        return getDefaultNotificationPublisher(clazz.getCanonicalName());
+    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
+        return getDefaultNotificationPublisher(clazz.name());
     }
 
     /**
@@ -156,13 +155,13 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
      * @return a NotificationPublisher
      */
     public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final Class<Publisher> publisherClass, final String templateContent,
+                                                             final String publisherClass, final String templateContent,
                                                              final String templateMimeType, final boolean defaultPublisher) {
         pm.currentTransaction().begin();
         final NotificationPublisher publisher = new NotificationPublisher();
         publisher.setName(name);
         publisher.setDescription(description);
-        publisher.setPublisherClass(publisherClass.getName());
+        publisher.setPublisherClass(publisherClass);
         publisher.setTemplate(templateContent);
         publisher.setTemplateMimeType(templateMimeType);
         publisher.setDefaultPublisher(defaultPublisher);
