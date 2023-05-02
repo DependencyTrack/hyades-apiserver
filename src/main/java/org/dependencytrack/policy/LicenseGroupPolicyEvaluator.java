@@ -52,7 +52,7 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
-        if(!super.extractSupportedConditions(policy).isEmpty()){
+        if(super.extractSupportedConditions(policy).isEmpty()){
             return violations;
         }
         final License license = component.getResolvedLicense();
