@@ -31,6 +31,7 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -58,10 +59,10 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
-        final var violations = new ArrayList<PolicyConditionViolation>();
         if(super.extractSupportedConditions(policy).isEmpty()){
-            return violations;
+            return Collections.emptyList();
         }
+        final var violations = new ArrayList<PolicyConditionViolation>();
         if (component.getPurl() == null) {
             return violations;
         }

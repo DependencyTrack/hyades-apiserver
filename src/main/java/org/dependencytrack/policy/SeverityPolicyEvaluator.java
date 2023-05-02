@@ -25,6 +25,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Vulnerability;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,11 +51,11 @@ public class SeverityPolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
-        final List<PolicyConditionViolation> violations = new ArrayList<>();
         final List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
         if (policyConditions.isEmpty()) {
-            return violations;
+            return Collections.emptyList();
         }
+        final List<PolicyConditionViolation> violations = new ArrayList<>();
         for (final Vulnerability vulnerability : qm.getAllVulnerabilities(component, false)) {
             for (final PolicyCondition condition : policyConditions) {
                 LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");

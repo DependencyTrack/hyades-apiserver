@@ -26,6 +26,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -51,10 +52,10 @@ public class LicenseGroupPolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
-        final List<PolicyConditionViolation> violations = new ArrayList<>();
         if(super.extractSupportedConditions(policy).isEmpty()){
-            return violations;
+            return Collections.emptyList();
         }
+        final List<PolicyConditionViolation> violations = new ArrayList<>();
         final License license = component.getResolvedLicense();
 
         for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
