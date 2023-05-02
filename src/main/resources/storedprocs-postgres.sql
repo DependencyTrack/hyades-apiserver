@@ -90,6 +90,8 @@ $$
 DECLARE
     "v_component"                               RECORD; -- The component to update metrics for
     "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
+    "v_alias"                                   RECORD; -- Loop variable for iterating over aliases of a vulnerability
+    "v_aliases_seen"                            TEXT[]; -- Array of aliases encountered while iterating over vulnerabilities
     "v_severity"                                VARCHAR; -- Loop variable for the current vulnerability's severity
     "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
     "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
@@ -136,7 +138,47 @@ BEGIN
                                                 AND "A"."VULNERABILITY_ID" = "CV"."VULNERABILITY_ID"
                                                 AND "A"."SUPPRESSED" = TRUE)
         LOOP
-            -- TODO: Check aliases
+            CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
+
+            FOR "v_alias" IN SELECT *
+                             FROM "VULNERABILITYALIAS" AS "VA"
+                             WHERE ("v_vulnerability"."SOURCE" = 'GITHUB' AND
+                                    "VA"."GHSA_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'INTERNAL' AND
+                                    "VA"."INTERNAL_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'NVD' AND
+                                    "VA"."CVE_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'OSSINDEX' AND
+                                    "VA"."SONATYPE_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'OSV' AND
+                                    "VA"."OSV_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'SNYK' AND
+                                    "VA"."SNYK_ID" = "v_vulnerability"."VULNID")
+                                OR ("v_vulnerability"."SOURCE" = 'VULNDB' AND
+                                    "VA"."VULNDB_ID" = "v_vulnerability"."VULNID")
+                LOOP
+                    IF "v_alias"."GHSA_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'GITHUB|' || "v_alias"."GHSA_ID");
+                    END IF;
+                    IF "v_alias"."INTERNAL_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'INTERNAL|' || "v_alias"."INTERNAL_ID");
+                    END IF;
+                    IF "v_alias"."CVE_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'NVD|' || "v_alias"."CVE_ID");
+                    END IF;
+                    IF "v_alias"."SONATYPE_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'OSSINDEX|' || "v_alias"."SONATYPE_ID");
+                    END IF;
+                    IF "v_alias"."OSV_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'OSV|' || "v_alias"."OSV_ID");
+                    END IF;
+                    IF "v_alias"."SNYK_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'SNYK|' || "v_alias"."SNYK_ID");
+                    END IF;
+                    IF "v_alias"."VULNDB_ID" IS NOT NULL THEN
+                        "v_aliases_seen" = array_append("v_aliases_seen", 'VULNDB|' || "v_alias"."VULNDB_ID");
+                    END IF;
+                END LOOP;
 
             "v_vulnerabilities" := "v_vulnerabilities" + 1;
 
@@ -250,7 +292,7 @@ BEGIN
         + "v_policy_violations_security_audited";
     "v_policy_violations_unaudited" = "v_policy_violations_total" - "v_policy_violations_audited";
 
-    SELECT DISTINCT ON ("ID") "ID"
+    SELECT "ID"
     FROM "DEPENDENCYMETRICS"
     WHERE "COMPONENT_ID" = "v_component"."ID"
       AND "VULNERABILITIES" = "v_vulnerabilities"
@@ -279,7 +321,7 @@ BEGIN
       AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
       AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
       AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-    ORDER BY "ID", "LAST_OCCURRENCE" DESC
+    ORDER BY "LAST_OCCURRENCE" DESC
     LIMIT 1
     INTO "v_existing_id";
 
@@ -360,34 +402,34 @@ AS
 $$
 DECLARE
     "v_project_id"                              BIGINT;
-    "v_components"                              INT     := 0; -- Total number of components in the project
-    "v_vulnerable_components"                   INT     := 0; -- Number of vulnerable components in the project
-    "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
-    "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
-    "v_high"                                    INT     := 0; -- Number of vulnerabilities with high severity
-    "v_medium"                                  INT     := 0; -- Number of vulnerabilities with medium severity
-    "v_low"                                     INT     := 0; -- Number of vulnerabilities with low severity
-    "v_unassigned"                              INT     := 0; -- Number of vulnerabilities with unassigned severity
-    "v_risk_score"                              NUMERIC := 0; -- Inherited risk score
-    "v_findings_total"                          INT     := 0; -- Total number of findings
-    "v_findings_audited"                        INT     := 0; -- Number of audited findings
-    "v_findings_unaudited"                      INT     := 0; -- Number of unaudited findings
-    "v_findings_suppressed"                     INT     := 0; -- Number of suppressed findings
-    "v_policy_violations_total"                 INT     := 0; -- Total number of policy violations
-    "v_policy_violations_fail"                  INT     := 0; -- Number of policy violations with level fail
-    "v_policy_violations_warn"                  INT     := 0; -- Number of policy violations with level warn
-    "v_policy_violations_info"                  INT     := 0; -- Number of policy violations with level info
-    "v_policy_violations_audited"               INT     := 0; -- Number of audited policy violations
-    "v_policy_violations_unaudited"             INT     := 0; -- Number of unaudited policy violations
-    "v_policy_violations_license_total"         INT     := 0; -- Total number of policy violations of type license
-    "v_policy_violations_license_audited"       INT     := 0; -- Number of audited policy violations of type license
-    "v_policy_violations_license_unaudited"     INT     := 0; -- Number of unaudited policy violations of type license
-    "v_policy_violations_operational_total"     INT     := 0; -- Total number of policy violations of type operational
-    "v_policy_violations_operational_audited"   INT     := 0; -- Number of audited policy violations of type operational
-    "v_policy_violations_operational_unaudited" INT     := 0; -- Number of unaudited policy violations of type operational
-    "v_policy_violations_security_total"        INT     := 0; -- Total number of policy violations of type security
-    "v_policy_violations_security_audited"      INT     := 0; -- Number of audited policy violations of type security
-    "v_policy_violations_security_unaudited"    INT     := 0; -- Number of unaudited policy violations of type security
+    "v_components"                              INT; -- Total number of components in the project
+    "v_vulnerable_components"                   INT; -- Number of vulnerable components in the project
+    "v_vulnerabilities"                         INT; -- Total number of vulnerabilities
+    "v_critical"                                INT; -- Number of vulnerabilities with critical severity
+    "v_high"                                    INT; -- Number of vulnerabilities with high severity
+    "v_medium"                                  INT; -- Number of vulnerabilities with medium severity
+    "v_low"                                     INT; -- Number of vulnerabilities with low severity
+    "v_unassigned"                              INT; -- Number of vulnerabilities with unassigned severity
+    "v_risk_score"                              NUMERIC; -- Inherited risk score
+    "v_findings_total"                          INT; -- Total number of findings
+    "v_findings_audited"                        INT; -- Number of audited findings
+    "v_findings_unaudited"                      INT; -- Number of unaudited findings
+    "v_findings_suppressed"                     INT; -- Number of suppressed findings
+    "v_policy_violations_total"                 INT; -- Total number of policy violations
+    "v_policy_violations_fail"                  INT; -- Number of policy violations with level fail
+    "v_policy_violations_warn"                  INT; -- Number of policy violations with level warn
+    "v_policy_violations_info"                  INT; -- Number of policy violations with level info
+    "v_policy_violations_audited"               INT; -- Number of audited policy violations
+    "v_policy_violations_unaudited"             INT; -- Number of unaudited policy violations
+    "v_policy_violations_license_total"         INT; -- Total number of policy violations of type license
+    "v_policy_violations_license_audited"       INT; -- Number of audited policy violations of type license
+    "v_policy_violations_license_unaudited"     INT; -- Number of unaudited policy violations of type license
+    "v_policy_violations_operational_total"     INT; -- Total number of policy violations of type operational
+    "v_policy_violations_operational_audited"   INT; -- Number of audited policy violations of type operational
+    "v_policy_violations_operational_unaudited" INT; -- Number of unaudited policy violations of type operational
+    "v_policy_violations_security_total"        INT; -- Total number of policy violations of type security
+    "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
+    "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
     "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
     SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
@@ -395,8 +437,11 @@ BEGIN
         RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
     END IF;
 
+    -- Aggregate over all most recent DEPENDENCYMETRICS.
+    -- NOTE: SUM returns NULL when no rows match the query, but COUNT returns 0.
+    -- For nullable result columns, use COALESCE(..., 0) to have a default value.
     SELECT COUNT(*)::INT,
-           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END)::INT, 0),
            COALESCE(SUM("VULNERABILITIES")::INT, 0),
            COALESCE(SUM("CRITICAL")::INT, 0),
            COALESCE(SUM("HIGH")::INT, 0),
@@ -457,7 +502,7 @@ BEGIN
 
     "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
-    SELECT DISTINCT ON ("ID") "ID"
+    SELECT "ID"
     FROM "PROJECTMETRICS"
     WHERE "PROJECT_ID" = "v_project_id"
       AND "COMPONENTS" = "v_components"
@@ -488,7 +533,7 @@ BEGIN
       AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
       AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
       AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-    ORDER BY "ID", "LAST_OCCURRENCE" DESC
+    ORDER BY "LAST_OCCURRENCE" DESC
     LIMIT 1
     INTO "v_existing_id";
 
@@ -601,10 +646,13 @@ DECLARE
     "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
     "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
+    -- Aggregate over all most recent DEPENDENCYMETRICS.
+    -- NOTE: SUM returns NULL when no rows match the query, but COUNT returns 0.
+    -- For nullable result columns, use COALESCE(..., 0) to have a default value.
     SELECT COUNT(*)::INT,
-           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
-           COUNT(*)::INT,
-           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END)::INT, 0),
+           COALESCE(SUM("COMPONENTS")::INT, 0),
+           COALESCE(SUM("VULNERABLECOMPONENTS")::INT, 0),
            COALESCE(SUM("VULNERABILITIES")::INT, 0),
            COALESCE(SUM("CRITICAL")::INT, 0),
            COALESCE(SUM("HIGH")::INT, 0),
@@ -669,7 +717,7 @@ BEGIN
 
     "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
-    SELECT DISTINCT ON ("ID") "ID"
+    SELECT "ID"
     FROM "PORTFOLIOMETRICS"
     WHERE "PROJECTS" = "v_projects"
       AND "VULNERABLEPROJECTS" = "v_vulnerable_projects"
@@ -701,7 +749,7 @@ BEGIN
       AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
       AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
       AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-    ORDER BY "ID", "LAST_OCCURRENCE" DESC
+    ORDER BY "LAST_OCCURRENCE" DESC
     LIMIT 1
     INTO "v_existing_id";
 
