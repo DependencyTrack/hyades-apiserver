@@ -25,6 +25,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,15 +51,18 @@ public class LicensePolicyEvaluator extends AbstractPolicyEvaluator {
      */
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
+        List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
+        if (policyConditions.isEmpty()) {
+            return Collections.emptyList();
+        }
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final License license = component.getResolvedLicense();
 
-        for (final PolicyCondition condition : super.extractSupportedConditions(policy)) {
+        for (final PolicyCondition condition : policyConditions) {
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
             if (condition.getValue().equals("unresolved")) {
-                if (license == null && PolicyCondition.Operator.IS == condition.getOperator()) {
-                    violations.add(new PolicyConditionViolation(condition, component));
-                } else if (license != null && PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
+                boolean result = (license == null && PolicyCondition.Operator.IS == condition.getOperator()) || (license != null && PolicyCondition.Operator.IS_NOT == condition.getOperator());
+                if (result) {
                     violations.add(new PolicyConditionViolation(condition, component));
                 }
             } else if (license != null) {
@@ -67,10 +71,8 @@ public class LicensePolicyEvaluator extends AbstractPolicyEvaluator {
                     if (component.getResolvedLicense().getId() == l.getId()) {
                         violations.add(new PolicyConditionViolation(condition, component));
                     }
-                } else if (l != null && PolicyCondition.Operator.IS_NOT == condition.getOperator()) {
-                    if (component.getResolvedLicense().getId() != l.getId()) {
-                        violations.add(new PolicyConditionViolation(condition, component));
-                    }
+                } else if (l != null && PolicyCondition.Operator.IS_NOT == condition.getOperator() && component.getResolvedLicense().getId() != l.getId()) {
+                    violations.add(new PolicyConditionViolation(condition, component));
                 }
             }
         }
