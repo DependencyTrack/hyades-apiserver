@@ -424,6 +424,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProjectsWithoutDescendantsOf(name, excludeInactive, project);
     }
 
+    public List<UUID> getParents(final Project project) {
+        return getProjectQueryManager().getParents(project);
+    }
+
     public boolean hasAccess(final Principal principal, final Project project) {
         return getProjectQueryManager().hasAccess(principal, project);
     }
@@ -618,6 +622,10 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().getAllPolicies();
     }
 
+    public List<Policy> getApplicablePolicies(final Project project) {
+        return getPolicyQueryManager().getApplicablePolicies(project);
+    }
+
     public Policy getPolicy(final String name) {
         return getPolicyQueryManager().getPolicy(name);
     }
@@ -724,8 +732,12 @@ public class QueryManager extends AlpineQueryManager {
         getPolicyQueryManager().deletePolicyViolations(component);
     }
 
-    void deletePolicyViolations(Project project) {
+    public void deletePolicyViolations(Project project) {
         getPolicyQueryManager().deletePolicyViolations(project);
+    }
+
+    public void deletePolicyViolationsOfComponent(final Component component) {
+        getPolicyQueryManager().deletePolicyViolationsOfComponent(component);
     }
 
     public long getAuditedCount(final Component component, final PolicyViolation.Type type) {
@@ -1369,15 +1381,17 @@ public class QueryManager extends AlpineQueryManager {
      * @param fetchGroups Fetch groups to use for this operation
      * @param <T>         Type of the object
      * @return The object if found, otherwise {@code null}
-     * @throws Exception When closing the query failed
      * @since 4.6.0
      */
-    public <T> T getObjectByUuid(final Class<T> clazz, final UUID uuid, final List<String> fetchGroups) throws Exception {
-        try (final Query<T> query = pm.newQuery(clazz)) {
+    public <T> T getObjectByUuid(final Class<T> clazz, final UUID uuid, final List<String> fetchGroups) {
+        final Query<T> query = pm.newQuery(clazz);
+        try {
             query.setFilter("uuid == :uuid");
             query.setParameters(uuid);
             query.getFetchPlan().setGroups(fetchGroups);
             return query.executeUnique();
+        } finally {
+            query.closeAll();
         }
     }
 

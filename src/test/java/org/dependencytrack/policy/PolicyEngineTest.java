@@ -339,4 +339,41 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
     }
+
+    @Test
+    public void removeExistingViolationsWhenNoPoliciesApplyTest() {
+        final var policy = qm.createPolicy("Policy-1993", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
+                {"group": "*", name: "*", version: "*"}
+                """);
+
+        final var project = new Project();
+        project.setName("project");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("foo");
+        component.setName("bar");
+        component.setVersion("1.2.3");
+        qm.createComponent(component, false);
+
+        final var policyEngine = new PolicyEngine();
+        assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
+
+        // Create another project and bind the policy to it.
+        // The policy is no longer global and no longer applies
+        // to the first project.
+        final var otherProject = new Project();
+        otherProject.setName("otherProject");
+        qm.persist(otherProject);
+        policy.setProjects(List.of(otherProject));
+        qm.persist(policy);
+
+        // During evaluation, existing violations caused by the policy
+        // must be removed.
+        assertThat(policyEngine.evaluate(component.getUuid())).isEmpty();
+        assertThat(qm.getAllPolicyViolations(project)).isEmpty();
+    }
+
 }

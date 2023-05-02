@@ -28,7 +28,6 @@ import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
@@ -56,7 +55,6 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -1069,6 +1067,35 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return result;
     }
 
+    /**
+     * Fetch the {@link UUID}s of all parents of a given {@link Project}.
+     *
+     * @param project The {@link Project} to fetch the parent {@link UUID}s for
+     * @return A {@link List} of {@link UUID}s
+     */
+    public List<UUID> getParents(final Project project) {
+        return getParents(project.getUuid(), new ArrayList<>());
+    }
+
+    private List<UUID> getParents(final UUID uuid, final List<UUID> parents) {
+        final UUID parentUuid;
+        final Query<Project> query = pm.newQuery(Project.class);
+        try {
+            query.setFilter("uuid == :uuid && parent != null");
+            query.setParameters(uuid);
+            query.setResult("parent.uuid");
+            parentUuid = query.executeResultUnique(UUID.class);
+        } finally {
+            query.closeAll();
+        }
+
+        if (parentUuid == null) {
+            return parents;
+        }
+
+        parents.add(parentUuid);
+        return getParents(parentUuid, parents);
+    }
 
     private static boolean isChildOf(Project project, UUID uuid) {
         boolean isChild = false;

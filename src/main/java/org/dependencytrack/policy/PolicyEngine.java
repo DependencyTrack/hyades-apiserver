@@ -26,7 +26,6 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
@@ -71,14 +70,20 @@ public class PolicyEngine {
         final Timer.Sample timerSample = Timer.start();
         final var violations = new ArrayList<PolicyViolation>();
         try (final var qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+            final Project project = qm.getObjectByUuid(Project.class, projectUuid, List.of(Project.FetchGroup.IDENTIFIERS.name()));
             if (project == null) {
                 LOGGER.warn("Unable to evaluate project %s against applicable policies, because it does not exist"
                         .formatted(projectUuid));
                 return violations;
             }
 
-            final List<Policy> policies = qm.getAllPolicies();
+            final List<Policy> policies = qm.getApplicablePolicies(project);
+            if (policies.isEmpty()) {
+                // With no applicable policies, there's no way to resolve violations.
+                // As a compensation, simply delete all violations associated with the project.
+                qm.deletePolicyViolations(project);
+                return Collections.emptyList();
+            }
 
             LOGGER.debug("Fetching first components page for project " + projectUuid);
             List<Component> components = fetchNextComponentsPage(qm.getPersistenceManager(), project, null);
@@ -102,16 +107,24 @@ public class PolicyEngine {
 
     public List<PolicyViolation> evaluate(UUID componentUuid) {
         final Timer.Sample timerSample = Timer.start();
-        List<PolicyViolation> violations = new ArrayList<>();
+        final List<PolicyViolation> violations = new ArrayList<>();
         try (final QueryManager qm = new QueryManager()) {
-            final List<Policy> policies = qm.getAllPolicies();
             final Component component = qm.getObjectByUuid(Component.class, componentUuid);
-            if (component != null) {
-                LOGGER.debug("Evaluating component " + componentUuid + " against applicable policies");
-                violations.addAll(this.evaluate(qm, policies, component));
-            } else {
+            if (component == null) {
                 LOGGER.warn("Unable to evaluate component " + componentUuid + " against applicable policies, because it does not exist");
+                return Collections.emptyList();
             }
+
+            final List<Policy> policies = qm.getApplicablePolicies(component.getProject());
+            if (policies.isEmpty()) {
+                // With no applicable policies, there's no way to resolve violations.
+                // As a compensation, simply delete all violations associated with the component.
+                qm.deletePolicyViolationsOfComponent(component);
+                return Collections.emptyList();
+            }
+
+            LOGGER.debug("Evaluating component " + componentUuid + " against applicable policies");
+            violations.addAll(this.evaluate(qm, policies, component));
         } finally {
             timerSample.stop(Timer
                     .builder("policy_evaluation")
@@ -124,28 +137,25 @@ public class PolicyEngine {
     private List<PolicyViolation> evaluate(final QueryManager qm, final List<Policy> policies, Component component) {
         final List<PolicyViolation> policyViolations = new ArrayList<>();
         final List<PolicyViolation> existingPolicyViolations = qm.detach(qm.getAllPolicyViolations(component));
-        for (Policy policy : policies) {
-            if (policy.isGlobal() || isPolicyAssignedToProject(policy, component.getProject())
-                    || isPolicyAssignedToProjectTag(policy, component.getProject())) {
-                LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy (" + policy.getUuid() + ")");
-                final List<PolicyConditionViolation> policyConditionViolations = new ArrayList<>();
-                int policyConditionsViolated = 0;
-                for (final PolicyEvaluator evaluator : evaluators) {
-                    evaluator.setQueryManager(qm);
-                    final List<PolicyConditionViolation> policyConditionViolationsFromEvaluator = evaluator.evaluate(policy, component);
-                    if (!policyConditionViolationsFromEvaluator.isEmpty()) {
-                        policyConditionViolations.addAll(policyConditionViolationsFromEvaluator);
-                        policyConditionsViolated += (int) policyConditionViolationsFromEvaluator.stream()
-                                .map(pcv -> pcv.getPolicyCondition().getId())
-                                .sorted()
-                                .distinct()
-                                .count();
-                    }
+        for (final Policy policy : policies) {
+            LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy (" + policy.getUuid() + ")");
+            final List<PolicyConditionViolation> policyConditionViolations = new ArrayList<>();
+            int policyConditionsViolated = 0;
+            for (final PolicyEvaluator evaluator : evaluators) {
+                evaluator.setQueryManager(qm);
+                final List<PolicyConditionViolation> policyConditionViolationsFromEvaluator = evaluator.evaluate(policy, component);
+                if (!policyConditionViolationsFromEvaluator.isEmpty()) {
+                    policyConditionViolations.addAll(policyConditionViolationsFromEvaluator);
+                    policyConditionsViolated += (int) policyConditionViolationsFromEvaluator.stream()
+                            .map(pcv -> pcv.getPolicyCondition().getId())
+                            .sorted()
+                            .distinct()
+                            .count();
                 }
-                List<PolicyViolation> result = addToPolicyViolation(qm, policy, policyConditionsViolated, policyConditionViolations);
-                if (!result.isEmpty())
-                    policyViolations.addAll(result);
             }
+            List<PolicyViolation> result = addToPolicyViolation(qm, policy, policyConditionsViolated, policyConditionViolations);
+            if (!result.isEmpty())
+                policyViolations.addAll(result);
         }
         qm.reconcilePolicyViolations(component, policyViolations);
         for (final PolicyViolation pv : qm.getAllPolicyViolations(component)) {
@@ -165,13 +175,6 @@ public class PolicyEngine {
             return createPolicyViolations(qm, policyConditionViolations);
         }
         return Collections.emptyList();
-    }
-
-    private boolean isPolicyAssignedToProject(Policy policy, Project project) {
-        if (policy.getProjects() == null || policy.getProjects().isEmpty()) {
-            return false;
-        }
-        return (policy.getProjects().stream().anyMatch(p -> p.getId() == project.getId()) || (Boolean.TRUE.equals(policy.isIncludeChildren()) && isPolicyAssignedToParentProject(policy, project)));
     }
 
     private List<PolicyViolation> createPolicyViolations(final QueryManager qm, final List<PolicyConditionViolation> pcvList) {
@@ -197,32 +200,6 @@ public class PolicyEngine {
                     PolicyViolation.Type.OPERATIONAL;
             case LICENSE, LICENSE_GROUP -> PolicyViolation.Type.LICENSE;
         };
-    }
-
-
-    private boolean isPolicyAssignedToProjectTag(Policy policy, Project project) {
-        if (policy.getTags() == null || policy.getTags().isEmpty()) {
-            return false;
-        }
-        boolean flag = false;
-        for (Tag projectTag : project.getTags()) {
-            flag = policy.getTags().stream().anyMatch(policyTag -> policyTag.getId() == projectTag.getId());
-            if (flag) {
-                break;
-            }
-        }
-        return flag;
-    }
-
-
-    private boolean isPolicyAssignedToParentProject(Policy policy, Project child) {
-        if (child.getParent() == null) {
-            return false;
-        }
-        if (policy.getProjects().stream().anyMatch(p -> p.getId() == child.getParent().getId())) {
-            return true;
-        }
-        return isPolicyAssignedToParentProject(policy, child.getParent());
     }
 
     private static List<Component> fetchNextComponentsPage(final PersistenceManager pm, final Project project,
