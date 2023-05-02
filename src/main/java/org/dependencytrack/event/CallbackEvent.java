@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.event;
 
+import alpine.event.framework.AbstractChainableEvent;
 import alpine.event.framework.Event;
 
 import java.util.Objects;
@@ -27,7 +28,7 @@ import java.util.Objects;
  *
  * @since 4.6.0
  */
-public class CallbackEvent implements Event {
+public class CallbackEvent extends AbstractChainableEvent {
 
     private final Runnable callback;
 

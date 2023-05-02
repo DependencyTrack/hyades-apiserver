@@ -23,6 +23,7 @@ import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
@@ -46,7 +47,8 @@ import java.util.concurrent.TimeUnit;
 public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
-    private static final long BATCH_SIZE = SystemUtil.getCpuCores();
+    private static final int MAX_CONCURRENCY = SystemUtil.getCpuCores();
+    private static final int BATCH_SIZE = MAX_CONCURRENCY * 100;
 
     @Override
     public void inform(final Event e) {
@@ -89,16 +91,22 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             while (!activeProjects.isEmpty()) {
                 final long firstId = activeProjects.get(0).id();
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
-                final int batchCount = activeProjects.size();
 
-                final var countDownLatch = new CountDownLatch(batchCount);
+                // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
+                final List<List<ProjectProjection>> partitions = ListUtils.partition(activeProjects, MAX_CONCURRENCY);
+                final var countDownLatch = new CountDownLatch(partitions.size());
 
-                for (final ProjectProjection project : activeProjects) {
-                    LOGGER.debug("Dispatching metrics update event for project " + project.uuid());
-                    final var callbackEvent = new CallbackEvent(countDownLatch::countDown);
-                    Event.dispatch(new ProjectMetricsUpdateEvent(project.uuid())
-                            .onSuccess(callbackEvent)
-                            .onFailure(callbackEvent));
+                for (final List<ProjectProjection> partition : partitions) {
+                    final var partitionEvent = new CallbackEvent(() -> {
+                        for (final ProjectProjection project : partition) {
+                            new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.uuid()));
+                        }
+                    });
+
+                    final var countDownEvent = new CallbackEvent(countDownLatch::countDown);
+                    Event.dispatch(partitionEvent
+                            .onSuccess(countDownEvent)
+                            .onFailure(countDownEvent));
                 }
 
                 LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
