@@ -12,6 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/**
+ * A {@link ServletContextListener} that ensures that stored procedures are available.
+ *
+ * @since 5.0.0
+ */
 public class StoredProcedureInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(StoredProcedureInitializer.class);

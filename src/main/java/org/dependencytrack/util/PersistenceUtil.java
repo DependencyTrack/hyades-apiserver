@@ -52,11 +52,24 @@ public final class PersistenceUtil {
                 && PSQLState.UNIQUE_VIOLATION.getState().equals(se.getSQLState());
     }
 
+    /**
+     * Execute a given stored procedure.
+     *
+     * @param name Name of the stored procedure to execute
+     * @since 5.0.0
+     */
     public static void executeStoredProcedure(final String name) {
         executeStoredProcedure(name, query -> {
         });
     }
 
+    /**
+     * Execute a given stored procedure and customize the execution.
+     *
+     * @param name          Name of the stored procedure to execute
+     * @param queryConsumer {@link Consumer} for customizing the {@link StoredProcedureQuery}
+     * @since 5.0.0
+     */
     public static void executeStoredProcedure(final String name, final Consumer<StoredProcedureQuery> queryConsumer) {
         try (final var qm = new QueryManager()) {
             final Query<?> query = qm.getPersistenceManager().newQuery("STOREDPROC", "\"%s\"".formatted(name));
