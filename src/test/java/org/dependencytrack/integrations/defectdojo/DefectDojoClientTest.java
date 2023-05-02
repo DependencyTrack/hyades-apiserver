@@ -19,119 +19,70 @@
 package org.dependencytrack.integrations.defectdojo;
 
 import alpine.Config;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.EqualToPattern;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.http.HttpHeaders;
+import org.apache.http.entity.ContentType;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.rules.ExpectedException;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.verify.VerificationTimes;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.URL;
 
-import static org.mockserver.integration.ClientAndServer.startClientAndServer;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
 public class DefectDojoClientTest {
-
-    private static ClientAndServer mockServer;
-    private static MockServerClient testClient;
-
-    @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Before
     public void before() {
         Config.enableUnitTests();
-        environmentVariables.set("http_proxy", "http://127.0.0.1:1080");
-        testClient = new MockServerClient("localhost", 1080);
     }
-
     @After
     public void after() {
-        testClient.clear(
-                request()
-                    .withPath("/defectdojo/api/v2/import-scan/")
-        );
-        testClient.clear(
-                request()
-                    .withPath("/defectdojo/api/v2/reimport-scan/")
-        );
         KafkaProducerInitializer.tearDown();
     }
 
-    @BeforeClass
-    public static void beforeClass() {
-        mockServer = startClientAndServer(1080);
-    }
-
-    @AfterClass
-    public static void afterClass() {
-        mockServer.stop();
-    }
+    @Rule
+    public WireMockRule wireMockRule = new WireMockRule();
 
     @Test
     public void testUploadFindingsPositiveCase() throws Exception {
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/defectdojo/api/v2/import-scan/"))
+                .withMultipartRequestBody(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo("12345"))));
+        InputStream stream = new ByteArrayInputStream("test input".getBytes());
         String token = "db975c97-98b1-4988-8d6a-9c3e044dfff3";
         String engagementId = "12345";
-        testClient.when(
-                        request()
-                                .withMethod("POST")
-                                .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                                .withPath("/defectdojo/api/v2/import-scan/")
-                )
-                .respond(
-                        response()
-                                .withStatusCode(201)
-                                .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                );
         DefectDojoUploader uploader = new DefectDojoUploader();
-        DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
-        client.uploadDependencyTrackFindings(token, engagementId, new NullInputStream(0));
-        testClient.verify(
-                request()
-                        .withMethod("POST")
-                        .withPath("/defectdojo/api/v2/import-scan/"),
-                VerificationTimes.exactly(1)
-        );
+        DefectDojoClient client = new DefectDojoClient(uploader, new URL(wireMockRule.baseUrl() + "/defectdojo"));
+        client.uploadDependencyTrackFindings(token, engagementId, stream);
+
+        WireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/defectdojo/api/v2/import-scan/"))
+                .withAnyRequestBodyPart(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo("12345")
+                        )).withAnyRequestBodyPart(WireMock.aMultipart().withName("file")
+                        .withBody(WireMock.equalTo("test input")).withHeader("Content-Type", WireMock.equalTo(ContentType.APPLICATION_OCTET_STREAM.getMimeType()))));
     }
 
     @Test
     public void testUploadFindingsNegativeCase() throws Exception {
         String token = "db975c97-98b1-4988-8d6a-9c3e044dfff2";
         String engagementId = "";
-        testClient.when(
-                        request()
-                                .withMethod("POST")
-                                .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                                .withPath("/defectdojo/api/v2/import-scan/")
-                )
-                .respond(
-                        response()
-                                .withStatusCode(400)
-                                .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                );
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/defectdojo/api/v2/import-scan/"))
+                .withHeader(HttpHeaders.AUTHORIZATION, new EqualToPattern("Token " + token))
+                .withMultipartRequestBody(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo(""))).willReturn(WireMock.aResponse().withStatus(400).withHeader(HttpHeaders.CONTENT_TYPE, "application/json")));
         DefectDojoUploader uploader = new DefectDojoUploader();
-        DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
+        DefectDojoClient client = new DefectDojoClient(uploader, new URL(wireMockRule.baseUrl() + "/defectdojo"));
         client.uploadDependencyTrackFindings(token, engagementId, new NullInputStream(16));
-        testClient.verify(
-                request()
-                        .withMethod("POST")
-                        .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                        .withPath("/defectdojo/api/v2/import-scan/"),
-                VerificationTimes.exactly(1)
-        );
+        WireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/defectdojo/api/v2/import-scan/"))
+                .withAnyRequestBodyPart(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo("")
+                        )));
     }
 
     @Test
@@ -139,26 +90,17 @@ public class DefectDojoClientTest {
         String token = "db975c97-98b1-4988-8d6a-9c3e044dfff3";
         String testId = "15";
         String engagementId = "67890";
-        testClient.when(
-                        request()
-                                .withMethod("POST")
-                                .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                                .withPath("/defectdojo/api/v2/reimport-scan/")
-                )
-                .respond(
-                        response()
-                                .withStatusCode(201)
-                                .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                );
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/defectdojo/api/v2/reimport-scan/"))
+                .withHeader(HttpHeaders.AUTHORIZATION, new EqualToPattern("Token " + token))
+                .withMultipartRequestBody(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo(engagementId))).willReturn(WireMock.aResponse().withStatus(201).withHeader(HttpHeaders.CONTENT_TYPE, "application/json")));
         DefectDojoUploader uploader = new DefectDojoUploader();
-        DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
-        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(0), testId, false);
-        testClient.verify(
-                request()
-                        .withMethod("POST")
-                        .withPath("/defectdojo/api/v2/reimport-scan/"),
-                VerificationTimes.exactly(1)
-        );
+        DefectDojoClient client = new DefectDojoClient(uploader, new URL(wireMockRule.baseUrl() + "/defectdojo"));
+        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(0), testId);
+        WireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/defectdojo/api/v2/reimport-scan/"))
+                .withAnyRequestBodyPart(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo(engagementId)
+                        )));
     }
 
     @Test
@@ -166,26 +108,16 @@ public class DefectDojoClientTest {
         String token = "db975c97-98b1-4988-8d6a-9c3e044dfff2";
         String testId = "14";
         String engagementId = "";
-        testClient.when(
-                        request()
-                                .withMethod("POST")
-                                .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                                .withPath("/defectdojo/api/v2/reimport-scan/")
-                )
-                .respond(
-                        response()
-                                .withStatusCode(400)
-                                .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                );
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/defectdojo/api/v2/reimport-scan/"))
+                .withHeader(HttpHeaders.AUTHORIZATION, new EqualToPattern("Token " + token))
+                .withMultipartRequestBody(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo(""))).willReturn(WireMock.aResponse().withStatus(400).withHeader(HttpHeaders.CONTENT_TYPE, "application/json")));
         DefectDojoUploader uploader = new DefectDojoUploader();
-        DefectDojoClient client = new DefectDojoClient(uploader, new URL("https://localhost/defectdojo"));
-        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(16), testId, false);
-        testClient.verify(
-                request()
-                        .withMethod("POST")
-                        .withHeader(HttpHeaders.AUTHORIZATION, "Token " + token)
-                        .withPath("/defectdojo/api/v2/reimport-scan/"),
-                VerificationTimes.exactly(1)
-        );
+        DefectDojoClient client = new DefectDojoClient(uploader, new URL(wireMockRule.baseUrl() + "/defectdojo"));
+        client.reimportDependencyTrackFindings(token, engagementId, new NullInputStream(16), testId);
+        WireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/defectdojo/api/v2/reimport-scan/"))
+                .withAnyRequestBodyPart(WireMock.aMultipart().withName("engagement").
+                        withBody(WireMock.equalTo(engagementId)
+                        )));
     }
 }

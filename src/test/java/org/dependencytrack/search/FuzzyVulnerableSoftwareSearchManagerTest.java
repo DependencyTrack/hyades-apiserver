@@ -3,10 +3,13 @@ package org.dependencytrack.search;
 import alpine.Config;
 import org.apache.commons.io.FileUtils;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.persistence.QueryManager;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import us.springett.parsers.cpe.Cpe;
 import us.springett.parsers.cpe.CpeParser;
 import us.springett.parsers.cpe.exceptions.CpeEncodingException;
@@ -20,9 +23,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static org.mockito.Mockito.*;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class FuzzyVulnerableSoftwareSearchManagerTest {
     private static final File INDEX_DIRECTORY;
@@ -30,6 +38,7 @@ public class FuzzyVulnerableSoftwareSearchManagerTest {
     private FuzzyVulnerableSoftwareSearchManager toTest = new FuzzyVulnerableSoftwareSearchManager(true);
     private QueryManager qm;
     private final VulnerableSoftware VALUE_TO_MATCH = new VulnerableSoftware();
+
     static {
         INDEX_DIRECTORY = new File(
                 Config.getInstance().getDataDirectorty(),
@@ -53,6 +62,7 @@ public class FuzzyVulnerableSoftwareSearchManagerTest {
         VulnerableSoftwareIndexer.getInstance().add(vs);
         VulnerableSoftwareIndexer.getInstance().commit();
     }
+
     @AfterClass
     public static void restoreVsIndex() throws IOException {
         VulnerableSoftwareIndexer.getInstance().close();
@@ -92,7 +102,7 @@ public class FuzzyVulnerableSoftwareSearchManagerTest {
 
     @Test
     public void getLuceneCpeRegexp() throws CpeValidationException, CpeEncodingException {
-        us.springett.parsers.cpe.Cpe os = new us.springett.parsers.cpe.Cpe( Part.OPERATING_SYSTEM, "vendor", "product", "1\\.0", "2", "33","en", "inside", "Vista", "x86", "other");
+        us.springett.parsers.cpe.Cpe os = new us.springett.parsers.cpe.Cpe(Part.OPERATING_SYSTEM, "vendor", "product", "1\\.0", "2", "33", "en", "inside", "Vista", "x86", "other");
 
         assertEquals("cpe23:/cpe\\:2\\.3\\:a\\:.*\\:.*\\:.*\\:.*\\:.*\\:.*\\:.*\\:.*\\:.*\\:.*/", FuzzyVulnerableSoftwareSearchManager.getLuceneCpeRegexp("cpe:2.3:a:*:*:*:*:*:*:*:*:*:*"));
         assertEquals("cpe23:/cpe\\:2\\.3\\:o\\:vendor\\:product\\:1.0\\:2\\:33\\:en\\:inside\\:Vista\\:x86\\:other/", FuzzyVulnerableSoftwareSearchManager.getLuceneCpeRegexp(os.toCpe23FS()));
@@ -100,13 +110,13 @@ public class FuzzyVulnerableSoftwareSearchManagerTest {
     }
 
     @Test
-    @Ignore ("This demonstrates assumptions about CPE matching but does not exercise code")
+    @Ignore("This demonstrates assumptions about CPE matching but does not exercise code")
     public void cpeMatching() {
         String lucene = FuzzyVulnerableSoftwareSearchManager.getLuceneCpeRegexp("cpe:2.3:a:*:file:*:*:*:*:*:*:*:*");
-        String regex = lucene.substring(7, lucene.length()-1);
+        String regex = lucene.substring(7, lucene.length() - 1);
         Pattern pattern = Pattern.compile(regex);
         assertFalse(pattern.matcher(
-        "cpe:2.3:a:dell:emc_vnx2_operating_environment:*:*:*:*:*:file:*:*").matches());
+                "cpe:2.3:a:dell:emc_vnx2_operating_environment:*:*:*:*:*:file:*:*").matches());
         assertTrue(pattern.matcher(
                 "cpe:2.3:a:*:file:*:*:*:*:*:file:*:*").matches());
     }

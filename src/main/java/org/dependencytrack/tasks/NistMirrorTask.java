@@ -21,7 +21,7 @@ public class NistMirrorTask implements LoggableSubscriber {
         try (final QueryManager qm = new QueryManager()) {
             final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_NVD_ENABLED.getGroupName(), VULNERABILITY_SOURCE_NVD_ENABLED.getPropertyName());
             this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-         }
+        }
     }
 
     /**

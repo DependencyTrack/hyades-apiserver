@@ -115,7 +115,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 return Response.status(Response.Status.BAD_REQUEST).entity("The creation of a new default publisher is forbidden").build();
             }
             if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
-                clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
+                    clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
                 NotificationPublisher notificationPublisherCreated = qm.createNotificationPublisher(
                         jsonNotificationPublisher.getName(), jsonNotificationPublisher.getDescription(),
                         jsonNotificationPublisher.getPublisherClass(), jsonNotificationPublisher.getTemplate(), jsonNotificationPublisher.getTemplateMimeType(),
@@ -201,7 +201,7 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteNotificationPublisher(@ApiParam(value = "The UUID of the notification publisher to delete", required = true)
-                                               @PathParam("notificationPublisherUuid") String notificationPublisherUuid) {
+                                                @PathParam("notificationPublisherUuid") String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
             if (notificationPublisher != null) {

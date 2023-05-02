@@ -36,6 +36,7 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.epss.EpssParser;
 import org.dependencytrack.persistence.QueryManager;
+import org.apache.http.HttpStatus;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.io.Closeable;
@@ -142,7 +143,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
                 final StatusLine status = response.getStatusLine();
                 final long end = System.currentTimeMillis();
                 metricDownloadTime += end - start;
-                if (status.getStatusCode() == 200) {
+                if (status.getStatusCode() == HttpStatus.SC_OK) {
                     LOGGER.info("Downloading...");
                     try (InputStream in = response.getEntity().getContent()) {
                         file = new File(outputDir, filename);

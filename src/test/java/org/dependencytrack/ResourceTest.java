@@ -132,7 +132,7 @@ public abstract class ResourceTest extends JerseyTest {
 
     public void initializeWithPermissions(Permissions... permissions) {
         List<Permission> permissionList = new ArrayList<>();
-        for (Permissions permission: permissions) {
+        for (Permissions permission : permissions) {
             permissionList.add(qm.createPermission(permission.name(), null));
         }
         testUser.setPermissions(permissionList);
