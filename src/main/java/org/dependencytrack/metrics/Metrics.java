@@ -18,8 +18,11 @@
  */
 package org.dependencytrack.metrics;
 
-import alpine.common.logging.Logger;
 import org.datanucleus.metadata.StoredProcQueryParameterMode;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.util.PersistenceUtil;
 
 import java.util.UUID;
@@ -31,8 +34,6 @@ import java.util.UUID;
  * @since 3.0.0
  */
 public final class Metrics {
-
-    private static final Logger LOGGER = Logger.getLogger(Metrics.class);
 
     private Metrics() {
     }
@@ -49,10 +50,27 @@ public final class Metrics {
         return ratio;
     }
 
+    /**
+     * Update metrics for the entire portfolio.
+     * <p>
+     * Note: This does not implicitly update metrics for all projects in the portfolio,
+     * it merely aggregates all existing {@link ProjectMetrics}.
+     *
+     * @since 5.0.0
+     */
     public static void updatePortfolioMetrics() {
         PersistenceUtil.executeStoredProcedure("UPDATE_PORTFOLIO_METRICS");
     }
 
+    /**
+     * Update metrics for a given {@link Project}.
+     * <p>
+     * Note: This does not implicitly update metrics for all components in the project,
+     * it merely aggregates all existing {@link DependencyMetrics}.
+     *
+     * @param projectUuid {@link UUID} of the {@link Project} to update metrics for
+     * @since 5.0.0
+     */
     public static void updateProjectMetrics(final UUID projectUuid) {
         PersistenceUtil.executeStoredProcedure("UPDATE_PROJECT_METRICS", query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
@@ -60,6 +78,12 @@ public final class Metrics {
         });
     }
 
+    /**
+     * Update metrics for a given {@link Component}.
+     *
+     * @param componentUuid {@link UUID} of the {@link Component} to update metrics for
+     * @since 5.0.0
+     */
     public static void updateComponentMetrics(final UUID componentUuid) {
         PersistenceUtil.executeStoredProcedure("UPDATE_COMPONENT_METRICS", query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);

@@ -48,17 +48,34 @@ public class ProjectMetricsUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final ProjectMetricsUpdateEvent event) {
             try {
-                updateMetrics(event.getUuid());
+                updateMetrics(event.getUuid(), event.isForceRefresh());
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while updating metrics for project " + event.getUuid(), ex);
             }
         }
     }
 
-    private static void updateMetrics(final UUID uuid) throws Exception {
+    private static void updateMetrics(final UUID uuid, final boolean forceRefresh) throws Exception {
         LOGGER.info("Executing metrics update for project " + uuid);
         final Timer.Sample timerSample = Timer.start();
 
+        try {
+            if (forceRefresh) {
+                LOGGER.debug("Refreshing component metrics for project " + uuid);
+                refreshComponentMetrics(uuid);
+            }
+
+            Metrics.updateProjectMetrics(uuid);
+        } finally {
+            final long durationNanos = timerSample.stop(Timer
+                    .builder("metrics_update")
+                    .tag("target", "project")
+                    .register(alpine.common.metrics.Metrics.getRegistry()));
+            LOGGER.debug("Completed metrics update for project " + uuid + " in " + Duration.ofNanos(durationNanos));
+        }
+    }
+
+    private static void refreshComponentMetrics(final UUID uuid) throws Exception {
         try (final QueryManager qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
@@ -72,15 +89,16 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
             while (!components.isEmpty()) {
                 for (final ComponentProjection component : components) {
+                    final Timer.Sample componentTimerSample = Timer.start();
                     try {
                         Metrics.updateComponentMetrics(component.uuid());
-                    } catch (NoSuchElementException ex) {
-                        // This will happen when a component or its associated project have been deleted after the
-                        // task started. Instead of splurging the log with to-be-expected errors, we just log it
-                        // with DEBUG, and ignore it otherwise.
-                        LOGGER.debug("Couldn't update metrics of component " + component.uuid() + " because the component was not found", ex);
                     } catch (Exception ex) {
                         LOGGER.error("An unexpected error occurred while updating metrics of component " + component.uuid(), ex);
+                    } finally {
+                        componentTimerSample.stop(Timer
+                                .builder("metrics_update")
+                                .tag("target", "component")
+                                .register(alpine.common.metrics.Metrics.getRegistry()));
                     }
                 }
 
@@ -88,14 +106,6 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 final long lastId = components.get(components.size() - 1).id();
                 components = fetchNextComponentsPage(pm, project, lastId);
             }
-
-            Metrics.updateProjectMetrics(uuid);
-        } finally {
-            final long durationNanos = timerSample.stop(Timer
-                    .builder("metrics_update")
-                    .tag("target", "project")
-                    .register(alpine.common.metrics.Metrics.getRegistry()));
-            LOGGER.debug("Completed metrics update for project " + uuid + " in " + Duration.ofNanos(durationNanos));
         }
     }
 

@@ -32,9 +32,20 @@ public class PortfolioMetricsUpdateEvent extends SingletonCapableEvent {
 
     public static final UUID CHAIN_IDENTIFIER = UUID.fromString("1d652235-9480-4033-a24e-c748811e24d6");
 
+    private final boolean forceRefresh;
+
     public PortfolioMetricsUpdateEvent() {
+        this(true);
+    }
+
+    public PortfolioMetricsUpdateEvent(final boolean forceRefresh) {
         this.setChainIdentifier(CHAIN_IDENTIFIER);
         this.setSingleton(true);
+        this.forceRefresh = forceRefresh;
+    }
+
+    public boolean isForceRefresh() {
+        return forceRefresh;
     }
 
 }

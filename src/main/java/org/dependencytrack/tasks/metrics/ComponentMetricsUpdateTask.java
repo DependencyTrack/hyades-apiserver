@@ -21,9 +21,12 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
+
+import java.time.Duration;
 
 /**
  * A {@link Subscriber} task that updates {@link Component} metrics.
@@ -37,10 +40,18 @@ public class ComponentMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final ComponentMetricsUpdateEvent event) {
+            LOGGER.debug("Executing metrics update for component " + event.uuid());
+            final Timer.Sample timerSample = Timer.start();
             try {
                 Metrics.updateComponentMetrics(event.uuid());
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while updating metrics of component " + event.uuid(), ex);
+            } finally {
+                final long durationNanos = timerSample.stop(Timer
+                        .builder("metrics_update")
+                        .tag("target", "component")
+                        .register(alpine.common.metrics.Metrics.getRegistry()));
+                LOGGER.debug("Completed metrics update for component " + event.uuid() + " in " + Duration.ofNanos(durationNanos));
             }
         }
     }

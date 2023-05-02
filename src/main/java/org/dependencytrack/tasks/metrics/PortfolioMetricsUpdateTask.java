@@ -19,13 +19,24 @@
 package org.dependencytrack.tasks.metrics;
 
 import alpine.common.logging.Logger;
+import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
+import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.QueryManager;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A {@link Subscriber} task that updates portfolio metrics.
@@ -35,31 +46,94 @@ import java.time.Duration;
 public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
+    private static final long BATCH_SIZE = SystemUtil.getCpuCores();
 
     @Override
     public void inform(final Event e) {
-        if (e instanceof PortfolioMetricsUpdateEvent) {
+        if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                updateMetrics();
+                updateMetrics(event.isForceRefresh());
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while updating portfolio metrics", ex);
             }
         }
     }
 
-    private void updateMetrics() {
+    private void updateMetrics(final boolean forceRefresh) throws Exception {
         LOGGER.info("Executing portfolio metrics update");
         final Timer.Sample timerSample = Timer.start();
 
         try {
+            if (forceRefresh) {
+                LOGGER.info("Refreshing project metrics");
+                refreshProjectMetrics();
+            }
+
             Metrics.updatePortfolioMetrics();
         } finally {
             final long durationNanos = timerSample.stop(Timer
                     .builder("metrics_update")
                     .tag("target", "portfolio")
                     .register(alpine.common.metrics.Metrics.getRegistry()));
-            LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
+            LOGGER.debug("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
         }
+    }
+
+    private static void refreshProjectMetrics() throws Exception {
+        try (final var qm = new QueryManager().withL2CacheDisabled()) {
+            final PersistenceManager pm = qm.getPersistenceManager();
+
+            LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
+            List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
+
+            while (!activeProjects.isEmpty()) {
+                final long firstId = activeProjects.get(0).id();
+                final long lastId = activeProjects.get(activeProjects.size() - 1).id();
+                final int batchCount = activeProjects.size();
+
+                final var countDownLatch = new CountDownLatch(batchCount);
+
+                for (final ProjectProjection project : activeProjects) {
+                    LOGGER.debug("Dispatching metrics update event for project " + project.uuid());
+                    final var callbackEvent = new CallbackEvent(countDownLatch::countDown);
+                    Event.dispatch(new ProjectMetricsUpdateEvent(project.uuid())
+                            .onSuccess(callbackEvent)
+                            .onFailure(callbackEvent));
+                }
+
+                LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
+                if (!countDownLatch.await(15, TimeUnit.MINUTES)) {
+                    // Depending on the system load, it may take a while for the queued events
+                    // to be processed. And depending on how large the projects are, it may take a
+                    // while for the processing of the respective event to complete.
+                    // It is unlikely though that either of these situations causes a block for
+                    // over 15 minutes. If that happens, the system is under-resourced.
+                    LOGGER.warn("Updating metrics for projects " + firstId + "-" + lastId +
+                            " took longer than expected (15m); Proceeding with potentially stale data");
+                }
+                LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
+                LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
+                activeProjects = fetchNextActiveProjectsPage(pm, lastId);
+            }
+        }
+    }
+
+    private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
+        try (final Query<Project> query = pm.newQuery(Project.class)) {
+            if (lastId == null) {
+                query.setFilter("(active == null || active == true)");
+            } else {
+                query.setFilter("(active == null || active == true) && id < :lastId");
+                query.setParameters(lastId);
+            }
+            query.setOrdering("id DESC");
+            query.range(0, BATCH_SIZE);
+            query.setResult("id, uuid");
+            return List.copyOf(query.executeResultList(ProjectProjection.class));
+        }
+    }
+
+    public record ProjectProjection(long id, UUID uuid) {
     }
 
 }

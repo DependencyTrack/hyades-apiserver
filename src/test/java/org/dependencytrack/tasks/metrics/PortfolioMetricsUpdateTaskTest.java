@@ -30,6 +30,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
@@ -38,6 +39,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
@@ -152,6 +154,29 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
         qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
+        // Create "old" metrics data points for all three projects.
+        // When the calculating portfolio metrics, only the latest data point for each project
+        // must be considered. Because the update task calculates new project metrics data points,
+        // the ones created below must be ignored.
+        final var projectUnauditedOldMetrics = new ProjectMetrics();
+        projectUnauditedOldMetrics.setProject(projectUnaudited);
+        projectUnauditedOldMetrics.setCritical(666);
+        projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectUnauditedOldMetrics);
+        final var projectAuditedOldMetrics = new ProjectMetrics();
+        projectAuditedOldMetrics.setProject(projectAudited);
+        projectAuditedOldMetrics.setHigh(666);
+        projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectAuditedOldMetrics);
+        final var projectSuppressedOldMetrics = new ProjectMetrics();
+        projectSuppressedOldMetrics.setProject(projectSuppressed);
+        projectSuppressedOldMetrics.setMedium(666);
+        projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectSuppressedOldMetrics);
+
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -229,6 +254,29 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentSuppressed = qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
+
+        // Create "old" metrics data points for all three projects.
+        // When the calculating portfolio metrics, only the latest data point for each project
+        // must be considered. Because the update task calculates new project metrics data points,
+        // the ones created below must be ignored.
+        final var projectUnauditedOldMetrics = new ProjectMetrics();
+        projectUnauditedOldMetrics.setProject(projectUnaudited);
+        projectUnauditedOldMetrics.setPolicyViolationsFail(666);
+        projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectUnauditedOldMetrics);
+        final var projectAuditedOldMetrics = new ProjectMetrics();
+        projectAuditedOldMetrics.setProject(projectAudited);
+        projectAuditedOldMetrics.setPolicyViolationsWarn(666);
+        projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectAuditedOldMetrics);
+        final var projectSuppressedOldMetrics = new ProjectMetrics();
+        projectSuppressedOldMetrics.setProject(projectSuppressed);
+        projectSuppressedOldMetrics.setPolicyViolationsInfo(666);
+        projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(projectSuppressedOldMetrics);
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
