@@ -12,6 +12,7 @@ import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.persistence.QueryManager;
+import org.apache.http.HttpStatus;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -72,7 +73,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
         HttpUriRequest request = new HttpGet(url);
         try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
             final StatusLine status = response.getStatusLine();
-            if (status.getStatusCode() == 200) {
+            if (status.getStatusCode() == HttpStatus.SC_OK) {
                 try (InputStream in = response.getEntity().getContent();
                      Scanner scanner = new Scanner(in, StandardCharsets.UTF_8)) {
                     while (scanner.hasNextLine()) {

@@ -31,14 +31,17 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.vulndb.ModelConverter;
+import org.dependencytrack.parser.vulndb.VulnDbParser;
+import org.dependencytrack.parser.vulndb.model.Product;
+import org.dependencytrack.parser.vulndb.model.Results;
+import org.dependencytrack.parser.vulndb.model.Vendor;
+import org.dependencytrack.parser.vulndb.model.Version;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 import us.springett.parsers.cpe.Cpe;
 import us.springett.parsers.cpe.CpeParser;
 import us.springett.parsers.cpe.exceptions.CpeEncodingException;
 import us.springett.parsers.cpe.exceptions.CpeParsingException;
-import us.springett.vulndbdatamirror.parser.VulnDbParser;
-import us.springett.vulndbdatamirror.parser.model.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +53,7 @@ import java.util.Locale;
  * Subscriber task that performs synchronization with VulnDB mirrored data.
  * This task relies on an existing mirror generated from vulndb-data-mirror. The mirror must exist
  * in a 'vulndb' subdirectory of the Dependency-Track data directory. i.e.  ~/dependency-track/vulndb
- *
+ * <p>
  * https://github.com/stevespringett/vulndb-data-mirror
  *
  * @author Steve Springett
@@ -81,13 +84,13 @@ public class VulnDbSyncTask implements LoggableSubscriber {
                     LOGGER.info("Parsing: " + file.getName());
                     final VulnDbParser parser = new VulnDbParser();
                     try {
-                        final Results results = parser.parse(file, us.springett.vulndbdatamirror.parser.model.Vulnerability.class);
+                        final Results results = parser.parse(file, org.dependencytrack.parser.vulndb.model.Vulnerability.class);
                         updateDatasource(results);
                     } catch (IOException ex) {
                         LOGGER.error("An error occurred while parsing VulnDB payload: " + file.getName(), ex);
                         successful = false;
                         String content = "An error occurred parsing VulnDB payload. Check log for details. " + ex.getMessage();
-                        NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content , NotificationLevel.ERROR);
+                        NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content, NotificationLevel.ERROR);
                     }
                 }
             }
@@ -95,21 +98,22 @@ public class VulnDbSyncTask implements LoggableSubscriber {
             LOGGER.info("VulnDB mirror synchronization task complete");
             if (successful) {
                 String content = "Mirroring of VulnDB completed successfully";
-                NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content , NotificationLevel.INFORMATIONAL);
+                NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.VULNDB_MIRROR, content, NotificationLevel.INFORMATIONAL);
             }
         }
     }
 
     /**
      * Synchronizes the VulnDB vulnerabilities with the internal Dependency-Track database.
+     *
      * @param results the results to synchronize
      */
     private void updateDatasource(final Results results) {
         LOGGER.info("Updating datasource with VulnDB vulnerabilities");
         try (QueryManager qm = new QueryManager()) {
-            for (final Object o: results.getResults()) {
-                if (o instanceof us.springett.vulndbdatamirror.parser.model.Vulnerability) {
-                    final us.springett.vulndbdatamirror.parser.model.Vulnerability vulnDbVuln = (us.springett.vulndbdatamirror.parser.model.Vulnerability)o;
+            for (final Object o : results.getResults()) {
+                if (o instanceof org.dependencytrack.parser.vulndb.model.Vulnerability) {
+                    final org.dependencytrack.parser.vulndb.model.Vulnerability vulnDbVuln = (org.dependencytrack.parser.vulndb.model.Vulnerability) o;
                     final org.dependencytrack.model.Vulnerability vulnerability = ModelConverter.convert(qm, vulnDbVuln);
                     final Vulnerability synchronizeVulnerability = qm.synchronizeVulnerability(vulnerability, false);
                     final List<VulnerableSoftware> vsListOld = qm.detach(qm.getVulnerableSoftwareByVulnId(synchronizeVulnerability.getSource(), synchronizeVulnerability.getVulnId()));
@@ -124,28 +128,28 @@ public class VulnDbSyncTask implements LoggableSubscriber {
     }
 
     public static List<VulnerableSoftware> parseCpes(final QueryManager qm, final Vulnerability vulnerability,
-                                                     final us.springett.vulndbdatamirror.parser.model.Vulnerability vulnDbVuln) {
+                                                     final org.dependencytrack.parser.vulndb.model.Vulnerability vulnDbVuln) {
         // cpe:2.3:a:belavier_commerce:abantecart:1.2.8:*:*:*:*:*:*:*
         final List<VulnerableSoftware> vsList = new ArrayList<>();
-        if (vulnDbVuln.getVendors() != null) {
-            for (Vendor vendor: vulnDbVuln.getVendors()) {
-                if (vendor.getProducts() != null) {
-                    for (Product product: vendor.getProducts()) {
-                        if (product.getVersions() != null) {
-                            for (Version version: product.getVersions()) {
+        if (vulnDbVuln.vendors() != null) {
+            for (Vendor vendor : vulnDbVuln.vendors()) {
+                if (vendor.products() != null) {
+                    for (Product product : vendor.products()) {
+                        if (product.versions() != null) {
+                            for (Version version : product.versions()) {
                                 if (version != null) {
-                                    if (version.isAffected()) {
-                                        if (version.getCpes() != null) {
-                                            for (CPE cpeObject : version.getCpes()) {
+                                    if (version.affected()) {
+                                        if (version.cpes() != null) {
+                                            for (org.dependencytrack.parser.vulndb.model.Cpe cpeObject : version.cpes()) {
                                                 try {
-                                                    final Cpe cpe = CpeParser.parse(cpeObject.getCpe(), true);
+                                                    final Cpe cpe = CpeParser.parse(cpeObject.cpe(), true);
                                                     final VulnerableSoftware vs = generateVulnerableSoftware(qm, cpe, vulnerability);
                                                     if (vs != null) {
                                                         vsList.add(vs);
                                                     }
                                                 } catch (CpeParsingException e) {
                                                     // Normally, this would be logged to error, however, VulnDB contains a lot of invalid CPEs
-                                                    LOGGER.debug("An error occurred parsing " + cpeObject.getCpe(), e);
+                                                    LOGGER.debug("An error occurred parsing " + cpeObject.cpe(), e);
                                                 }
                                             }
                                         }
