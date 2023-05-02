@@ -1,6 +1,4 @@
-DROP FUNCTION IF EXISTS "CVSSV2_TO_SEVERITY"(numeric);
-DROP FUNCTION IF EXISTS "CVSSV3_TO_SEVERITY"(numeric);
-
+-- Calculate the severity of a vulnerability based on its CVSSv2 base score.
 CREATE OR REPLACE FUNCTION "CVSSV2_TO_SEVERITY"(
     "base_score" NUMERIC
 ) RETURNS VARCHAR
@@ -17,6 +15,7 @@ BEGIN
 END;
 $$;
 
+-- Calculate the severity of a vulnerability based on its CVSSv3 base score.
 CREATE OR REPLACE FUNCTION "CVSSV3_TO_SEVERITY"(
     "base_score" NUMERIC
 ) RETURNS VARCHAR
@@ -34,6 +33,13 @@ BEGIN
 END;
 $$;
 
+-- Calculate the severity of a vulnerability based on:
+--   * a pre-set severity
+--   * a CVSSv3 base score
+--   * a CVSSv2 base score
+-- The behavior of this function is identical to Vulnerability#getSeverity
+-- in the API server Java code base.
+-- https://github.com/DependencyTrack/dependency-track/blob/1976be1f5cc9d027900f09aed9d1539595aeda3a/src/main/java/org/dependencytrack/model/Vulnerability.java#L338-L340
 CREATE OR REPLACE FUNCTION "CALC_SEVERITY"(
     "severity" VARCHAR,
     "cvssv3_base_score" NUMERIC,
@@ -55,6 +61,11 @@ BEGIN
 END;
 $$;
 
+-- Calculate the inherited risk score of a component, based on the number
+-- of vulnerabilities per severity.
+-- The behavior of this function is identical to Metrics#inheritedRiskScore
+-- in the API server Java code base.
+-- https://github.com/DependencyTrack/dependency-track/blob/1976be1f5cc9d027900f09aed9d1539595aeda3a/src/main/java/org/dependencytrack/metrics/Metrics.java#L31-L33
 CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
     "critical" INT,
     "high" INT,
@@ -317,24 +328,16 @@ CREATE OR REPLACE PROCEDURE "UPDATE_PROJECT_METRICS"(
 AS
 $$
 DECLARE
-    "v_project_id"     BIGINT;
-    "v_component_uuid" VARCHAR;
-    "v_aggregate"      RECORD;
-    "v_risk_score"     NUMERIC := 0;
-    "v_existing_id"    BIGINT;
-    "v_now"            DATE;
+    "v_project_id"  BIGINT;
+    "v_aggregate"   RECORD;
+    "v_risk_score"  NUMERIC; -- Inherited risk score
+    "v_existing_id" BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
+    "v_now"         DATE; -- The date to be set as last occurrence of this data point
 BEGIN
     SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
     IF "v_project_id" IS NULL THEN
         RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
     END IF;
-
-    -- TODO: Each
-    FOR "v_component_uuid" IN SELECT "UUID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id"
-        LOOP
-            RAISE NOTICE 'Updating metrics of component %', "v_component_uuid";
-            CALL "UPDATE_COMPONENT_METRICS"("v_component_uuid");
-        END LOOP;
 
     SELECT COUNT(*)::INT                                          AS "COMPONENTS",
            SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END) AS "VULNERABLECOMPONENTS",
@@ -479,14 +482,16 @@ BEGIN
 end;
 $$;
 
+--
 CREATE OR REPLACE PROCEDURE "UPDATE_PORTFOLIO_METRICS"()
     LANGUAGE "plpgsql"
 AS
 $$
 DECLARE
-    "v_aggregate"   RECORD;
-    "v_existing_id" BIGINT;
-    "v_now"         DATE;
+    "v_aggregate"   RECORD; -- Result of the project metrics aggregation
+    "v_risk_score"  NUMERIC; -- Inherited risk score
+    "v_existing_id" BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
+    "v_now"         DATE; -- The date to be set as last occurrence of this data point
 BEGIN
     SELECT COUNT(*)::INT                                          AS "PROJECTS",
            SUM(CASE WHEN "VULNERABILITIES" > 0 THEN 1 ELSE 0 END) AS "VULNERABLEPROJECTS",
@@ -520,10 +525,13 @@ BEGIN
     FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
           FROM "PROJECTMETRICS" AS "PM"
                    INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
-          WHERE "P"."ACTIVE" IS NULL
-             OR "P"."ACTIVE" = TRUE
+          WHERE "P"."ACTIVE" = TRUE  -- Only consider active projects
+             OR "P"."ACTIVE" IS NULL -- ACTIVE is nullable, assume TRUE per default
           ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
     INTO "v_aggregate";
+
+    "v_risk_score" = "CALC_RISK_SCORE"("v_aggregate"."CRITICAL", "v_aggregate"."HIGH", "v_aggregate"."MEDIUM",
+                                       "v_aggregate"."LOW", "v_aggregate"."UNASSIGNED_SEVERITY");
 
     SELECT "ID"
     FROM "PORTFOLIOMETRICS"
@@ -537,6 +545,7 @@ BEGIN
       AND "MEDIUM" = "v_aggregate"."MEDIUM"
       AND "LOW" = "v_aggregate"."LOW"
       AND "UNASSIGNED_SEVERITY" = "v_aggregate"."UNASSIGNED_SEVERITY"
+      AND "RISKSCORE" = "v_risk_score"
       AND "FINDINGS_TOTAL" = "v_aggregate"."FINDINGS_TOTAL"
       AND "FINDINGS_AUDITED" = "v_aggregate"."FINDINGS_AUDITED"
       AND "FINDINGS_UNAUDITED" = "v_aggregate"."FINDINGS_UNAUDITED"
@@ -574,6 +583,7 @@ BEGIN
                                         "MEDIUM",
                                         "LOW",
                                         "UNASSIGNED_SEVERITY",
+                                        "RISKSCORE",
                                         "FINDINGS_TOTAL",
                                         "FINDINGS_AUDITED",
                                         "FINDINGS_UNAUDITED",
@@ -593,7 +603,6 @@ BEGIN
                                         "POLICYVIOLATIONS_SECURITY_TOTAL",
                                         "POLICYVIOLATIONS_SECURITY_AUDITED",
                                         "POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                                        "RISKSCORE",
                                         "FIRST_OCCURRENCE",
                                         "LAST_OCCURRENCE")
         VALUES ("v_aggregate"."PROJECTS",
@@ -606,6 +615,7 @@ BEGIN
                 "v_aggregate"."MEDIUM",
                 "v_aggregate"."LOW",
                 "v_aggregate"."UNASSIGNED_SEVERITY",
+                "v_risk_score",
                 "v_aggregate"."FINDINGS_TOTAL",
                 "v_aggregate"."FINDINGS_AUDITED",
                 "v_aggregate"."FINDINGS_UNAUDITED",
@@ -625,11 +635,6 @@ BEGIN
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_TOTAL",
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_AUDITED",
                 "v_aggregate"."POLICYVIOLATIONS_SECURITY_UNAUDITED",
-                "CALC_RISK_SCORE"("v_aggregate"."CRITICAL",
-                                  "v_aggregate"."HIGH",
-                                  "v_aggregate"."MEDIUM",
-                                  "v_aggregate"."LOW",
-                                  "v_aggregate"."UNASSIGNED_SEVERITY"),
                 "v_now",
                 "v_now");
     END IF;
