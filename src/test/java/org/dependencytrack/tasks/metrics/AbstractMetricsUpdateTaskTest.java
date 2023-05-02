@@ -43,12 +43,17 @@ import java.util.UUID;
 
 abstract class AbstractMetricsUpdateTaskTest {
 
+    protected final String postgresImageTag;
     protected PostgreSQLContainer<?> postgresContainer;
     protected QueryManager qm;
 
+    protected AbstractMetricsUpdateTaskTest(final String postgresImageTag) {
+        this.postgresImageTag = postgresImageTag;
+    }
+
     @Before
     public void setUp() throws Exception {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse(postgresImageTag))
                 .withUsername("dtrack")
                 .withPassword("dtrack")
                 .withDatabaseName("dtrack");
