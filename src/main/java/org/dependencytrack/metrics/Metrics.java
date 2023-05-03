@@ -23,7 +23,8 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.persistence.StoredProcedures;
+import org.dependencytrack.persistence.StoredProcedures.Procedure;
 
 import java.util.UUID;
 
@@ -59,7 +60,7 @@ public final class Metrics {
      * @since 5.0.0
      */
     public static void updatePortfolioMetrics() {
-        PersistenceUtil.executeStoredProcedure("UPDATE_PORTFOLIO_METRICS");
+        StoredProcedures.execute(Procedure.UPDATE_PORTFOLIO_METRICS);
     }
 
     /**
@@ -72,7 +73,7 @@ public final class Metrics {
      * @since 5.0.0
      */
     public static void updateProjectMetrics(final UUID projectUuid) {
-        PersistenceUtil.executeStoredProcedure("UPDATE_PROJECT_METRICS", query -> {
+        StoredProcedures.execute(Procedure.UPDATE_PROJECT_METRICS, query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
             query.setImplicitParameter(1, projectUuid.toString());
         });
@@ -85,7 +86,7 @@ public final class Metrics {
      * @since 5.0.0
      */
     public static void updateComponentMetrics(final UUID componentUuid) {
-        PersistenceUtil.executeStoredProcedure("UPDATE_COMPONENT_METRICS", query -> {
+        StoredProcedures.execute(Procedure.UPDATE_COMPONENT_METRICS, query -> {
             query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
             query.setImplicitParameter(1, componentUuid.toString());
         });
