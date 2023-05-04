@@ -28,23 +28,11 @@ import java.util.UUID;
 public class BomUploadEventTest {
 
     @Test
-    public void testByteArrayConstructor() {
-        UUID uuid = UUID.randomUUID();
-        byte[] bom = "testing".getBytes();
-        BomUploadEvent event = new BomUploadEvent(uuid, bom);
-        Assert.assertEquals(uuid, event.getProjectUuid());
-        Assert.assertNotEquals(bom, event.getBom()); // should be a cloned byte array - not the same reference
-        Assert.assertTrue(event.getBom().length > 0);
-        Assert.assertNull(event.getFile());
-    }
-
-    @Test
     public void testFileConstructor() {
         UUID uuid = UUID.randomUUID();
         File bitBucket = new File(SystemUtil.getBitBucket());
         BomUploadEvent event = new BomUploadEvent(uuid, bitBucket);
         Assert.assertEquals(uuid, event.getProjectUuid());
         Assert.assertEquals(bitBucket, event.getFile());
-        Assert.assertNull(event.getBom());
     }
 }

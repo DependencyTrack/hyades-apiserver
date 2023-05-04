@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import org.apache.commons.io.IOUtils;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -32,9 +33,7 @@ import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.File;
 import java.time.Duration;
 import java.util.List;
 
@@ -65,9 +64,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final byte[] bomBytes = Files.readAllBytes(Paths.get(getClass().getClassLoader().getResource("bom-1.xml").toURI()));
+        final var bomFile = new File(IOUtils.resourceToURL("/bom-1.xml").toURI());
 
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomBytes);
+        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -106,15 +105,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithEmptyBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final byte[] bomBytes = """
-                {
-                  "bomFormat": "CycloneDX",
-                  "specVersion": "1.4",
-                  "components": []
-                }
-                """.getBytes(StandardCharsets.UTF_8);
+        final var bomFile = new File(IOUtils.resourceToURL("/unit/bom-empty.json").toURI());
 
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomBytes);
+        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -138,12 +131,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final byte[] bomBytes = """
-                {
-                  "bomFormat": "CycloneDX",
-                """.getBytes(StandardCharsets.UTF_8);
+        final var bomFile = new File(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI());
 
-        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomBytes));
+        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomFile));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),

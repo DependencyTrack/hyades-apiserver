@@ -32,15 +32,7 @@ import java.util.UUID;
 public class BomUploadEvent extends AbstractChainableEvent {
 
     private final UUID projectUuid;
-    private File file;
-    private byte[] bom;
-
-    public BomUploadEvent(final UUID projectUuid, final byte[] bom) {
-        this.projectUuid = projectUuid;
-        if (bom != null) {
-            this.bom = bom.clone();
-        }
-    }
+    private final File file;
 
     public BomUploadEvent(final UUID projectUuid, final File file) {
         this.projectUuid = projectUuid;
@@ -49,10 +41,6 @@ public class BomUploadEvent extends AbstractChainableEvent {
 
     public UUID getProjectUuid() {
         return projectUuid;
-    }
-
-    public byte[] getBom() {
-        return bom == null ? null : bom.clone();
     }
 
     public File getFile() {

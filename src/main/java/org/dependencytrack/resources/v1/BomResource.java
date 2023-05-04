@@ -31,8 +31,11 @@ import io.swagger.annotations.Authorization;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
+import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
+import org.cyclonedx.exception.ParseException;
+import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.Component;
@@ -61,11 +64,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.security.Principal;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -358,13 +363,18 @@ public class BomResource extends AlpineResource {
             if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
-            final byte[] decoded = Base64.getDecoder().decode(encodedBomData);
-            try (final ByteArrayInputStream bain = new ByteArrayInputStream(decoded)) {
-                final byte[] content = IOUtils.toByteArray(new BOMInputStream((bain)));
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), content);
+            try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
+                 final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
+                 final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
+                final File bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+
+                final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
                 Event.dispatch(bomUploadEvent);
-                return Response.ok(Collections.singletonMap("token", bomUploadEvent.getChainIdentifier())).build();
-            } catch (IOException e) {
+
+                BomUploadResponse bomUploadResponse = new BomUploadResponse();
+                bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+                return Response.ok(bomUploadResponse).build();
+            } catch (IOException | ParseException e) {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
         } else {
@@ -382,19 +392,19 @@ public class BomResource extends AlpineResource {
                 if (!qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
-                try (InputStream in = bodyPartEntity.getInputStream()) {
-                    final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
+                try (final var inputStream = bodyPartEntity.getInputStream();
+                     final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
+                    final File bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+
                     // todo: make option to combine all the bom data so components are reconciled in a single pass.
                     // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), content);
+                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
                     Event.dispatch(bomUploadEvent);
 
                     BomUploadResponse bomUploadResponse = new BomUploadResponse();
-
                     bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
-
                     return Response.ok(bomUploadResponse).build();
-                } catch (IOException e) {
+                } catch (IllegalArgumentException | IOException | ParseException e) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
             } else {
@@ -402,6 +412,30 @@ public class BomResource extends AlpineResource {
             }
         }
         return Response.ok().build();
+    }
+
+    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException, ParseException {
+        if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
+            throw new IllegalArgumentException("The uploaded file is not a CycloneDX BOM");
+        }
+
+        final Parser parser = BomParserFactory.createParser(bomBytes);
+        if (!parser.validate(bomBytes).isEmpty()) {
+            throw new IllegalArgumentException("The uploaded CycloneDX BOM is invalid");
+        }
+
+        // TODO: Store externally so other instances of the API server can pick it up.
+        // https://github.com/CycloneDX/cyclonedx-bom-repo-server
+        final java.nio.file.Path tmpPath = Files.createTempFile("dtrack-bom-%s".formatted(project.getUuid()), null);
+        final File tmpFile = tmpPath.toFile();
+        tmpFile.deleteOnExit();
+
+        LOGGER.debug("Writing BOM for project %s to %s".formatted(project.getUuid(), tmpPath));
+        try (final var tmpOutputStream = Files.newOutputStream(tmpPath, StandardOpenOption.WRITE)) {
+            tmpOutputStream.write(bomBytes);
+        }
+
+        return tmpFile;
     }
 
 }

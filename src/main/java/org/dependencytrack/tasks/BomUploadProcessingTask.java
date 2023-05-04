@@ -44,9 +44,10 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.CompressUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -77,12 +78,10 @@ public class BomUploadProcessingTask implements Subscriber {
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof BomUploadEvent) {
+        if (e instanceof final BomUploadEvent event) {
             Project bomProcessingFailedProject = null;
             Bom.Format bomProcessingFailedBomFormat = null;
             String bomProcessingFailedBomVersion = null;
-            final BomUploadEvent event = (BomUploadEvent) e;
-            final byte[] bomBytes = CompressUtil.optionallyDecompress(event.getBom());
             final QueryManager qm = new QueryManager().withL2CacheDisabled();
             try {
                 final Project project = qm.getObjectByUuid(Project.class, event.getProjectUuid());
@@ -96,6 +95,11 @@ public class BomUploadProcessingTask implements Subscriber {
                 final List<Component> flattenedComponents = new ArrayList<>();
                 final List<ServiceComponent> services;
                 final List<ServiceComponent> flattenedServices = new ArrayList<>();
+
+                final byte[] bomBytes;
+                try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
+                    bomBytes = bomFileInputStream.readAllBytes();
+                }
 
                 // Holds a list of all Components that are existing dependencies of the specified project
                 final List<Component> existingProjectComponents = qm.getAllComponents(project);
