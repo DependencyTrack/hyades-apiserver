@@ -44,7 +44,6 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Serialized;
 import javax.jdo.annotations.Unique;
-import javax.json.JsonObject;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
@@ -355,9 +354,6 @@ public class Component implements Serializable {
     private transient DependencyMetrics metrics;
     private transient RepositoryMetaComponent repositoryMeta;
     private transient int usedBy;
-
-    @JsonIgnore
-    private transient JsonObject cacheResult;
 
     private transient Set<String> dependencyGraph;
 
@@ -766,14 +762,6 @@ public class Component implements Serializable {
 
     public void setUsedBy(int usedBy) {
         this.usedBy = usedBy;
-    }
-
-    public JsonObject getCacheResult() {
-        return cacheResult;
-    }
-
-    public void setCacheResult(JsonObject cacheResult) {
-        this.cacheResult = cacheResult;
     }
 
     public Set<String> getDependencyGraph() {
