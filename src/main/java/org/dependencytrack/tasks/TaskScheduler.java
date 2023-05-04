@@ -24,7 +24,6 @@ import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.tasks.AlpineTaskScheduler;
-import org.dependencytrack.event.ClearComponentAnalysisCacheEvent;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
@@ -52,7 +51,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_SYNC_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_COMPONENT_ANALYSIS_CACHE_CLEAR_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_GHSA_MIRROR_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE;
@@ -109,9 +107,6 @@ public final class TaskScheduler extends AlpineTaskScheduler {
 
             // Creates a new event that executes every 6 hours (21600000) by default after an initial 1 hour (3600000) delay
             scheduleEvent(new InternalComponentIdentificationEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE));
-
-            // Creates a new event that executes every 72 hours (259200000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new ClearComponentAnalysisCacheEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_COMPONENT_ANALYSIS_CACHE_CLEAR_CADENCE));
 
             scheduleEvent(new VulnerabilityScanCleanupEvent(), Duration.ofSeconds(30).toMillis(), Duration.ofDays(6).toMillis());
         }

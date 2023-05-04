@@ -45,7 +45,6 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentAnalysisCache;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cpe;
@@ -86,7 +85,6 @@ import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
-import javax.json.JsonObject;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Date;
@@ -110,7 +108,6 @@ public class QueryManager extends AlpineQueryManager {
 
     private AlpineRequest request;
     private BomQueryManager bomQueryManager;
-    private CacheQueryManager cacheQueryManager;
     private ComponentQueryManager componentQueryManager;
     private FindingsQueryManager findingsQueryManager;
     private LicenseQueryManager licenseQueryManager;
@@ -328,18 +325,6 @@ public class QueryManager extends AlpineQueryManager {
             notificationQueryManager = (request == null) ? new NotificationQueryManager(getPersistenceManager()) : new NotificationQueryManager(getPersistenceManager(), request);
         }
         return notificationQueryManager;
-    }
-
-    /**
-     * Lazy instantiation of CacheQueryManager.
-     *
-     * @return a CacheQueryManager object
-     */
-    private CacheQueryManager getCacheQueryManager() {
-        if (cacheQueryManager == null) {
-            cacheQueryManager = (request == null) ? new CacheQueryManager(getPersistenceManager()) : new CacheQueryManager(getPersistenceManager(), request);
-        }
-        return cacheQueryManager;
     }
 
     /**
@@ -1244,26 +1229,6 @@ public class QueryManager extends AlpineQueryManager {
             return BooleanUtil.valueOf(property.getPropertyValue());
         }
         return false;
-    }
-
-    public ComponentAnalysisCache getComponentAnalysisCache(ComponentAnalysisCache.CacheType cacheType, String targetHost, String targetType, String target) {
-        return getCacheQueryManager().getComponentAnalysisCache(cacheType, targetHost, targetType, target);
-    }
-
-    public List<ComponentAnalysisCache> getComponentAnalysisCache(ComponentAnalysisCache.CacheType cacheType, String targetType, String target) {
-        return getCacheQueryManager().getComponentAnalysisCache(cacheType, targetType, target);
-    }
-
-    public synchronized void updateComponentAnalysisCache(ComponentAnalysisCache.CacheType cacheType, String targetHost, String targetType, String target, Date lastOccurrence, JsonObject result) {
-        getCacheQueryManager().updateComponentAnalysisCache(cacheType, targetHost, targetType, target, lastOccurrence, result);
-    }
-
-    public void clearComponentAnalysisCache() {
-        getCacheQueryManager().clearComponentAnalysisCache();
-    }
-
-    public void clearComponentAnalysisCache(Date threshold) {
-        getCacheQueryManager().clearComponentAnalysisCache(threshold);
     }
 
     public void bind(Project project, List<Tag> tags) {
