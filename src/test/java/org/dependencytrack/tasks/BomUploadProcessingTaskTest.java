@@ -34,6 +34,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
 
@@ -64,7 +68,11 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final var bomFile = new File(IOUtils.resourceToURL("/bom-1.xml").toURI());
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(IOUtils.resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        final var bomFile = bomFilePath.toFile();
 
         final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
@@ -105,7 +113,11 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithEmptyBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final var bomFile = new File(IOUtils.resourceToURL("/unit/bom-empty.json").toURI());
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        final var bomFile = bomFilePath.toFile();
 
         final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
@@ -131,7 +143,11 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        final var bomFile = new File(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI());
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        final var bomFile = bomFilePath.toFile();
 
         new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomFile));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
