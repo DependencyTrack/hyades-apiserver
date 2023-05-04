@@ -22,6 +22,7 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
@@ -30,13 +31,32 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(Parameterized.class)
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
+
+    @Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {"postgres:11-alpine"},
+                {"postgres:15-alpine"}
+        });
+    }
+
+    public ProjectMetricsUpdateTaskTest(final String postgresImageTag) {
+        super(postgresImageTag);
+    }
 
     @Test
     public void testUpdateMetricsEmpty() {
@@ -136,6 +156,32 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
         qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
+        // Create "old" metrics data points for all three components.
+        // When the calculating project metrics, only the latest data point for each component
+        // must be considered. Because the update task calculates new component metrics data points,
+        // the ones created below must be ignored.
+        final var componentUnauditedOldMetrics = new DependencyMetrics();
+        componentUnauditedOldMetrics.setProject(project);
+        componentUnauditedOldMetrics.setComponent(componentUnaudited);
+        componentUnauditedOldMetrics.setCritical(666);
+        componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentUnauditedOldMetrics);
+        final var componentAuditedOldMetrics = new DependencyMetrics();
+        componentAuditedOldMetrics.setProject(project);
+        componentAuditedOldMetrics.setComponent(componentUnaudited);
+        componentAuditedOldMetrics.setHigh(666);
+        componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentAuditedOldMetrics);
+        final var componentSuppressedOldMetrics = new DependencyMetrics();
+        componentSuppressedOldMetrics.setProject(project);
+        componentSuppressedOldMetrics.setComponent(componentUnaudited);
+        componentSuppressedOldMetrics.setMedium(666);
+        componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentSuppressedOldMetrics);
+
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
         final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -203,6 +249,32 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         componentSuppressed = qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
+
+        // Create "old" metrics data points for all three components.
+        // When the calculating project metrics, only the latest data point for each component
+        // must be considered. Because the update task calculates new component metrics data points,
+        // the ones created below must be ignored.
+        final var componentUnauditedOldMetrics = new DependencyMetrics();
+        componentUnauditedOldMetrics.setProject(project);
+        componentUnauditedOldMetrics.setComponent(componentUnaudited);
+        componentUnauditedOldMetrics.setPolicyViolationsFail(666);
+        componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentUnauditedOldMetrics);
+        final var componentAuditedOldMetrics = new DependencyMetrics();
+        componentAuditedOldMetrics.setProject(project);
+        componentAuditedOldMetrics.setComponent(componentUnaudited);
+        componentAuditedOldMetrics.setPolicyViolationsWarn(666);
+        componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentAuditedOldMetrics);
+        final var componentSuppressedOldMetrics = new DependencyMetrics();
+        componentSuppressedOldMetrics.setProject(project);
+        componentSuppressedOldMetrics.setComponent(componentUnaudited);
+        componentSuppressedOldMetrics.setPolicyViolationsInfo(666);
+        componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
+        qm.persist(componentSuppressedOldMetrics);
 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 

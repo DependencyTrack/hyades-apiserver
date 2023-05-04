@@ -18,6 +18,16 @@
  */
 package org.dependencytrack.metrics;
 
+import org.datanucleus.metadata.StoredProcQueryParameterMode;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.StoredProcedures;
+import org.dependencytrack.persistence.StoredProcedures.Procedure;
+
+import java.util.UUID;
+
 /**
  * Helper class for enhancing metrics.
  *
@@ -26,7 +36,8 @@ package org.dependencytrack.metrics;
  */
 public final class Metrics {
 
-    private Metrics() { }
+    private Metrics() {
+    }
 
     public static double inheritedRiskScore(final int critical, final int high, final int medium, final int low, final int unassigned) {
         return (double) ((critical * 10) + (high * 5) + (medium * 3) + (low * 1) + (unassigned * 5));
@@ -39,4 +50,46 @@ public final class Metrics {
         }
         return ratio;
     }
+
+    /**
+     * Update metrics for the entire portfolio.
+     * <p>
+     * Note: This does not implicitly update metrics for all projects in the portfolio,
+     * it merely aggregates all existing {@link ProjectMetrics}.
+     *
+     * @since 5.0.0
+     */
+    public static void updatePortfolioMetrics() {
+        StoredProcedures.execute(Procedure.UPDATE_PORTFOLIO_METRICS);
+    }
+
+    /**
+     * Update metrics for a given {@link Project}.
+     * <p>
+     * Note: This does not implicitly update metrics for all components in the project,
+     * it merely aggregates all existing {@link DependencyMetrics}.
+     *
+     * @param projectUuid {@link UUID} of the {@link Project} to update metrics for
+     * @since 5.0.0
+     */
+    public static void updateProjectMetrics(final UUID projectUuid) {
+        StoredProcedures.execute(Procedure.UPDATE_PROJECT_METRICS, query -> {
+            query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
+            query.setImplicitParameter(1, projectUuid.toString());
+        });
+    }
+
+    /**
+     * Update metrics for a given {@link Component}.
+     *
+     * @param componentUuid {@link UUID} of the {@link Component} to update metrics for
+     * @since 5.0.0
+     */
+    public static void updateComponentMetrics(final UUID componentUuid) {
+        StoredProcedures.execute(Procedure.UPDATE_COMPONENT_METRICS, query -> {
+            query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
+            query.setImplicitParameter(1, componentUuid.toString());
+        });
+    }
+
 }

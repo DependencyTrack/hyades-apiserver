@@ -1,6 +1,8 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
+import alpine.event.framework.Subscriber;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -10,16 +12,15 @@ import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
-import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,14 +47,31 @@ import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
 public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
+    public static class EventSubscriber implements Subscriber {
+
+        @Override
+        public void inform(final Event event) {
+            EVENTS.add(event);
+        }
+
+    }
+
+    private static final ConcurrentLinkedQueue<Event> EVENTS = new ConcurrentLinkedQueue<>();
+
     @BeforeClass
     public static void setUpClass() {
-        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
+        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, EventSubscriber.class);
+    }
+
+    @After
+    public void tearDown() {
+        super.tearDown();
+        EVENTS.clear();
     }
 
     @AfterClass
     public static void tearDownClass() {
-        EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
+        EventService.getInstance().unsubscribe(EventSubscriber.class);
     }
 
     @Test
@@ -263,10 +282,13 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
-        assertConditionWithTimeout(() -> {
-            qm.getPersistenceManager().refresh(scan);
-            return scan != null && scan.getReceivedResults() == 1;
-        }, Duration.ofSeconds(10));
+        await("First scan result processing")
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> {
+                    qm.getPersistenceManager().refresh(scan);
+                    assertThat(scan).isNotNull();
+                    assertThat(scan.getReceivedResults()).isEqualTo(1);
+                });
 
         // Evaluation of componentA should raise a policy violation. But because the vulnerability
         // scan was targeting a project, evaluation of individual components should not be performed.
@@ -285,24 +307,26 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
-        assertConditionWithTimeout(() -> {
-            qm.getPersistenceManager().refresh(scan);
-            return scan != null && scan.getReceivedResults() == 2;
-        }, Duration.ofSeconds(10));
+        await("Scan completion")
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> {
+                    qm.getPersistenceManager().refresh(scan);
+                    assertThat(scan).isNotNull();
+                    assertThat(scan.getReceivedResults()).isEqualTo(2);
+                });
 
         // Vulnerability scan of the project completed. Policy evaluation of all components should
         // have been performed, so we expect the violation for componentA to appear.
-        final var project1 = project;
-        assertConditionWithTimeout(()-> qm.getAllPolicyViolations(project1).size()==1, Duration.ofSeconds(30));
+        final var finalProject = project;
+        await("Policy evaluation")
+                .atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(qm.getAllPolicyViolations(finalProject)).hasSize(1));
 
         // A project metrics update should have been executed AFTER policy evaluation.
         // It thus should include the newly discovered policy violation.
-        final Project finalProject = project;
-        assertConditionWithTimeout(() -> {
-            final ProjectMetrics projectMetrics = qm.getMostRecentProjectMetrics(finalProject);
-            return projectMetrics != null
-                    && projectMetrics.getPolicyViolationsFail() == 1;
-        }, Duration.ofSeconds(5));
+        await("Project metrics update")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(EVENTS).hasSize(1));
     }
 
 }

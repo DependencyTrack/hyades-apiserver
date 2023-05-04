@@ -23,20 +23,19 @@ import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
-import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.Date;
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -48,43 +47,66 @@ import java.util.concurrent.TimeUnit;
 public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
-    private static final long BATCH_SIZE = SystemUtil.getCpuCores();
+    private static final int MAX_CONCURRENCY = SystemUtil.getCpuCores();
+    private static final int BATCH_SIZE = MAX_CONCURRENCY * 100;
 
     @Override
     public void inform(final Event e) {
-        if (e instanceof PortfolioMetricsUpdateEvent) {
+        if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                updateMetrics();
+                updateMetrics(event.isForceRefresh());
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while updating portfolio metrics", ex);
             }
         }
     }
 
-    private void updateMetrics() throws Exception {
+    private void updateMetrics(final boolean forceRefresh) throws Exception {
         LOGGER.info("Executing portfolio metrics update");
         final Timer.Sample timerSample = Timer.start();
-        final var counters = new Counters();
 
+        try {
+            if (forceRefresh) {
+                LOGGER.info("Refreshing project metrics");
+                refreshProjectMetrics();
+            }
+
+            Metrics.updatePortfolioMetrics();
+        } finally {
+            final long durationNanos = timerSample.stop(Timer
+                    .builder("metrics_update")
+                    .tag("target", "portfolio")
+                    .register(alpine.common.metrics.Metrics.getRegistry()));
+            LOGGER.debug("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
+        }
+    }
+
+    private static void refreshProjectMetrics() throws Exception {
         try (final var qm = new QueryManager().withL2CacheDisabled()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
-            List<Project> activeProjects = fetchNextActiveProjectsPage(pm, null);
+            List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
 
             while (!activeProjects.isEmpty()) {
-                final long firstId = activeProjects.get(0).getId();
-                final long lastId = activeProjects.get(activeProjects.size() - 1).getId();
-                final int batchCount = activeProjects.size();
+                final long firstId = activeProjects.get(0).id();
+                final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
-                final var countDownLatch = new CountDownLatch(batchCount);
+                // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
+                final List<List<ProjectProjection>> partitions = ListUtils.partition(activeProjects, MAX_CONCURRENCY);
+                final var countDownLatch = new CountDownLatch(partitions.size());
 
-                for (final Project project : activeProjects) {
-                    LOGGER.debug("Dispatching metrics update event for project " + project.getUuid());
-                    final var callbackEvent = new CallbackEvent(countDownLatch::countDown);
-                    Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid())
-                            .onSuccess(callbackEvent)
-                            .onFailure(callbackEvent));
+                for (final List<ProjectProjection> partition : partitions) {
+                    final var partitionEvent = new CallbackEvent(() -> {
+                        for (final ProjectProjection project : partition) {
+                            new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.uuid()));
+                        }
+                    });
+
+                    final var countDownEvent = new CallbackEvent(countDownLatch::countDown);
+                    Event.dispatch(partitionEvent
+                            .onSuccess(countDownEvent)
+                            .onFailure(countDownEvent));
                 }
 
                 LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
@@ -98,82 +120,13 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                             " took longer than expected (15m); Proceeding with potentially stale data");
                 }
                 LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
-
-                for (final Project project : activeProjects) {
-                    LOGGER.debug("Processing latest metrics for project " + project.getUuid());
-                    final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-                    if (metrics == null) {
-                        // The project metrics calculation task failed, or the project has been
-                        // deleted after the event being dispatched. Either way, nothing we can
-                        // do anything about.
-                        LOGGER.debug("No metrics found for project " + project.getUuid() + " - skipping");
-                        continue;
-                    }
-
-                    counters.critical += metrics.getCritical();
-                    counters.high += metrics.getHigh();
-                    counters.medium += metrics.getMedium();
-                    counters.low += metrics.getLow();
-                    counters.unassigned += metrics.getUnassigned();
-                    counters.vulnerabilities += metrics.getVulnerabilities();
-
-                    counters.findingsTotal += metrics.getFindingsTotal();
-                    counters.findingsAudited += metrics.getFindingsAudited();
-                    counters.findingsUnaudited += metrics.getFindingsUnaudited();
-                    counters.suppressions += metrics.getSuppressed();
-                    counters.inheritedRiskScore = Metrics.inheritedRiskScore(counters.critical, counters.high, counters.medium, counters.low, counters.unassigned);
-
-                    counters.projects++;
-                    if (metrics.getVulnerabilities() > 0) {
-                        counters.vulnerableProjects++;
-                    }
-                    counters.components += metrics.getComponents();
-                    counters.vulnerableComponents += metrics.getVulnerableComponents();
-
-                    counters.policyViolationsFail += metrics.getPolicyViolationsFail();
-                    counters.policyViolationsWarn += metrics.getPolicyViolationsWarn();
-                    counters.policyViolationsInfo += metrics.getPolicyViolationsInfo();
-                    counters.policyViolationsTotal += metrics.getPolicyViolationsTotal();
-                    counters.policyViolationsAudited += metrics.getPolicyViolationsAudited();
-                    counters.policyViolationsUnaudited += metrics.getPolicyViolationsUnaudited();
-                    counters.policyViolationsSecurityTotal += metrics.getPolicyViolationsSecurityTotal();
-                    counters.policyViolationsSecurityAudited += metrics.getPolicyViolationsSecurityAudited();
-                    counters.policyViolationsSecurityUnaudited += metrics.getPolicyViolationsSecurityUnaudited();
-                    counters.policyViolationsLicenseTotal += metrics.getPolicyViolationsLicenseTotal();
-                    counters.policyViolationsLicenseAudited += metrics.getPolicyViolationsLicenseAudited();
-                    counters.policyViolationsLicenseUnaudited += metrics.getPolicyViolationsLicenseUnaudited();
-                    counters.policyViolationsOperationalTotal += metrics.getPolicyViolationsOperationalTotal();
-                    counters.policyViolationsOperationalAudited += metrics.getPolicyViolationsOperationalAudited();
-                    counters.policyViolationsOperationalUnaudited += metrics.getPolicyViolationsOperationalUnaudited();
-                }
-
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
-
-            qm.runInTransaction(() -> {
-                final PortfolioMetrics latestMetrics = qm.getMostRecentPortfolioMetrics();
-                if (!counters.hasChanged(latestMetrics)) {
-                    LOGGER.debug("Portfolio metrics did not change");
-                    latestMetrics.setLastOccurrence(counters.measuredAt);
-                } else {
-                    LOGGER.debug("Portfolio metrics changed");
-                    final PortfolioMetrics metrics = counters.createPortfolioMetrics();
-                    pm.makePersistent(metrics);
-                }
-            });
-        } finally {
-            timerSample.stop(Timer
-                    .builder("metrics_update")
-                    .tag("target", "portfolio")
-                    .register(alpine.common.metrics.Metrics.getRegistry()));
         }
-
-        LOGGER.info("Completed portfolio metrics update in " +
-                DurationFormatUtils.formatDuration(new Date().getTime() - counters.measuredAt.getTime(), "mm:ss:SS"));
     }
 
-    private List<Project> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
+    private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
         try (final Query<Project> query = pm.newQuery(Project.class)) {
             if (lastId == null) {
                 query.setFilter("(active == null || active == true)");
@@ -183,9 +136,12 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             }
             query.setOrdering("id DESC");
             query.range(0, BATCH_SIZE);
-            query.getFetchPlan().setGroup(Project.FetchGroup.METRICS_UPDATE.name());
-            return List.copyOf(query.executeList());
+            query.setResult("id, uuid");
+            return List.copyOf(query.executeResultList(ProjectProjection.class));
         }
+    }
+
+    public record ProjectProjection(long id, UUID uuid) {
     }
 
 }

@@ -31,13 +31,31 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(Parameterized.class)
 public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
+
+    @Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {"postgres:11-alpine"},
+                {"postgres:15-alpine"}
+        });
+    }
+
+    public ComponentMetricsUpdateTaskTest(final String postgresImageTag) {
+        super(postgresImageTag);
+    }
 
     @Test
     public void testUpdateCMetricsEmpty() {
@@ -144,7 +162,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnSuppressed = qm.createVulnerability(vulnSuppressed, false);
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
         qm.makeAnalysis(component, vulnSuppressed, AnalysisState.FALSE_POSITIVE, null, null, null, true);
-        
+
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
         assertThat(metrics.getCritical()).isZero();
