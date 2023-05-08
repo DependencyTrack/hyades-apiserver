@@ -21,6 +21,7 @@ package org.dependencytrack.parser.epss;
 import alpine.common.logging.Logger;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.math.BigDecimal;
@@ -56,13 +57,16 @@ public final class EpssParser {
                     final String cveId = values.get(0);
                     final BigDecimal epssScore = new BigDecimal(values.get(1));
                     final BigDecimal percentile = new BigDecimal(values.get(2));
-                    try (final QueryManager qm = new QueryManager()) {
-                        final Vulnerability vuln = qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, cveId);
-                        if (vuln != null) {
-                            vuln.setEpssScore(epssScore);
-                            vuln.setEpssPercentile(percentile);
-                            qm.persist(vuln);
-                        }
+                    try (final QueryManager qm = new QueryManager().withL2CacheDisabled()) {
+                        qm.runInTransaction(() -> {
+                            final Vulnerability vuln = qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, cveId);
+                            if (vuln != null
+                                    && epssScore.compareTo(vuln.getEpssScore()) != 0
+                                    && percentile.compareTo(vuln.getEpssPercentile()) != 0) {
+                                vuln.setEpssScore(epssScore);
+                                vuln.setEpssPercentile(percentile);
+                            }
+                        });
                     }
                 }
             }
