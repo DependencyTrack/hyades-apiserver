@@ -150,7 +150,7 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
     }
 
     /**
-     * Retrieves a DefaultNotificationPublisher by its class.
+     * Retrieves a DefaultNotificationPublisher by its name.
      * @param name The name of the DefaultNotificationPublisher
      * @return a DefaultNotificationPublisher
      */

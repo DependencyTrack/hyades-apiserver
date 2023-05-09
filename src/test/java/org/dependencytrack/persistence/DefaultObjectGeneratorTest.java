@@ -22,7 +22,6 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.dependencytrack.util.NotificationUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
