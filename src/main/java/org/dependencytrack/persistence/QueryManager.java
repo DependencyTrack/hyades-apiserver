@@ -1193,6 +1193,10 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().getDefaultNotificationPublisher(clazz);
     }
 
+    public NotificationPublisher getDefaultNotificationPublisherByName(String publisherName) {
+        return getNotificationQueryManager().getDefaultNotificationPublisherByName(publisherName);
+    }
+
     public NotificationPublisher createNotificationPublisher(final String name, final String description,
                                                              final String publisherClass, final String templateContent,
                                                              final String templateMimeType, final boolean defaultPublisher) {
@@ -1520,5 +1524,4 @@ public class QueryManager extends AlpineQueryManager {
             }
         }
     }
-
 }
