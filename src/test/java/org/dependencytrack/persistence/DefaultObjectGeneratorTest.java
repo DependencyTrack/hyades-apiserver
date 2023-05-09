@@ -96,10 +96,4 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
         NotificationUtil.cleanExistingNotificationPublishers(qm);
         Assert.assertEquals(0, qm.getAllNotificationPublishers().size());
     }
-
-    @Test
-    public void testCleanNotificationPublishers() throws Exception {
-        NotificationUtil.cleanExistingNotificationPublishers(qm);
-        Assert.assertEquals(0, qm.getAllNotificationPublishers().size());
-    }
 }
