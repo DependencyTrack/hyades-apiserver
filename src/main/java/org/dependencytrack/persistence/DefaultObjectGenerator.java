@@ -245,6 +245,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing notification publishers to datastore");
             try {
+                NotificationUtil.cleanExistingNotificationPublishers(qm);
                 NotificationUtil.loadDefaultNotificationPublishers(qm);
             } catch (IOException e) {
                 LOGGER.error("An error occurred while synchronizing a default notification publisher", e);

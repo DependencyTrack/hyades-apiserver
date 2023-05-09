@@ -22,6 +22,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
+import org.dependencytrack.util.NotificationUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -91,5 +92,14 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
         method.setAccessible(true);
         method.invoke(generator);
         Assert.assertEquals(DefaultNotificationPublishers.values().length, qm.getAllNotificationPublishers().size());
+
+        NotificationUtil.cleanExistingNotificationPublishers(qm);
+        Assert.assertEquals(0, qm.getAllNotificationPublishers().size());
+    }
+
+    @Test
+    public void testCleanNotificationPublishers() throws Exception {
+        NotificationUtil.cleanExistingNotificationPublishers(qm);
+        Assert.assertEquals(0, qm.getAllNotificationPublishers().size());
     }
 }

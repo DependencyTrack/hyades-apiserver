@@ -297,6 +297,12 @@ public final class NotificationUtil {
         }
     }
 
+    public static void cleanExistingNotificationPublishers(QueryManager qm) {
+        for (final NotificationPublisher publisher : qm.getAllNotificationPublishers()) {
+                qm.deleteNotificationPublisher(publisher);
+        }
+    }
+
     public static String generateNotificationContent(final Vulnerability vulnerability) {
         final String content;
         if (vulnerability.getDescription() != null) {
