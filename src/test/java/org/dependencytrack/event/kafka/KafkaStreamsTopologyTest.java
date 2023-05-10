@@ -8,6 +8,7 @@ import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -16,6 +17,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -60,6 +62,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
     @BeforeClass
     public static void setUpClass() {
+        EventService.getInstance().subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, EventSubscriber.class);
     }
 
@@ -71,6 +74,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
     @AfterClass
     public static void tearDownClass() {
+        EventService.getInstance().unsubscribe(PolicyEvaluationTask.class);
         EventService.getInstance().unsubscribe(EventSubscriber.class);
     }
 
