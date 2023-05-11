@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -11,13 +12,14 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
+import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
+import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.policy.PolicyEngine;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
@@ -79,21 +81,23 @@ class KafkaStreamsTopologyFactory {
                         Named.as("filter_completed_vuln_scans"));
 
         completedVulnScanStream
-                .peek((scanToken, vulnScan) -> {
-                    final var policyEngine = new PolicyEngine();
-                    switch (vulnScan.getTargetType()) {
-                        case COMPONENT -> policyEngine.evaluate(vulnScan.getTargetIdentifier());
-                        case PROJECT -> policyEngine.evaluateProject(vulnScan.getTargetIdentifier());
-                    }
-                }, Named.as("execute_policy_evaluation"))
                 .foreach((scanToken, vulnScan) -> {
+                    final ChainableEvent policyEvaluationEvent = switch (vulnScan.getTargetType()) {
+                        case COMPONENT -> new ComponentPolicyEvaluationEvent(vulnScan.getTargetIdentifier());
+                        case PROJECT -> new ProjectPolicyEvaluationEvent(vulnScan.getTargetIdentifier());
+                    };
+                    policyEvaluationEvent.setChainIdentifier(UUID.fromString(vulnScan.getToken()));
+
+                    // Trigger a metrics update no matter if the policy evaluation succeeded or not.
                     final Event metricsUpdateEvent = switch (vulnScan.getTargetType()) {
                         case COMPONENT -> new ComponentMetricsUpdateEvent(vulnScan.getTargetIdentifier());
                         case PROJECT -> new ProjectMetricsUpdateEvent(vulnScan.getTargetIdentifier());
                     };
+                    policyEvaluationEvent.onFailure(metricsUpdateEvent);
+                    policyEvaluationEvent.onSuccess(metricsUpdateEvent);
 
-                    Event.dispatch(metricsUpdateEvent);
-                }, Named.as("trigger_metrics_update"));
+                    Event.dispatch(policyEvaluationEvent);
+                }, Named.as("trigger_policy_evaluation"));
 
         streamsBuilder
                 .stream(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(),

@@ -37,6 +37,7 @@ import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.NewVulnerableDependencyAnalysisTask;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvDownloadTask;
+import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
@@ -99,6 +100,8 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(VulnerabilityScanCleanupEvent.class, VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.subscribe(NistMirrorEvent.class, NistMirrorTask.class);
         EVENT_SERVICE.subscribe(EpssMirrorEvent.class, EpssMirrorTask.class);
+        EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
+        EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
 
         EVENT_SERVICE_ST.subscribe(IndexEvent.class, IndexTask.class);
 
@@ -134,6 +137,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.unsubscribe(NistMirrorTask.class);
         EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
+        EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);
         EVENT_SERVICE.shutdown();
 
         EVENT_SERVICE_ST.unsubscribe(IndexTask.class);
