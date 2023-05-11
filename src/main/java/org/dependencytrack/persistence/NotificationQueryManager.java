@@ -150,6 +150,18 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
     }
 
     /**
+     * Retrieves a DefaultNotificationPublisher by its name.
+     * @param name The name of the DefaultNotificationPublisher
+     * @return a DefaultNotificationPublisher
+     */
+    public NotificationPublisher getDefaultNotificationPublisherByName(final String name) {
+        final Query<NotificationPublisher> query = pm.newQuery(NotificationPublisher.class, "name == :name && defaultPublisher == true");
+        query.getFetchPlan().addGroup(NotificationPublisher.FetchGroup.ALL.name());
+        query.setRange(0, 1);
+        return singleResult(query.execute(name));
+    }
+
+    /**
      * Creates a NotificationPublisher object.
      * @param name The name of the NotificationPublisher
      * @return a NotificationPublisher
