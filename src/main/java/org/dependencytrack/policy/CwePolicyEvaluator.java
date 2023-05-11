@@ -28,6 +28,7 @@ package org.dependencytrack.policy;
 
  import java.util.ArrayList;
  import java.util.Arrays;
+ import java.util.Collections;
  import java.util.List;
 
 /**
@@ -52,6 +53,9 @@ public class CwePolicyEvaluator extends AbstractPolicyEvaluator {
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
+        if (policyConditions.isEmpty()) {
+            return Collections.emptyList();
+        }
         for (final Vulnerability vulnerability : qm.getAllVulnerabilities(component, false)) {
             for (final PolicyCondition condition: policyConditions) {
                 LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
