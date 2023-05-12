@@ -128,6 +128,7 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager() {
         super();
+        disableL2Cache();
     }
 
     /**
@@ -137,6 +138,7 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final PersistenceManager pm) {
         super(pm);
+        disableL2Cache();
     }
 
     /**
@@ -146,6 +148,7 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final AlpineRequest request) {
         super(request);
+        disableL2Cache();
         this.request = request;
     }
 
@@ -156,6 +159,7 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
+        disableL2Cache();
         this.request = request;
     }
 
@@ -350,6 +354,10 @@ public class QueryManager extends AlpineQueryManager {
         return principalTeamIds;
     }
 
+    private void disableL2Cache() {
+        pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
+    }
+
     /**
      * Disables the second level cache for this {@link QueryManager} instance.
      * <p>
@@ -362,7 +370,7 @@ public class QueryManager extends AlpineQueryManager {
      * @see <a href="https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#cache_level2">L2 Cache docs</a>
      */
     public QueryManager withL2CacheDisabled() {
-        pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
+        disableL2Cache();
         return this;
     }
 
