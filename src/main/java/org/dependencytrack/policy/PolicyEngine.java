@@ -26,6 +26,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
@@ -138,12 +139,25 @@ public class PolicyEngine {
         final List<PolicyViolation> policyViolations = new ArrayList<>();
         final List<PolicyViolation> existingPolicyViolations = qm.detach(qm.getAllPolicyViolations(component));
         for (final Policy policy : policies) {
+            List<Vulnerability> vulnerabilities = new ArrayList<>();
+            if (policy.getPolicyConditions().stream().anyMatch(policyCondition -> policyCondition.getSubject() == PolicyCondition.Subject.SEVERITY ||
+                    policyCondition.getSubject() == PolicyCondition.Subject.CWE ||
+                    policyCondition.getSubject() == PolicyCondition.Subject.VULNERABILITY_ID)) {
+                vulnerabilities = qm.getAllVulnerabilities(component, false);
+            }
             LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy (" + policy.getUuid() + ")");
             final List<PolicyConditionViolation> policyConditionViolations = new ArrayList<>();
             int policyConditionsViolated = 0;
             for (final PolicyEvaluator evaluator : evaluators) {
                 evaluator.setQueryManager(qm);
-                final List<PolicyConditionViolation> policyConditionViolationsFromEvaluator = evaluator.evaluate(policy, component);
+                final List<PolicyConditionViolation> policyConditionViolationsFromEvaluator;
+                if (evaluator.getClass().equals(SeverityPolicyEvaluator.class) ||
+                        evaluator.getClass().equals(CwePolicyEvaluator.class) ||
+                        evaluator.getClass().equals(VulnerabilityIdPolicyEvaluator.class)) {
+                    policyConditionViolationsFromEvaluator = evaluator.evaluate(policy, component, vulnerabilities);
+                } else {
+                    policyConditionViolationsFromEvaluator = evaluator.evaluate(policy, component);
+                }
                 if (!policyConditionViolationsFromEvaluator.isEmpty()) {
                     policyConditionViolations.addAll(policyConditionViolationsFromEvaluator);
                     policyConditionsViolated += (int) policyConditionViolationsFromEvaluator.stream()

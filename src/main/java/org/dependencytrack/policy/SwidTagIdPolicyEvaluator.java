@@ -63,5 +63,4 @@ public class SwidTagIdPolicyEvaluator extends AbstractPolicyEvaluator {
         }
         return violations;
     }
-
 }
