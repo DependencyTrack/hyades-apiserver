@@ -56,7 +56,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
     }
 
     private static void updateMetrics(final UUID uuid, final boolean forceRefresh) throws Exception {
-        LOGGER.info("Executing metrics update for project " + uuid);
+        LOGGER.debug("Executing metrics update for project " + uuid);
         final Timer.Sample timerSample = Timer.start();
 
         try {
