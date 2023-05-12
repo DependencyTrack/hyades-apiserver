@@ -53,7 +53,7 @@ public class SeverityPolicyEvaluatorTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         PolicyEvaluator evaluator = new SeverityPolicyEvaluator();
         evaluator.setQueryManager(qm);
-        List<PolicyConditionViolation> violations = evaluator.evaluate(policy, component);
+        List<PolicyConditionViolation> violations = evaluator.evaluate(policy, component, List.of(vulnerability));
         Assert.assertEquals(1, violations.size());
         PolicyConditionViolation violation = violations.get(0);
         Assert.assertEquals(component.getId(), violation.getComponent().getId());

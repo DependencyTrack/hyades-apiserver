@@ -60,7 +60,7 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
     @Override
     public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
         List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
-        if(policyConditions.isEmpty()){
+        if (policyConditions.isEmpty()) {
             return Collections.emptyList();
         }
         final var violations = new ArrayList<PolicyConditionViolation>();

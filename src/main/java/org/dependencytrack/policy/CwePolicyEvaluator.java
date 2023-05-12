@@ -50,13 +50,13 @@ public class CwePolicyEvaluator extends AbstractPolicyEvaluator {
      * {@inheritDoc}
      */
     @Override
-    public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component) {
+    public List<PolicyConditionViolation> evaluate(final Policy policy, final Component component, List<Vulnerability> vulerabilities) {
         final List<PolicyConditionViolation> violations = new ArrayList<>();
         final List<PolicyCondition> policyConditions = super.extractSupportedConditions(policy);
         if (policyConditions.isEmpty()) {
             return Collections.emptyList();
         }
-        for (final Vulnerability vulnerability : qm.getAllVulnerabilities(component, false)) {
+        for (final Vulnerability vulnerability : vulerabilities) {
             for (final PolicyCondition condition: policyConditions) {
                 LOGGER.debug("Evaluating component (" + component.getUuid() + ") against policy condition (" + condition.getUuid() + ")");
                 if (matches(condition.getOperator(), vulnerability.getCwes(), condition.getValue())) {
@@ -65,6 +65,11 @@ public class CwePolicyEvaluator extends AbstractPolicyEvaluator {
             }
         }
         return violations;
+    }
+
+    @Override
+    public List<PolicyConditionViolation> evaluate(Policy policy, Component component) {
+        return Collections.emptyList();
     }
 
     public boolean matches(final PolicyCondition.Operator operator, final List<Integer> vulnerabilityCwes, final String conditionValue) {

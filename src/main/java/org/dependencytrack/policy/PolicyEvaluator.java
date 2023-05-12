@@ -21,6 +21,7 @@ package org.dependencytrack.policy;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
 
 import java.util.List;
@@ -50,6 +51,12 @@ public interface PolicyEvaluator {
      * @return a List of zero or more PolicyConditionViolation objects
      * @since 4.0.0
      */
+
     List<PolicyConditionViolation> evaluate(final Policy policy, final Component component);
+
+
+    default List<PolicyConditionViolation> evaluate(final Policy policy, final Component component, List<Vulnerability> vulnerabilities){
+        return evaluate(policy, component);
+    }
 
 }
