@@ -94,6 +94,7 @@
         <lib.kafka-junit.version>3.3.0</lib.kafka-junit.version>
         <lib.kafka-streams.version>3.4.0</lib.kafka-streams.version>
         <lib.lucene.version>8.11.2</lib.lucene.version>
+        <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
         <lib.protobuf-java.version>3.23.0</lib.protobuf-java.version>
@@ -271,6 +272,18 @@
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-sandbox</artifactId>
             <version>${lib.lucene.version}</version>
+        </dependency>
+        <!-- Micrometer Metrics -->
+        <dependency>
+            <groupId>io.github.mweirauch</groupId>
+            <artifactId>micrometer-jvm-extras</artifactId>
+            <version>${lib.micrometer-jvm-extras.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.micrometer</groupId>
+                    <artifactId>micrometer-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Pebble templating engine -->
         <dependency>
