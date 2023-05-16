@@ -24,6 +24,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentProjectA.setName("acme-lib-a");
         componentProjectA.setVersion("1.0.1");
         componentProjectA.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
+        componentProjectA.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
         qm.persist(componentProjectA);
 
         // Create another active project with one component.
@@ -41,22 +42,54 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentProjectC.setProject(projectC);
         componentProjectC.setName("acme-lib-c");
         componentProjectC.setVersion("3.0.1");
-        componentProjectA.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
+        componentProjectC.setPurl("pkg:maven/acme/acme-lib-c@3.0.1?foo=bar");
+        componentProjectC.setPurlCoordinates("pkg:maven/acme/acme-lib-c@3.0.1");
         qm.persist(componentProjectC);
+
+        // Create an active project with a component that has identical purlCoordinates as componentProjectA.
+        final var projectD = qm.createProject("acme-app-d", null, "4.0.0", null, null, null, true, false);
+        final var componentProjectD = new Component();
+        componentProjectD.setProject(projectD);
+        componentProjectD.setName("acme-lib-a");
+        componentProjectD.setVersion("1.0.1");
+        componentProjectD.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
+        componentProjectD.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
+        qm.persist(componentProjectD);
+
+        // Create an active project with a component that has identical purlCoordinates as componentProjectA, but is internal.
+        final var projectE = qm.createProject("acme-app-e", null, "5.0.0", null, null, null, true, false);
+        final var componentProjectE = new Component();
+        componentProjectE.setProject(projectE);
+        componentProjectE.setName("acme-lib-a");
+        componentProjectE.setVersion("1.0.1");
+        componentProjectE.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?fizz=buzz");
+        componentProjectE.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
+        componentProjectE.setInternal(true);
+        qm.persist(componentProjectE);
 
         new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectA
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectB
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectD
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectE
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo(componentProjectA.getPurl().toString());
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                },
+                // componentProjectB must not have been submitted, because it does not have a PURL
+                // componentProjectC must not have been submitted, because it belongs to an inactive project
+                // componentProjectD has the same PURL coordinates as componentProjectA and is not submitted again
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getInternal()).isTrue();
                 }
-                // componentB must not have been submitted, because it does not have a PURL
-                // componentC must not have been submitted, because it belongs to an inactive project
         );
     }
 
@@ -69,6 +102,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentA.setName("acme-lib-a");
         componentA.setVersion("1.0.1");
         componentA.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
+        componentA.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
         qm.persist(componentA);
         final var componentB = new Component();
         componentB.setProject(project);
@@ -84,7 +118,25 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentC.setVersion("3.0.1");
         componentC.setCpe("cpe:2.3:a:acme:acme-lib-c:3.0.1:*:*:*:*:*:*:*");
         componentC.setPurl("pkg:maven/acme/acme-lib-c@3.0.1?foo=bar");
+        componentC.setPurlCoordinates("pkg:maven/acme/acme-lib-c@3.0.1");
         qm.persist(componentC);
+        final var componentD = new Component();
+        componentD.setProject(project);
+        componentD.setGroup("acme");
+        componentD.setName("acme-lib-a");
+        componentD.setVersion("1.0.1");
+        componentD.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
+        componentD.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
+        qm.persist(componentD);
+        final var componentE = new Component();
+        componentE.setProject(project);
+        componentE.setGroup("acme");
+        componentE.setName("acme-lib-a");
+        componentE.setVersion("1.0.1");
+        componentE.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
+        componentE.setPurlCoordinates("pkg:maven/acme/acme-lib-a@1.0.1");
+        componentE.setInternal(true);
+        qm.persist(componentE);
 
         new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
@@ -93,14 +145,23 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo(componentC.getPurl().toString());
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                },
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getInternal()).isTrue();
                 },
                 // componentB must not have been submitted, because it does not have a PURL
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo(componentA.getPurl().toString());
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-c@3.0.1");
+                    assertThat(command.getComponent().getInternal()).isFalse();
                 }
+                // componentD has the same PURL coordinates as componentA nad is not submitted again
         );
     }
 
