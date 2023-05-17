@@ -369,9 +369,9 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomConsumedOrProcessedSubject.class);
         assertProject(subject.getProject());
-        assertThat(subject.getBom().toStringUtf8()).isEqualTo("bom");
-        assertThat(subject.getFormat()).isEqualTo("CycloneDX");
-        assertThat(subject.getSpecVersion()).isEqualTo("1.4");
+        assertThat(subject.getBom().getContent()).isEqualTo("bom");
+        assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
+        assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
     }
 
     @Test
@@ -398,9 +398,9 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomConsumedOrProcessedSubject.class);
         assertProject(subject.getProject());
-        assertThat(subject.getBom().toStringUtf8()).isEqualTo("bom");
-        assertThat(subject.getFormat()).isEqualTo("CycloneDX");
-        assertThat(subject.getSpecVersion()).isEqualTo("1.4");
+        assertThat(subject.getBom().getContent()).isEqualTo("bom");
+        assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
+        assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
     }
 
     @Test
@@ -427,9 +427,9 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
         assertProject(subject.getProject());
-        assertThat(subject.getBom().toStringUtf8()).isEqualTo("bom");
-        assertThat(subject.getFormat()).isEqualTo("CycloneDX");
-        assertThat(subject.getSpecVersion()).isEqualTo("1.4");
+        assertThat(subject.getBom().getContent()).isEqualTo("bom");
+        assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
+        assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
         assertThat(subject.getCause()).isEqualTo("just because");
     }
 

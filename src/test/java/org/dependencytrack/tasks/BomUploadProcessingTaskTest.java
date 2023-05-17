@@ -166,9 +166,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
                     assertThat(subject.hasProject()).isTrue();
                     assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
-                    assertThat(subject.getBom().toStringUtf8()).isEqualTo("(Omitted)");
-                    assertThat(subject.getFormat()).isEqualTo("CycloneDX");
-                    assertThat(subject.getSpecVersion()).isEmpty();
+                    assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
+                    assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
+                    assertThat(subject.getBom().getSpecVersion()).isEmpty();
                 }
         );
 
