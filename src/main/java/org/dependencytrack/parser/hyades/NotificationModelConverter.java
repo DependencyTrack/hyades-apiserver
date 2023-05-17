@@ -216,23 +216,31 @@ public final class NotificationModelConverter {
     }
 
     private static BomConsumedOrProcessedSubject convert(final BomConsumedOrProcessed subject) {
+
+        org.hyades.proto.notification.v1.Bom bom = org.hyades.proto.notification.v1.Bom.newBuilder()
+                .setSpecVersion(subject.getSpecVersion())
+                .setFormat(subject.getFormat().getFormatShortName())
+                .setContent(subject.getBom())
+                .build();
+
         return BomConsumedOrProcessedSubject.newBuilder()
                 .setProject(convert(subject.getProject()))
-                .setBom(ByteString.copyFromUtf8(subject.getBom()))
-                .setFormat(subject.getFormat().getFormatShortName())
-                .setSpecVersion(subject.getSpecVersion())
+                .setBom(bom)
                 .build();
     }
 
     private static BomProcessingFailedSubject convert(final BomProcessingFailed subject) {
+
+        org.hyades.proto.notification.v1.Bom.Builder bomBuilder = org.hyades.proto.notification.v1.Bom.newBuilder();
+        Optional.ofNullable(subject.getBom()).ifPresent(bomBuilder::setContent);
+        Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(bomBuilder::setFormat);
+        Optional.ofNullable(subject.getSpecVersion()).ifPresent(bomBuilder::setSpecVersion);
+
         final BomProcessingFailedSubject.Builder builder = BomProcessingFailedSubject.newBuilder()
                 .setProject(convert(subject.getProject()))
-                .setBom(ByteString.copyFromUtf8(subject.getBom()));
+                .setBom(bomBuilder.build());
 
-        Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(builder::setFormat);
-        Optional.ofNullable(subject.getSpecVersion()).ifPresent(builder::setSpecVersion);
         Optional.ofNullable(subject.getCause()).ifPresent(builder::setCause);
-
         return builder.build();
     }
 
