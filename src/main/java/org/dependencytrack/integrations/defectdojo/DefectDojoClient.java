@@ -118,8 +118,10 @@ public class DefectDojoClient {
                                 stringResponse = EntityUtils.toString(response1.getEntity());
                             }
                             dojoObj = new JSONObject(stringResponse);
-                            dojoArray = dojoObj.getJSONArray("results");
-                            dojoTests.addAll(jsonToList(dojoArray));
+                            dojoArray = dojoObj.optJSONArray("results");
+                            if (dojoArray != null) {
+                                dojoTests.addAll(jsonToList(dojoArray));
+                            }
                         }
                         LOGGER.debug("Successfully retrieved the test list ");
                         return dojoTests;
@@ -136,13 +138,12 @@ public class DefectDojoClient {
     }
 
     // Given the engagement id and scan type, search for existing test id
-    public String getDojoTestId(final String engagementID, final ArrayList dojoTests) {
-        for (int i = 0; i < dojoTests.size(); i++) {
-            String s = dojoTests.get(i).toString();
-            JSONObject dojoTest = new JSONObject(s);
-            if (dojoTest.get("engagement").toString().equals(engagementID) &&
-                    dojoTest.get("scan_type").toString().equals("Dependency Track Finding Packaging Format (FPF) Export")) {
-                return dojoTest.get("id").toString();
+    public String getDojoTestId(final String engagementID, final ArrayList<String> dojoTests) {
+        for (final String dojoTestJson : dojoTests) {
+            JSONObject dojoTest = new JSONObject(dojoTestJson);
+            if (dojoTest.optString("engagement").equals(engagementID) &&
+                    dojoTest.optString("scan_type").equals("Dependency Track Finding Packaging Format (FPF) Export")) {
+                return dojoTest.optString("id");
             }
         }
         return "";
