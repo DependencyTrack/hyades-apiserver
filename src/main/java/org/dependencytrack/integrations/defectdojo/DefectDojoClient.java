@@ -19,6 +19,7 @@
 package org.dependencytrack.integrations.defectdojo;
 
 import alpine.common.logging.Logger;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -69,7 +70,7 @@ public class DefectDojoClient {
                 .addPart("active", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
                 .addPart("minimum_severity", new StringBody("Info", ContentType.MULTIPART_FORM_DATA))
                 .addPart("close_old_findings", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("push_to_jira", new StringBody("push_to_jira", ContentType.MULTIPART_FORM_DATA))
+                .addPart("push_to_jira", new StringBody("false", ContentType.MULTIPART_FORM_DATA))
                 .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
                 .build();
         request.setEntity(data);
@@ -87,7 +88,7 @@ public class DefectDojoClient {
     }
 
     // Pulling DefectDojo 'tests' API endpoint with engagementID filter on, and retrieve a list of existing tests
-    public ArrayList getDojoTestIds(final String token, final String eid) {
+    public ArrayList<String> getDojoTestIds(final String token, final String eid) {
         LOGGER.debug("Pulling DefectDojo Tests API ...");
         String testsUri = "/api/v2/tests/";
         LOGGER.debug("Make the first pagination call");
@@ -104,17 +105,15 @@ public class DefectDojoClient {
                         String stringResponse = EntityUtils.toString(response.getEntity());
                         JSONObject dojoObj = new JSONObject(stringResponse);
                         JSONArray dojoArray = dojoObj.getJSONArray("results");
-                        ArrayList dojoTests = jsonToList(dojoArray);
-                        String nextUrl = "";
-                        while (dojoObj.get("next") != null) {
-                            nextUrl = dojoObj.get("next").toString();
+                        ArrayList<String> dojoTests = jsonToList(dojoArray);
+                        while (StringUtils.isNotBlank(dojoObj.optString("next"))) {
+                            final String nextUrl = dojoObj.getString("next");
                             LOGGER.debug("Making the subsequent pagination call on " + nextUrl);
                             uriBuilder = new URIBuilder(nextUrl);
                             request = new HttpGet(uriBuilder.build().toString());
                             request.addHeader("accept", "application/json");
                             request.addHeader("Authorization", "Token " + token);
                             try (CloseableHttpResponse response1 = HttpClientPool.getClient().execute(request)) {
-                                nextUrl = dojoObj.get("next").toString();
                                 stringResponse = EntityUtils.toString(response1.getEntity());
                             }
                             dojoObj = new JSONObject(stringResponse);
@@ -151,7 +150,7 @@ public class DefectDojoClient {
 
     // JSONArray to ArrayList simple converter
     public ArrayList<String> jsonToList(final JSONArray jsonArray) {
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList<String> list = new ArrayList<>();
         if (jsonArray != null) {
             for (int i = 0; i < jsonArray.length(); i++) {
                 list.add(jsonArray.get(i).toString());
@@ -164,7 +163,7 @@ public class DefectDojoClient {
      * A Reimport will reuse (overwrite) the existing test, instead of create a new test.
      * The Successfully reimport will also  increase the reimport counter by 1.
      */
-    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId) {
+    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId, final Boolean doNotReactivate) {
         LOGGER.debug("Re-reimport Dependency-Track findings to DefectDojo per Engagement");
         HttpPost request = new HttpPost(baseURL + "/api/v2/reimport-scan/");
         request.addHeader("accept", "application/json");
@@ -178,7 +177,8 @@ public class DefectDojoClient {
                 .addPart("active", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
                 .addPart("minimum_severity", new StringBody("Info", ContentType.MULTIPART_FORM_DATA))
                 .addPart("close_old_findings", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("push_to_jira", new StringBody("push_to_jira", ContentType.MULTIPART_FORM_DATA))
+                .addPart("push_to_jira", new StringBody("false", ContentType.MULTIPART_FORM_DATA))
+                .addPart("do_not_reactivate", new StringBody(doNotReactivate.toString(), ContentType.MULTIPART_FORM_DATA))
                 .addPart("test", new StringBody(testId, ContentType.MULTIPART_FORM_DATA))
                 .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
                 .build();
@@ -193,5 +193,4 @@ public class DefectDojoClient {
             uploader.handleException(LOGGER, ex);
         }
     }
-
 }
