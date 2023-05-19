@@ -24,6 +24,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -540,6 +541,39 @@ public class ProjectResourceTest extends ResourceTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getParent()).isNotNull();
         assertThat(project.getParent().getUuid()).isEqualTo(newParent.getUuid());
+    }
+
+    @Test
+    public void patchProjectExternalReferencesTest() {
+        final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, true, false);
+        final var ref1 = new ExternalReference();
+        ref1.setType(org.cyclonedx.model.ExternalReference.Type.VCS);
+        ref1.setUrl("https://github.com/DependencyTrack/awesomeness");
+        final var ref2 = new ExternalReference();
+        ref2.setType(org.cyclonedx.model.ExternalReference.Type.WEBSITE);
+        ref2.setUrl("https://dependencytrack.org");
+        ref2.setComment("Worth a visit!");
+        final var externalReferences = List.of(ref1, ref2);
+        final var jsonProject = new Project();
+        jsonProject.setExternalReferences(externalReferences);
+
+        final var response = target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method("PATCH", Entity.json(jsonProject));
+
+        Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        final var json = parseJsonObject(response);
+        final var patchedExternalReferences = json.getJsonArray("externalReferences");
+        Assert.assertEquals(2, patchedExternalReferences.size());
+        final var patchedRef1 = patchedExternalReferences.getJsonObject(0);
+        final var patchedRef2 = patchedExternalReferences.getJsonObject(1);
+        Assert.assertEquals("vcs", patchedRef1.getString("type"));
+        Assert.assertEquals("https://github.com/DependencyTrack/awesomeness", patchedRef1.getString("url"));
+        Assert.assertEquals("website", patchedRef2.getString("type"));
+        Assert.assertEquals("https://dependencytrack.org", patchedRef2.getString("url"));
+        Assert.assertEquals("Worth a visit!", patchedRef2.getString("comment"));
     }
 
     @Test
