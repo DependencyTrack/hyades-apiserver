@@ -3,6 +3,7 @@ package org.dependencytrack.event.kafka;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -13,8 +14,8 @@ import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
-import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
@@ -40,28 +41,23 @@ class KafkaStreamsTopologyFactory {
                         .withName("consume_from_%s_topic".formatted(KafkaTopics.VULN_ANALYSIS_RESULT.name())));
 
         // Process the vulnerabilities reported by the scanners.
-        // Re-key the result stream to component UUIDs to ensure that results
-        // for the same component are processed in a serial fashion.
-        //
-        // Results with status COMPLETE are re-keyed back to scan keys
-        // and forwarded, all other results are dropped after successful processing.
-        final KStream<UUID, ScanResult> processedVulnScanResultStream = vulnScanResultStream
-                .selectKey((scanKey, scanResult) -> UUID.fromString(scanKey.getComponentUuid()),
-                        Named.as("re-key_vuln_scan_result_to_component_uuid"))
-                .repartition(Repartitioned
-                        .with(Serdes.UUID(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
-                        .withName("vuln-scan-result-by-component-uuid"))
+        final KStream<ScanKey, ScanResult> processedVulnScanResultStream = vulnScanResultStream
                 .processValues(VulnerabilityScanResultProcessor::new, Named.as("process_vuln_scan_result"));
 
         // Re-key processed results to their respective scan token, and record their arrival.
         final KStream<String, VulnerabilityScan> completedVulnScanStream = processedVulnScanResultStream
-                .selectKey((componentUuid, scanResult) -> scanResult.getKey().getScanToken())
+                .map((scanKey, scanResult) -> {
+                    // Drop scanner results, as they can be rather large, and we don't need them anymore.
+                    // Dropping them will save us some compression and network overhead during the repartition.
+                    // We can remove this step should we ever need access to the results again.
+                    final var strippedScanResult = ScanResult.newBuilder(scanResult).clearScannerResults().build();
+                    return KeyValue.pair(scanKey.getScanToken(), strippedScanResult);
+                }, Named.as("re-key_scan-result_to_scan-token"))
                 .repartition(Repartitioned
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("processed-vuln-scan-result-by-scan-token"))
-                .mapValues((scanToken, scanResult) -> {
-                    try (final var qm = new QueryManager()) {
-                        qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
+                .mapValues((scanToken, value) -> {
+                    try (final var qm = new QueryManager().withL2CacheDisabled()) {
                         // Detach VulnerabilityScan objects when committing changes. Without this,
                         // all fields except the ID field will be unloaded on commit (the object will become HOLLOW),
                         // causing the call to getStatus() to trigger a database query behind the scenes.
@@ -79,6 +75,8 @@ class KafkaStreamsTopologyFactory {
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,
                         Named.as("filter_completed_vuln_scans"));
+
+        // TODO: Send VULNERABILITY_SCAN_COMPLETED notification
 
         completedVulnScanStream
                 .foreach((scanToken, vulnScan) -> {
