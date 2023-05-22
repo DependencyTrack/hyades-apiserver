@@ -1,6 +1,7 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.event.framework.Event;
+import alpine.notification.Notification;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -102,14 +103,14 @@ public class KafkaEventDispatcher {
     }
 
     /**
-     * Asynchronously dispatch a given {@link alpine.notification.Notification} to Kafka.
+     * Asynchronously dispatch a given {@link Notification} to Kafka.
      *
-     * @param alpineNotification The {@link alpine.notification.Notification} to dispatch
+     * @param alpineNotification The {@link Notification} to dispatch
      * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched notification,
      * or {@code null} when the event was not dispatched
      * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord)
      */
-    public Future<RecordMetadata> dispatchAsync(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
+    public Future<RecordMetadata> dispatchAsync(final UUID projectUuid, final Notification alpineNotification) {
         return dispatchAsyncInternal(KafkaEventConverter.convert(projectUuid, alpineNotification), null);
     }
 
