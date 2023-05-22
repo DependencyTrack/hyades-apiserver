@@ -109,8 +109,8 @@ public class KafkaEventDispatcher {
      * or {@code null} when the event was not dispatched
      * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord)
      */
-    public Future<RecordMetadata> dispatchAsync(final alpine.notification.Notification alpineNotification) {
-        return dispatchAsyncInternal(KafkaEventConverter.convert(alpineNotification), null);
+    public Future<RecordMetadata> dispatchAsync(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
+        return dispatchAsyncInternal(KafkaEventConverter.convert(projectUuid, alpineNotification), null);
     }
 
     private <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
