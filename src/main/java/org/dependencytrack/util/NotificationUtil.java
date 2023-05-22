@@ -232,7 +232,7 @@ public final class NotificationUtil {
         qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
         qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
-        Project project = violationAnalysis.getComponent().getProject();
+        Project project = policyViolation.getComponent().getProject();
         sendNotificationToKafka(project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.POLICY_VIOLATION)
