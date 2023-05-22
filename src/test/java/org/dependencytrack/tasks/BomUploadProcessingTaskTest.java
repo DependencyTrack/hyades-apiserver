@@ -79,10 +79,10 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
 
         qm.getPersistenceManager().refresh(project);
@@ -124,8 +124,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
 
         qm.getPersistenceManager().refresh(project);
@@ -154,8 +154,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
-                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED.name());
-                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED, event);
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
                     assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
                     assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                     assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);

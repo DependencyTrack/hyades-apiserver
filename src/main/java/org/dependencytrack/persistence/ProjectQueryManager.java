@@ -433,7 +433,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        NotificationUtil.dispatchNotificationsWithSubject(
+        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
                 NotificationScope.PORTFOLIO,
                 NotificationGroup.PROJECT_CREATED,
                 NotificationConstants.Title.PROJECT_CREATED,

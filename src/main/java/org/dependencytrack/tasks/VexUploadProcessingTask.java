@@ -95,13 +95,13 @@ public class VexUploadProcessingTask implements Subscriber {
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + vexFormat.getFormatShortName() + " VEX was consumed and will be processed";
                 Object subject = new VexConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(vexBytes), vexFormat, vexSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.VEX_CONSUMED, NotificationConstants.Title.VEX_CONSUMED, content, NotificationLevel.INFORMATIONAL, subject);
+                NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(), NotificationScope.PORTFOLIO, NotificationGroup.VEX_CONSUMED, NotificationConstants.Title.VEX_CONSUMED, content, NotificationLevel.INFORMATIONAL, subject);
                 qm.createVex(project, new Date(), vexFormat, vexSpecVersion, vexVersion, serialNumnber);
 
                 final Project detachedProject = qm.detach(Project.class, project.getId());
                 content = "A " + vexFormat.getFormatShortName() + " VEX was processed";
                 subject = new VexConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(vexBytes), vexFormat, vexSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(NotificationScope.PORTFOLIO, NotificationGroup.VEX_PROCESSED, NotificationConstants.Title.VEX_PROCESSED, content, NotificationLevel.INFORMATIONAL, subject);
+                NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(), NotificationScope.PORTFOLIO, NotificationGroup.VEX_PROCESSED, NotificationConstants.Title.VEX_PROCESSED, content, NotificationLevel.INFORMATIONAL, subject);
 
 
             } catch (Exception ex) {
