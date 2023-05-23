@@ -433,7 +433,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        NotificationUtil.dispatchNotificationsWithSubject(
+        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
                 NotificationScope.PORTFOLIO,
                 NotificationGroup.PROJECT_CREATED,
                 NotificationConstants.Title.PROJECT_CREATED,
@@ -516,6 +516,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setCpe(transientProject.getCpe());
         project.setPurl(transientProject.getPurl());
         project.setSwidTagId(transientProject.getSwidTagId());
+        project.setExternalReferences(transientProject.getExternalReferences());
 
         if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)){
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");

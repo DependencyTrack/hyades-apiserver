@@ -141,7 +141,8 @@ public class BomUploadProcessingTask implements Subscriber {
                     return;
                 }
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
-                kafkaEventDispatcher.dispatchAsync(new Notification()
+                kafkaEventDispatcher.dispatchAsync(project.getUuid(),
+                        new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_CONSUMED)
                         .level(NotificationLevel.INFORMATIONAL)
@@ -183,7 +184,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     }
                 }
                 LOGGER.info("Processed " + flattenedComponents.size() + " components and " + flattenedServices.size() + " services uploaded to project " + event.getProjectUuid());
-                kafkaEventDispatcher.dispatchAsync(new Notification()
+                kafkaEventDispatcher.dispatchAsync(project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSED)
                         .level(NotificationLevel.INFORMATIONAL)
@@ -196,7 +197,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 if (bomProcessingFailedProject != null) {
                     bomProcessingFailedProject = qm.detach(Project.class, bomProcessingFailedProject.getId());
                 }
-                kafkaEventDispatcher.dispatchAsync(new Notification()
+                kafkaEventDispatcher.dispatchAsync(bomProcessingFailedProject.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
                         .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
