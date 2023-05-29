@@ -47,19 +47,19 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purl() == null) {
+        if (event == null || event.purlCoordinates() == null) {
             return null;
         }
 
         final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
-                .setPurl(event.purl());
+                .setPurl(event.purlCoordinates());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
 
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purl(), analysisCommand, null);
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
     static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
