@@ -157,7 +157,6 @@ public class ViolationAnalysisResource extends AlpineResource {
             final String comment = StringUtils.trimToNull(request.getComment());
             qm.makeViolationAnalysisComment(analysis, comment, commenter);
             analysis = qm.getObjectById(ViolationAnalysis.class, analysis.getId());
-            ///////////////
             Project project = analysis.getComponent().getProject();
             PolicyViolation policyViolation = analysis.getPolicyViolation();
             analysis.getPolicyViolation().getPolicyCondition().getPolicy(); // Force loading of policy
@@ -181,8 +180,6 @@ public class ViolationAnalysisResource extends AlpineResource {
 
             analysis.getComponent().setProject(project); // Project of component is lost after the detach above
             analysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
-
-            ////////////////
 
             NotificationUtil.analyzeNotificationCriteria(analysis, analysisStateChange, suppressionChange);
             return Response.ok(analysis).build();
