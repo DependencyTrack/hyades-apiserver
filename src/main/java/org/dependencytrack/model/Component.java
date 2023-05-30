@@ -243,7 +243,7 @@ public class Component implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_IDX")
-    @Size(max = 255)
+    @Column(name = "PURL", jdbcType = "VARCHAR", length = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purl;
