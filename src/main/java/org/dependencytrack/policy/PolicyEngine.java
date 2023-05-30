@@ -26,10 +26,13 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ViolationAnalysis;
+import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.ArrayList;
@@ -174,7 +177,15 @@ public class PolicyEngine {
         qm.reconcilePolicyViolations(component, policyViolations);
         for (final PolicyViolation pv : qm.getAllPolicyViolations(component)) {
             if (existingPolicyViolations.stream().noneMatch(existingViolation -> existingViolation.getId() == pv.getId())) {
-                NotificationUtil.analyzeNotificationCriteria(qm, pv);
+                final ViolationAnalysis violationAnalysis = qm.getViolationAnalysis(pv.getComponent(), pv);
+                if (!(violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState()))) {
+                    pv.getPolicyCondition().getPolicy(); // Force loading of policy
+                    qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
+                    qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
+                    final PolicyViolation pv1 = qm.getPersistenceManager().detachCopy(pv);
+                    Project project = pv.getComponent().getProject();
+                    NotificationUtil.analyzeNotificationCriteria(project.getUuid(), pv1);
+                }
             }
         }
         return policyViolations;

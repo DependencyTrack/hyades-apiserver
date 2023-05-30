@@ -31,7 +31,6 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
-import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
@@ -43,7 +42,6 @@ import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
 
-import javax.jdo.FetchPlan;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
@@ -52,6 +50,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -64,8 +63,8 @@ public final class NotificationUtil {
     private NotificationUtil() {
     }
 
-    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level){
-       sendNotificationToKafka(null, new Notification()
+    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level) {
+        sendNotificationToKafka(null, new Notification()
                 .scope(scope)
                 .group(group)
                 .title(title)
@@ -73,7 +72,8 @@ public final class NotificationUtil {
                 .level(level)
         );
     }
-    public static void dispatchNotificationsWithSubject(UUID projectUuid, NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject){
+
+    public static void dispatchNotificationsWithSubject(UUID projectUuid, NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject) {
         sendNotificationToKafka(projectUuid, new Notification()
                 .scope(scope)
                 .group(group)
@@ -84,29 +84,18 @@ public final class NotificationUtil {
         );
     }
 
-    public static void analyzeNotificationCriteria(final QueryManager qm, Component component) {
-        List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component, false);
-        if (vulnerabilities != null && !vulnerabilities.isEmpty()) {
-            component = qm.detach(Component.class, component.getId());
-            vulnerabilities = qm.detach(vulnerabilities);
-            for (final Vulnerability vulnerability : vulnerabilities) {
-                // Because aliases is a transient field, it's lost when detaching the vulnerability.
-                // Repopulating here as a workaround, ultimately we need a better way to handle them.
-                vulnerability.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
-            }
-
-            sendNotificationToKafka(component.getProject().getUuid(), new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(NotificationGroup.NEW_VULNERABLE_DEPENDENCY)
-                    .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABLE_DEPENDENCY, component.getProject()))
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .content(generateNotificationContent(component, vulnerabilities))
-                    .subject(new NewVulnerableDependency(component, vulnerabilities))
-            );
-        }
+    public static void analyzeNotificationCriteria(Component component, List<Vulnerability> vulnerabilities) {
+        sendNotificationToKafka(component.getProject().getUuid(), new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.NEW_VULNERABLE_DEPENDENCY)
+                .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABLE_DEPENDENCY, component.getProject()))
+                .level(NotificationLevel.INFORMATIONAL)
+                .content(generateNotificationContent(vulnerabilities))
+                .subject(new NewVulnerableDependency(component, vulnerabilities))
+        );
     }
 
-    public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
+    public static void analyzeNotificationCriteria(UUID projectUuid, Analysis analysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
         if (analysisStateChange || suppressionChange) {
             final NotificationGroup notificationGroup;
@@ -114,26 +103,14 @@ public final class NotificationUtil {
 
             String title = null;
             if (analysisStateChange) {
-                switch (analysis.getAnalysisState()) {
-                    case EXPLOITABLE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
-                        break;
-                    case IN_TRIAGE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
-                        break;
-                    case NOT_AFFECTED:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
-                        break;
-                    case FALSE_POSITIVE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
-                        break;
-                    case NOT_SET:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
-                        break;
-                    case RESOLVED:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
-                        break;
-                }
+                title = switch (analysis.getAnalysisState()) {
+                    case EXPLOITABLE -> NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
+                    case IN_TRIAGE -> NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
+                    case NOT_AFFECTED -> NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
+                    case FALSE_POSITIVE -> NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
+                    case NOT_SET -> NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
+                    case RESOLVED -> NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
+                };
             } else if (suppressionChange) {
                 if (analysis.isSuppressed()) {
                     title = NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED;
@@ -142,16 +119,7 @@ public final class NotificationUtil {
                 }
             }
 
-            Project project = analysis.getComponent().getProject();
-
-            analysis = qm.detach(Analysis.class, analysis.getId());
-
-            analysis.getComponent().setProject(project); // Project of component is lost after the detach above
-
-            // Aliases are lost during the detach above
-            analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
-
-            sendNotificationToKafka(project.getUuid(), new Notification()
+            sendNotificationToKafka(projectUuid, new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
@@ -163,24 +131,18 @@ public final class NotificationUtil {
         }
     }
 
-    public static void analyzeNotificationCriteria(final QueryManager qm, ViolationAnalysis violationAnalysis,
+    public static void analyzeNotificationCriteria(ViolationAnalysis violationAnalysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
         if (analysisStateChange || suppressionChange) {
             final NotificationGroup notificationGroup;
             notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
             String title = null;
             if (analysisStateChange) {
-                switch (violationAnalysis.getAnalysisState()) {
-                    case APPROVED:
-                        title = NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_APPROVED;
-                        break;
-                    case REJECTED:
-                        title = NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_REJECTED;
-                        break;
-                    case NOT_SET:
-                        title = NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET;
-                        break;
-                }
+                title = switch (violationAnalysis.getAnalysisState()) {
+                    case APPROVED -> NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_APPROVED;
+                    case REJECTED -> NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_REJECTED;
+                    case NOT_SET -> NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET;
+                };
             } else if (suppressionChange) {
                 if (violationAnalysis.isSuppressed()) {
                     title = NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_SUPPRESSED;
@@ -190,56 +152,26 @@ public final class NotificationUtil {
             }
 
             Project project = violationAnalysis.getComponent().getProject();
-            PolicyViolation policyViolation = violationAnalysis.getPolicyViolation();
-            violationAnalysis.getPolicyViolation().getPolicyCondition().getPolicy(); // Force loading of policy
-
-            // Detach policyViolation, ensuring that all elements in the policyViolation->policyCondition->policy
-            // reference chain are included. It's important that "the opposite way" is not loaded when detaching,
-            // otherwise the policy->policyConditions reference chain will cause indefinite recursion issues during
-            // JSON serialization.
-            final int origMaxFetchDepth = qm.getPersistenceManager().getFetchPlan().getMaxFetchDepth();
-            final int origDetachmentOptions = qm.getPersistenceManager().getFetchPlan().getDetachmentOptions();
-            try {
-                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2);
-                policyViolation = qm.getPersistenceManager().detachCopy(policyViolation);
-            } finally {
-                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(origDetachmentOptions);
-                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(origMaxFetchDepth);
-            }
-
-            violationAnalysis = qm.detach(ViolationAnalysis.class, violationAnalysis.getId());
-
-            violationAnalysis.getComponent().setProject(project); // Project of component is lost after the detach above
-            violationAnalysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
-
             sendNotificationToKafka(project.getUuid(), new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, violationAnalysis.getComponent().getProject()))
                     .level(NotificationLevel.INFORMATIONAL)
-                    .content(generateNotificationContent(violationAnalysis))
+                    .content("An violation analysis decision was made to a policy violation affecting a project ")
                     .subject(new ViolationAnalysisDecisionChange(violationAnalysis.getPolicyViolation(),
                             violationAnalysis.getComponent(), violationAnalysis))
             );
         }
     }
 
-    public static void analyzeNotificationCriteria(final QueryManager qm, final PolicyViolation policyViolation) {
-        final ViolationAnalysis violationAnalysis = qm.getViolationAnalysis(policyViolation.getComponent(), policyViolation);
-        if (violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState())) return;
-        policyViolation.getPolicyCondition().getPolicy(); // Force loading of policy
-        qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
-        qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
-        Project project = policyViolation.getComponent().getProject();
-        sendNotificationToKafka(project.getUuid(), new Notification()
+    public static void analyzeNotificationCriteria(UUID projectUuid, final PolicyViolation policyViolation) {
+        sendNotificationToKafka(projectUuid, new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.POLICY_VIOLATION)
-                .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION,policyViolation.getComponent().getProject()))
+                .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION, policyViolation.getComponent().getProject()))
                 .level(NotificationLevel.INFORMATIONAL)
-                .content(generateNotificationContent(pv))
-                .subject(new PolicyViolationIdentified(pv, pv.getComponent(), pv.getProject()))
+                .content(generateNotificationContent(policyViolation))
+                .subject(new PolicyViolationIdentified(policyViolation, policyViolation.getComponent(), policyViolation.getProject()))
         );
     }
 
@@ -252,14 +184,14 @@ public final class NotificationUtil {
         if (project.getPurl() != null) {
             projectBuilder.add("purl", project.getPurl().canonicalize());
         }
-        if (project.getTags() != null && project.getTags().size() > 0) {
+        if (project.getTags() != null && !project.getTags().isEmpty()) {
             final StringBuilder sb = new StringBuilder();
-            for (final Tag tag: project.getTags()) {
+            for (final Tag tag : project.getTags()) {
                 sb.append(tag.getName()).append(",");
             }
             String tags = sb.toString();
             if (tags.endsWith(",")) {
-                tags = tags.substring(0, tags.length()-1);
+                tags = tags.substring(0, tags.length() - 1);
             }
             JsonUtil.add(projectBuilder, "tags", tags);
         }
@@ -268,7 +200,7 @@ public final class NotificationUtil {
 
     public static void loadDefaultNotificationPublishers(QueryManager qm) throws IOException {
         for (final DefaultNotificationPublishers publisher : DefaultNotificationPublishers.values()) {
-            File templateFile = new File(URLDecoder.decode(NotificationUtil.class.getResource(publisher.getPublisherTemplateFile()).getFile(), UTF_8.name()));
+            File templateFile = new File(URLDecoder.decode(Objects.requireNonNull(NotificationUtil.class.getResource(publisher.getPublisherTemplateFile())).getFile(), UTF_8.name()));
             if (qm.isEnabled(ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED)) {
                 ConfigProperty templateBaseDir = qm.getConfigProperty(
                         ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR.getGroupName(),
@@ -304,7 +236,7 @@ public final class NotificationUtil {
         if (vulnerability.getDescription() != null) {
             content = vulnerability.getDescription();
         } else {
-            content = (vulnerability.getTitle() != null) ? vulnerability.getVulnId() + ": " +vulnerability.getTitle() : vulnerability.getVulnId();
+            content = (vulnerability.getTitle() != null) ? vulnerability.getVulnId() + ": " + vulnerability.getTitle() : vulnerability.getVulnId();
         }
         return content;
     }
@@ -313,7 +245,7 @@ public final class NotificationUtil {
         return "A " + policyViolation.getType().name().toLowerCase() + " policy violation occurred";
     }
 
-    private static String generateNotificationContent(final Component component, final List<Vulnerability> vulnerabilities) {
+    private static String generateNotificationContent(final List<Vulnerability> vulnerabilities) {
         final String content;
         if (vulnerabilities.size() == 1) {
             content = "A dependency was introduced that contains 1 known vulnerability";
@@ -333,10 +265,6 @@ public final class NotificationUtil {
         return content;
     }
 
-    private static String generateNotificationContent(final ViolationAnalysis violationAnalysis) {
-        return "An violation analysis decision was made to a policy violation affecting a project";
-    }
-
     public static String generateNotificationTitle(String messageType, Project project) {
         if (project != null) {
             return messageType + " on Project: [" + project.toString() + "]";
@@ -344,7 +272,7 @@ public final class NotificationUtil {
         return messageType;
     }
 
-    private static void sendNotificationToKafka(UUID projectUuid, Notification notification){
+    private static void sendNotificationToKafka(UUID projectUuid, Notification notification) {
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 }

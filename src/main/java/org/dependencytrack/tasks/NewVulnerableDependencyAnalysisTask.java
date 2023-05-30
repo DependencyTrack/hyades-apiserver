@@ -23,8 +23,13 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.NewVulnerableDependencyAnalysisEvent;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A {@link Subscriber} task that evaluates whether components qualify for
@@ -39,13 +44,27 @@ public class NewVulnerableDependencyAnalysisTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final NewVulnerableDependencyAnalysisEvent event) {
-            for (Component component : event.components()) {
-                try (final var qm = new QueryManager()) {
-                    component = qm.getObjectById(Component.class, component.getId());
-                    LOGGER.debug("Analyzing notification criteria for component " + component.getUuid());
-                    NotificationUtil.analyzeNotificationCriteria(qm, component);
-                } catch (Exception ex) {
-                    LOGGER.error("An unknown error occurred while analyzing notification criteria for component " + component.getUuid(), ex);
+            try (final var qm = new QueryManager()) {
+                for (Component component : event.components()) {
+                    try {
+                        component = qm.getObjectById(Component.class, component.getId());
+                        LOGGER.debug("Analyzing notification criteria for component " + component.getUuid());
+                        List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component, false);
+                        List<Vulnerability> result = new ArrayList<>();
+                        if (vulnerabilities != null && !vulnerabilities.isEmpty()) {
+                            component = qm.detach(Component.class, component.getId());
+                            for (final Vulnerability vulnerability : vulnerabilities) {
+                                Vulnerability vulnerability1= qm.detach(Vulnerability.class, vulnerability);
+                                // Because aliases is a transient field, it's lost when detaching the vulnerability.
+                                // Repopulating here as a workaround, ultimately we need a better way to handle them.
+                                vulnerability1.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
+                                result.add(vulnerability1);
+                            }
+                            NotificationUtil.analyzeNotificationCriteria( component, result);
+                        }
+                    } catch (Exception ex) {
+                        LOGGER.error("An unknown error occurred while analyzing notification criteria for component " + component.getUuid(), ex);
+                    }
                 }
             }
         }

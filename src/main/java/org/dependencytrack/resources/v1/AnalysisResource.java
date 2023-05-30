@@ -174,7 +174,11 @@ public class AnalysisResource extends AlpineResource {
             final String comment = StringUtils.trimToNull(request.getComment());
             qm.makeAnalysisComment(analysis, comment, commenter);
             analysis = qm.getAnalysis(component, vulnerability);
-            NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
+            analysis = qm.detach(Analysis.class, analysis.getId());
+            analysis.getComponent().setProject(project); // Project of component is lost after the detach above
+            // Aliases are lost during the detach above
+            analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
+            NotificationUtil.analyzeNotificationCriteria(project.getUuid(), analysis, analysisStateChange, suppressionChange);
             return Response.ok(analysis).build();
         }
     }

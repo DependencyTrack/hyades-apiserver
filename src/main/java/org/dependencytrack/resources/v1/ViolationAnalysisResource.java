@@ -36,12 +36,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PolicyViolation;
+import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
 
+import javax.jdo.FetchPlan;
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -155,7 +157,34 @@ public class ViolationAnalysisResource extends AlpineResource {
             final String comment = StringUtils.trimToNull(request.getComment());
             qm.makeViolationAnalysisComment(analysis, comment, commenter);
             analysis = qm.getObjectById(ViolationAnalysis.class, analysis.getId());
-            NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
+            ///////////////
+            Project project = analysis.getComponent().getProject();
+            PolicyViolation policyViolation = analysis.getPolicyViolation();
+            analysis.getPolicyViolation().getPolicyCondition().getPolicy(); // Force loading of policy
+
+            // Detach policyViolation, ensuring that all elements in the policyViolation->policyCondition->policy
+            // reference chain are included. It's important that "the opposite way" is not loaded when detaching,
+            // otherwise the policy->policyConditions reference chain will cause indefinite recursion issues during
+            // JSON serialization.
+            final int origMaxFetchDepth = qm.getPersistenceManager().getFetchPlan().getMaxFetchDepth();
+            final int origDetachmentOptions = qm.getPersistenceManager().getFetchPlan().getDetachmentOptions();
+            try {
+                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
+                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2);
+                policyViolation = qm.getPersistenceManager().detachCopy(policyViolation);
+            } finally {
+                qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(origDetachmentOptions);
+                qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(origMaxFetchDepth);
+            }
+
+            analysis = qm.detach(ViolationAnalysis.class, analysis.getId());
+
+            analysis.getComponent().setProject(project); // Project of component is lost after the detach above
+            analysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
+
+            ////////////////
+
+            NotificationUtil.analyzeNotificationCriteria(analysis, analysisStateChange, suppressionChange);
             return Response.ok(analysis).build();
         }
     }
