@@ -865,6 +865,10 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(cpe23, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
     }
 
+    public VulnerableSoftware getVulnerableSoftwareByCpe23AndVersion(String cpe23, String version) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23AndVersion(cpe23, version);
+    }
+
     public PaginatedResult getVulnerableSoftware() {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftware();
     }
@@ -1531,5 +1535,9 @@ public class QueryManager extends AlpineQueryManager {
                 trx.rollback();
             }
         }
+    }
+
+    public VulnerableSoftware getVulnerableSoftwareByPurlAndVersion(String purlType, String purlNamespace, String purlName, String version) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurlAndVersion(purlType, purlNamespace, purlName, version);
     }
 }
