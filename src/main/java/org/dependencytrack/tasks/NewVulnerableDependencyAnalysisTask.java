@@ -24,7 +24,6 @@ import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.NewVulnerableDependencyAnalysisEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
@@ -54,13 +53,13 @@ public class NewVulnerableDependencyAnalysisTask implements Subscriber {
                         if (vulnerabilities != null && !vulnerabilities.isEmpty()) {
                             component = qm.detach(Component.class, component.getId());
                             for (final Vulnerability vulnerability : vulnerabilities) {
-                                Vulnerability vulnerability1= qm.detach(Vulnerability.class, vulnerability);
+                                Vulnerability vulnerability1 = qm.detach(Vulnerability.class, vulnerability);
                                 // Because aliases is a transient field, it's lost when detaching the vulnerability.
                                 // Repopulating here as a workaround, ultimately we need a better way to handle them.
                                 vulnerability1.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
                                 result.add(vulnerability1);
                             }
-                            NotificationUtil.analyzeNotificationCriteria( component, result);
+                            NotificationUtil.analyzeNotificationCriteria(component, result);
                         }
                     } catch (Exception ex) {
                         LOGGER.error("An unknown error occurred while analyzing notification criteria for component " + component.getUuid(), ex);

@@ -157,7 +157,7 @@ public final class NotificationUtil {
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, violationAnalysis.getComponent().getProject()))
                     .level(NotificationLevel.INFORMATIONAL)
-                    .content("An violation analysis decision was made to a policy violation affecting a project ")
+                    .content("An violation analysis decision was made to a policy violation affecting a project")
                     .subject(new ViolationAnalysisDecisionChange(violationAnalysis.getPolicyViolation(),
                             violationAnalysis.getComponent(), violationAnalysis))
             );
