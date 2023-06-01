@@ -61,6 +61,7 @@ import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABLE_DEPEND
 import static org.hyades.proto.notification.v1.Group.GROUP_POLICY_VIOLATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
+import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
 import static org.hyades.proto.notification.v1.Group.GROUP_REPOSITORY;
 import static org.hyades.proto.notification.v1.Group.GROUP_UNSPECIFIED;
 import static org.hyades.proto.notification.v1.Group.GROUP_VEX_CONSUMED;
@@ -142,6 +143,7 @@ public final class NotificationModelConverter {
             case VEX_PROCESSED -> GROUP_VEX_PROCESSED;
             case POLICY_VIOLATION -> GROUP_POLICY_VIOLATION;
             case PROJECT_CREATED -> GROUP_PROJECT_CREATED;
+            case PROJECT_VULN_ANALYSIS_COMPLETE -> GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
         };
     }
 

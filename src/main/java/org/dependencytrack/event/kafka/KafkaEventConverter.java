@@ -83,6 +83,7 @@ final class KafkaEventConverter {
             case GROUP_VEX_CONSUMED -> KafkaTopics.NOTIFICATION_VEX;
             case GROUP_VEX_PROCESSED -> KafkaTopics.NOTIFICATION_VEX;
             case GROUP_BOM_PROCESSING_FAILED -> KafkaTopics.NOTIFICATION_BOM;
+            case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> KafkaTopics.PROJECT_VULN_ANALYSIS_COMPLETE;
             default -> null;
         };
         if (topic == null) {

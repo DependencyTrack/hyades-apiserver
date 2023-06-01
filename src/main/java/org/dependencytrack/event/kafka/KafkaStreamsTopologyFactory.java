@@ -2,6 +2,8 @@ package org.dependencytrack.event.kafka;
 
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
+import alpine.notification.Notification;
+import alpine.notification.NotificationLevel;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -19,13 +21,26 @@ import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 class KafkaStreamsTopologyFactory {
 
@@ -75,8 +90,10 @@ class KafkaStreamsTopologyFactory {
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,
                         Named.as("filter_completed_vuln_scans"));
-
-        // TODO: Send VULNERABILITY_SCAN_COMPLETED notification
+        completedVulnScanStream.foreach((scantoken, vulnscan) -> {
+            if (vulnscan.getTargetIdentifier().toString().equals(VulnerabilityScan.TargetType.PROJECT.toString())) {
+                sendNotificationForCompletedVulnerabilityScan(vulnscan);
+            }});
 
         completedVulnScanStream
                 .foreach((scanToken, vulnScan) -> {
@@ -110,6 +127,57 @@ class KafkaStreamsTopologyFactory {
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         return streamsBuilder.build(streamsProperties);
+    }
+
+    private void sendNotificationForCompletedVulnerabilityScan( VulnerabilityScan vulnscan ) {
+                try (QueryManager qm = new QueryManager()) {
+                    Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
+                    List<Component> componentList = qm.getAllComponents(project);
+                    ConcurrentHashMap<String, String> cumulativeContent = new ConcurrentHashMap<>();
+                    for (Component component : componentList) {
+                        ConcurrentHashMap<String, String> notificationContent = new ConcurrentHashMap<>();
+                        List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
+                        if (!vulnerabilities.isEmpty()) {
+                            notificationContent.put("Vulnerable Library", component.getName());
+                            notificationContent.put("Vulnerable library version", component.getVersion());
+                            notificationContent.put("Purl", component.getPurl().toString());
+                            for (Vulnerability vulnerability : vulnerabilities) {
+                                ConcurrentHashMap<String, String> vulnerabilityDetails = new ConcurrentHashMap<>();
+                                if (!vulnerability.getAliases().isEmpty()) {
+                                    for (VulnerabilityAlias vulnerabilityAlias : vulnerability.getAliases()) {
+                                        vulnerabilityDetails.put("CVE ID", Optional.ofNullable(vulnerabilityAlias.getCveId()).orElse("NA"));
+                                        vulnerabilityDetails.put("GHSA ID", Optional.ofNullable(vulnerabilityAlias.getGhsaId()).orElse("NA"));
+                                        vulnerabilityDetails.put("OSV ID", Optional.ofNullable(vulnerabilityAlias.getOsvId()).orElse("NA"));
+                                        vulnerabilityDetails.put("SNYK ID", Optional.ofNullable(vulnerabilityAlias.getSnykId()).orElse("NA"));
+                                        vulnerabilityDetails.put("Sonatype ID", Optional.ofNullable(vulnerabilityAlias.getSonatypeId()).orElse("NA"));
+                                        vulnerabilityDetails.put("VulnDb ID", Optional.ofNullable(vulnerabilityAlias.getVulnDbId()).orElse("NA"));
+                                        vulnerabilityDetails.put("Gsd ID", Optional.ofNullable(vulnerabilityAlias.getGsdId()).orElse("NA"));
+                                        vulnerabilityDetails.put("Internal ID", Optional.ofNullable(vulnerabilityAlias.getInternalId()).orElse("NA"));
+                                    }
+                                }
+                                vulnerabilityDetails.put("CVSSV3Score", String.valueOf(Optional.ofNullable(vulnerability.getCvssV3BaseScore()).orElse(BigDecimal.valueOf(0L))));
+                                vulnerabilityDetails.put("CVSSV2Score", String.valueOf(Optional.ofNullable(vulnerability.getCvssV2BaseScore()).orElse(BigDecimal.valueOf(0L))));
+                                vulnerabilityDetails.put("Vulnerability id",vulnerability.getVulnId());
+                                notificationContent.putAll(vulnerabilityDetails);
+                            }
+
+                        }
+                        cumulativeContent.putAll(notificationContent);
+                    }
+                    StringBuilder contents = new StringBuilder();
+                    for(Map.Entry<String, String> entry: cumulativeContent.entrySet()){
+                        contents.append(entry.getKey()).append(": ").append(entry.getValue());
+                    }
+                    final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
+                    kafkaEventDispatcher.dispatchAsync(vulnscan.getTargetIdentifier(),
+                            new Notification()
+                                    .scope(NotificationScope.PORTFOLIO)
+                                    .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
+                                    .level(NotificationLevel.INFORMATIONAL)
+                                    .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
+                                    .content(contents.toString())
+                                    .subject("Vulnerability data for project "+project.getName()));
+                }
     }
 
 }
