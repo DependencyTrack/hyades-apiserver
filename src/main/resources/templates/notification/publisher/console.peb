@@ -6,3 +6,4 @@ Notification
   -- group:     {{ notification.group }}
   -- title:     {{ notification.title }}
   -- content:   {{ notification.content }}
+  -- subject:   {{ subjectJson | raw }}

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
@@ -62,8 +61,6 @@ import java.util.List;
 @Api(authorizations = @Authorization(value = "X-Api-Key"))
 public class NotificationRuleResource extends AlpineResource {
 
-    private static final Logger LOGGER = Logger.getLogger(NotificationRuleResource.class);
-
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
@@ -106,7 +103,7 @@ public class NotificationRuleResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             NotificationPublisher publisher = null;
             if (jsonRule.getPublisher() != null) {
-                publisher =qm.getObjectByUuid(NotificationPublisher.class, jsonRule.getPublisher().getUuid());
+                publisher = qm.getObjectByUuid(NotificationPublisher.class, jsonRule.getPublisher().getUuid());
             }
             if (publisher == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification publisher could not be found.").build();

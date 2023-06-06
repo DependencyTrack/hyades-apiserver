@@ -188,6 +188,15 @@ message Vulnerability {
     string name = 2;
   }
 }
+message ComponentAnalysisCompleteSubject{
+  Component component = 1;
+  repeated Vulnerability vulnerability = 2;
+}
+
+message ProjectAnalysisCompleteSubject{
+  repeated ComponentAnalysisCompleteSubject component_analysis_complete = 1;
+
+}
 
 message VulnerabilityAnalysis {
   Component component = 1;

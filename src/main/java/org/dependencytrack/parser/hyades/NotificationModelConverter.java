@@ -12,9 +12,11 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
+import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
+import org.dependencytrack.notification.vo.ProjectAnalysisCompleteNotification;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -23,6 +25,7 @@ import org.hyades.proto.notification.v1.BackReference;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Component;
+import org.hyades.proto.notification.v1.ComponentAnalysisCompleteSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Level;
 import org.hyades.proto.notification.v1.NewVulnerabilitySubject;
@@ -35,6 +38,7 @@ import org.hyades.proto.notification.v1.PolicyViolationAnalysis;
 import org.hyades.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
 import org.hyades.proto.notification.v1.PolicyViolationSubject;
 import org.hyades.proto.notification.v1.Project;
+import org.hyades.proto.notification.v1.ProjectAnalysisCompleteSubject;
 import org.hyades.proto.notification.v1.Scope;
 import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.Vulnerability;
@@ -44,6 +48,7 @@ import org.hyades.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubje
 import java.math.BigDecimal;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -164,6 +169,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
             return Optional.of(Any.pack(convert(pvi)));
+        } else if (subject instanceof final ProjectAnalysisCompleteNotification projectAnalysisCompleteNotification) {
+            return Optional.of(Any.pack(convert(projectAnalysisCompleteNotification)));
         }
 
         return Optional.empty();
@@ -206,6 +213,7 @@ public final class NotificationModelConverter {
                 .setVulnerability(convert(subject.getVulnerability()))
                 .setAnalysis(convert(subject.getAnalysis()))
                 .build();
+
     }
 
     private static PolicyViolationAnalysisDecisionChangeSubject convert(final ViolationAnalysisDecisionChange subject) {
@@ -292,6 +300,36 @@ public final class NotificationModelConverter {
                 .map(Tag::getName)
                 .forEach(builder::addTags);
 
+        return builder.build();
+    }
+
+    private static ComponentAnalysisCompleteSubject convert(ComponentAnalysisComplete componentAnalysisComplete) {
+        Component component = Component.newBuilder()
+                .setUuid(componentAnalysisComplete.getComponent().getUuid().toString())
+                .setName(componentAnalysisComplete.getComponent().getName())
+                .setPurl(componentAnalysisComplete.getComponent().getPurl().toString())
+                .setVersion(componentAnalysisComplete.getComponent().getVersion())
+                .setSha512(componentAnalysisComplete.getComponent().getSha512())
+                .setSha256(componentAnalysisComplete.getComponent().getSha256())
+                .setSha1(componentAnalysisComplete.getComponent().getSha1())
+                .setMd5(componentAnalysisComplete.getComponent().getMd5())
+                .setGroup(componentAnalysisComplete.getComponent().getGroup())
+                .build();
+        ComponentAnalysisCompleteSubject.Builder builder = ComponentAnalysisCompleteSubject.newBuilder();
+        builder.setComponent(component);
+        List<Vulnerability> vulnerabilities = componentAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
+        for (Vulnerability vulnerability : vulnerabilities) {
+            builder.addVulnerability(vulnerability);
+        }
+        return builder.build();
+    }
+
+    private static ProjectAnalysisCompleteSubject convert(ProjectAnalysisCompleteNotification notification) {
+        ProjectAnalysisCompleteSubject.Builder builder = ProjectAnalysisCompleteSubject.newBuilder();
+        List<ComponentAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
+        for (ComponentAnalysisCompleteSubject componentAnalysisCompleteSubject : componentAnalysisCompleteSubjects) {
+            builder.addComponentAnalysisComplete(componentAnalysisCompleteSubject);
+        }
         return builder.build();
     }
 
