@@ -304,17 +304,20 @@ public final class NotificationModelConverter {
     }
 
     private static ComponentAnalysisCompleteSubject convert(ComponentAnalysisComplete componentAnalysisComplete) {
-        Component component = Component.newBuilder()
+
+        Component.Builder componentBuilder = Component.newBuilder()
                 .setUuid(componentAnalysisComplete.getComponent().getUuid().toString())
                 .setName(componentAnalysisComplete.getComponent().getName())
-                .setPurl(componentAnalysisComplete.getComponent().getPurl().toString())
                 .setVersion(componentAnalysisComplete.getComponent().getVersion())
-                .setSha512(componentAnalysisComplete.getComponent().getSha512())
-                .setSha256(componentAnalysisComplete.getComponent().getSha256())
-                .setSha1(componentAnalysisComplete.getComponent().getSha1())
-                .setMd5(componentAnalysisComplete.getComponent().getMd5())
-                .setGroup(componentAnalysisComplete.getComponent().getGroup())
-                .build();
+                .setSha512(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha512()).orElse(""))
+                .setSha256(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha256()).orElse(""))
+                .setSha1(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha1()).orElse(""))
+                .setMd5(Optional.ofNullable(componentAnalysisComplete.getComponent().getMd5()).orElse(""))
+                .setGroup(Optional.ofNullable(componentAnalysisComplete.getComponent().getGroup()).orElse(""));
+        if(componentAnalysisComplete.getComponent().getPurl()==null){
+            componentBuilder.setPurl("");
+        }
+        Component component = componentBuilder.build();
         ComponentAnalysisCompleteSubject.Builder builder = ComponentAnalysisCompleteSubject.newBuilder();
         builder.setComponent(component);
         List<Vulnerability> vulnerabilities = componentAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
@@ -326,6 +329,7 @@ public final class NotificationModelConverter {
 
     private static ProjectAnalysisCompleteSubject convert(ProjectAnalysisCompleteNotification notification) {
         ProjectAnalysisCompleteSubject.Builder builder = ProjectAnalysisCompleteSubject.newBuilder();
+        builder.setProject(convert(notification.getProject()));
         List<ComponentAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
         for (ComponentAnalysisCompleteSubject componentAnalysisCompleteSubject : componentAnalysisCompleteSubjects) {
             builder.addComponentAnalysisComplete(componentAnalysisCompleteSubject);

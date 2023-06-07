@@ -4,12 +4,18 @@ import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import net.mguenther.kafka.junit.KeyValue;
+import net.mguenther.kafka.junit.ObserveKeyValues;
+import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
+import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
@@ -17,7 +23,9 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -28,11 +36,16 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
@@ -172,7 +185,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
-
         await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(250))
@@ -180,6 +192,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
                     assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
                 });
+
     }
 
     @Test
@@ -318,7 +331,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(scan).isNotNull();
                     assertThat(scan.getReceivedResults()).isEqualTo(2);
                 });
-
         // Vulnerability scan of the project completed. Policy evaluation of all components should
         // have been performed, so we expect the violation for componentA to appear.
         final var finalProject = project;
@@ -333,4 +345,79 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .untilAsserted(() -> assertThat(EVENTS).hasSize(1));
     }
 
+    @Test
+    public void sendNotificationForCompletedVulnerabilityScanTest() throws Exception {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.createProject(project, null, false);
+
+        final var componentA = new org.dependencytrack.model.Component();
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("1.1.0");
+        componentA.setProject(project);
+        componentA.setPurl("pkg:maven/org.acme/acme-lib-a@1.1.0");
+        qm.persist(componentA);
+
+        final var componentB = new org.dependencytrack.model.Component();
+        componentB.setName("acme-lib-b");
+        componentB.setVersion("1.2.0");
+        componentB.setProject(project);
+        qm.persist(componentB);
+
+        final var scanToken = UUID.randomUUID().toString();
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
+
+        final var scanKeyComponentA = ScanKey.newBuilder()
+                .setScanToken(scanToken.toString())
+                .setComponentUuid(componentA.getUuid().toString())
+                .build();
+        final var scanKeyComponentB = ScanKey.newBuilder()
+                .setScanToken(scanToken.toString())
+                .setComponentUuid(componentB.getUuid().toString())
+                .build();
+        final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SNYK-001")
+                .setSource(SOURCE_SNYK)
+                .build();
+        final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SONATYPE-001")
+                .setSource(SOURCE_OSSINDEX)
+                .build();
+
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>(scanKeyComponentA,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentA)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_SNYK)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                                .addVulnerabilities(vulnComponentA))
+                                        .build()),
+                        new KeyValue<>(scanKeyComponentB,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentB)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_OSSINDEX)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                                .addVulnerabilities(vulnComponentB))
+                                        .build())))
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+        await()
+                .atMost(Duration.ofSeconds(10))
+                .pollInterval(Duration.ofMillis(250))
+                .untilAsserted(() -> {
+                    assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
+                    assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
+                });
+        NotificationUtil.sendNotificationForCompletedVulnerabilityScan(scan);
+        await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofSeconds(2)).untilAsserted(()->{
+            List<KeyValue<String, String>> readKeyValues = kafka.read(ReadKeyValues.from("dtrack.notification.project-vuln-analysis-complete"));
+            for(KeyValue entry: readKeyValues){
+                entry.getKey();
+            }
+        });
+    }
+//kafka.read(ReadKeyValues.from(KafkaTopics.PROJECT_VULN_ANALYSIS_COMPLETE.name()))
 }

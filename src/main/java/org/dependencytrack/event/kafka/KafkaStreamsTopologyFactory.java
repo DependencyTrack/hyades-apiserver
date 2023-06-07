@@ -2,8 +2,6 @@ package org.dependencytrack.event.kafka;
 
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -21,21 +19,12 @@ import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
-import org.dependencytrack.notification.vo.ProjectAnalysisCompleteNotification;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -89,7 +78,7 @@ class KafkaStreamsTopologyFactory {
                         Named.as("filter_completed_vuln_scans"));
         completedVulnScanStream.foreach((scantoken, vulnscan) -> {
             if (vulnscan.getTargetType().toString().equals(VulnerabilityScan.TargetType.PROJECT.toString())) {
-                sendNotificationForCompletedVulnerabilityScan(vulnscan);
+                NotificationUtil.sendNotificationForCompletedVulnerabilityScan(vulnscan);
             }
         });
 
@@ -125,39 +114,6 @@ class KafkaStreamsTopologyFactory {
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         return streamsBuilder.build(streamsProperties);
-    }
-
-    private void sendNotificationForCompletedVulnerabilityScan(VulnerabilityScan vulnscan) {
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
-            List<Component> componentList = qm.getAllComponents(project);
-            List<ComponentAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
-            for (Component component : componentList) {
-                List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
-                if (!vulnerabilities.isEmpty()) {
-                    List<Vulnerability> result = new ArrayList<>();
-                    for (Vulnerability vulnerability : vulnerabilities) {
-                        Vulnerability vulnerability1 = new Vulnerability();
-                        if(vulnerability.getDescription()!=null){
-                            vulnerability.setDescription(null);
-                            vulnerability1 = vulnerability;
-                        }
-                        result.add(vulnerability1);
-                    }
-                    componentAnalysisCompleteList.add(new ComponentAnalysisComplete(result, component));
-                }
-            }
-
-            final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
-            kafkaEventDispatcher.dispatchAsync(vulnscan.getTargetIdentifier(),
-                    new Notification()
-                            .scope(NotificationScope.PORTFOLIO)
-                            .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
-                            .level(NotificationLevel.INFORMATIONAL)
-                            .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
-                            .content("project analysis complete for project" + project.getName() + ". Vulnerability details added to subject ")
-                            .subject(new ProjectAnalysisCompleteNotification(componentAnalysisCompleteList)));
-        }
     }
 
 }

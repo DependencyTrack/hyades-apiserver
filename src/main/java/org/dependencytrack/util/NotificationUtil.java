@@ -33,13 +33,16 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
+import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
+import org.dependencytrack.notification.vo.ProjectAnalysisCompleteNotification;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -51,7 +54,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -346,5 +351,52 @@ public final class NotificationUtil {
 
     private static void sendNotificationToKafka(UUID projectUuid, Notification notification){
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
+    }
+    public static void sendNotificationForCompletedVulnerabilityScan(VulnerabilityScan vulnscan) {
+        try (QueryManager qm = new QueryManager()) {
+            Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
+            List<Component> componentList = qm.getAllComponents(project);
+            List<ComponentAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
+            for (Component component : componentList) {
+                List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
+                if (!vulnerabilities.isEmpty()) {
+                    List<Vulnerability> result = new ArrayList<>();
+                    for (Vulnerability vulnerability : vulnerabilities) {
+                        Vulnerability vulnerability1 = new Vulnerability();
+                        vulnerability1.setId(vulnerability.getId());
+                        vulnerability1.setVulnId(vulnerability.getVulnId());
+                        vulnerability1.setSource(vulnerability.getSource());
+                        vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                        vulnerability1.setTitle(Optional.ofNullable(vulnerability.getTitle()).orElse("NA"));
+                        vulnerability1.setSubTitle(Optional.ofNullable(vulnerability.getSubTitle()).orElse("NA"));
+                        vulnerability1.setRecommendation(Optional.ofNullable(vulnerability.getRecommendation()).orElse("NA"));
+                        vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
+                        vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
+                        vulnerability1.setSeverity(vulnerability.getSeverity());
+                        vulnerability1.setCwes(vulnerability.getCwes());
+                        vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
+                        vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
+                        vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                        vulnerability1.setUuid(vulnerability.getUuid());
+                        vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
+                        if (!vulnerability.getAliases().isEmpty()) {
+                            vulnerability1.setAliases(vulnerability.getAliases());
+                        }
+                        result.add(vulnerability1);
+                    }
+                    componentAnalysisCompleteList.add(new ComponentAnalysisComplete(result, component));
+                }
+            }
+
+            final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
+            kafkaEventDispatcher.dispatchAsync(vulnscan.getTargetIdentifier(),
+                    new Notification()
+                            .scope(NotificationScope.PORTFOLIO)
+                            .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
+                            .level(NotificationLevel.INFORMATIONAL)
+                            .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
+                            .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
+                            .subject(new ProjectAnalysisCompleteNotification(project, componentAnalysisCompleteList)));
+        }
     }
 }
