@@ -47,9 +47,6 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
                 .withName(KafkaTopics.NEW_VULNERABILITY.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
-        kafka.createTopic(TopicConfig.withName("dtrack.notification.project-vuln-analysis-complete")
-                .withNumberOfPartitions(3)
-                .withNumberOfReplicas(1));
 
         kafkaStreamsStateDirectory = Files.createTempDirectory(getClass().getSimpleName());
 

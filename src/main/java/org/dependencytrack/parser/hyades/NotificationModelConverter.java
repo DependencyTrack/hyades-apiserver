@@ -321,9 +321,7 @@ public final class NotificationModelConverter {
         ComponentAnalysisCompleteSubject.Builder builder = ComponentAnalysisCompleteSubject.newBuilder();
         builder.setComponent(component);
         List<Vulnerability> vulnerabilities = componentAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
-        for (Vulnerability vulnerability : vulnerabilities) {
-            builder.addVulnerability(vulnerability);
-        }
+        builder.addAllVulnerability(vulnerabilities);
         return builder.build();
     }
 
@@ -331,9 +329,7 @@ public final class NotificationModelConverter {
         ProjectAnalysisCompleteSubject.Builder builder = ProjectAnalysisCompleteSubject.newBuilder();
         builder.setProject(convert(notification.getProject()));
         List<ComponentAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
-        for (ComponentAnalysisCompleteSubject componentAnalysisCompleteSubject : componentAnalysisCompleteSubjects) {
-            builder.addComponentAnalysisComplete(componentAnalysisCompleteSubject);
-        }
+        builder.addAllComponentAnalysisComplete(componentAnalysisCompleteSubjects);
         return builder.build();
     }
 

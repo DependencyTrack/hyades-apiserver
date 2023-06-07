@@ -356,37 +356,7 @@ public final class NotificationUtil {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
             List<Component> componentList = qm.getAllComponents(project);
-            List<ComponentAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
-            for (Component component : componentList) {
-                List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
-                if (!vulnerabilities.isEmpty()) {
-                    List<Vulnerability> result = new ArrayList<>();
-                    for (Vulnerability vulnerability : vulnerabilities) {
-                        Vulnerability vulnerability1 = new Vulnerability();
-                        vulnerability1.setId(vulnerability.getId());
-                        vulnerability1.setVulnId(vulnerability.getVulnId());
-                        vulnerability1.setSource(vulnerability.getSource());
-                        vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
-                        vulnerability1.setTitle(Optional.ofNullable(vulnerability.getTitle()).orElse("NA"));
-                        vulnerability1.setSubTitle(Optional.ofNullable(vulnerability.getSubTitle()).orElse("NA"));
-                        vulnerability1.setRecommendation(Optional.ofNullable(vulnerability.getRecommendation()).orElse("NA"));
-                        vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
-                        vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
-                        vulnerability1.setSeverity(vulnerability.getSeverity());
-                        vulnerability1.setCwes(vulnerability.getCwes());
-                        vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
-                        vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
-                        vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
-                        vulnerability1.setUuid(vulnerability.getUuid());
-                        vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
-                        if (!vulnerability.getAliases().isEmpty()) {
-                            vulnerability1.setAliases(vulnerability.getAliases());
-                        }
-                        result.add(vulnerability1);
-                    }
-                    componentAnalysisCompleteList.add(new ComponentAnalysisComplete(result, component));
-                }
-            }
+            List<ComponentAnalysisComplete> componentAnalysisCompleteList = createList(componentList, qm);
 
             final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
             kafkaEventDispatcher.dispatchAsync(vulnscan.getTargetIdentifier(),
@@ -398,5 +368,39 @@ public final class NotificationUtil {
                             .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
                             .subject(new ProjectAnalysisCompleteNotification(project, componentAnalysisCompleteList)));
         }
+    }
+     public  static List<ComponentAnalysisComplete> createList(List<Component> componentList, QueryManager qm){
+        List<ComponentAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
+        for (Component component : componentList) {
+            List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component);
+            if (!vulnerabilities.isEmpty()) {
+                List<Vulnerability> result = new ArrayList<>();
+                for (Vulnerability vulnerability : vulnerabilities) {
+                    Vulnerability vulnerability1 = new Vulnerability();
+                    vulnerability1.setId(vulnerability.getId());
+                    vulnerability1.setVulnId(vulnerability.getVulnId());
+                    vulnerability1.setSource(vulnerability.getSource());
+                    vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                    vulnerability1.setTitle(Optional.ofNullable(vulnerability.getTitle()).orElse("NA"));
+                    vulnerability1.setSubTitle(Optional.ofNullable(vulnerability.getSubTitle()).orElse("NA"));
+                    vulnerability1.setRecommendation(Optional.ofNullable(vulnerability.getRecommendation()).orElse("NA"));
+                    vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
+                    vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
+                    vulnerability1.setSeverity(vulnerability.getSeverity());
+                    vulnerability1.setCwes(vulnerability.getCwes());
+                    vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
+                    vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
+                    vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                    vulnerability1.setUuid(vulnerability.getUuid());
+                    vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
+                    if (!vulnerability.getAliases().isEmpty()) {
+                        vulnerability1.setAliases(vulnerability.getAliases());
+                    }
+                    result.add(vulnerability1);
+                }
+                componentAnalysisCompleteList.add(new ComponentAnalysisComplete(result, component));
+            }
+        }
+        return componentAnalysisCompleteList;
     }
 }

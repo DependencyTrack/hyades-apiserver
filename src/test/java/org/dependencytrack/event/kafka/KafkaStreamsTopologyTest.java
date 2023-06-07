@@ -4,18 +4,12 @@ import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
-import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
-import org.dependencytrack.model.Classifier;
-import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
@@ -23,7 +17,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
+import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
@@ -35,17 +29,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
@@ -346,7 +336,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
     }
 
     @Test
-    public void sendNotificationForCompletedVulnerabilityScanTest() throws Exception {
+    public void createListTest() throws Exception {
         var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -364,10 +354,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         componentB.setVersion("1.2.0");
         componentB.setProject(project);
         qm.persist(componentB);
-
-        final var scanToken = UUID.randomUUID().toString();
-        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
-
+        final var scanToken = UUID.randomUUID();
         final var scanKeyComponentA = ScanKey.newBuilder()
                 .setScanToken(scanToken.toString())
                 .setComponentUuid(componentA.getUuid().toString())
@@ -411,13 +398,15 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
                     assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
                 });
-        NotificationUtil.sendNotificationForCompletedVulnerabilityScan(scan);
-        await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofSeconds(2)).untilAsserted(()->{
-            List<KeyValue<String, String>> readKeyValues = kafka.read(ReadKeyValues.from("dtrack.notification.project-vuln-analysis-complete"));
-            for(KeyValue entry: readKeyValues){
-                entry.getKey();
-            }
-        });
+        List<ComponentAnalysisComplete> componentAnalysisCompleteList = NotificationUtil.createList(qm.getAllComponents(project), qm);
+        assertThat(componentAnalysisCompleteList.get(0).getComponent().getName().equals("acme-lib-a"));
+        Assertions.assertEquals(1, componentAnalysisCompleteList.get(0).getVulnerabilityList().size());
+        Assertions.assertEquals("SNYK", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getSource());
+        Assertions.assertEquals("SNYK-001", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getVulnId());
+        assertThat(componentAnalysisCompleteList.get(1).getComponent().getName().equals("acme-lib-b"));
+        Assertions.assertEquals(1, componentAnalysisCompleteList.get(1).getVulnerabilityList().size());
+        Assertions.assertEquals("OSSINDEX", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getSource());
+        Assertions.assertEquals("SONATYPE-001", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getVulnId());
     }
-//kafka.read(ReadKeyValues.from(KafkaTopics.PROJECT_VULN_ANALYSIS_COMPLETE.name()))
+
 }
