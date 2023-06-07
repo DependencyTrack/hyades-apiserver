@@ -29,6 +29,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;

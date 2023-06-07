@@ -26,6 +26,7 @@ import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
 import net.javacrumbs.shedlock.core.DefaultLockingTaskExecutor;
 import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.collections4.ListUtils;
@@ -47,10 +48,13 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static java.time.Duration.ZERO;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
 import static org.dependencytrack.util.LockProviderUtil.getDataSource;
+import static org.dependencytrack.util.LockProviderUtil.getJdbcLockProviderInstance;
+import static org.dependencytrack.util.LockProviderUtil.getLockingTaskExecutorInstance;
 
 
 /**
@@ -67,12 +71,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
-            try (final QueryManager qm = new QueryManager()) {
-                PersistenceManager pm = qm.getPersistenceManager();
-                JDOPersistenceManagerFactory pmf = (JDOPersistenceManagerFactory) pm.getPersistenceManagerFactory();
-
-                JdbcLockProvider instance = new JdbcLockProvider(getDataSource(pmf));
-                LockingTaskExecutor executor = new DefaultLockingTaskExecutor(instance);
+            try {
+                JdbcLockProvider instance = getJdbcLockProviderInstance();
+                LockingTaskExecutor executor = getLockingTaskExecutorInstance(instance);
                 LockConfiguration lockConfiguration = new LockConfiguration(Instant.now(),
                         PORTFOLIO_METRICS_TASK_LOCK.name(),
                         Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
@@ -119,6 +120,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
 
             while (!activeProjects.isEmpty()) {
+                long startTime = System.currentTimeMillis();
                 final long firstId = activeProjects.get(0).id();
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
@@ -151,6 +153,14 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 }
                 LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
+                long now = System.currentTimeMillis();
+                long processDurationInMillis = now - startTime;
+                //extend the lock for the duration of process
+                //initial duration of portfolio metrics can be set to 20min. No thread calculating
+                //metrics would be executing for more than 15min.
+                //if one partition of metrics calculation lasted long, lock will be extended by that duration
+                //lock can only be extended if lock until is held for time after current db time
+                LockExtender.extendActiveLock(Duration.ofMillis(processDurationInMillis), ZERO);
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
         }
