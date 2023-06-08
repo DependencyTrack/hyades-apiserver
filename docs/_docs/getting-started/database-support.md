@@ -161,3 +161,19 @@ java -cp h2-2.1.214.jar org.h2.tools.RunScript \
 [HikariCP]: https://github.com/brettwooldridge/HikariCP
 [Monitoring]: {{ site.baseurl }}{% link _docs/getting-started/monitoring.md %}
 [SQL mode]: https://dev.mysql.com/doc/refman/5.7/en/sql-mode.html
+
+### Improve query performance
+
+#### PostgreSQL
+To improve the performance, database uses index for faster retrieval. However, some fetch queries while matching strings to make comparison uses String method like LOWER on a field. Index is not applied in such cases.
+
+For example, the index defined on component's purl (COMPONENT_PURL_IDX) is not used in query using purl match (either equals or LIKE) because it queries on method "lower(purl)".
+In such cases, indices can be created manually while setting up database using any index method :
+
+1. GIN index for search using LIKE %purlString%
+
+`create index "COMPONENT_PURL_IDX_GIN" on "COMPONENT" using gin (lower("PURL"::text) gin_trgm_ops);`
+
+3. BTREE index for search using LIKE purlString% or equals comparison
+
+`create index "COMPONENT_PURL_IDX_BTREE" on "COMPONENT" (lower("PURL"::text) text_pattern_ops);`
