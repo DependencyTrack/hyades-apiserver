@@ -5,11 +5,11 @@ import org.dependencytrack.model.Vulnerability;
 
 import java.util.List;
 
-public class ComponentAnalysisComplete {
+public class ComponentVulnAnalysisComplete {
     private final List<Vulnerability> vulnerabilityList;
     private final Component component;
 
-    public ComponentAnalysisComplete(List<Vulnerability> vulnerabilityList, Component component) {
+    public ComponentVulnAnalysisComplete(List<Vulnerability> vulnerabilityList, Component component) {
         this.vulnerabilityList = vulnerabilityList;
         this.component = component;
     }

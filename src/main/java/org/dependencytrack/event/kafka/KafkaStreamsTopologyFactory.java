@@ -10,6 +10,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Named;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
@@ -20,6 +21,7 @@ import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
@@ -76,11 +78,15 @@ class KafkaStreamsTopologyFactory {
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,
                         Named.as("filter_completed_vuln_scans"));
-        completedVulnScanStream.foreach((scantoken, vulnscan) -> {
-            if (vulnscan.getTargetType().toString().equals(VulnerabilityScan.TargetType.PROJECT.toString())) {
-                NotificationUtil.sendNotificationForCompletedVulnerabilityScan(vulnscan);
-            }
-        });
+        completedVulnScanStream.filter((scantoken, vulnscan) -> vulnscan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
+                        Named.as("filter_vuln_scans_with_project_target"))
+                .map((scantoken, vulnscan) -> {
+                    var notification = NotificationModelConverter.convert(NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(vulnscan));
+                    return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), notification);
+                }).to(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(),
+                        Produced.with(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.keySerde(),
+                                KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde()));
+
 
         completedVulnScanStream
                 .foreach((scanToken, vulnScan) -> {

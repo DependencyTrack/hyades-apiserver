@@ -4,16 +4,16 @@ import org.dependencytrack.model.Project;
 
 import java.util.List;
 
-public class ProjectAnalysisCompleteNotification {
+public class ProjectVulnAnalysisComplete {
     private final Project project;
-    private final List<ComponentAnalysisComplete> componentAnalysisCompleteList;
+    private final List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList;
 
-    public ProjectAnalysisCompleteNotification(Project project, List<ComponentAnalysisComplete> componentAnalysisCompleteList) {
+    public ProjectVulnAnalysisComplete(Project project, List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList) {
         this.project = project;
         this.componentAnalysisCompleteList = componentAnalysisCompleteList;
     }
 
-    public List<ComponentAnalysisComplete> getComponentAnalysisCompleteList() {
+    public List<ComponentVulnAnalysisComplete> getComponentAnalysisCompleteList() {
         return componentAnalysisCompleteList;
     }
 

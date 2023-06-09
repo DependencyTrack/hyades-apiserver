@@ -2,52 +2,28 @@ package org.dependencytrack.event.kafka;
 
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.cyclonedx.proto.v1_4.Vulnerability;
-import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
-import org.dependencytrack.notification.vo.ProjectAnalysisCompleteNotification;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.NotificationUtil;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
-import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.awaitility.Awaitility.await;
-import static org.hyades.proto.vuln.v1.Source.SOURCE_OSSINDEX;
-import static org.hyades.proto.vuln.v1.Source.SOURCE_SNYK;
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
-public class KafkaEventDispatcherTest extends PersistenceCapableTest {
+public class KafkaEventDispatcherTest {
 
     private MockProducer<byte[], byte[]> mockProducer;
 

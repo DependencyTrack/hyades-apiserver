@@ -13,6 +13,8 @@ import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
+import java.util.UUID;
+
 public final class KafkaTopics {
 
     public static final Topic<String, Notification> NOTIFICATION_ANALYZER;

@@ -12,11 +12,11 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.notification.vo.ComponentAnalysisComplete;
+import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
-import org.dependencytrack.notification.vo.ProjectAnalysisCompleteNotification;
+import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -25,7 +25,7 @@ import org.hyades.proto.notification.v1.BackReference;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Component;
-import org.hyades.proto.notification.v1.ComponentAnalysisCompleteSubject;
+import org.hyades.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Level;
 import org.hyades.proto.notification.v1.NewVulnerabilitySubject;
@@ -38,7 +38,7 @@ import org.hyades.proto.notification.v1.PolicyViolationAnalysis;
 import org.hyades.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
 import org.hyades.proto.notification.v1.PolicyViolationSubject;
 import org.hyades.proto.notification.v1.Project;
-import org.hyades.proto.notification.v1.ProjectAnalysisCompleteSubject;
+import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 import org.hyades.proto.notification.v1.Scope;
 import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.Vulnerability;
@@ -169,7 +169,7 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
             return Optional.of(Any.pack(convert(pvi)));
-        } else if (subject instanceof final ProjectAnalysisCompleteNotification projectAnalysisCompleteNotification) {
+        } else if (subject instanceof final ProjectVulnAnalysisComplete projectAnalysisCompleteNotification) {
             return Optional.of(Any.pack(convert(projectAnalysisCompleteNotification)));
         }
 
@@ -303,32 +303,20 @@ public final class NotificationModelConverter {
         return builder.build();
     }
 
-    private static ComponentAnalysisCompleteSubject convert(ComponentAnalysisComplete componentAnalysisComplete) {
+    private static ComponentVulnAnalysisCompleteSubject convert(ComponentVulnAnalysisComplete componentVulnAnalysisComplete) {
 
-        Component.Builder componentBuilder = Component.newBuilder()
-                .setUuid(componentAnalysisComplete.getComponent().getUuid().toString())
-                .setName(componentAnalysisComplete.getComponent().getName())
-                .setVersion(componentAnalysisComplete.getComponent().getVersion())
-                .setSha512(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha512()).orElse(""))
-                .setSha256(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha256()).orElse(""))
-                .setSha1(Optional.ofNullable(componentAnalysisComplete.getComponent().getSha1()).orElse(""))
-                .setMd5(Optional.ofNullable(componentAnalysisComplete.getComponent().getMd5()).orElse(""))
-                .setGroup(Optional.ofNullable(componentAnalysisComplete.getComponent().getGroup()).orElse(""));
-        if(componentAnalysisComplete.getComponent().getPurl()==null){
-            componentBuilder.setPurl("");
-        }
-        Component component = componentBuilder.build();
-        ComponentAnalysisCompleteSubject.Builder builder = ComponentAnalysisCompleteSubject.newBuilder();
+        Component component = convert(componentVulnAnalysisComplete.getComponent());
+        ComponentVulnAnalysisCompleteSubject.Builder builder = ComponentVulnAnalysisCompleteSubject.newBuilder();
         builder.setComponent(component);
-        List<Vulnerability> vulnerabilities = componentAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
+        List<Vulnerability> vulnerabilities = componentVulnAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
         builder.addAllVulnerability(vulnerabilities);
         return builder.build();
     }
 
-    private static ProjectAnalysisCompleteSubject convert(ProjectAnalysisCompleteNotification notification) {
-        ProjectAnalysisCompleteSubject.Builder builder = ProjectAnalysisCompleteSubject.newBuilder();
+    private static ProjectVulnAnalysisCompleteSubject convert(ProjectVulnAnalysisComplete notification) {
+        ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
         builder.setProject(convert(notification.getProject()));
-        List<ComponentAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
+        List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
         builder.addAllComponentAnalysisComplete(componentAnalysisCompleteSubjects);
         return builder.build();
     }
