@@ -94,5 +94,4 @@ public class KafkaEventDispatcherTest {
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
-
 }

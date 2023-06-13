@@ -13,6 +13,8 @@ import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
+import java.util.UUID;
+
 public final class KafkaTopics {
 
     public static final Topic<String, Notification> NOTIFICATION_ANALYZER;
@@ -35,6 +37,8 @@ public final class KafkaTopics {
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
+
+    public static final Topic<String, Notification> NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
@@ -58,6 +62,7 @@ public final class KafkaTopics {
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));
+        NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE = new Topic<>("dtrack.notification.project-vuln-analysis-complete", Serdes.String(), NOTIFICATION_SERDE);
     }
 
     public record Topic<K, V>(String name, Serde<K> keySerde, Serde<V> valueSerde) {
