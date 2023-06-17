@@ -100,6 +100,7 @@
         <lib.protobuf-java.version>3.23.3</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
+        <lib.snappy-java.version>1.1.10.1</lib.snappy-java.version>
         <lib.woodstox.version>6.4.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.7</lib.log4j-over-slf4j.version>
@@ -148,6 +149,16 @@
                         <artifactId>jetty-webapp-logging</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <!--
+                  Managing snappy-java to fix GHSA-qcwq-55hx-v3vh, GHSA-fjpj-2g6w-x25r, and GHSA-pqr6-cmr2-h8hf.
+                  Snappy is introduced via kafka-clients; Once kafka-clients bumps its snappy-java version, we can remove this.
+                -->
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>${lib.snappy-java.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
