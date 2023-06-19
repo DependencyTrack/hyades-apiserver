@@ -19,10 +19,12 @@
 package org.dependencytrack.tasks;
 
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
+import io.micrometer.core.instrument.Timer;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.event.BomUploadEvent;
@@ -63,6 +65,9 @@ import java.util.Optional;
 public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
+    private static final Timer TIMER = Timer.builder("bom_upload_processing")
+            .description("Time taken to process / ingest uploaded Bill of Materials")
+            .register(Metrics.getRegistry());
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
 
@@ -82,6 +87,7 @@ public class BomUploadProcessingTask implements Subscriber {
             Project bomProcessingFailedProject = null;
             Bom.Format bomProcessingFailedBomFormat = null;
             String bomProcessingFailedBomVersion = null;
+            final Timer.Sample timerSample = Timer.start();
             final QueryManager qm = new QueryManager().withL2CacheDisabled();
             try {
                 final Project project = qm.getObjectByUuid(Project.class, event.getProjectUuid());
@@ -206,6 +212,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomProcessingFailed(bomProcessingFailedProject, /* bom */ "(Omitted)", ex.getMessage(), bomProcessingFailedBomFormat, bomProcessingFailedBomVersion)));
             } finally {
+                timerSample.stop(TIMER);
                 qm.commitSearchIndex(true, Component.class);
                 qm.commitSearchIndex(true, ServiceComponent.class);
                 qm.close();
