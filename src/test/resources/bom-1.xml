@@ -41,7 +41,7 @@
             </licenses>
             <copyright>Copyright Example Inc. All rights reserved.</copyright>
             <cpe>cpe:/a:example:xmlutil:1.0.0</cpe>
-            <purl>pkg:maven/com.example/xmlutil@1.0.0?packaging=jar</purl>
+            <purl>pkg:maven/com.example/xmlutil@1.0.0?download_url=https://on-premises.url/repository/npm/@babel/helper-split-export-declaration/helper-split-export-declaration/helper-split-export-declaration/helper-split-export-declaration/helper-split-export-declaration-7.18.6.tgz</purl>
             <modified>false</modified>
         </component>
     </components>

@@ -309,108 +309,108 @@ public final class NotificationModelConverter {
         FindingsSubject.Builder builder = FindingsSubject.newBuilder();
         builder.setComponent(component);
         List<Vulnerability> vulnerabilities = findings.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllVulnerability(vulnerabilities);
-        return builder.build();
-    }
-
-    private static ProjectVulnAnalysisCompleteSubject convert(ProjectVulnAnalysisComplete notification) {
-        ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
-        builder.setProject(convert(notification.getProject()));
-        List<FindingsSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllFindingsSubject(componentAnalysisCompleteSubjects);
-        return builder.build();
-    }
-
-    private static Vulnerability convert(final org.dependencytrack.model.Vulnerability vulnerability) {
-        final Vulnerability.Builder builder = Vulnerability.newBuilder()
-                .setUuid(vulnerability.getUuid().toString())
-                .setVulnId(vulnerability.getVulnId())
-                .setSource(vulnerability.getSource());
-
-        if (vulnerability.getAliases() != null) {
-            VulnerabilityUtil.getUniqueAliases(vulnerability).stream()
-                    .map(entry -> Vulnerability.Alias.newBuilder()
-                            .setId(entry.getValue())
-                            .setSource(entry.getKey().name()))
-                    .forEach(builder::addAliases);
+            builder.addAllVulnerability(vulnerabilities);
+            return builder.build();
         }
-        Optional.ofNullable(vulnerability.getTitle()).ifPresent(builder::setTitle);
-        Optional.ofNullable(vulnerability.getSubTitle()).ifPresent(builder::setSubTitle);
-        Optional.ofNullable(vulnerability.getDescription()).ifPresent(builder::setDescription);
-        Optional.ofNullable(vulnerability.getRecommendation()).ifPresent(builder::setRecommendation);
-        Optional.ofNullable(vulnerability.getCvssV2BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV2);
-        Optional.ofNullable(vulnerability.getCvssV3BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV3);
-        Optional.ofNullable(vulnerability.getOwaspRRLikelihoodScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihood);
-        Optional.ofNullable(vulnerability.getOwaspRRTechnicalImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpact);
-        Optional.ofNullable(vulnerability.getOwaspRRBusinessImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpact);
-        Optional.ofNullable(vulnerability.getSeverity()).map(Enum::name).ifPresent(builder::setSeverity);
-        Optional.ofNullable(vulnerability.getCwes())
-                .orElseGet(Collections::emptyList).stream()
-                .map(CweResolver.getInstance()::lookup)
-                .filter(Objects::nonNull)
-                .map(NotificationModelConverter::convert)
-                .forEach(builder::addCwes);
 
-        return builder.build();
+        private static ProjectVulnAnalysisCompleteSubject convert (ProjectVulnAnalysisComplete notification){
+            ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
+            builder.setProject(convert(notification.getProject()));
+            List<FindingsSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
+            builder.addAllFindingsSubject(componentAnalysisCompleteSubjects);
+            return builder.build();
+        }
+
+        private static Vulnerability convert ( final org.dependencytrack.model.Vulnerability vulnerability){
+            final Vulnerability.Builder builder = Vulnerability.newBuilder()
+                    .setUuid(vulnerability.getUuid().toString())
+                    .setVulnId(vulnerability.getVulnId())
+                    .setSource(vulnerability.getSource());
+
+            if (vulnerability.getAliases() != null) {
+                VulnerabilityUtil.getUniqueAliases(vulnerability).stream()
+                        .map(entry -> Vulnerability.Alias.newBuilder()
+                                .setId(entry.getValue())
+                                .setSource(entry.getKey().name()))
+                        .forEach(builder::addAliases);
+            }
+            Optional.ofNullable(vulnerability.getTitle()).ifPresent(builder::setTitle);
+            Optional.ofNullable(vulnerability.getSubTitle()).ifPresent(builder::setSubTitle);
+            Optional.ofNullable(vulnerability.getDescription()).ifPresent(builder::setDescription);
+            Optional.ofNullable(vulnerability.getRecommendation()).ifPresent(builder::setRecommendation);
+            Optional.ofNullable(vulnerability.getCvssV2BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV2);
+            Optional.ofNullable(vulnerability.getCvssV3BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV3);
+            Optional.ofNullable(vulnerability.getOwaspRRLikelihoodScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihood);
+            Optional.ofNullable(vulnerability.getOwaspRRTechnicalImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpact);
+            Optional.ofNullable(vulnerability.getOwaspRRBusinessImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpact);
+            Optional.ofNullable(vulnerability.getSeverity()).map(Enum::name).ifPresent(builder::setSeverity);
+            Optional.ofNullable(vulnerability.getCwes())
+                    .orElseGet(Collections::emptyList).stream()
+                    .map(CweResolver.getInstance()::lookup)
+                    .filter(Objects::nonNull)
+                    .map(NotificationModelConverter::convert)
+                    .forEach(builder::addCwes);
+
+            return builder.build();
+        }
+
+        private static PolicyViolation convert ( final org.dependencytrack.model.PolicyViolation policyViolation){
+            return PolicyViolation.newBuilder()
+                    .setUuid(policyViolation.getUuid().toString())
+                    .setType(policyViolation.getType().name())
+                    .setTimestamp(Timestamp.newBuilder()
+                            .setSeconds(policyViolation.getTimestamp().getTime() / 1000))
+                    .setCondition(convert(policyViolation.getPolicyCondition()))
+                    .build();
+        }
+
+        private static PolicyCondition convert ( final org.dependencytrack.model.PolicyCondition policyCondition){
+            return PolicyCondition.newBuilder()
+                    .setUuid(policyCondition.getUuid().toString())
+                    .setSubject(policyCondition.getSubject().name())
+                    .setOperator(policyCondition.getOperator().name())
+                    .setValue(policyCondition.getValue())
+                    .setPolicy(convert(policyCondition.getPolicy()))
+                    .build();
+        }
+
+        private static Policy convert ( final org.dependencytrack.model.Policy policy){
+            return Policy.newBuilder()
+                    .setUuid(policy.getUuid().toString())
+                    .setName(policy.getName())
+                    .setViolationState(policy.getViolationState().name())
+                    .build();
+        }
+
+        private static VulnerabilityAnalysis convert ( final org.dependencytrack.model.Analysis analysis){
+            final VulnerabilityAnalysis.Builder builder = VulnerabilityAnalysis.newBuilder()
+                    .setComponent(convert(analysis.getComponent()))
+                    .setProject(convert(analysis.getProject()))
+                    .setVulnerability(convert(analysis.getVulnerability()))
+                    .setSuppressed(analysis.isSuppressed());
+
+            Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
+
+            return builder.build();
+        }
+
+        private static PolicyViolationAnalysis convert ( final org.dependencytrack.model.ViolationAnalysis analysis){
+            final PolicyViolationAnalysis.Builder builder = PolicyViolationAnalysis.newBuilder()
+                    .setComponent(convert(analysis.getComponent()))
+                    .setProject(convert(analysis.getComponent().getProject()))
+                    .setPolicyViolation(convert(analysis.getPolicyViolation()))
+                    .setSuppressed(analysis.isSuppressed());
+
+            Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
+
+            return builder.build();
+        }
+
+        private static Vulnerability.Cwe convert ( final org.dependencytrack.model.Cwe cwe){
+            return Vulnerability.Cwe.newBuilder()
+                    .setCweId(cwe.getCweId())
+                    .setName(cwe.getName())
+                    .build();
+        }
+
     }
-
-    private static PolicyViolation convert(final org.dependencytrack.model.PolicyViolation policyViolation) {
-        return PolicyViolation.newBuilder()
-                .setUuid(policyViolation.getUuid().toString())
-                .setType(policyViolation.getType().name())
-                .setTimestamp(Timestamp.newBuilder()
-                        .setSeconds(policyViolation.getTimestamp().getTime() / 1000))
-                .setCondition(convert(policyViolation.getPolicyCondition()))
-                .build();
-    }
-
-    private static PolicyCondition convert(final org.dependencytrack.model.PolicyCondition policyCondition) {
-        return PolicyCondition.newBuilder()
-                .setUuid(policyCondition.getUuid().toString())
-                .setSubject(policyCondition.getSubject().name())
-                .setOperator(policyCondition.getOperator().name())
-                .setValue(policyCondition.getValue())
-                .setPolicy(convert(policyCondition.getPolicy()))
-                .build();
-    }
-
-    private static Policy convert(final org.dependencytrack.model.Policy policy) {
-        return Policy.newBuilder()
-                .setUuid(policy.getUuid().toString())
-                .setName(policy.getName())
-                .setViolationState(policy.getViolationState().name())
-                .build();
-    }
-
-    private static VulnerabilityAnalysis convert(final org.dependencytrack.model.Analysis analysis) {
-        final VulnerabilityAnalysis.Builder builder = VulnerabilityAnalysis.newBuilder()
-                .setComponent(convert(analysis.getComponent()))
-                .setProject(convert(analysis.getProject()))
-                .setVulnerability(convert(analysis.getVulnerability()))
-                .setSuppressed(analysis.isSuppressed());
-
-        Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
-
-        return builder.build();
-    }
-
-    private static PolicyViolationAnalysis convert(final org.dependencytrack.model.ViolationAnalysis analysis) {
-        final PolicyViolationAnalysis.Builder builder = PolicyViolationAnalysis.newBuilder()
-                .setComponent(convert(analysis.getComponent()))
-                .setProject(convert(analysis.getComponent().getProject()))
-                .setPolicyViolation(convert(analysis.getPolicyViolation()))
-                .setSuppressed(analysis.isSuppressed());
-
-        Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
-
-        return builder.build();
-    }
-
-    private static Vulnerability.Cwe convert(final org.dependencytrack.model.Cwe cwe) {
-        return Vulnerability.Cwe.newBuilder()
-                .setCweId(cwe.getCweId())
-                .setName(cwe.getName())
-                .build();
-    }
-
-}
