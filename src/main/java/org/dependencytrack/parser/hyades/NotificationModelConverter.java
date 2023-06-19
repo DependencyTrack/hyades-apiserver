@@ -317,7 +317,7 @@ public final class NotificationModelConverter {
         ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
         builder.setProject(convert(notification.getProject()));
         List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllComponentAnalysisComplete(componentAnalysisCompleteSubjects);
+        builder.addAllFindings(componentAnalysisCompleteSubjects);
         return builder.build();
     }
 

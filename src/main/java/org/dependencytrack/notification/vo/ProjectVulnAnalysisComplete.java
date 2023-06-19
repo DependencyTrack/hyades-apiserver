@@ -6,15 +6,15 @@ import java.util.List;
 
 public class ProjectVulnAnalysisComplete {
     private final Project project;
-    private final List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList;
+    private final List<ComponentVulnAnalysisComplete> findingsList;
 
-    public ProjectVulnAnalysisComplete(Project project, List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList) {
+    public ProjectVulnAnalysisComplete(Project project, List<ComponentVulnAnalysisComplete> findingsList) {
         this.project = project;
-        this.componentAnalysisCompleteList = componentAnalysisCompleteList;
+        this.findingsList = findingsList;
     }
 
     public List<ComponentVulnAnalysisComplete> getComponentAnalysisCompleteList() {
-        return componentAnalysisCompleteList;
+        return findingsList;
     }
 
     public Project getProject(){

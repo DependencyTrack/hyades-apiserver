@@ -59,7 +59,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -406,9 +405,9 @@ public final class NotificationUtil {
                 vulnerability1.setVulnId(vulnerability.getVulnId());
                 vulnerability1.setSource(vulnerability.getSource());
                 vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
-                vulnerability1.setTitle(Optional.ofNullable(vulnerability.getTitle()).orElse("NA"));
-                vulnerability1.setSubTitle(Optional.ofNullable(vulnerability.getSubTitle()).orElse("NA"));
-                vulnerability1.setRecommendation(Optional.ofNullable(vulnerability.getRecommendation()).orElse("NA"));
+                vulnerability1.setTitle(vulnerability.getTitle());
+                vulnerability1.setSubTitle(vulnerability.getSubTitle());
+                vulnerability1.setRecommendation(vulnerability.getRecommendation());
                 vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
                 vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
                 vulnerability1.setSeverity(vulnerability.getSeverity());
