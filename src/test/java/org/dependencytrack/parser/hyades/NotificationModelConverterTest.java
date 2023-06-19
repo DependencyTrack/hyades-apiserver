@@ -15,7 +15,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
+import org.dependencytrack.notification.vo.Findings;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
@@ -738,14 +738,14 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         final org.dependencytrack.model.Project project = createProject();
         final org.dependencytrack.model.Component component = createComponent(project);
         final org.dependencytrack.model.Vulnerability vulnerability = createVulnerability();
-        ComponentVulnAnalysisComplete componentVulnAnalysisComplete = new ComponentVulnAnalysisComplete(List.of(vulnerability), component);
+        Findings findings = new Findings(List.of(vulnerability), component);
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
         alpineNotification.setLevel(NotificationLevel.INFORMATIONAL);
         alpineNotification.setGroup(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete)));
+        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(findings)));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -759,7 +759,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(ProjectVulnAnalysisCompleteSubject.class);
         assertProject(subject.getProject());
-        assertComponent(subject.getComponentAnalysisCompleteList().get(0).getComponent());
-        assertVulnerability(subject.getComponentAnalysisCompleteList().get(0).getVulnerability(0));
+        assertComponent(subject.getFindingsSubjectList().get(0).getComponent());
+        assertVulnerability(subject.getFindingsSubjectList().get(0).getVulnerability(0));
     }
 }

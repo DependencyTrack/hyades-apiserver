@@ -41,7 +41,7 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
+import org.dependencytrack.notification.vo.Findings;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
@@ -59,7 +59,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -384,7 +383,7 @@ public final class NotificationUtil {
             }
 
 
-            List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = createList(componentList, map);
+            List<Findings> componentAnalysisCompleteList = createList(componentList, map);
             return new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
@@ -395,8 +394,8 @@ public final class NotificationUtil {
         }
     }
 
-    public static List<ComponentVulnAnalysisComplete> createList(List<Component> componentList, Map<String, List<Vulnerability>> map) {
-        List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
+    public static List<Findings> createList(List<Component> componentList, Map<String, List<Vulnerability>> map) {
+        List<Findings> componentAnalysisCompleteList = new ArrayList<>();
         for (Component component : componentList) {
             List<Vulnerability> vulnerabilities = map.get(component.getUuid().toString());
             List<Vulnerability> result = new ArrayList<>();
@@ -406,16 +405,16 @@ public final class NotificationUtil {
                 vulnerability1.setVulnId(vulnerability.getVulnId());
                 vulnerability1.setSource(vulnerability.getSource());
                 vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
-                vulnerability1.setTitle(Optional.ofNullable(vulnerability.getTitle()).orElse("NA"));
-                vulnerability1.setSubTitle(Optional.ofNullable(vulnerability.getSubTitle()).orElse("NA"));
-                vulnerability1.setRecommendation(Optional.ofNullable(vulnerability.getRecommendation()).orElse("NA"));
+                vulnerability1.setTitle(vulnerability.getTitle());
+                vulnerability1.setSubTitle(vulnerability.getSubTitle());
+                vulnerability1.setRecommendation(vulnerability.getRecommendation());
                 vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
                 vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
-                vulnerability1.setSeverity(vulnerability.getSeverity());
-                vulnerability1.setCwes(vulnerability.getCwes());
                 vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
                 vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
                 vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                vulnerability1.setSeverity(vulnerability.getSeverity());
+                vulnerability1.setCwes(vulnerability.getCwes());
                 vulnerability1.setUuid(vulnerability.getUuid());
                 vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
                 if (vulnerability.getAliases() != null && !vulnerability.getAliases().isEmpty()) {
@@ -423,7 +422,7 @@ public final class NotificationUtil {
                 }
                 result.add(vulnerability1);
             }
-            componentAnalysisCompleteList.add(new ComponentVulnAnalysisComplete(result, component));
+            componentAnalysisCompleteList.add(new Findings(result, component));
         }
         return componentAnalysisCompleteList;
     }

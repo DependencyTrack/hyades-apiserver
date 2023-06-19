@@ -12,7 +12,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
+import org.dependencytrack.notification.vo.Findings;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
@@ -25,7 +25,7 @@ import org.hyades.proto.notification.v1.BackReference;
 import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Component;
-import org.hyades.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
+import org.hyades.proto.notification.v1.FindingsSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Level;
 import org.hyades.proto.notification.v1.NewVulnerabilitySubject;
@@ -303,12 +303,12 @@ public final class NotificationModelConverter {
         return builder.build();
     }
 
-    private static ComponentVulnAnalysisCompleteSubject convert(ComponentVulnAnalysisComplete componentVulnAnalysisComplete) {
+    private static FindingsSubject convert(Findings findings) {
 
-        Component component = convert(componentVulnAnalysisComplete.getComponent());
-        ComponentVulnAnalysisCompleteSubject.Builder builder = ComponentVulnAnalysisCompleteSubject.newBuilder();
+        Component component = convert(findings.getComponent());
+        FindingsSubject.Builder builder = FindingsSubject.newBuilder();
         builder.setComponent(component);
-        List<Vulnerability> vulnerabilities = componentVulnAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
+        List<Vulnerability> vulnerabilities = findings.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
         builder.addAllVulnerability(vulnerabilities);
         return builder.build();
     }
@@ -316,8 +316,8 @@ public final class NotificationModelConverter {
     private static ProjectVulnAnalysisCompleteSubject convert(ProjectVulnAnalysisComplete notification) {
         ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
         builder.setProject(convert(notification.getProject()));
-        List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllComponentAnalysisComplete(componentAnalysisCompleteSubjects);
+        List<FindingsSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
+        builder.addAllFindingsSubject(componentAnalysisCompleteSubjects);
         return builder.build();
     }
 
