@@ -17,7 +17,8 @@ ENV TZ=Etc/UTC \
     LOGGING_LEVEL=INFO \
     # JVM Options that are passed at runtime by default
     JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=90.0" \
-    # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS
+    # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS.
+    # e.g. EXTRA_JAVA_OPTIONS="-Dlogback.configurationFile=logback-json.xml"
     EXTRA_JAVA_OPTIONS="" \
     # The web context defaults to the root. To override, supply an alternative context which starts with a / but does not end with one
     # Example: /dtrack
@@ -52,7 +53,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
 COPY --from=jre-build /opt/java/openjdk $JAVA_HOME
 
 # Copy the compiled WAR to the application directory created above
-COPY ./target/${WAR_FILENAME} ${APP_DIR}
+COPY ./target/${WAR_FILENAME} ./src/main/docker/logback-json.xml ${APP_DIR}
 
 # Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
 USER ${UID}
