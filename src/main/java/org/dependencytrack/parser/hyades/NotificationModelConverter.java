@@ -169,8 +169,10 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
             return Optional.of(Any.pack(convert(pvi)));
-        } else if (subject instanceof final ProjectVulnAnalysisComplete projectAnalysisCompleteNotification) {
-            return Optional.of(Any.pack(convert(projectAnalysisCompleteNotification)));
+        } else if (subject instanceof final ProjectVulnAnalysisComplete pac) {
+            return Optional.of(Any.pack(convert(pac)));
+        } else if (subject instanceof final org.dependencytrack.model.Project p) {
+            return Optional.of(Any.pack(convert(p)));
         }
 
         return Optional.empty();

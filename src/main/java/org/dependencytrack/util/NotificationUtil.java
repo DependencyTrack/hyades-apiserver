@@ -30,7 +30,6 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
@@ -49,9 +48,6 @@ import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.FetchPlan;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -251,29 +247,6 @@ public final class NotificationUtil {
                 .content(generateNotificationContent(pv))
                 .subject(new PolicyViolationIdentified(pv, pv.getComponent(), pv.getProject()))
         );
-    }
-
-    public static JsonObject toJson(final Project project) {
-        final JsonObjectBuilder projectBuilder = Json.createObjectBuilder();
-        projectBuilder.add("uuid", project.getUuid().toString());
-        JsonUtil.add(projectBuilder, "name", project.getName());
-        JsonUtil.add(projectBuilder, "version", project.getVersion());
-        JsonUtil.add(projectBuilder, "description", project.getDescription());
-        if (project.getPurl() != null) {
-            projectBuilder.add("purl", project.getPurl().canonicalize());
-        }
-        if (project.getTags() != null && project.getTags().size() > 0) {
-            final StringBuilder sb = new StringBuilder();
-            for (final Tag tag : project.getTags()) {
-                sb.append(tag.getName()).append(",");
-            }
-            String tags = sb.toString();
-            if (tags.endsWith(",")) {
-                tags = tags.substring(0, tags.length() - 1);
-            }
-            JsonUtil.add(projectBuilder, "tags", tags);
-        }
-        return projectBuilder.build();
     }
 
     public static void loadDefaultNotificationPublishers(QueryManager qm) throws IOException {

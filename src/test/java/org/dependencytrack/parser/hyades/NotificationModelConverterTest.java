@@ -528,12 +528,8 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertProjectCreatedNotification() {
+    public void testConvertProjectCreatedNotification() throws Exception {
         final org.dependencytrack.model.Project project = createProject();
-        final org.dependencytrack.model.Component component = createComponent(project);
-        final org.dependencytrack.model.Policy policy = createPolicy();
-        final org.dependencytrack.model.PolicyCondition policyCondition = createPolicyCondition(policy);
-        final org.dependencytrack.model.PolicyViolation policyViolation = createPolicyViolation(policyCondition, component);
 
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
@@ -541,6 +537,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setGroup(NotificationGroup.PROJECT_CREATED.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
+        alpineNotification.setSubject(project);
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -549,7 +546,11 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertThat(notification.getTitle()).isEqualTo("Foo");
         assertThat(notification.getContent()).isEqualTo("Bar");
         assertThat(notification.getTimestamp().getSeconds()).isNotZero();
-        assertThat(notification.hasSubject()).isFalse();
+        assertThat(notification.hasSubject()).isTrue();
+        assertThat(notification.getSubject().is(Project.class)).isTrue();
+
+        final var subject = notification.getSubject().unpack(Project.class);
+        assertProject(subject);
     }
 
     private org.dependencytrack.model.Project createProject() {
