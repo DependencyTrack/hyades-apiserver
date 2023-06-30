@@ -1,5 +1,6 @@
 package org.dependencytrack.util;
 
+import alpine.Config;
 import net.javacrumbs.shedlock.core.DefaultLockingTaskExecutor;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
@@ -8,37 +9,35 @@ import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.datanucleus.store.connection.ConnectionManagerImpl;
 import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
 import org.datanucleus.store.rdbms.RDBMSStoreManager;
-import org.datanucleus.store.rdbms.datasource.dbcp2.PoolingDataSource;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
 
-public class LockProviderUtil {
+public class LockProvider {
 
-    private static JdbcLockProvider instance;
+    private static JdbcLockProvider INSTANCE;
 
-    private static LockingTaskExecutor lockingTaskExecutor;
+    private static LockingTaskExecutor LOCKING_TASK_EXECUTOR;
 
     public static JdbcLockProvider getJdbcLockProviderInstance() {
-       if(instance == null) {
-           try (final QueryManager qm = new QueryManager()) {
-               PersistenceManager pm = qm.getPersistenceManager();
+       if(INSTANCE == null || Config.isUnitTestsEnabled()) {
+           try (final QueryManager qm = new QueryManager();
+               PersistenceManager pm = qm.getPersistenceManager()) {
                JDOPersistenceManagerFactory pmf = (JDOPersistenceManagerFactory) pm.getPersistenceManagerFactory();
-               instance =  new JdbcLockProvider(getDataSource(pmf));
+               INSTANCE =  new JdbcLockProvider(getDataSource(pmf));
            } catch (IllegalAccessException e) {
                throw new RuntimeException("Failed to access data source", e);
            }
        }
-
-       return instance;
+       return INSTANCE;
     }
 
     public static LockingTaskExecutor getLockingTaskExecutorInstance(JdbcLockProvider jdbcLockProvider) {
-        if(lockingTaskExecutor == null) {
-            lockingTaskExecutor = new DefaultLockingTaskExecutor(jdbcLockProvider);
+        if(LOCKING_TASK_EXECUTOR == null || Config.isUnitTestsEnabled()) {
+            LOCKING_TASK_EXECUTOR = new DefaultLockingTaskExecutor(jdbcLockProvider);
         }
-        return lockingTaskExecutor;
+        return LOCKING_TASK_EXECUTOR;
     }
 
     public static DataSource getDataSource(final JDOPersistenceManagerFactory pmf) throws IllegalAccessException {
@@ -58,6 +57,4 @@ public class LockProviderUtil {
         }
         return null;
     }
-
-
 }

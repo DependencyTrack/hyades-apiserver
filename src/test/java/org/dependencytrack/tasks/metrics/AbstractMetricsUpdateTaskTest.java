@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks.metrics;
 
+import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
@@ -31,6 +32,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -50,6 +52,11 @@ abstract class AbstractMetricsUpdateTaskTest {
 
     protected AbstractMetricsUpdateTaskTest(final String postgresImageTag) {
         this.postgresImageTag = postgresImageTag;
+    }
+
+    @BeforeClass
+    public static void init() {
+        Config.enableUnitTests();
     }
 
     @Before
