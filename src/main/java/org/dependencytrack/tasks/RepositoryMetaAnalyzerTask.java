@@ -39,6 +39,10 @@ import java.util.UUID;
  * A {@link Subscriber} to {@link ProjectRepositoryMetaAnalysisEvent} and {@link PortfolioRepositoryMetaAnalysisEvent}
  * that submits components of a specific project, or all components in the entire portfolio, for repository meta
  * analysis.
+ * <p>
+ * As repository metadata analysis is purely based on PURLs, and does not (currently) consider PURL qualifiers,
+ * components are submitted by distinct PURL coordinates. As such, there is no 1:1 correlation between total number
+ * of components in the portfolio or project, and records submitted for analysis.
  */
 public class RepositoryMetaAnalyzerTask implements Subscriber {
 
@@ -79,12 +83,14 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
 
             final PersistenceManager pm = qm.getPersistenceManager();
-            List<ComponentProjection> components = fetchNextComponentsPage(pm, project, null);
+
+            long offset = 0;
+            List<ComponentProjection> components = fetchNextComponentsPage(pm, project, offset);
             while (!components.isEmpty()) {
                 dispatchComponents(components);
 
-                final long lastId = components.get(components.size() - 1).id();
-                components = fetchNextComponentsPage(qm.getPersistenceManager(), project, lastId);
+                offset += components.size();
+                components = fetchNextComponentsPage(qm.getPersistenceManager(), project, offset);
             }
         }
 
@@ -97,12 +103,13 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
-            List<ComponentProjection> components = fetchNextComponentsPage(pm, null, null);
+            long offset = 0;
+            List<ComponentProjection> components = fetchNextComponentsPage(pm, null, offset);
             while (!components.isEmpty()) {
                 dispatchComponents(components);
 
-                final long lastId = components.get(components.size() - 1).id();
-                components = fetchNextComponentsPage(qm.getPersistenceManager(), null, lastId);
+                offset += components.size();
+                components = fetchNextComponentsPage(qm.getPersistenceManager(), null, offset);
             }
         }
 
@@ -111,33 +118,29 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private void dispatchComponents(final List<ComponentProjection> components) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purl(), component.internal()));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal()));
         }
     }
 
-    private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final Long lastId) throws Exception {
+    private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final long offset) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "project.active == :projectActive && purl != null";
+            var filter = "project.active == :projectActive && purlCoordinates != null";
             var params = new HashMap<String, Object>();
             params.put("projectActive", true);
             if (project != null) {
                 filter += " && project == :project";
                 params.put("project", project);
             }
-            if (lastId != null) {
-                filter += " && id < :lastId";
-                params.put("lastId", lastId);
-            }
             query.setFilter(filter);
             query.setNamedParameters(params);
-            query.setOrdering("id DESC");
-            query.setRange(0, 5000);
-            query.setResult("id, purl, internal");
+            query.setOrdering("purlCoordinates ASC"); // Keep the order somewhat consistent
+            query.setRange(offset, offset + 5000);
+            query.setResult("DISTINCT purlCoordinates, internal");
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
     }
 
-    public record ComponentProjection(long id, String purl, Boolean internal) {
+    public record ComponentProjection(String purlCoordinates, Boolean internal) {
     }
 
 }

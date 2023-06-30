@@ -15,9 +15,12 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -27,13 +30,16 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
@@ -172,7 +178,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
-
         await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(250))
@@ -180,6 +185,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
                     assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
                 });
+
     }
 
     @Test
@@ -318,7 +324,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(scan).isNotNull();
                     assertThat(scan.getReceivedResults()).isEqualTo(2);
                 });
-
         // Vulnerability scan of the project completed. Policy evaluation of all components should
         // have been performed, so we expect the violation for componentA to appear.
         final var finalProject = project;
@@ -331,6 +336,83 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         await("Project metrics update")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(EVENTS).hasSize(1));
+    }
+
+    @Test
+    public void createListTest() throws Exception {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.createProject(project, null, false);
+
+        final var componentA = new org.dependencytrack.model.Component();
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("1.1.0");
+        componentA.setProject(project);
+        componentA.setPurl("pkg:maven/org.acme/acme-lib-a@1.1.0");
+        qm.persist(componentA);
+
+        final var componentB = new org.dependencytrack.model.Component();
+        componentB.setName("acme-lib-b");
+        componentB.setVersion("1.2.0");
+        componentB.setProject(project);
+        qm.persist(componentB);
+        final var scanToken = UUID.randomUUID();
+        final var scanKeyComponentA = ScanKey.newBuilder()
+                .setScanToken(scanToken.toString())
+                .setComponentUuid(componentA.getUuid().toString())
+                .build();
+        final var scanKeyComponentB = ScanKey.newBuilder()
+                .setScanToken(scanToken.toString())
+                .setComponentUuid(componentB.getUuid().toString())
+                .build();
+        final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SNYK-001")
+                .setSource(SOURCE_SNYK)
+                .build();
+        final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+                .setId("SONATYPE-001")
+                .setSource(SOURCE_OSSINDEX)
+                .build();
+
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>(scanKeyComponentA,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentA)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_SNYK)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                                .addVulnerabilities(vulnComponentA))
+                                        .build()),
+                        new KeyValue<>(scanKeyComponentB,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKeyComponentB)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_OSSINDEX)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                                .addVulnerabilities(vulnComponentB))
+                                        .build())))
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+        await()
+                .atMost(Duration.ofSeconds(10))
+                .pollInterval(Duration.ofMillis(250))
+                .untilAsserted(() -> {
+                    assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
+                    assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
+                });
+        ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
+        map.put(componentA.getUuid().toString(), qm.getAllVulnerabilities(componentA));
+        map.put(componentB.getUuid().toString(), qm.getAllVulnerabilities(componentB));
+        List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = NotificationUtil.createList(qm.getAllComponents(project), map);
+        assertThat(componentAnalysisCompleteList.get(0).getComponent().getName().equals("acme-lib-a"));
+        Assertions.assertEquals(1, componentAnalysisCompleteList.get(0).getVulnerabilityList().size());
+        Assertions.assertEquals("SNYK", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getSource());
+        Assertions.assertEquals("SNYK-001", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getVulnId());
+        assertThat(componentAnalysisCompleteList.get(1).getComponent().getName().equals("acme-lib-b"));
+        Assertions.assertEquals(1, componentAnalysisCompleteList.get(1).getVulnerabilityList().size());
+        Assertions.assertEquals("OSSINDEX", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getSource());
+        Assertions.assertEquals("SONATYPE-001", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getVulnId());
     }
 
 }

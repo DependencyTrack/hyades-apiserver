@@ -55,16 +55,20 @@ public final class EpssParser {
                 }
                 if (values.get(0).startsWith("CVE-")) {
                     final String cveId = values.get(0);
-                    final BigDecimal epssScore = new BigDecimal(values.get(1));
+                    final BigDecimal score = new BigDecimal(values.get(1));
                     final BigDecimal percentile = new BigDecimal(values.get(2));
                     try (final QueryManager qm = new QueryManager().withL2CacheDisabled()) {
                         qm.runInTransaction(() -> {
                             final Vulnerability vuln = qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, cveId);
-                            if (vuln != null
-                                    && epssScore.compareTo(vuln.getEpssScore()) != 0
-                                    && percentile.compareTo(vuln.getEpssPercentile()) != 0) {
-                                vuln.setEpssScore(epssScore);
-                                vuln.setEpssPercentile(percentile);
+                            if (vuln != null) {
+                                final boolean scoreChanged = vuln.getEpssScore() == null
+                                        || score.compareTo(vuln.getEpssScore()) != 0;
+                                final boolean percentileChanged = vuln.getEpssPercentile() == null
+                                        || percentile.compareTo(vuln.getEpssPercentile()) != 0;
+                                if (scoreChanged || percentileChanged) {
+                                    vuln.setEpssScore(score);
+                                    vuln.setEpssPercentile(percentile);
+                                }
                             }
                         });
                     }

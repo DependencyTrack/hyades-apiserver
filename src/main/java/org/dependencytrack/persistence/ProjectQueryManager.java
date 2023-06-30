@@ -65,6 +65,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Constructs a new QueryManager.
+     *
      * @param pm a PersistenceManager object
      */
     ProjectQueryManager(final PersistenceManager pm) {
@@ -73,7 +74,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Constructs a new QueryManager.
-     * @param pm a PersistenceManager object
+     *
+     * @param pm      a PersistenceManager object
      * @param request an AlpineRequest object
      */
     ProjectQueryManager(final PersistenceManager pm, final AlpineRequest request) {
@@ -82,6 +84,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of all projects.
+     *
      * @return a List of Projects
      */
     public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
@@ -94,7 +97,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         var filterBuilder = new ProjectQueryFilterBuilder()
                 .excludeInactive(excludeInactive);
 
-        if (onlyRoot){
+        if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         }
@@ -128,6 +131,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of all projects.
+     *
      * @return a List of Projects
      */
     public PaginatedResult getProjects(final boolean includeMetrics) {
@@ -136,6 +140,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of all projects.
+     *
      * @return a List of Projects
      */
     public PaginatedResult getProjects() {
@@ -145,6 +150,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     /**
      * Returns a list of all projects.
      * This method if designed NOT to provide paginated results.
+     *
      * @return a List of Projects
      */
     public List<Project> getAllProjects() {
@@ -154,6 +160,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     /**
      * Returns a list of all projects.
      * This method if designed NOT to provide paginated results.
+     *
      * @return a List of Projects
      */
     public List<Project> getAllProjects(boolean excludeInactive) {
@@ -167,6 +174,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of projects by their name.
+     *
      * @param name the name of the Projects (required)
      * @return a List of Project objects
      */
@@ -194,7 +202,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a project by its name and version.
-     * @param name the name of the Project (required)
+     *
+     * @param name    the name of the Project (required)
      * @param version the version of the Project (or null)
      * @return a Project object, or null if not found
      */
@@ -216,6 +225,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of projects that are accessible by the specified team.
+     *
      * @param team the team the has access to Projects
      * @return a List of Project objects
      */
@@ -229,7 +239,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 .excludeInactive(excludeInactive)
                 .withTeam(team);
 
-        if (onlyRoot){
+        if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         }
@@ -243,6 +253,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a paginated result of projects by tag.
+     *
      * @param tag the tag associated with the Project
      * @return a List of Projects that contain the tag
      */
@@ -257,7 +268,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 .excludeInactive(excludeInactive)
                 .withTag(tag);
 
-        if (onlyRoot){
+        if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         }
@@ -284,6 +295,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a paginated result of projects by classifier.
+     *
      * @param classifier the classifier of the Project
      * @return a List of Projects of the specified classifier
      */
@@ -298,7 +310,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 .excludeInactive(excludeInactive)
                 .withClassifier(classifier);
 
-        if (onlyRoot){
+        if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         }
@@ -320,6 +332,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a paginated result of projects by tag.
+     *
      * @param tag the tag associated with the Project
      * @return a List of Projects that contain the tag
      */
@@ -332,6 +345,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * tags by querying the database to retrieve the tag. If the tag does
      * not exist, the tag will be created and returned with other resolved
      * tags.
+     *
      * @param tags a List of Tags to resolve
      * @return List of resolved Tags
      */
@@ -341,7 +355,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
         final List<Tag> resolvedTags = new ArrayList<>();
         final List<String> unresolvedTags = new ArrayList<>();
-        for (final Tag tag: tags) {
+        for (final Tag tag : tags) {
             final String trimmedTag = StringUtils.trimToNull(tag.getName());
             if (trimmedTag != null) {
                 final Tag resolvedTag = getTagByName(trimmedTag);
@@ -358,6 +372,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of Tag objects by name.
+     *
      * @param name the name of the Tag
      * @return a Tag object
      */
@@ -370,6 +385,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Creates a new Tag object with the specified name.
+     *
      * @param name the name of the Tag to create
      * @return the created Tag object
      */
@@ -386,12 +402,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Creates one or more Tag objects from the specified name(s).
+     *
      * @param names the name(s) of the Tag(s) to create
      * @return the created Tag object(s)
      */
     private List<Tag> createTags(final List<String> names) {
         final List<Tag> newTags = new ArrayList<>();
-        for (final String name: names) {
+        for (final String name : names) {
             final String loweredTrimmedTag = StringUtils.lowerCase(StringUtils.trimToNull(name));
             if (getTagByName(loweredTrimmedTag) == null) {
                 final Tag tag = new Tag();
@@ -404,13 +421,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Creates a new Project.
-     * @param name the name of the project to create
+     *
+     * @param name        the name of the project to create
      * @param description a description of the project
-     * @param version the project version
-     * @param tags a List of Tags - these will be resolved if necessary
-     * @param parent an optional parent Project
-     * @param purl an optional Package URL
-     * @param active specified if the project is active
+     * @param version     the project version
+     * @param tags        a List of Tags - these will be resolved if necessary
+     * @param parent      an optional parent Project
+     * @param purl        an optional Package URL
+     * @param active      specified if the project is active
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      * @return the created Project
      */
@@ -419,8 +437,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setName(name);
         project.setDescription(description);
         project.setVersion(version);
-        if (parent != null ) {
-            if (!Boolean.TRUE.equals(parent.isActive())){
+        if (parent != null) {
+            if (!Boolean.TRUE.equals(parent.isActive())) {
                 throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
             }
             project.setParent(parent);
@@ -433,7 +451,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        NotificationUtil.dispatchNotificationsWithSubject(
+        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
                 NotificationScope.PORTFOLIO,
                 NotificationGroup.PROJECT_CREATED,
                 NotificationConstants.Title.PROJECT_CREATED,
@@ -447,13 +465,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Creates a new Project.
-     * @param project the project to create
-     * @param tags a List of Tags - these will be resolved if necessary
+     *
+     * @param project     the project to create
+     * @param tags        a List of Tags - these will be resolved if necessary
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      * @return the created Project
      */
     public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
-        if (project.getParent() != null && !Boolean.TRUE.equals(project.getParent().isActive())){
+        if (project.getParent() != null && !Boolean.TRUE.equals(project.getParent().isActive())) {
             throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
         }
         final Project result = persist(project);
@@ -467,13 +486,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Updates an existing Project.
-     * @param uuid the uuid of the project to update
-     * @param name the name of the project
+     *
+     * @param uuid        the uuid of the project to update
+     * @param name        the name of the project
      * @param description a description of the project
-     * @param version the project version
-     * @param tags a List of Tags - these will be resolved if necessary
-     * @param purl an optional Package URL
-     * @param active specified if the project is active
+     * @param version     the project version
+     * @param tags        a List of Tags - these will be resolved if necessary
+     * @param purl        an optional Package URL
+     * @param active      specified if the project is active
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      * @return the updated Project
      */
@@ -484,7 +504,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setVersion(version);
         project.setPurl(purl);
 
-        if (!active && Boolean.TRUE.equals(project.isActive()) && hasActiveChild(project)){
+        if (!active && Boolean.TRUE.equals(project.isActive()) && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive, if active children are present.");
         }
         project.setActive(active);
@@ -500,8 +520,9 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Updates an existing Project.
+     *
      * @param transientProject the project to update
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
+     * @param commitIndex      specifies if the search index should be committed (an expensive operation)
      * @return the updated Project
      */
     public Project updateProject(Project transientProject, boolean commitIndex) {
@@ -516,26 +537,27 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setCpe(transientProject.getCpe());
         project.setPurl(transientProject.getPurl());
         project.setSwidTagId(transientProject.getSwidTagId());
+        project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)){
+        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
         project.setActive(transientProject.isActive());
 
         if (transientProject.getParent() != null && transientProject.getParent().getUuid() != null) {
-            if (project.getUuid().equals(transientProject.getParent().getUuid())){
+            if (project.getUuid().equals(transientProject.getParent().getUuid())) {
                 throw new IllegalArgumentException("A project cannot select itself as a parent");
             }
             Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
-            if (!Boolean.TRUE.equals(parent.isActive())){
+            if (!Boolean.TRUE.equals(parent.isActive())) {
                 throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
-            } else if (isChildOf(parent, transientProject.getUuid())){
+            } else if (isChildOf(parent, transientProject.getUuid())) {
                 throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
             } else {
                 project.setParent(parent);
             }
             project.setParent(parent);
-        }else {
+        } else {
             project.setParent(null);
         }
 
@@ -574,14 +596,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project = persist(project);
 
         if (includeTags) {
-            for (final Tag tag: source.getTags()) {
+            for (final Tag tag : source.getTags()) {
                 tag.getProjects().add(project);
                 persist(tag);
             }
         }
 
         if (includeProperties && source.getProperties() != null) {
-            for (final ProjectProperty sourceProperty: source.getProperties()) {
+            for (final ProjectProperty sourceProperty : source.getProperties()) {
                 final ProjectProperty property = new ProjectProperty();
                 property.setProject(project);
                 property.setPropertyType(sourceProperty.getPropertyType());
@@ -597,10 +619,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         if (includeComponents) {
             final List<Component> sourceComponents = getAllComponents(source);
             if (sourceComponents != null) {
-                for (final Component sourceComponent: sourceComponents) {
+                for (final Component sourceComponent : sourceComponents) {
                     final Component clonedComponent = cloneComponent(sourceComponent, project, false);
                     // Add vulnerabilties and finding attribution from the source component to the cloned component
-                    for (Vulnerability vuln: sourceComponent.getVulnerabilities()) {
+                    for (Vulnerability vuln : sourceComponent.getVulnerabilities()) {
                         final FindingAttribution sourceAttribution = this.getFindingAttribution(vuln, sourceComponent);
                         this.addVulnerability(vuln, clonedComponent, sourceAttribution.getAnalyzerIdentity(), sourceAttribution.getAlternateIdentifier(), sourceAttribution.getReferenceUrl());
                     }
@@ -612,7 +634,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         if (includeAuditHistory && includeComponents) {
             final List<Analysis> analyses = super.getAnalyses(source);
             if (analyses != null) {
-                for (final Analysis sourceAnalysis: analyses) {
+                for (final Analysis sourceAnalysis : analyses) {
                     Analysis analysis = new Analysis();
                     analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
                     final Component clonedComponent = clonedComponents.get(sourceAnalysis.getComponent().getId());
@@ -628,7 +650,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     analysis.setAnalysisDetails(sourceAnalysis.getAnalysisDetails());
                     analysis = persist(analysis);
                     if (sourceAnalysis.getAnalysisComments() != null) {
-                        for (final AnalysisComment sourceComment: sourceAnalysis.getAnalysisComments()) {
+                        for (final AnalysisComment sourceComment : sourceAnalysis.getAnalysisComments()) {
                             final AnalysisComment analysisComment = new AnalysisComment();
                             analysisComment.setAnalysis(analysis);
                             analysisComment.setTimestamp(sourceComment.getTimestamp());
@@ -656,12 +678,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Deletes a Project and all objects dependant on the project.
-     * @param project the Project to delete
+     *
+     * @param project     the Project to delete
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     public void recursivelyDelete(final Project project, final boolean commitIndex) {
         if (project.getChildren() != null) {
-            for (final Project child: project.getChildren()) {
+            for (final Project child : project.getChildren()) {
                 recursivelyDelete(child, false);
             }
         }
@@ -677,7 +700,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         deletePolicyViolations(project);
         deleteComponents(project);
 
-        for (final ServiceComponent s: getAllServiceComponents(project)) {
+        for (final ServiceComponent s : getAllServiceComponents(project)) {
             recursivelyDelete(s, false);
         }
         deleteBoms(project);
@@ -692,12 +715,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Creates a key/value pair (ProjectProperty) for the specified Project.
-     * @param project the Project to create the property for
-     * @param groupName the group name of the property
-     * @param propertyName the name of the property
+     *
+     * @param project       the Project to create the property for
+     * @param groupName     the group name of the property
+     * @param propertyName  the name of the property
      * @param propertyValue the value of the property
-     * @param propertyType the type of property
-     * @param description a description of the property
+     * @param propertyType  the type of property
+     * @param description   a description of the property
      * @return the created ProjectProperty object
      */
     public ProjectProperty createProjectProperty(final Project project, final String groupName, final String propertyName,
@@ -715,8 +739,9 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a ProjectProperty with the specified groupName and propertyName.
-     * @param project the project the property belongs to
-     * @param groupName the group name of the config property
+     *
+     * @param project      the project the property belongs to
+     * @param groupName    the group name of the config property
      * @param propertyName the name of the property
      * @return a ProjectProperty object
      */
@@ -728,6 +753,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a List of ProjectProperty's for the specified project.
+     *
      * @param project the project the property belongs to
      * @return a List ProjectProperty objects
      */
@@ -735,27 +761,28 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public List<ProjectProperty> getProjectProperties(final Project project) {
         final Query<ProjectProperty> query = this.pm.newQuery(ProjectProperty.class, "project == :project");
         query.setOrdering("groupName asc, propertyName asc");
-        return (List<ProjectProperty>)query.execute(project);
+        return (List<ProjectProperty>) query.execute(project);
     }
 
     /**
      * Binds the two objects together in a corresponding join table.
+     *
      * @param project a Project object
-     * @param tags a List of Tag objects
+     * @param tags    a List of Tag objects
      */
     @SuppressWarnings("unchecked")
     @Override
     public void bind(Project project, List<Tag> tags) {
         final Query<Tag> query = pm.newQuery(Tag.class, "projects.contains(:project)");
-        final List<Tag> currentProjectTags = (List<Tag>)query.execute(project);
+        final List<Tag> currentProjectTags = (List<Tag>) query.execute(project);
         pm.currentTransaction().begin();
-        for (final Tag tag: currentProjectTags) {
+        for (final Tag tag : currentProjectTags) {
             if (!tags.contains(tag)) {
                 tag.getProjects().remove(project);
             }
         }
         project.setTags(tags);
-        for (final Tag tag: tags) {
+        for (final Tag tag : tags) {
             final List<Project> projects = tag.getProjects();
             if (!projects.contains(project)) {
                 projects.add(project);
@@ -766,7 +793,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Updates the last time a bom was imported.
-     * @param date the date of the last bom import
+     *
+     * @param date      the date of the last bom import
      * @param bomFormat the format and version of the bom format
      * @return the updated Project
      */
@@ -793,7 +821,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                         }
                     }
                 }
-            } else if (principal instanceof ApiKey ){
+            } else if (principal instanceof ApiKey) {
                 final ApiKey apiKey = (ApiKey) principal;
                 if (super.hasAccessManagementPermission(apiKey)) {
                     return true;
@@ -844,7 +872,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     final Team team = super.getObjectById(Team.class, teams.get(i).getId());
                     sb.append(" accessTeams.contains(:team").append(i).append(") ");
                     params.put("team" + i, team);
-                    if (i < teamsSize-1) {
+                    if (i < teamsSize - 1) {
                         sb.append(" || ");
                     }
                 }
@@ -864,6 +892,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * This only happens if Portfolio Access Control is enabled and the @param principal is an ApyKey
      * For a UserPrincipal we don't know which Team(s) to add to the ACL,
      * See https://github.com/DependencyTrack/dependency-track/issues/1435
+     *
      * @param project
      * @param principal
      * @return True if ACL was updated
@@ -886,7 +915,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
-        for (Permission permission: getEffectivePermissions(userPrincipal)) {
+        for (Permission permission : getEffectivePermissions(userPrincipal)) {
             if (Permissions.ACCESS_MANAGEMENT.name().equals(permission.getName())) {
                 return true;
             }
@@ -998,7 +1027,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return result;
     }
 
-    public PaginatedResult getProjectsWithoutDescendantsOf(final boolean exludeInactive, final Project project){
+    public PaginatedResult getProjectsWithoutDescendantsOf(final boolean exludeInactive, final Project project) {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
@@ -1032,7 +1061,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return result;
     }
 
-    public PaginatedResult getProjectsWithoutDescendantsOf(final String name, final boolean excludeInactive, Project project){
+    public PaginatedResult getProjectsWithoutDescendantsOf(final String name, final boolean excludeInactive, Project project) {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
@@ -1099,8 +1128,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     private static boolean isChildOf(Project project, UUID uuid) {
         boolean isChild = false;
-        if (project.getParent() != null){
-            if (project.getParent().getUuid().equals(uuid)){
+        if (project.getParent() != null) {
+            if (project.getParent().getUuid().equals(uuid)) {
                 return true;
             } else {
                 isChild = isChildOf(project.getParent(), uuid);
@@ -1111,8 +1140,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     private static boolean hasActiveChild(Project project) {
         boolean hasActiveChild = false;
-        if (project.getChildren() != null){
-            for (Project child: project.getChildren()) {
+        if (project.getChildren() != null) {
+            for (Project child : project.getChildren()) {
                 if (Boolean.TRUE.equals(child.isActive()) || hasActiveChild) {
                     return true;
                 } else {

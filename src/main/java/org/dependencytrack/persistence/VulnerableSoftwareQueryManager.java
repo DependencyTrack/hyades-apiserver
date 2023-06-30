@@ -133,6 +133,18 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
     }
 
     /**
+     * Returns a VulnerableSoftware by it's CPE v2.3 string and the affected version.
+     * @param cpe23 the CPE 2.3 string
+     * @return a VulnerableSoftware object, or null if not found
+     */
+    public VulnerableSoftware getVulnerableSoftwareByCpe23AndVersion(String cpe23, String version) {
+        final Query<VulnerableSoftware> query = pm.newQuery(VulnerableSoftware.class);
+        query.setFilter("cpe23 == :cpe23 && version == :version");
+        query.setRange(0, 1);
+        return singleResult(query.executeWithArray(cpe23, version));
+    }
+
+    /**
      * Returns a List of all VulnerableSoftware objects.
      * @return a List of all VulnerableSoftware objects
      */
@@ -200,6 +212,17 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
     public List<VulnerableSoftware> getAllVulnerableSoftwareByPurl(final PackageURL purl) {
         final Query<VulnerableSoftware> query = pm.newQuery(VulnerableSoftware.class, "(purlType == :purlType && purlNamespace == :purlNamespace && purlName == :purlName && purlVersion == :purlVersion)");
         return (List<VulnerableSoftware>)query.executeWithArray(purl.getType(), purl.getNamespace(), purl.getName(), purl.getVersion());
+    }
+
+    /**
+     * Returns a VulnerableSoftware object that match the specified PackageURL and the affected version
+     * @return matching VulnerableSoftware object
+     */
+    public VulnerableSoftware getVulnerableSoftwareByPurlAndVersion(String purlType, String purlNamespace, String purlName, String version) {
+        final Query<VulnerableSoftware> query = pm.newQuery(VulnerableSoftware.class, "purlType == :purlType && purlNamespace == :purlNamespace && purlName == :purlName && version == :version");
+        query.setRange(0, 1);
+        return singleResult(query.executeWithArray(purlType, purlNamespace, purlName, version));
+
     }
 
     /**

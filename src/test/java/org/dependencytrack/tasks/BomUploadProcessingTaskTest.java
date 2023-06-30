@@ -33,7 +33,6 @@ import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -79,10 +78,10 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
 
         qm.getPersistenceManager().refresh(project);
@@ -102,7 +101,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getVersion()).isEqualTo("1.0.0");
         assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
-        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?packaging=jar");
+        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
@@ -124,8 +123,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_CONSUMED.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSED.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
 
         qm.getPersistenceManager().refresh(project);
@@ -154,8 +153,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
-                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED.name());
-                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED, event);
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
                     assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
                     assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                     assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);

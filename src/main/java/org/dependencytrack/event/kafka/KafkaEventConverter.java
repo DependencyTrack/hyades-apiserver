@@ -11,6 +11,7 @@ import org.hyades.proto.vulnanalysis.v1.ScanKey;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Utility class to convert {@link alpine.event.framework.Event}s and {@link alpine.notification.Notification}s
@@ -46,22 +47,22 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purl() == null) {
+        if (event == null || event.purlCoordinates() == null) {
             return null;
         }
 
         final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
-                .setPurl(event.purl());
+                .setPurl(event.purlCoordinates());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
 
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purl(), analysisCommand, null);
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
-    static KafkaEvent<String, Notification> convert(final alpine.notification.Notification alpineNotification) {
+    static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
 
         final Topic<String, Notification> topic = switch (notification.getGroup()) {
@@ -70,8 +71,8 @@ final class KafkaEventConverter {
             case GROUP_REPOSITORY -> KafkaTopics.NOTIFICATION_REPOSITORY;
             case GROUP_INTEGRATION -> KafkaTopics.NOTIFICATION_INTEGRATION;
             case GROUP_ANALYZER -> KafkaTopics.NOTIFICATION_ANALYZER;
-            case GROUP_BOM_CONSUMED -> KafkaTopics.NOTIFICATION_BOM_CONSUMED;
-            case GROUP_BOM_PROCESSED -> KafkaTopics.NOTIFICATION_BOM_PROCESSED;
+            case GROUP_BOM_CONSUMED -> KafkaTopics.NOTIFICATION_BOM;
+            case GROUP_BOM_PROCESSED -> KafkaTopics.NOTIFICATION_BOM;
             case GROUP_FILE_SYSTEM -> KafkaTopics.NOTIFICATION_FILE_SYSTEM;
             case GROUP_INDEXING_SERVICE -> KafkaTopics.NOTIFICATION_INDEXING_SERVICE;
             case GROUP_NEW_VULNERABILITY -> KafkaTopics.NOTIFICATION_NEW_VULNERABILITY;
@@ -79,16 +80,20 @@ final class KafkaEventConverter {
             case GROUP_POLICY_VIOLATION -> KafkaTopics.NOTIFICATION_POLICY_VIOLATION;
             case GROUP_PROJECT_AUDIT_CHANGE -> KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE;
             case GROUP_PROJECT_CREATED -> KafkaTopics.NOTIFICATION_PROJECT_CREATED;
-            case GROUP_VEX_CONSUMED -> KafkaTopics.NOTIFICATION_VEX_CONSUMED;
-            case GROUP_VEX_PROCESSED -> KafkaTopics.NOTIFICATION_VEX_PROCESSED;
-            case GROUP_BOM_PROCESSING_FAILED -> KafkaTopics.NOTIFICATION_BOM_PROCESSING_FAILED;
+            case GROUP_VEX_CONSUMED -> KafkaTopics.NOTIFICATION_VEX;
+            case GROUP_VEX_PROCESSED -> KafkaTopics.NOTIFICATION_VEX;
+            case GROUP_BOM_PROCESSING_FAILED -> KafkaTopics.NOTIFICATION_BOM;
+            case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
             default -> null;
         };
         if (topic == null) {
             return null;
         }
 
-        return new KafkaEvent<>(topic, null, notification, null);
+        return new KafkaEvent<>(topic,
+                projectUuid != null ? projectUuid.toString() : null,
+                notification,
+                null);
     }
 
 }

@@ -1,6 +1,6 @@
 FROM eclipse-temurin:17.0.6_10-jre-focal@sha256:22942ca3ffac6e593063e33a225c458e315afa2c0dddfdbe15d337dd9130c70c AS jre-build
 
-FROM debian:bullseye-20230502-slim@sha256:f4da3f9b18fc242b739807a0fb3e77747f644f2fb3f67f4403fafce2286b431a
+FROM debian:bullseye-20230612-slim@sha256:924df86f8aad741a0134b2de7d8e70c5c6863f839caadef62609c1be1340daf5
 
 # Arguments that can be passed at build time
 # Directory names must end with / to avoid errors when ADDing and COPYing
@@ -17,7 +17,8 @@ ENV TZ=Etc/UTC \
     LOGGING_LEVEL=INFO \
     # JVM Options that are passed at runtime by default
     JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=90.0" \
-    # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS
+    # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS.
+    # e.g. EXTRA_JAVA_OPTIONS="-Dlogback.configurationFile=logback-json.xml"
     EXTRA_JAVA_OPTIONS="" \
     # The web context defaults to the root. To override, supply an alternative context which starts with a / but does not end with one
     # Example: /dtrack
@@ -52,7 +53,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
 COPY --from=jre-build /opt/java/openjdk $JAVA_HOME
 
 # Copy the compiled WAR to the application directory created above
-COPY ./target/${WAR_FILENAME} ${APP_DIR}
+COPY ./target/${WAR_FILENAME} ./src/main/docker/logback-json.xml ${APP_DIR}
 
 # Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
 USER ${UID}
@@ -61,7 +62,7 @@ USER ${UID}
 WORKDIR ${APP_DIR}
 
 # Launch Dependency-Track
-CMD java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar ${WAR_FILENAME} -context ${CONTEXT}
+CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar ${WAR_FILENAME} -context ${CONTEXT}
 
 # Specify which port Dependency-Track listens on
 EXPOSE 8080

@@ -90,9 +90,8 @@ public class KafkaEventDispatcherTest {
                 .level(NotificationLevel.INFORMATIONAL);
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final RecordMetadata recordMeta = dispatcher.dispatchAsync(notification).get();
+        final RecordMetadata recordMeta = dispatcher.dispatchAsync(UUID.randomUUID(), notification).get();
         assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name());
         assertThat(mockProducer.history()).hasSize(1);
     }
-
 }

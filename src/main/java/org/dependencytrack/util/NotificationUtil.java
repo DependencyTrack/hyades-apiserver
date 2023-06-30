@@ -26,6 +26,7 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
@@ -33,13 +34,17 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
+import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
+import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -51,7 +56,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -63,8 +72,8 @@ public final class NotificationUtil {
     private NotificationUtil() {
     }
 
-    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level){
-       sendNotificationToKafka(new Notification()
+    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level) {
+        sendNotificationToKafka(null, new Notification()
                 .scope(scope)
                 .group(group)
                 .title(title)
@@ -72,8 +81,9 @@ public final class NotificationUtil {
                 .level(level)
         );
     }
-    public static void dispatchNotificationsWithSubject(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject){
-        sendNotificationToKafka(new Notification()
+
+    public static void dispatchNotificationsWithSubject(UUID projectUuid, NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject) {
+        sendNotificationToKafka(projectUuid, new Notification()
                 .scope(scope)
                 .group(group)
                 .title(title)
@@ -94,7 +104,7 @@ public final class NotificationUtil {
                 vulnerability.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
             }
 
-            sendNotificationToKafka(new Notification()
+            sendNotificationToKafka(component.getProject().getUuid(), new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(NotificationGroup.NEW_VULNERABLE_DEPENDENCY)
                     .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABLE_DEPENDENCY, component.getProject()))
@@ -150,7 +160,7 @@ public final class NotificationUtil {
             // Aliases are lost during the detach above
             analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
 
-            sendNotificationToKafka(new Notification()
+            sendNotificationToKafka(project.getUuid(), new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
@@ -212,7 +222,7 @@ public final class NotificationUtil {
             violationAnalysis.getComponent().setProject(project); // Project of component is lost after the detach above
             violationAnalysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
 
-            sendNotificationToKafka(new Notification()
+            sendNotificationToKafka(project.getUuid(), new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, violationAnalysis.getComponent().getProject()))
@@ -226,15 +236,17 @@ public final class NotificationUtil {
 
     public static void analyzeNotificationCriteria(final QueryManager qm, final PolicyViolation policyViolation) {
         final ViolationAnalysis violationAnalysis = qm.getViolationAnalysis(policyViolation.getComponent(), policyViolation);
-        if (violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState())) return;
+        if (violationAnalysis != null && (violationAnalysis.isSuppressed() || ViolationAnalysisState.APPROVED == violationAnalysis.getAnalysisState()))
+            return;
         policyViolation.getPolicyCondition().getPolicy(); // Force loading of policy
         qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(2); // Ensure policy is included
         qm.getPersistenceManager().getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         final PolicyViolation pv = qm.getPersistenceManager().detachCopy(policyViolation);
-        sendNotificationToKafka(new Notification()
+        Project project = policyViolation.getComponent().getProject();
+        sendNotificationToKafka(project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.POLICY_VIOLATION)
-                .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION,policyViolation.getComponent().getProject()))
+                .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION, policyViolation.getComponent().getProject()))
                 .level(NotificationLevel.INFORMATIONAL)
                 .content(generateNotificationContent(pv))
                 .subject(new PolicyViolationIdentified(pv, pv.getComponent(), pv.getProject()))
@@ -252,12 +264,12 @@ public final class NotificationUtil {
         }
         if (project.getTags() != null && project.getTags().size() > 0) {
             final StringBuilder sb = new StringBuilder();
-            for (final Tag tag: project.getTags()) {
+            for (final Tag tag : project.getTags()) {
                 sb.append(tag.getName()).append(",");
             }
             String tags = sb.toString();
             if (tags.endsWith(",")) {
-                tags = tags.substring(0, tags.length()-1);
+                tags = tags.substring(0, tags.length() - 1);
             }
             JsonUtil.add(projectBuilder, "tags", tags);
         }
@@ -302,7 +314,7 @@ public final class NotificationUtil {
         if (vulnerability.getDescription() != null) {
             content = vulnerability.getDescription();
         } else {
-            content = (vulnerability.getTitle() != null) ? vulnerability.getVulnId() + ": " +vulnerability.getTitle() : vulnerability.getVulnId();
+            content = (vulnerability.getTitle() != null) ? vulnerability.getVulnId() + ": " + vulnerability.getTitle() : vulnerability.getVulnId();
         }
         return content;
     }
@@ -342,7 +354,76 @@ public final class NotificationUtil {
         return messageType;
     }
 
-    private static void sendNotificationToKafka(Notification notification){
-        new KafkaEventDispatcher().dispatchAsync(notification);
+    private static void sendNotificationToKafka(UUID projectUuid, Notification notification) {
+        new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
+    }
+
+    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan) {
+        try (QueryManager qm = new QueryManager()) {
+            Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
+            List<Finding> findings = qm.getFindings(project);
+            List<Component> componentList = new ArrayList<>();
+            ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
+            for (Finding finding : findings) {
+                Component component = qm.getObjectByUuid(Component.class, (String) finding.getComponent().get("uuid"));
+                Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (String) finding.getVulnerability().get("uuid"));
+                final List<VulnerabilityAlias> aliases = qm.detach(qm.getVulnerabilityAliases(vulnerability));
+                vulnerability.setAliases(aliases);
+                if (map.containsKey(component.getUuid().toString())) {
+                    List<Vulnerability> temp1 = new ArrayList<>();
+                    temp1.add(vulnerability);
+                    temp1.addAll(map.get(component.getUuid().toString()));
+                    map.remove(component.getUuid().toString());
+                    map.put(component.getUuid().toString(), temp1);
+                } else {
+                    //component should be added to list only if not present in map
+                    componentList.add(component);
+                    map.put(component.getUuid().toString(), List.of(vulnerability));
+                }
+            }
+
+
+            List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = createList(componentList, map);
+            return new Notification()
+                    .scope(NotificationScope.PORTFOLIO)
+                    .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
+                    .level(NotificationLevel.INFORMATIONAL)
+                    .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
+                    .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
+                    .subject(new ProjectVulnAnalysisComplete(project, componentAnalysisCompleteList));
+        }
+    }
+
+    public static List<ComponentVulnAnalysisComplete> createList(List<Component> componentList, Map<String, List<Vulnerability>> map) {
+        List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
+        for (Component component : componentList) {
+            List<Vulnerability> vulnerabilities = map.get(component.getUuid().toString());
+            List<Vulnerability> result = new ArrayList<>();
+            for (Vulnerability vulnerability : vulnerabilities) {
+                Vulnerability vulnerability1 = new Vulnerability();
+                vulnerability1.setId(vulnerability.getId());
+                vulnerability1.setVulnId(vulnerability.getVulnId());
+                vulnerability1.setSource(vulnerability.getSource());
+                vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                vulnerability1.setTitle(vulnerability.getTitle());
+                vulnerability1.setSubTitle(vulnerability.getSubTitle());
+                vulnerability1.setRecommendation(vulnerability.getRecommendation());
+                vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
+                vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
+                vulnerability1.setSeverity(vulnerability.getSeverity());
+                vulnerability1.setCwes(vulnerability.getCwes());
+                vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
+                vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
+                vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                vulnerability1.setUuid(vulnerability.getUuid());
+                vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
+                if (vulnerability.getAliases() != null && !vulnerability.getAliases().isEmpty()) {
+                    vulnerability1.setAliases(vulnerability.getAliases());
+                }
+                result.add(vulnerability1);
+            }
+            componentAnalysisCompleteList.add(new ComponentVulnAnalysisComplete(result, component));
+        }
+        return componentAnalysisCompleteList;
     }
 }
