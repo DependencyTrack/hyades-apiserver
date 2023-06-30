@@ -116,7 +116,27 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
-    public void testUpdateMetricsUnchanged() {
+    public void testUpdateMetricsUnchanged() throws Exception {
+        // Record initial portfolio metrics
+        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+        final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
+        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
+
+        //sleep for the least duration lock held for, so lock could be released
+        Thread.sleep(3000);
+
+        // Run the task a second time, without any metric being changed
+        final var beforeSecondRun = new Date();
+        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+
+        // Ensure that the lastOccurrence timestamp was correctly updated
+        qm.getPersistenceManager().refresh(metrics);
+        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
+        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+    }
+
+    @Test
+    public void testUpdateMetricsDidNotExecuteWhenLockWasHeld() throws Exception {
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -128,8 +148,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Ensure that the lastOccurrence timestamp was correctly updated
         qm.getPersistenceManager().refresh(metrics);
-        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
     }
 
     @Test
