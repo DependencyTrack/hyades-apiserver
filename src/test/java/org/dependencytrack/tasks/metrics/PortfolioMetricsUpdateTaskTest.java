@@ -76,7 +76,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     public static void tearDownClass() {
         EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
         EventService.getInstance().unsubscribe(CallbackTask.class);
-
     }
 
     @Test

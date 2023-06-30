@@ -21,14 +21,11 @@ package org.dependencytrack;
 import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import javax.jdo.PersistenceManager;
 
 public abstract class PersistenceCapableTest {
 
