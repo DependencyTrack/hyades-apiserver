@@ -27,6 +27,7 @@ import alpine.notification.NotificationLevel;
 import io.micrometer.core.instrument.Timer;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
+import org.cyclonedx.model.Dependency;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.flush.FlushMode;
@@ -51,6 +52,7 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.json.JSONArray;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -132,6 +134,8 @@ public class BomUploadProcessingTask implements Subscriber {
 
         // TODO: Send BOM_CONSUMED_NOTIFICATION
 
+        final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
+
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
             pm.setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
@@ -207,10 +211,10 @@ public class BomUploadProcessingTask implements Subscriber {
 
                     final boolean shouldFlush;
                     final var componentIdentity = new ComponentIdentity(component);
-                    final Component existingComponent = qm.matchSingleIdentity(project, componentIdentity);
-                    if (existingComponent == null) {
+                    Component persistentComponent = qm.matchSingleIdentity(project, componentIdentity);
+                    if (persistentComponent == null) {
                         component.setProject(project);
-                        pm.makePersistent(component);
+                        persistentComponent = pm.makePersistent(component);
                         shouldFlush = true;
 
                         // TODO: Mark as "new"
@@ -218,41 +222,49 @@ public class BomUploadProcessingTask implements Subscriber {
                         // Only call setters when values actually changed. Otherwise, we'll trigger lots of unnecessary
                         // database calls.
                         var changed = false;
-                        changed |= applyIfChanged(existingComponent, component, Component::getAuthor, existingComponent::setAuthor);
-                        changed |= applyIfChanged(existingComponent, component, Component::getPublisher, existingComponent::setPublisher);
-                        changed |= applyIfChanged(existingComponent, component, Component::getBomRef, existingComponent::setBomRef);
-                        changed |= applyIfChanged(existingComponent, component, Component::getClassifier, existingComponent::setClassifier);
-                        changed |= applyIfChanged(existingComponent, component, Component::getGroup, existingComponent::setGroup);
-                        changed |= applyIfChanged(existingComponent, component, Component::getName, existingComponent::setName);
-                        changed |= applyIfChanged(existingComponent, component, Component::getVersion, existingComponent::setVersion);
-                        changed |= applyIfChanged(existingComponent, component, Component::getDescription, existingComponent::setDescription);
-                        changed |= applyIfChanged(existingComponent, component, Component::getCopyright, existingComponent::setCopyright);
-                        changed |= applyIfChanged(existingComponent, component, Component::getCpe, existingComponent::setCpe);
-                        changed |= applyIfChanged(existingComponent, component, Component::getPurl, existingComponent::setPurl);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSwidTagId, existingComponent::setSwidTagId);
-                        changed |= applyIfChanged(existingComponent, component, Component::getMd5, existingComponent::setMd5);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha1, existingComponent::setSha1);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha256, existingComponent::setSha256);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha384, existingComponent::setSha384);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha512, existingComponent::setSha512);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha3_256, existingComponent::setSha3_256);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha3_384, existingComponent::setSha3_384);
-                        changed |= applyIfChanged(existingComponent, component, Component::getSha3_512, existingComponent::setSha3_512);
-                        changed |= applyIfChanged(existingComponent, component, Component::getBlake2b_256, existingComponent::setBlake2b_256);
-                        changed |= applyIfChanged(existingComponent, component, Component::getBlake2b_384, existingComponent::setBlake2b_384);
-                        changed |= applyIfChanged(existingComponent, component, Component::getBlake2b_512, existingComponent::setBlake2b_512);
-                        changed |= applyIfChanged(existingComponent, component, Component::getBlake3, existingComponent::setBlake3);
-                        changed |= applyIfChanged(existingComponent, component, Component::getResolvedLicense, existingComponent::setResolvedLicense);
-                        changed |= applyIfChanged(existingComponent, component, Component::getLicense, existingComponent::setLicense);
-                        changed |= applyIfChanged(existingComponent, component, Component::getLicenseUrl, existingComponent::setLicenseUrl);
-                        changed |= applyIfChanged(existingComponent, component, Component::isInternal, existingComponent::setInternal);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getAuthor, persistentComponent::setAuthor);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getPublisher, persistentComponent::setPublisher);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getBomRef, persistentComponent::setBomRef);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getClassifier, persistentComponent::setClassifier);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getGroup, persistentComponent::setGroup);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getName, persistentComponent::setName);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getVersion, persistentComponent::setVersion);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getDescription, persistentComponent::setDescription);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getCopyright, persistentComponent::setCopyright);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getCpe, persistentComponent::setCpe);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getPurl, persistentComponent::setPurl);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSwidTagId, persistentComponent::setSwidTagId);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getMd5, persistentComponent::setMd5);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha1, persistentComponent::setSha1);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha256, persistentComponent::setSha256);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha384, persistentComponent::setSha384);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha512, persistentComponent::setSha512);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha3_256, persistentComponent::setSha3_256);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha3_384, persistentComponent::setSha3_384);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getSha3_512, persistentComponent::setSha3_512);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getBlake2b_256, persistentComponent::setBlake2b_256);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getBlake2b_384, persistentComponent::setBlake2b_384);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getBlake2b_512, persistentComponent::setBlake2b_512);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getBlake3, persistentComponent::setBlake3);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getResolvedLicense, persistentComponent::setResolvedLicense);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getLicense, persistentComponent::setLicense);
+                        changed |= applyIfChanged(persistentComponent, component, Component::getLicenseUrl, persistentComponent::setLicenseUrl);
+                        changed |= applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
                         shouldFlush = changed;
 
                         // Exclude from components to delete.
                         if (!oldComponentIds.isEmpty()) {
-                            oldComponentIds.remove(existingComponent.getId());
+                            oldComponentIds.remove(persistentComponent.getId());
                         }
                     }
+
+                    // Update component identities in our Identity->BOMRef map,
+                    // as after persisting the components, their identities now include UUIDs.
+                    // Applications like the frontend rely on the UUIDs being there.
+                    componentIdentityBomRefs.put(persistentComponent.getBomRef(), new ComponentIdentity(persistentComponent));
+
+                    vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
+                            event.getChainIdentifier(), pm.detachCopy(persistentComponent), VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
 
                     if (shouldFlush) {
                         if (++numFlushableChanges >= flushThreshold) {
@@ -283,6 +295,71 @@ public class BomUploadProcessingTask implements Subscriber {
                         } finally {
                             componentDeleteQuery.closeAll();
                         }
+
+                        if (++numFlushableChanges >= flushThreshold) {
+                            numFlushableChanges = 0;
+                            pm.flush();
+                        }
+                    }
+
+                    // Flush all remaining changes to the database.
+                    if (numFlushableChanges > 0) {
+                        numFlushableChanges = 0;
+                        pm.flush();
+                    }
+                }
+
+                LOGGER.info("Collecting direct dependencies from CycloneDX BOM uploaded to project: " + event.getProjectUuid());
+                if (cdxBom.getMetadata() != null
+                        && cdxBom.getMetadata().getComponent() != null
+                        && cdxBom.getMetadata().getComponent().getBomRef() != null) {
+                    final org.cyclonedx.model.Dependency metadataComponentDependency =
+                            findDependencyByBomRef(cdxBom.getDependencies(), cdxBom.getMetadata().getComponent().getBomRef());
+
+                    final var jsonDependencies = new JSONArray();
+                    if (metadataComponentDependency != null && metadataComponentDependency.getDependencies() != null) {
+                        for (final org.cyclonedx.model.Dependency dependency : metadataComponentDependency.getDependencies()) {
+                            final ComponentIdentity dependencyIdentity = componentIdentityBomRefs.get(dependency.getRef());
+                            if (dependencyIdentity != null) {
+                                jsonDependencies.put(dependencyIdentity.toJSON());
+                            } else {
+                                LOGGER.warn("BOM ref " + dependency.getRef() + " does not match any component identity");
+                            }
+                        }
+                    }
+                    if (jsonDependencies.isEmpty()) {
+                        project.setDirectDependencies(null);
+                    } else {
+                        project.setDirectDependencies(jsonDependencies.toString());
+                    }
+                }
+
+                LOGGER.info("Collecting transitive dependencies from CycloneDX BOM uploaded to project: " + event.getProjectUuid());
+                for (final Map.Entry<String, ComponentIdentity> entry : componentIdentityBomRefs.entrySet()) {
+                    final ComponentIdentity identity = componentIdentityBomRefs.get(entry.getKey());
+                    final org.cyclonedx.model.Dependency dependency = findDependencyByBomRef(cdxBom.getDependencies(), entry.getKey());
+
+                    final var jsonDependencies = new JSONArray();
+                    if (dependency != null && dependency.getDependencies() != null) {
+                        for (final org.cyclonedx.model.Dependency dependency1 : dependency.getDependencies()) {
+                            final ComponentIdentity dependencyIdentity = componentIdentityBomRefs.get(dependency1.getRef());
+                            if (dependencyIdentity != null) {
+                                jsonDependencies.put(dependencyIdentity.toJSON());
+                            } else {
+                                LOGGER.warn("BOM ref " + dependency.getRef() + " does not match any component identity");
+                            }
+                        }
+                    }
+
+                    // Use bulk UPDATE query in order to avoid having to fetch every single component again.
+                    final Query<?> componentQuery = pm.newQuery(Query.JDOQL, "UPDATE org.dependencytrack.model.Component SET directDependencies = :directDependencies WHERE uuid == :uuid");
+                    try {
+                        componentQuery.executeWithMap(Map.of(
+                                "directDependencies", jsonDependencies.toString(),
+                                "uuid", identity.getUuid()
+                        ));
+                    } finally {
+                        componentQuery.closeAll();
                     }
                 }
 
@@ -307,11 +384,33 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
+            if (!vulnAnalysisEvents.isEmpty()) {
+                qm.createVulnerabilityScan(TargetType.PROJECT, event.getProjectUuid(), event.getChainIdentifier().toString(), vulnAnalysisEvents.size());
+                for (final ComponentVulnerabilityAnalysisEvent vae : vulnAnalysisEvents) {
+                    kafkaEventDispatcher.dispatchAsync(vae);
+                    // kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
+                }
+            }
+
             // TODO: Submit components for vuln analysis
             // TODO: Submit components for repo meta analysis
             // TODO: Trigger index updates
             // TODO: Send BOM_PROCESSED notification
         }
+    }
+
+    private static org.cyclonedx.model.Dependency findDependencyByBomRef(final List<Dependency> dependencies, final String bomRef) {
+        if (dependencies == null || dependencies.isEmpty() || bomRef == null) {
+            return null;
+        }
+
+        for (final org.cyclonedx.model.Dependency dependency : dependencies) {
+            if (bomRef.equals(dependency.getRef())) {
+                return dependency;
+            }
+        }
+
+        return null;
     }
 
     private org.cyclonedx.model.Bom parseBom(final BomUploadEvent event) throws IOException, ParseException {

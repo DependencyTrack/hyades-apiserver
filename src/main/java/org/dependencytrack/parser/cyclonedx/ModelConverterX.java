@@ -11,6 +11,7 @@ import org.dependencytrack.model.ServiceComponent;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -53,6 +54,9 @@ public final class ModelConverterX {
 
     public static List<Component> flattenComponents(final Collection<Component> components) {
         final var result = new ArrayList<Component>();
+        if (components == null || components.isEmpty()) {
+            return Collections.emptyList();
+        }
 
         for (final Component component : components) {
             if (component.getChildren() != null) {
@@ -68,7 +72,7 @@ public final class ModelConverterX {
 
     public static List<Component> convertComponents(final List<org.cyclonedx.model.Component> cdxComponents) {
         if (cdxComponents == null || cdxComponents.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
         return cdxComponents.stream().map(ModelConverterX::convertComponent).toList();
@@ -153,6 +157,9 @@ public final class ModelConverterX {
 
     public static List<ServiceComponent> flattenServices(final Collection<ServiceComponent> services) {
         final var result = new ArrayList<ServiceComponent>();
+        if (services == null || services.isEmpty()) {
+            return Collections.emptyList();
+        }
 
         for (final ServiceComponent service : services) {
             if (service.getChildren() != null) {
@@ -168,7 +175,7 @@ public final class ModelConverterX {
 
     public static List<ServiceComponent> convertServices(final List<org.cyclonedx.model.Service> cdxServices) {
         if (cdxServices == null || cdxServices.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
         return cdxServices.stream().map(ModelConverterX::convertService).toList();
