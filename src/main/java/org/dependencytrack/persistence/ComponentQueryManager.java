@@ -452,7 +452,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             coordinatesFilter += " && version == :version";
             params.put("version", cid.getVersion());
         } else {
-            coordinatesFilter += "&& version == null";
+            coordinatesFilter += " && version == null";
         }
         coordinatesFilter += ")";
         filterParts.add(coordinatesFilter);
@@ -462,7 +462,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         final Query<Component> query = pm.newQuery(Component.class, filter);
         query.setNamedParameters(params);
-        query.setRange(0, 1);
         return query.executeUnique();
     }
 

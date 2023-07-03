@@ -4,6 +4,7 @@ import org.apache.commons.io.IOUtils;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.util.KafkaTestUtil;
@@ -18,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -59,6 +61,38 @@ public class BomUploadProcessingTaskPerfTest extends PersistenceCapableTest {
         final Query<Component> componentCountQuery = qm.getPersistenceManager().newQuery(Component.class);
         componentCountQuery.setFilter("project == :project");
         assertThat(qm.getCount(componentCountQuery, project)).isEqualTo(9056);
+
+        // Verify that we're not getting slower than before.
+        assertThat(BomUploadProcessingTask.TIMER.totalTime(TimeUnit.SECONDS)).isLessThan(25);
+    }
+
+    @Test
+    public void informTestX() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(IOUtils.resourceToURL("/bloated.bom.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        final var bomFile = bomFilePath.toFile();
+
+        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+        new BomUploadProcessingTask().process(bomUploadEvent);
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getName()).isEqualTo("Acme Example");
+        assertThat(project.getVersion()).isEqualTo("1.0");
+        assertThat(project.getDescription()).isNull();
+        assertThat(project.getPurl().canonicalize()).isEqualTo("pkg:npm/bloated@1.0.0");
+
+        // Make sure we ingested all components of the BOM.
+        final Query<Component> componentCountQuery = qm.getPersistenceManager().newQuery(Component.class);
+        componentCountQuery.setFilter("project == :project");
+        assertThat(qm.getCount(componentCountQuery, project)).isEqualTo(9056);
+
+        // Verify that we're not getting slower than before.
+        assertThat(BomUploadProcessingTask.TIMER.totalTime(TimeUnit.SECONDS)).isLessThan(25);
     }
 
 }

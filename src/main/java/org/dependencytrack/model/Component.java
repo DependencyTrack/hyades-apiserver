@@ -352,6 +352,7 @@ public class Component implements Serializable {
     private UUID uuid;
 
     private transient String bomRef;
+    private transient String licenseId;
     private transient DependencyMetrics metrics;
     private transient RepositoryMetaComponent repositoryMeta;
     private transient int usedBy;
@@ -755,6 +756,14 @@ public class Component implements Serializable {
 
     public void setBomRef(String bomRef) {
         this.bomRef = bomRef;
+    }
+
+    public String getLicenseId() {
+        return licenseId;
+    }
+
+    public void setLicenseId(final String licenseId) {
+        this.licenseId = licenseId;
     }
 
     public int getUsedBy() {
