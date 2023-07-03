@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks.metrics;
 
+import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
@@ -30,6 +31,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -49,6 +51,11 @@ abstract class AbstractMetricsUpdateTaskTest {
 
     protected AbstractMetricsUpdateTaskTest(final String postgresImageTag) {
         this.postgresImageTag = postgresImageTag;
+    }
+
+    @BeforeClass
+    public static void init() {
+        Config.enableUnitTests();
     }
 
     @Before
@@ -77,9 +84,11 @@ abstract class AbstractMetricsUpdateTaskTest {
         qm = new QueryManager();
 
         final String storedProcs = IOUtils.resourceToString("/storedprocs-postgres.sql", StandardCharsets.UTF_8);
+        final String shedlockSql = IOUtils.resourceToString("/shedlock.sql", StandardCharsets.UTF_8);
         final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
         final Connection connection = (Connection) jdoConnection.getNativeConnection();
         DbUtil.executeUpdate(connection, storedProcs);
+        DbUtil.executeUpdate(connection, shedlockSql);
         jdoConnection.close();
     }
 

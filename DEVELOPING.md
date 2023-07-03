@@ -220,37 +220,21 @@ To build the bundled image:
 docker build --build-arg WAR_FILENAME=dependency-track-bundled.jar -t dependencytrack/bundled:local -f ./src/main/docker/Dockerfile .
 ```
 
-## Documentation
+## Shedlock 
+Shedlock is being used to ensure that scheduled tasks are executed at most once at the same time. 
+If a task is being executed on one node, it acquires a lock which prevents execution of the same task from another node (or thread). 
+Please note, that if one task is already being executed on one node, execution on other nodes does not wait, it is simply skipped.
 
-The documentation is built using [Jekyll](https://jekyllrb.com/) and published to
-[docs.dependencytrack.org](https://docs.dependecytrack.org). Sources are located in the [`docs`](./docs) directory.
+Lock can be configured using 2 properties:
+lockAtMostFor - specifies how long the lock should be kept in case the executing node dies. 
+                This is just a fallback, under normal circumstances the lock is released as soon the tasks finishes. 
+                Set lockAtMostFor to a value which is much longer than normal execution time. 
 
-There is a lot going on in `docs`, but most of the time you'll want to spend your time in these directories:
+lockAtLeastFor - specifies minimum amount of time for which the lock should be kept.
+                  Its main purpose is to prevent execution from multiple nodes in case of really short tasks and clock difference between the nodes.
 
-* [`docs/_docs`](./docs/_docs): The *actual* documentation
-* [`docs/_posts`](./docs/_posts): The changelogs
+e.g. For lock held by Portfolio Metrics task, the above properties will be configured
+task.metrics.portfolio.lockAtMostForInMillis
 
-To build the docs, run:
 
-```shell
-./scripts/docs-build.sh
-```
 
-This installs all required dependencies (among them Jekyll) to `docs/vendor/bundle`, generates the documentation
-website and stores it in `docs/_site`.
-
-For local development, you may want to run this instead:
-
-```shell
-./scripts/docs-dev.sh
-```
-
-This will start a local webserver that listens on `127.0.0.1:4000` and rebuilds the site whenever you make changes.
-
-> To be able to build the docs with Jekyll, you'll need [Ruby 2](https://www.ruby-lang.org/en/),
-> [RubyGems](https://rubygems.org/pages/download) and [Bundler](https://bundler.io/) installed.
-> If you can't be bothered to install all of this, you can use the
-> [Jekyll container image](https://hub.docker.com/r/jekyll/jekyll) instead, e.g.:
-> ```
-> docker run --rm -it --name jekyll -p "127.0.0.1:4000:4000" -v "$(pwd)/docs:/srv/jekyll:Z" jekyll/jekyll:3.8 jekyll serve
-> ```

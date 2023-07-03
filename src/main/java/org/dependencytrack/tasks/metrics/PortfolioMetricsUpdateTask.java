@@ -18,11 +18,16 @@
  */
 package org.dependencytrack.tasks.metrics;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockExtender;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
+import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -34,10 +39,19 @@ import org.dependencytrack.persistence.QueryManager;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static java.time.Duration.ZERO;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.getJdbcLockProviderInstance;
+import static org.dependencytrack.util.LockProvider.getLockingTaskExecutorInstance;
+
 
 /**
  * A {@link Subscriber} task that updates portfolio metrics.
@@ -54,7 +68,20 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                updateMetrics(event.isForceRefresh());
+                JdbcLockProvider instance = getJdbcLockProviderInstance();
+                LockingTaskExecutor executor = getLockingTaskExecutorInstance(instance);
+                LockConfiguration lockConfiguration = new LockConfiguration(Instant.now(),
+                        PORTFOLIO_METRICS_TASK_LOCK.name(),
+                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
+                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_LEAST_FOR)));
+
+                executor.executeWithLock((Runnable) () -> {
+                    try {
+                        updateMetrics(event.isForceRefresh());
+                    } catch (Exception ex) {
+                        throw new RuntimeException("Error in acquiring lock and executing metrics", ex);
+                    }
+                }, lockConfiguration);
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while updating portfolio metrics", ex);
             }
@@ -89,6 +116,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
 
             while (!activeProjects.isEmpty()) {
+                long startTime = System.currentTimeMillis();
                 final long firstId = activeProjects.get(0).id();
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
@@ -121,6 +149,15 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 }
                 LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
+                long now = System.currentTimeMillis();
+                long processDurationInMillis = now - startTime;
+                //extend the lock for the duration of process
+                //initial duration of portfolio metrics can be set to 20min. No thread calculating
+                //metrics would be executing for more than 15min.
+                //if one partition of metrics calculation lasted long, lock will be extended by that duration
+                //lock can only be extended if lock until is held for time after current db time
+                LOGGER.debug("Extending lock duration by ms: " + processDurationInMillis);
+                LockExtender.extendActiveLock(Duration.ofMillis(processDurationInMillis), ZERO);
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
         }

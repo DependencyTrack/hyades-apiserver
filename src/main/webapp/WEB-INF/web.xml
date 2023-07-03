@@ -42,6 +42,9 @@
         <listener-class>org.dependencytrack.persistence.StoredProcedureInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.persistence.ShedlockInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>
     </listener>
     <listener>
