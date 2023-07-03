@@ -42,7 +42,8 @@ final class KafkaEventConverter {
         return new KafkaEvent<>(
                 KafkaTopics.VULN_ANALYSIS_COMMAND,
                 scanKey, scanCommand,
-                Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, event.level().name())
+                Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, event.level().name(),
+                        KafkaEventHeaders.IS_NEW_COMPONENT, String.valueOf(event.isNewComponent()))
         );
     }
 

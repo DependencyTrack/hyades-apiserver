@@ -21,23 +21,7 @@ package org.dependencytrack.notification.vo;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Vulnerability;
 
-import java.util.List;
+import java.util.Set;
 
-public class NewVulnerableDependency {
-
-    private final List<Vulnerability> vulnerabilities;
-    private final Component component;
-
-    public NewVulnerableDependency(final Component component, final List<Vulnerability> vulnerabilities) {
-        this.vulnerabilities = vulnerabilities;
-        this.component = component;
-    }
-
-    public Component getComponent() {
-        return component;
-    }
-
-    public List<Vulnerability> getVulnerabilities() {
-        return vulnerabilities;
-    }
+public record NewVulnerableDependency(Component component, Set<Vulnerability> vulnerabilities) {
 }

@@ -184,8 +184,10 @@ public class BomUploadProcessingTask implements Subscriber {
                 if (!detachedFlattenedComponents.isEmpty()) {
                     qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), event.getChainIdentifier().toString(), flattenedComponents.size());
                     for (final Component component : detachedFlattenedComponents) {
+                        //check component belongs to list of new component
+                        boolean isNewComponent = newComponents.contains(component);
                         kafkaEventDispatcher.dispatchAsync(new ComponentVulnerabilityAnalysisEvent(
-                                event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                                event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, isNewComponent));
                         kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component));
                     }
                 }

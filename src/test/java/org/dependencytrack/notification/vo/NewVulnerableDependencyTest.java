@@ -23,20 +23,20 @@ import org.dependencytrack.model.Vulnerability;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class NewVulnerableDependencyTest {
 
     @Test
     public void testVo() {
         Component component = new Component();
-        List<Vulnerability> vulns = new ArrayList<>();
+        Set<Vulnerability> vulns = new HashSet<>();
         Vulnerability vuln = new Vulnerability();
         vulns.add(vuln);
         NewVulnerableDependency vo = new NewVulnerableDependency(component, vulns);
-        Assert.assertEquals(component, vo.getComponent());
-        Assert.assertEquals(1, vo.getVulnerabilities().size());
-        Assert.assertEquals(vuln, vo.getVulnerabilities().get(0));
+        Assert.assertEquals(component, vo.component());
+        Assert.assertEquals(1, vo.vulnerabilities().size());
+        Assert.assertEquals(vuln, vo.vulnerabilities().stream().findFirst().get());
     }
 }

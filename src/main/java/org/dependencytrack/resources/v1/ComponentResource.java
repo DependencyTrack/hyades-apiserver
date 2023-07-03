@@ -315,7 +315,7 @@ public class ComponentResource extends AlpineResource {
 
             component = qm.createComponent(component, true);
             kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
-            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS);
+            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
             qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
             kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
             return Response.status(Response.Status.CREATED).entity(component).build();
@@ -401,7 +401,7 @@ public class ComponentResource extends AlpineResource {
 
                 component = qm.updateComponent(component, true);
                 kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
-                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS);
+                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
                 qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
                 kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
                 return Response.ok(component).build();

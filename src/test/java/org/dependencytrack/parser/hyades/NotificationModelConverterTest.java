@@ -47,6 +47,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -265,7 +266,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setGroup(NotificationGroup.NEW_VULNERABLE_DEPENDENCY.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new NewVulnerableDependency(component, List.of(vulnerability)));
+        alpineNotification.setSubject(new NewVulnerableDependency(component, Set.of(vulnerability)));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
