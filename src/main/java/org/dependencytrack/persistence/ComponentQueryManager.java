@@ -420,19 +420,50 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return a Component object, or null if not found
      */
     public Component matchSingleIdentity(final Project project, final ComponentIdentity cid) {
-        String purlString = null;
-        String purlCoordinates = null;
+        var filterParts = new ArrayList<String>();
+        final var params = new HashMap<String, Object>();
+
         if (cid.getPurl() != null) {
-            try {
-                final PackageURL purl = cid.getPurl();
-                purlString = cid.getPurl().canonicalize();
-                purlCoordinates = new PackageURL(purl.getType(), purl.getNamespace(), purl.getName(), purl.getVersion(), null, null).canonicalize();
-            } catch (MalformedPackageURLException e) { // throw it away
-            }
+            filterParts.add("((purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates))");
+            params.put("purl", cid.getPurl().canonicalize());
+            params.put("purlCoordinates", cid.getPurlCoordinates().canonicalize());
         }
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project && ((purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates) || (swidTagId != null && swidTagId == :swidTagId) || (cpe != null && cpe == :cpe) || (group == :group && name == :name && version == :version))");
+
+        if (cid.getCpe() != null) {
+            filterParts.add("(cpe != null && cpe == :cpe)");
+            params.put("cpe", cid.getCpe());
+        }
+
+        if (cid.getSwidTagId() != null) {
+            filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
+            params.put("swidTagId", cid.getSwidTagId());
+        }
+
+        var coordinatesFilter = "(";
+        if (cid.getGroup() != null) {
+            coordinatesFilter += "group == :group";
+            params.put("group", cid.getGroup());
+        } else {
+            coordinatesFilter += "group == null";
+        }
+        coordinatesFilter += " && name == :name";
+        params.put("name", cid.getName());
+        if (cid.getVersion() != null) {
+            coordinatesFilter += " && version == :version";
+            params.put("version", cid.getVersion());
+        } else {
+            coordinatesFilter += "&& version == null";
+        }
+        coordinatesFilter += ")";
+        filterParts.add(coordinatesFilter);
+
+        final var filter = "project == :project && (" + String.join(" || ", filterParts) + ")";
+        params.put("project", project);
+
+        final Query<Component> query = pm.newQuery(Component.class, filter);
+        query.setNamedParameters(params);
         query.setRange(0, 1);
-        return singleResult(query.executeWithArray(project, purlString, purlCoordinates, cid.getSwidTagId(), cid.getCpe(), cid.getGroup(), cid.getName(), cid.getVersion()));
+        return query.executeUnique();
     }
 
     /**
