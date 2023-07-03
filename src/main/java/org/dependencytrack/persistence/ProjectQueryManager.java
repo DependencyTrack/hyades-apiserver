@@ -457,7 +457,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 NotificationConstants.Title.PROJECT_CREATED,
                 result.getName() + " was created",
                 NotificationLevel.INFORMATIONAL,
-                NotificationUtil.toJson(pm.detachCopy(result))
+                pm.detachCopy(result)
         );
         commitSearchIndex(commitIndex, Project.class);
         return result;
