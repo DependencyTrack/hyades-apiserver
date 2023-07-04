@@ -13,5 +13,6 @@ public final class KafkaEventHeaders {
      * along with {@link ScanCommand}s for vulnerability analysis.
      */
     public static final String VULN_ANALYSIS_LEVEL = "x-dtrack-vuln-analysis-level";
+    public static final String IS_NEW_COMPONENT = "x-dtrack-is-new-component";
 
 }

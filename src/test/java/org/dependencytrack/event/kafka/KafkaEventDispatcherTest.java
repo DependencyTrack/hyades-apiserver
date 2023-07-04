@@ -38,7 +38,7 @@ public class KafkaEventDispatcherTest {
         component.setUuid(UUID.randomUUID());
         component.setName("foobar");
 
-        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
+        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, false);
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         final var countDownLatch = new CountDownLatch(1);
         dispatcher.dispatchAsync(event, (metadata, exception) -> countDownLatch.countDown());
@@ -51,7 +51,7 @@ public class KafkaEventDispatcherTest {
         component.setUuid(UUID.randomUUID());
         component.setName("foobar");
 
-        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS);
+        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, false);
 
         final var dispatcher = new KafkaEventDispatcher(mockProducer);
         final RecordMetadata recordMeta = dispatcher.dispatchBlocking(event);

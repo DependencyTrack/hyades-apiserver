@@ -55,6 +55,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -87,28 +88,6 @@ public final class NotificationUtil {
                 .level(level)
                 .subject(subject)
         );
-    }
-
-    public static void analyzeNotificationCriteria(final QueryManager qm, Component component) {
-        List<Vulnerability> vulnerabilities = qm.getAllVulnerabilities(component, false);
-        if (vulnerabilities != null && !vulnerabilities.isEmpty()) {
-            component = qm.detach(Component.class, component.getId());
-            vulnerabilities = qm.detach(vulnerabilities);
-            for (final Vulnerability vulnerability : vulnerabilities) {
-                // Because aliases is a transient field, it's lost when detaching the vulnerability.
-                // Repopulating here as a workaround, ultimately we need a better way to handle them.
-                vulnerability.setAliases(qm.detach(qm.getVulnerabilityAliases(vulnerability)));
-            }
-
-            sendNotificationToKafka(component.getProject().getUuid(), new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(NotificationGroup.NEW_VULNERABLE_DEPENDENCY)
-                    .title(generateNotificationTitle(NotificationConstants.Title.NEW_VULNERABLE_DEPENDENCY, component.getProject()))
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .content(generateNotificationContent(component, vulnerabilities))
-                    .subject(new NewVulnerableDependency(component, vulnerabilities))
-            );
-        }
     }
 
     public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
@@ -296,7 +275,7 @@ public final class NotificationUtil {
         return "A " + policyViolation.getType().name().toLowerCase() + " policy violation occurred";
     }
 
-    private static String generateNotificationContent(final Component component, final List<Vulnerability> vulnerabilities) {
+    public static String generateNotificationContent(final Component component, final Set<Vulnerability> vulnerabilities) {
         final String content;
         if (vulnerabilities.size() == 1) {
             content = "A dependency was introduced that contains 1 known vulnerability";

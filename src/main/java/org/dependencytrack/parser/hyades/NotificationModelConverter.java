@@ -198,10 +198,10 @@ public final class NotificationModelConverter {
 
     private static NewVulnerableDependencySubject convert(final NewVulnerableDependency subject) {
         final NewVulnerableDependencySubject.Builder builder = NewVulnerableDependencySubject.newBuilder()
-                .setComponent(convert(subject.getComponent()))
-                .setProject(convert(subject.getComponent().getProject()));
+                .setComponent(convert(subject.component()))
+                .setProject(convert(subject.component().getProject()));
 
-        subject.getVulnerabilities().stream()
+        subject.vulnerabilities().stream()
                 .map(NotificationModelConverter::convert)
                 .forEach(builder::addVulnerabilities);
 
