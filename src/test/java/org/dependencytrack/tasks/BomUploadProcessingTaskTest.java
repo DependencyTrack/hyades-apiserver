@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import org.apache.commons.io.IOUtils;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -27,12 +26,13 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.util.KafkaTestUtil;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
+import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.jdo.Query;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,8 +40,11 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
 
+import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -55,12 +58,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyType(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getDescription());
-
-        // Enable internal vulnerability analyzer
-        qm.createConfigProperty(ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getPropertyName(), "true",
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getDescription());
     }
 
     @Test
@@ -70,7 +67,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
         final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get(resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
@@ -115,7 +112,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
         final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get(resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
@@ -145,7 +142,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
         final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get(resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
         new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile));
@@ -154,7 +151,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
                     assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
-                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
                     assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
                     assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                     assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
@@ -179,6 +176,52 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
+    }
+
+    @Test
+    public void informWithBloatedBomTest() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(resourceToURL("/bloated.bom.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        final var bomFile = bomFilePath.toFile();
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        assertThat(kafkaMockProducer.history())
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
+                })
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_PROCESSED);
+                })
+                .noneSatisfy(record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                });
+
+        // Make sure we ingested all components of the BOM.
+        final Query<Component> componentCountQuery = qm.getPersistenceManager().newQuery(Component.class);
+        componentCountQuery.setFilter("project == :project");
+        assertThat(qm.getCount(componentCountQuery, project)).isEqualTo(9056);
+
+        // A VulnerabilityScan should've been initiated properly.
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        assertThat(vulnerabilityScan).isNotNull();
+        assertThat(vulnerabilityScan.getTargetType()).isEqualTo(VulnerabilityScan.TargetType.PROJECT);
+        assertThat(vulnerabilityScan.getTargetIdentifier()).isEqualTo(project.getUuid());
+        assertThat(vulnerabilityScan.getExpectedResults()).isEqualTo(9056);
+        assertThat(vulnerabilityScan.getReceivedResults()).isZero();
     }
 
 }
