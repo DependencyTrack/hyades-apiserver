@@ -67,6 +67,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -121,27 +122,33 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         // Keep track of which BOM ref points to which component identity.
+        //
+        // During component and service de-duplication we'll potentially drop
+        // some BOM refs, which can break the dependency graph.
         final var componentIdentityBomRefs = new HashMap<String, ComponentIdentity>();
+
         final List<Component> components = flattenComponents(convertComponents(cdxBom.getComponents())).stream()
                 .filter(distinctComponentByIdentity(componentIdentityBomRefs))
                 .toList();
-        LOGGER.info("Identified " + components.size() + " unique components in BOM uploaded to project: " + event.getProjectUuid()); // TODO: Remove
-
         final List<ServiceComponent> serviceComponents = flattenServices(convertServices(cdxBom.getServices())).stream()
                 .filter(distinctServiceByIdentity(componentIdentityBomRefs))
                 .toList();
-        LOGGER.info("Identified " + serviceComponents.size() + " unique services in BOM uploaded to project: " + event.getProjectUuid()); // TODO: Remove
-
-        // TODO: Send BOM_CONSUMED_NOTIFICATION
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
             pm.setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
-            pm.setProperty(PropertyNames.PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
-            LOGGER.info("Processing CycloneDX BOM uploaded to project: " + event.getProjectUuid());
+            // Save some database round-trips by only flushing changes every "flushThreshold" write operations.
+            // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
+            pm.setProperty(PropertyNames.PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
+            final int flushThreshold = 1000; // Number of changes until a flush should be triggered
+            int numFlushableChanges = 0; // Number of changes to be flushed
+
+            LOGGER.info("""
+                    Processing %d components and %d services from CycloneDX BOM uploaded to project: %s"""
+                    .formatted(components.size(), serviceComponents.size(), event.getProjectUuid()));
 
             final Transaction trx = pm.currentTransaction();
             try {
@@ -156,6 +163,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     throw new NoSuchElementException("Project with UUID " + event.getProjectUuid() + " could not be found");
                 }
 
+                // TODO: Move into separate method
                 if (metadataComponent != null) {
                     boolean projectChanged = false;
                     projectChanged |= applyIfChanged(project, metadataComponent, Project::getAuthor, project::setAuthor);
@@ -176,7 +184,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
 
                 // Fetch IDs of all components that exist in the project already.
-                // We'll use them later to determine which components to delete.
+                // We'll need them later to determine which components to delete.
                 final Query<Component> oldComponentIdsQuery = pm.newQuery(Component.class);
                 oldComponentIdsQuery.setFilter("project == :project");
                 oldComponentIdsQuery.setParameters(project);
@@ -186,11 +194,8 @@ public class BomUploadProcessingTask implements Subscriber {
                 // Avoid redundant queries by caching resolved licenses.
                 final var licenseCache = new HashMap<String, License>();
 
-                // Save some database round-trips by only flushing changes every "flushThreshold" components,
-                // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
-                final int flushThreshold = 10000;
-                int numFlushableChanges = 0;
-
+                // TODO: Move into separate method
+                final var persistentComponents = new HashMap<ComponentIdentity, Component>();
                 for (final Component component : components) {
                     component.setInternal(isInternalComponent(component, qm));
 
@@ -209,13 +214,13 @@ public class BomUploadProcessingTask implements Subscriber {
                         }
                     }
 
-                    final boolean shouldFlush;
+                    final boolean isNewOrUpdated;
                     final var componentIdentity = new ComponentIdentity(component);
                     Component persistentComponent = qm.matchSingleIdentity(project, componentIdentity);
                     if (persistentComponent == null) {
                         component.setProject(project);
                         persistentComponent = pm.makePersistent(component);
-                        shouldFlush = true;
+                        isNewOrUpdated = true;
 
                         // TODO: Mark as "new"
                     } else {
@@ -224,7 +229,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         var changed = false;
                         changed |= applyIfChanged(persistentComponent, component, Component::getAuthor, persistentComponent::setAuthor);
                         changed |= applyIfChanged(persistentComponent, component, Component::getPublisher, persistentComponent::setPublisher);
-                        changed |= applyIfChanged(persistentComponent, component, Component::getBomRef, persistentComponent::setBomRef);
                         changed |= applyIfChanged(persistentComponent, component, Component::getClassifier, persistentComponent::setClassifier);
                         changed |= applyIfChanged(persistentComponent, component, Component::getGroup, persistentComponent::setGroup);
                         changed |= applyIfChanged(persistentComponent, component, Component::getName, persistentComponent::setName);
@@ -250,7 +254,10 @@ public class BomUploadProcessingTask implements Subscriber {
                         changed |= applyIfChanged(persistentComponent, component, Component::getLicense, persistentComponent::setLicense);
                         changed |= applyIfChanged(persistentComponent, component, Component::getLicenseUrl, persistentComponent::setLicenseUrl);
                         changed |= applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
-                        shouldFlush = changed;
+                        isNewOrUpdated = changed;
+
+                        // BOM ref is transient and thus doesn't count towards the changed status.
+                        persistentComponent.setBomRef(component.getBomRef());
 
                         // Exclude from components to delete.
                         if (!oldComponentIds.isEmpty()) {
@@ -261,12 +268,18 @@ public class BomUploadProcessingTask implements Subscriber {
                     // Update component identities in our Identity->BOMRef map,
                     // as after persisting the components, their identities now include UUIDs.
                     // Applications like the frontend rely on the UUIDs being there.
-                    componentIdentityBomRefs.put(persistentComponent.getBomRef(), new ComponentIdentity(persistentComponent));
+                    final var newComponentIdentity = new ComponentIdentity(persistentComponent);
+                    componentIdentityBomRefs.put(persistentComponent.getBomRef(), newComponentIdentity);
+                    persistentComponents.put(newComponentIdentity, persistentComponent);
 
+                    // Note: persistentComponent does not need to be detached.
+                    // The constructor of ComponentVulnerabilityAnalysisEvent merely calls a few getters on it,
+                    // but the component object itself is not passed around. Detaching would imply additional
+                    // database interactions that we'd rather not do.
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
-                            event.getChainIdentifier(), pm.detachCopy(persistentComponent), VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                            event.getChainIdentifier(), persistentComponent, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
 
-                    if (shouldFlush) {
+                    if (isNewOrUpdated) { // Flushing is only necessary when something changed
                         if (++numFlushableChanges >= flushThreshold) {
                             numFlushableChanges = 0;
                             pm.flush();
@@ -285,6 +298,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 licenseCache.clear();
 
                 // Delete components that existed before this BOM import, but do not exist anymore.
+                // TODO: Move into separate method
                 if (!oldComponentIds.isEmpty()) {
                     LOGGER.info("Deleting " + oldComponentIds.size() + " old components from project: " + event.getProjectUuid()); // TODO: Remove
                     for (final Long componentId : oldComponentIds) {
@@ -309,7 +323,8 @@ public class BomUploadProcessingTask implements Subscriber {
                     }
                 }
 
-                LOGGER.info("Collecting direct dependencies from CycloneDX BOM uploaded to project: " + event.getProjectUuid());
+                // Assemble dependency graph.
+                // TODO: Move into separate method
                 if (cdxBom.getMetadata() != null
                         && cdxBom.getMetadata().getComponent() != null
                         && cdxBom.getMetadata().getComponent().getBomRef() != null) {
@@ -334,7 +349,6 @@ public class BomUploadProcessingTask implements Subscriber {
                     }
                 }
 
-                LOGGER.info("Collecting transitive dependencies from CycloneDX BOM uploaded to project: " + event.getProjectUuid());
                 for (final Map.Entry<String, ComponentIdentity> entry : componentIdentityBomRefs.entrySet()) {
                     final ComponentIdentity identity = componentIdentityBomRefs.get(entry.getKey());
                     final org.cyclonedx.model.Dependency dependency = findDependencyByBomRef(cdxBom.getDependencies(), entry.getKey());
@@ -350,17 +364,30 @@ public class BomUploadProcessingTask implements Subscriber {
                             }
                         }
                     }
+                    final var jsonDependenciesStr = jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
 
-                    // Use bulk UPDATE query in order to avoid having to fetch every single component again.
-                    final Query<?> componentQuery = pm.newQuery(Query.JDOQL, "UPDATE org.dependencytrack.model.Component SET directDependencies = :directDependencies WHERE uuid == :uuid");
-                    try {
-                        componentQuery.executeWithMap(Map.of(
-                                "directDependencies", jsonDependencies.toString(),
-                                "uuid", identity.getUuid()
-                        ));
-                    } finally {
-                        componentQuery.closeAll();
+                    final Component persistentComponent = persistentComponents.get(identity);
+                    if (persistentComponent != null) {
+                        if (!Objects.equals(jsonDependenciesStr, persistentComponent.getDirectDependencies())) {
+                            persistentComponent.setDirectDependencies(jsonDependenciesStr);
+
+                            if (++numFlushableChanges >= flushThreshold) {
+                                numFlushableChanges = 0;
+                                pm.flush();
+                            }
+                        }
+                    } else {
+                        LOGGER.warn("""
+                                Unable to resolve component identity %s to a persistent component; \
+                                As a result, the dependency graph of project %s will likely be incomplete"""
+                                .formatted(identity.toJSON(), event.getProjectUuid()));
                     }
+                }
+
+                // Flush all remaining changes to the database.
+                if (numFlushableChanges > 0) {
+                    numFlushableChanges = 0;
+                    pm.flush();
                 }
 
                 LOGGER.info("Creating record for CycloneDX BOM upload to project: " + event.getProjectUuid());
@@ -392,7 +419,6 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
-            // TODO: Submit components for vuln analysis
             // TODO: Submit components for repo meta analysis
             // TODO: Trigger index updates
             // TODO: Send BOM_PROCESSED notification
