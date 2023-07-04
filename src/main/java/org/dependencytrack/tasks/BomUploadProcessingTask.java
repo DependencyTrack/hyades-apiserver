@@ -236,7 +236,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     // Detaching would imply additional database interactions that we'd rather not do.
                     repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
-                            event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                            event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
                 }
 
                 trx.commit();
