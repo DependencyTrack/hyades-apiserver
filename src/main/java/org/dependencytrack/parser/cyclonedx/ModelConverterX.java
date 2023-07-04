@@ -42,7 +42,7 @@ public final class ModelConverterX {
                 final var purl = new PackageURL(cdxComponent.getPurl());
                 project.setPurl(purl);
             } catch (MalformedPackageURLException e) {
-                LOGGER.warn("Encountered invalid PURL", e);
+                LOGGER.debug("Encountered invalid PURL", e);
             }
         }
 
@@ -99,7 +99,7 @@ public final class ModelConverterX {
                 component.setPurl(purl);
                 component.setPurlCoordinates(silentPurlCoordinatesOnly(purl));
             } catch (MalformedPackageURLException e) {
-                LOGGER.warn("Encountered invalid PURL", e);
+                LOGGER.debug("Encountered invalid PURL", e);
             }
         }
 
