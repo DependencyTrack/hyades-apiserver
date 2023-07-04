@@ -109,7 +109,7 @@
         <lib.log4j-over-slf4j.version>2.0.7</lib.log4j-over-slf4j.version>
         <lib.signpost-core.version>2.1.1</lib.signpost-core.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>5.3.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>5.5.0</lib.net.javacrumbs.shedlock.version>
         <!-- JDBC Drivers -->
         <lib.jdbc-driver.mssql.version>12.3.0.jre17-preview</lib.jdbc-driver.mssql.version>
         <!-- Leave at 8.0.29 until https://github.com/datanucleus/datanucleus-rdbms/issues/446 is resolved! -->
