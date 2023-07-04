@@ -73,7 +73,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Files.copy(Paths.get(IOUtils.resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -118,7 +118,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -128,7 +128,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         );
 
         qm.getPersistenceManager().refresh(project);
-        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getClassifier()).isNull();
         assertThat(project.getLastBomImport()).isNotNull();
 
         final List<Component> components = qm.getAllComponents(project);
@@ -148,7 +148,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
-        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomFile));
+        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),

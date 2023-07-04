@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -29,12 +30,12 @@ public final class ModelConverterX {
         final var project = new Project();
         project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
-        project.setClassifier(convert(cdxComponent.getType()));
+        project.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.APPLICATION));
         project.setGroup(trimToNull(cdxComponent.getGroup()));
         project.setName(trimToNull(cdxComponent.getName()));
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
-        project.setExternalReferences(convert(cdxComponent.getExternalReferences()));
+        project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -83,14 +84,14 @@ public final class ModelConverterX {
         component.setAuthor(trimToNull(cdxComponent.getAuthor()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
         component.setBomRef(trimToNull(cdxComponent.getBomRef()));
-        component.setClassifier(convert(cdxComponent.getType()));
+        component.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.LIBRARY));
         component.setGroup(trimToNull(cdxComponent.getGroup()));
         component.setName(trimToNull(cdxComponent.getName()));
         component.setVersion(trimToNull(cdxComponent.getVersion()));
         component.setDescription(trimToNull(cdxComponent.getDescription()));
         component.setCopyright(trimToNull(cdxComponent.getCopyright()));
         component.setCpe(trimToNull(cdxComponent.getCpe()));
-        component.setExternalReferences(convert(cdxComponent.getExternalReferences()));
+        component.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -190,7 +191,7 @@ public final class ModelConverterX {
         service.setDescription(trimToNull(cdxService.getDescription()));
         service.setAuthenticated(cdxService.getAuthenticated());
         service.setCrossesTrustBoundary(cdxService.getxTrustBoundary());
-        service.setExternalReferences(convert(cdxService.getExternalReferences()));
+        service.setExternalReferences(convertExternalReferences(cdxService.getExternalReferences()));
 
         if (cdxService.getServices() != null && !cdxService.getServices().isEmpty()) {
             final var children = new ArrayList<ServiceComponent>();
@@ -205,15 +206,13 @@ public final class ModelConverterX {
         return service;
     }
 
-    private static Classifier convert(final org.cyclonedx.model.Component.Type cdxComponentType) {
-        if (cdxComponentType != null) {
-            return Classifier.valueOf(cdxComponentType.name());
-        }
-
-        return Classifier.LIBRARY;
+    private static Optional<Classifier> convertClassifier(final org.cyclonedx.model.Component.Type cdxComponentType) {
+        return Optional.ofNullable(cdxComponentType)
+                .map(Enum::name)
+                .map(Classifier::valueOf);
     }
 
-    private static List<ExternalReference> convert(final List<org.cyclonedx.model.ExternalReference> cdxExternalReferences) {
+    private static List<ExternalReference> convertExternalReferences(final List<org.cyclonedx.model.ExternalReference> cdxExternalReferences) {
         if (cdxExternalReferences == null || cdxExternalReferences.isEmpty()) {
             return null;
         }
