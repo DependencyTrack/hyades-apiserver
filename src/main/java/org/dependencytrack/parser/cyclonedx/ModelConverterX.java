@@ -14,7 +14,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.dependencytrack.util.PurlUtil.silentPurlCoordinatesOnly;
@@ -51,24 +53,6 @@ public final class ModelConverterX {
         }
 
         return project;
-    }
-
-    public static List<Component> flattenComponents(final Collection<Component> components) {
-        final var result = new ArrayList<Component>();
-        if (components == null || components.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        for (final Component component : components) {
-            if (component.getChildren() != null) {
-                result.addAll(flattenComponents(component.getChildren()));
-                component.setChildren(null);
-            }
-
-            result.add(component);
-        }
-
-        return result;
     }
 
     public static List<Component> convertComponents(final List<org.cyclonedx.model.Component> cdxComponents) {
@@ -156,24 +140,6 @@ public final class ModelConverterX {
         return component;
     }
 
-    public static List<ServiceComponent> flattenServices(final Collection<ServiceComponent> services) {
-        final var result = new ArrayList<ServiceComponent>();
-        if (services == null || services.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        for (final ServiceComponent service : services) {
-            if (service.getChildren() != null) {
-                result.addAll(flattenServices(service.getChildren()));
-                service.setChildren(null);
-            }
-
-            result.add(service);
-        }
-
-        return result;
-    }
-
     public static List<ServiceComponent> convertServices(final List<org.cyclonedx.model.Service> cdxServices) {
         if (cdxServices == null || cdxServices.isEmpty()) {
             return Collections.emptyList();
@@ -226,6 +192,26 @@ public final class ModelConverterX {
                     return externalReference;
                 })
                 .toList();
+    }
+
+    public static <T> List<T> flatten(final Collection<T> items, final Function<T, Collection<T>> childrenGetter,
+                                      final BiConsumer<T, Collection<T>> childrenSetter) {
+        final var result = new ArrayList<T>();
+        if (items == null || items.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        for (final T item : items) {
+            final Collection<T> children = childrenGetter.apply(item);
+            if (children != null) {
+                result.addAll(flatten(children, childrenGetter, childrenSetter));
+                childrenSetter.accept(item, null);
+            }
+
+            result.add(item);
+        }
+
+        return result;
     }
 
 }

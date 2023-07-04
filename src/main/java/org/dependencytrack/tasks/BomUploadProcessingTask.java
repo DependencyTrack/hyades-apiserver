@@ -75,8 +75,7 @@ import java.util.stream.Stream;
 import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertServices;
 import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertToProject;
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.flattenComponents;
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.flattenServices;
+import static org.dependencytrack.parser.cyclonedx.ModelConverterX.flatten;
 import static org.dependencytrack.util.InternalComponentIdentificationUtil.isInternalComponent;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 
@@ -170,12 +169,14 @@ public class BomUploadProcessingTask implements Subscriber {
         } else {
             metadataComponent = null;
         }
-        final List<Component> components = flattenComponents(convertComponents(cdxBom.getComponents())).stream()
-                .filter(distinctComponentByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                .toList();
-        final List<ServiceComponent> serviceComponents = flattenServices(convertServices(cdxBom.getServices())).stream()
-                .filter(distinctServiceByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                .toList();
+        final List<Component> components =
+                flatten(convertComponents(cdxBom.getComponents()), Component::getChildren, Component::setChildren).stream()
+                        .filter(distinctComponentByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                        .toList();
+        final List<ServiceComponent> serviceComponents =
+                flatten(convertServices(cdxBom.getServices()), ServiceComponent::getChildren, ServiceComponent::setChildren).stream()
+                        .filter(distinctServiceByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                        .toList();
 
         kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
@@ -338,6 +339,8 @@ public class BomUploadProcessingTask implements Subscriber {
         final Set<Long> oldComponentIds = getAllComponentIds(pm, persistentProject);
 
         // Avoid redundant queries by caching resolved licenses.
+        // It is likely that if license IDs were present in a BOM,
+        // they appear multiple times for different components.
         final var licenseCache = new HashMap<String, License>();
 
         final var persistentComponents = new HashMap<ComponentIdentity, Component>();
@@ -357,9 +360,8 @@ public class BomUploadProcessingTask implements Subscriber {
                 if (persistentComponent == null) {
                     component.setProject(persistentProject);
                     persistentComponent = pm.makePersistent(component);
+                    persistentComponent.setNew(true);
                     isNewOrUpdated = true;
-
-                    // TODO: Mark as "new"
                 } else {
                     // Only call setters when values actually changed. Otherwise, we'll trigger lots of unnecessary
                     // database calls.
