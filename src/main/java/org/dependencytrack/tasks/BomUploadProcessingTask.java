@@ -104,6 +104,9 @@ public class BomUploadProcessingTask implements Subscriber {
         this.kafkaEventDispatcher = kafkaEventDispatcher;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void inform(final Event e) {
         if (e instanceof final BomUploadEvent event) {
             final var ctx = new Context(event.getProject(), event.getChainIdentifier());
@@ -146,7 +149,7 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    void process(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
+    private void process(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
         LOGGER.info("Consuming uploaded BOM (%s)".formatted(ctx));
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, event);
 
@@ -169,14 +172,16 @@ public class BomUploadProcessingTask implements Subscriber {
         } else {
             metadataComponent = null;
         }
-        final List<Component> components =
-                flatten(convertComponents(cdxBom.getComponents()), Component::getChildren, Component::setChildren).stream()
-                        .filter(distinctComponentByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                        .toList();
-        final List<ServiceComponent> serviceComponents =
-                flatten(convertServices(cdxBom.getServices()), ServiceComponent::getChildren, ServiceComponent::setChildren).stream()
-                        .filter(distinctServiceByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                        .toList();
+        List<Component> components = convertComponents(cdxBom.getComponents());
+        components = flatten(components, Component::getChildren, Component::setChildren);
+        components = components.stream()
+                .filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                .toList();
+        List<ServiceComponent> serviceComponents = convertServices(cdxBom.getServices());
+        serviceComponents = flatten(serviceComponents, ServiceComponent::getChildren, ServiceComponent::setChildren);
+        serviceComponents = serviceComponents.stream()
+                .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                .toList();
 
         kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
@@ -258,7 +263,7 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private org.cyclonedx.model.Bom parseBom(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
+    private static org.cyclonedx.model.Bom parseBom(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
         final byte[] bomBytes;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             bomBytes = bomFileInputStream.readAllBytes();
@@ -307,20 +312,20 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         if (metadataComponent != null) {
-            boolean projectChanged = false;
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getAuthor, project::setAuthor);
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getPublisher, project::setPublisher);
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getClassifier, project::setClassifier);
+            boolean changed = false;
+            changed |= applyIfChanged(project, metadataComponent, Project::getAuthor, project::setAuthor);
+            changed |= applyIfChanged(project, metadataComponent, Project::getPublisher, project::setPublisher);
+            changed |= applyIfChanged(project, metadataComponent, Project::getClassifier, project::setClassifier);
             // TODO: Currently these properties are "decoupled" from the BOM and managed directly by DT users.
             // Perhaps there could be a flag for BOM uploads saying "use BOM properties" or something?
-            // projectChanged |= applyIfChanged(project, metadataComponent, Project::getGroup, project::setGroup);
-            // projectChanged |= applyIfChanged(project, metadataComponent, Project::getName, project::setName);
-            // projectChanged |= applyIfChanged(project, metadataComponent, Project::getVersion, project::setVersion);
-            // projectChanged |= applyIfChanged(project, metadataComponent, Project::getDescription, project::setDescription);
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getExternalReferences, project::setExternalReferences);
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getPurl, project::setPurl);
-            projectChanged |= applyIfChanged(project, metadataComponent, Project::getSwidTagId, project::setSwidTagId);
-            if (projectChanged) {
+            // changed |= applyIfChanged(project, metadataComponent, Project::getGroup, project::setGroup);
+            // changed |= applyIfChanged(project, metadataComponent, Project::getName, project::setName);
+            // changed |= applyIfChanged(project, metadataComponent, Project::getVersion, project::setVersion);
+            // changed |= applyIfChanged(project, metadataComponent, Project::getDescription, project::setDescription);
+            changed |= applyIfChanged(project, metadataComponent, Project::getExternalReferences, project::setExternalReferences);
+            changed |= applyIfChanged(project, metadataComponent, Project::getPurl, project::setPurl);
+            changed |= applyIfChanged(project, metadataComponent, Project::getSwidTagId, project::setSwidTagId);
+            if (changed) {
                 pm.flush();
             }
         }
@@ -393,6 +398,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     changed |= applyIfChanged(persistentComponent, component, Component::getLicense, persistentComponent::setLicense);
                     changed |= applyIfChanged(persistentComponent, component, Component::getLicenseUrl, persistentComponent::setLicenseUrl);
                     changed |= applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
+                    changed |= applyIfChanged(persistentComponent, component, Component::getExternalReferences, persistentComponent::setExternalReferences);
                     isNewOrUpdated = changed;
 
                     // BOM ref is transient and thus doesn't count towards the changed status.
@@ -406,7 +412,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 // Update component identities in our Identity->BOMRef map,
                 // as after persisting the components, their identities now include UUIDs.
-                // Applications like the frontend rely on the UUIDs being there.
+                // Applications like the frontend rely on UUIDs being there.
                 final var newComponentIdentity = new ComponentIdentity(persistentComponent);
                 final ComponentIdentity oldComponentIdentity = identitiesByBomRef.put(persistentComponent.getBomRef(), newComponentIdentity);
                 for (final String bomRef : bomRefsByIdentity.get(oldComponentIdentity)) {
@@ -435,60 +441,57 @@ public class BomUploadProcessingTask implements Subscriber {
         if (cdxBom.getMetadata() != null
                 && cdxBom.getMetadata().getComponent() != null
                 && cdxBom.getMetadata().getComponent().getBomRef() != null) {
-            final org.cyclonedx.model.Dependency metadataComponentDependency =
+            final org.cyclonedx.model.Dependency dependency =
                     findDependencyByBomRef(cdxBom.getDependencies(), cdxBom.getMetadata().getComponent().getBomRef());
-
-            final var jsonDependencies = new JSONArray();
-            if (metadataComponentDependency != null && metadataComponentDependency.getDependencies() != null) {
-                for (final org.cyclonedx.model.Dependency dependency : metadataComponentDependency.getDependencies()) {
-                    final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(dependency.getRef());
-                    if (dependencyIdentity != null) {
-                        jsonDependencies.put(dependencyIdentity.toJSON());
-                    } else {
-                        LOGGER.warn("BOM ref " + dependency.getRef() + " does not match any component identity");
-                    }
-                }
-            }
-
-            final var jsonDependenciesStr = jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
-            if (!Objects.equals(jsonDependenciesStr, project.getDirectDependencies())) {
-                project.setDirectDependencies(jsonDependenciesStr);
+            final String directDependenciesJson = resolveDirectDependenciesJson(ctx, dependency, identitiesByBomRef);
+            if (!Objects.equals(directDependenciesJson, project.getDirectDependencies())) {
+                project.setDirectDependencies(directDependenciesJson);
                 pm.flush();
             }
         }
 
         try (final var flushHelper = new FlushHelper(pm, FLUSH_THRESHOLD)) {
             for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
-                final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final org.cyclonedx.model.Dependency dependency = findDependencyByBomRef(cdxBom.getDependencies(), entry.getKey());
+                final String directDependenciesJson = resolveDirectDependenciesJson(ctx, dependency, identitiesByBomRef);
 
-                final var jsonDependencies = new JSONArray();
-                if (dependency != null && dependency.getDependencies() != null) {
-                    for (final org.cyclonedx.model.Dependency subDependency : dependency.getDependencies()) {
-                        final ComponentIdentity subDependencyIdentity = identitiesByBomRef.get(subDependency.getRef());
-                        if (subDependencyIdentity != null) {
-                            jsonDependencies.put(subDependencyIdentity.toJSON());
-                        } else {
-                            LOGGER.warn("BOM ref " + dependency.getRef() + " does not match any component identity");
-                        }
-                    }
-                }
-
-                final var jsonDependenciesStr = jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
+                final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final Component persistentComponent = componentsByIdentity.get(dependencyIdentity);
                 if (persistentComponent != null) {
-                    if (!Objects.equals(jsonDependenciesStr, persistentComponent.getDirectDependencies())) {
-                        persistentComponent.setDirectDependencies(jsonDependenciesStr);
+                    if (!Objects.equals(directDependenciesJson, persistentComponent.getDirectDependencies())) {
+                        persistentComponent.setDirectDependencies(directDependenciesJson);
                         flushHelper.maybeFlush();
                     }
                 } else {
                     LOGGER.warn("""
                             Unable to resolve component identity %s to a persistent component; \
                             As a result, the dependency graph of project %s will likely be incomplete (%s)"""
-                            .formatted(dependencyIdentity.toJSON(), ctx.project, ctx));
+                            .formatted(dependencyIdentity.toJSON(), ctx.project.getUuid(), ctx));
                 }
             }
         }
+    }
+
+    private static String resolveDirectDependenciesJson(final Context ctx,
+                                                        final org.cyclonedx.model.Dependency dependency,
+                                                        final Map<String, ComponentIdentity> identitiesByBomRef) {
+        final var jsonDependencies = new JSONArray();
+
+        if (dependency != null && dependency.getDependencies() != null) {
+            for (final org.cyclonedx.model.Dependency subDependency : dependency.getDependencies()) {
+                final ComponentIdentity subDependencyIdentity = identitiesByBomRef.get(subDependency.getRef());
+                if (subDependencyIdentity != null) {
+                    jsonDependencies.put(subDependencyIdentity.toJSON());
+                } else {
+                    LOGGER.warn("""
+                            Unable to resolve BOM ref %s to a component identity; \
+                            As a result, the dependency graph of project %s will likely be incomplete (%s)"""
+                            .formatted(dependency.getRef(), ctx.project.getUuid(), ctx));
+                }
+            }
+        }
+
+        return jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
     }
 
     /**
@@ -587,8 +590,8 @@ public class BomUploadProcessingTask implements Subscriber {
      * @param bomRefsByIdentity  The mapping of {@link ComponentIdentity}s to BOM refs to populate
      * @return A {@link Predicate} to use in {@link Stream#filter(Predicate)}
      */
-    private static Predicate<Component> distinctComponentByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                    final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Predicate<Component> distinctComponentsByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                     final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
         final var identitiesSeen = new HashSet<ComponentIdentity>();
 
         return component -> {
@@ -608,8 +611,8 @@ public class BomUploadProcessingTask implements Subscriber {
      * @param bomRefsByIdentity  The mapping of {@link ComponentIdentity}s to BOM refs to populate
      * @return A {@link Predicate} to use in {@link Stream#filter(Predicate)}
      */
-    private static Predicate<ServiceComponent> distinctServiceByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                         final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Predicate<ServiceComponent> distinctServicesByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                          final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
         final var identitiesSeen = new HashSet<ComponentIdentity>();
 
         return service -> {
