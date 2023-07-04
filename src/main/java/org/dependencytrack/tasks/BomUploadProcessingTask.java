@@ -108,7 +108,18 @@ public class BomUploadProcessingTask implements Subscriber {
             final Timer.Sample timerSample = Timer.start();
             try {
                 process(ctx, event);
+
+                LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
+                kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_PROCESSED)
+                        .level(NotificationLevel.INFORMATIONAL)
+                        .title(NotificationConstants.Title.BOM_PROCESSED)
+                        .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
+                        // FIXME: Add reference to BOM after we have dedicated BOM server
+                        .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
+                LOGGER.error("BOM processing failed (%s)".formatted(ctx), ex);
                 kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -118,6 +129,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", "%s (%s)".formatted(ex.getMessage(), ex.ctx), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
+                LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -136,19 +148,18 @@ public class BomUploadProcessingTask implements Subscriber {
         LOGGER.info("Consuming uploaded BOM (%s)".formatted(ctx));
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, event);
 
-        final Project metadataComponent;
-        if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
-            metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
-        } else {
-            metadataComponent = null;
-        }
-
         // Keep track of which BOM ref points to which component identity.
         //
         // During component and service de-duplication we'll potentially drop
         // some BOM refs, which can break the dependency graph.
         final var componentIdentitiesByBomRef = new HashMap<String, ComponentIdentity>();
 
+        final Project metadataComponent;
+        if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
+            metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
+        } else {
+            metadataComponent = null;
+        }
         final List<Component> components = flattenComponents(convertComponents(cdxBom.getComponents())).stream()
                 .filter(distinctComponentByIdentity(componentIdentitiesByBomRef))
                 .toList();
@@ -229,16 +240,6 @@ public class BomUploadProcessingTask implements Subscriber {
 
             // TODO: Trigger index updates
         }
-
-        LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
-        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_PROCESSED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.BOM_PROCESSED)
-                .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
-                // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
     }
 
     private static Project processMetadataComponent(final Context ctx, final PersistenceManager pm, final Project metadataComponent) throws BomProcessingException {
@@ -356,7 +357,12 @@ public class BomUploadProcessingTask implements Subscriber {
                 // as after persisting the components, their identities now include UUIDs.
                 // Applications like the frontend rely on the UUIDs being there.
                 final var newComponentIdentity = new ComponentIdentity(persistentComponent);
-                componentIdentityBomRefs.put(persistentComponent.getBomRef(), newComponentIdentity);
+                final ComponentIdentity oldComponentIdentity = componentIdentityBomRefs.put(persistentComponent.getBomRef(), newComponentIdentity);
+                for (final Map.Entry<String, ComponentIdentity> entry : componentIdentityBomRefs.entrySet()) {
+                    if (Objects.equals(oldComponentIdentity, entry.getValue())) {
+                        componentIdentityBomRefs.put(entry.getKey(), newComponentIdentity);
+                    }
+                }
                 persistentComponents.put(newComponentIdentity, persistentComponent);
 
                 if (isNewOrUpdated) { // Flushing is only necessary when something changed
