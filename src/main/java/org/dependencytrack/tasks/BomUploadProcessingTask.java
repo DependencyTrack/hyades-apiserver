@@ -25,6 +25,8 @@ import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
@@ -68,6 +70,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertServices;
@@ -149,10 +152,17 @@ public class BomUploadProcessingTask implements Subscriber {
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, event);
 
         // Keep track of which BOM ref points to which component identity.
-        //
-        // During component and service de-duplication we'll potentially drop
+        // During component and service de-duplication, we'll potentially drop
         // some BOM refs, which can break the dependency graph.
-        final var componentIdentitiesByBomRef = new HashMap<String, ComponentIdentity>();
+        final var identitiesByBomRef = new HashMap<String, ComponentIdentity>();
+
+        // Component identities will change once components are persisted to the database.
+        // This means we'll eventually have to update identities in "identitiesByBomRef"
+        // for every BOM ref pointing to them.
+        // We avoid having to iterate over, and compare, all values of "identitiesByBomRef"
+        // by keeping a secondary index on identities to BOM refs.
+        // Note: One identity can point to multiple BOM refs, due to component and service de-duplication.
+        final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
 
         final Project metadataComponent;
         if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
@@ -161,10 +171,10 @@ public class BomUploadProcessingTask implements Subscriber {
             metadataComponent = null;
         }
         final List<Component> components = flattenComponents(convertComponents(cdxBom.getComponents())).stream()
-                .filter(distinctComponentByIdentity(componentIdentitiesByBomRef))
+                .filter(distinctComponentByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
         final List<ServiceComponent> serviceComponents = flattenServices(convertServices(cdxBom.getServices())).stream()
-                .filter(distinctServiceByIdentity(componentIdentitiesByBomRef))
+                .filter(distinctServiceByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
 
         kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
@@ -180,9 +190,12 @@ public class BomUploadProcessingTask implements Subscriber {
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
+
+            // Disable reachability checks on commit.
+            // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
             pm.setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
 
-            // Save some database round-trips by only flushing changes every "flushThreshold" write operations.
+            // Save some database round-trips by only flushing changes every FLUSH_THRESHOLD write operations.
             // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
             pm.setProperty(PropertyNames.PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
@@ -194,13 +207,15 @@ public class BomUploadProcessingTask implements Subscriber {
                 trx.begin();
 
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
-
                 final Map<ComponentIdentity, Component> persistentComponents =
-                        processComponents(ctx, qm, project, components, componentIdentitiesByBomRef);
+                        processComponents(ctx, qm, project, components, identitiesByBomRef, bomRefsByIdentity);
+                processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, identitiesByBomRef);
 
-                processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, componentIdentitiesByBomRef);
+                // BOM ref <-> ComponentIdentity indexes are no longer needed.
+                // Let go of their contents to make it eligible for GC sooner.
+                identitiesByBomRef.clear();
+                bomRefsByIdentity.clear();
 
-                LOGGER.info("Creating record for processed BOM (%s)".formatted(ctx));
                 final var bom = new Bom();
                 bom.setProject(project);
                 bom.setBomFormat(ctx.bomFormat);
@@ -242,6 +257,39 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
+    private org.cyclonedx.model.Bom parseBom(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
+        final byte[] bomBytes;
+        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
+            bomBytes = bomFileInputStream.readAllBytes();
+        } catch (IOException e) {
+            throw new BomProcessingException(ctx, "Failed to read BOM file", e);
+        }
+
+        if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
+            throw new BomProcessingException(ctx, """
+                    The BOM uploaded is not in a supported format. \
+                    Supported formats include CycloneDX XML and JSON""");
+        }
+
+        ctx.bomFormat = Bom.Format.CYCLONEDX;
+
+        final org.cyclonedx.model.Bom bom;
+        try {
+            final Parser parser = BomParserFactory.createParser(bomBytes);
+            bom = parser.parse(bomBytes);
+        } catch (ParseException e) {
+            throw new BomProcessingException(ctx, "Failed to parse BOM", e);
+        }
+
+        ctx.bomSpecVersion = bom.getSpecVersion();
+        if (bom.getSerialNumber() != null) {
+            ctx.bomSerialNumber = bom.getSerialNumber().replaceFirst("urn:uuid:", "");
+        }
+        ctx.bomVersion = bom.getVersion();
+
+        return bom;
+    }
+
     private static Project processMetadataComponent(final Context ctx, final PersistenceManager pm, final Project metadataComponent) throws BomProcessingException {
         final Query<Project> query = pm.newQuery(Project.class);
         query.setFilter("uuid == :uuid");
@@ -280,13 +328,14 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static Map<ComponentIdentity, Component> processComponents(final Context ctx, final QueryManager qm,
-                                                                       final Project project, final List<Component> components,
-                                                                       final Map<String, ComponentIdentity> componentIdentityBomRefs) {
+                                                                       final Project persistentProject, final List<Component> components,
+                                                                       final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                       final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
         final PersistenceManager pm = qm.getPersistenceManager();
 
         // Fetch IDs of all components that exist in the project already.
         // We'll need them later to determine which components to delete.
-        final Set<Long> oldComponentIds = getAllComponentIds(pm, project);
+        final Set<Long> oldComponentIds = getAllComponentIds(pm, persistentProject);
 
         // Avoid redundant queries by caching resolved licenses.
         final var licenseCache = new HashMap<String, License>();
@@ -304,9 +353,9 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final boolean isNewOrUpdated;
                 final var componentIdentity = new ComponentIdentity(component);
-                Component persistentComponent = qm.matchSingleIdentity(project, componentIdentity);
+                Component persistentComponent = qm.matchSingleIdentity(persistentProject, componentIdentity);
                 if (persistentComponent == null) {
-                    component.setProject(project);
+                    component.setProject(persistentProject);
                     persistentComponent = pm.makePersistent(component);
                     isNewOrUpdated = true;
 
@@ -357,11 +406,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 // as after persisting the components, their identities now include UUIDs.
                 // Applications like the frontend rely on the UUIDs being there.
                 final var newComponentIdentity = new ComponentIdentity(persistentComponent);
-                final ComponentIdentity oldComponentIdentity = componentIdentityBomRefs.put(persistentComponent.getBomRef(), newComponentIdentity);
-                for (final Map.Entry<String, ComponentIdentity> entry : componentIdentityBomRefs.entrySet()) {
-                    if (Objects.equals(oldComponentIdentity, entry.getValue())) {
-                        componentIdentityBomRefs.put(entry.getKey(), newComponentIdentity);
-                    }
+                final ComponentIdentity oldComponentIdentity = identitiesByBomRef.put(persistentComponent.getBomRef(), newComponentIdentity);
+                for (final String bomRef : bomRefsByIdentity.get(oldComponentIdentity)) {
+                    identitiesByBomRef.put(bomRef, newComponentIdentity);
                 }
                 persistentComponents.put(newComponentIdentity, persistentComponent);
 
@@ -382,7 +429,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static void processDependencyGraph(final Context ctx, final PersistenceManager pm, final org.cyclonedx.model.Bom cdxBom,
                                                final Project project, final Map<ComponentIdentity, Component> componentsByIdentity,
-                                               final Map<String, ComponentIdentity> componentIdentitiesByBomRef) {
+                                               final Map<String, ComponentIdentity> identitiesByBomRef) {
         if (cdxBom.getMetadata() != null
                 && cdxBom.getMetadata().getComponent() != null
                 && cdxBom.getMetadata().getComponent().getBomRef() != null) {
@@ -392,7 +439,7 @@ public class BomUploadProcessingTask implements Subscriber {
             final var jsonDependencies = new JSONArray();
             if (metadataComponentDependency != null && metadataComponentDependency.getDependencies() != null) {
                 for (final org.cyclonedx.model.Dependency dependency : metadataComponentDependency.getDependencies()) {
-                    final ComponentIdentity dependencyIdentity = componentIdentitiesByBomRef.get(dependency.getRef());
+                    final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(dependency.getRef());
                     if (dependencyIdentity != null) {
                         jsonDependencies.put(dependencyIdentity.toJSON());
                     } else {
@@ -409,16 +456,16 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         try (final var flushHelper = new FlushHelper(pm, FLUSH_THRESHOLD)) {
-            for (final Map.Entry<String, ComponentIdentity> entry : componentIdentitiesByBomRef.entrySet()) {
-                final ComponentIdentity identity = componentIdentitiesByBomRef.get(entry.getKey());
+            for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
+                final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final org.cyclonedx.model.Dependency dependency = findDependencyByBomRef(cdxBom.getDependencies(), entry.getKey());
 
                 final var jsonDependencies = new JSONArray();
                 if (dependency != null && dependency.getDependencies() != null) {
-                    for (final org.cyclonedx.model.Dependency dependency1 : dependency.getDependencies()) {
-                        final ComponentIdentity dependencyIdentity = componentIdentitiesByBomRef.get(dependency1.getRef());
-                        if (dependencyIdentity != null) {
-                            jsonDependencies.put(dependencyIdentity.toJSON());
+                    for (final org.cyclonedx.model.Dependency subDependency : dependency.getDependencies()) {
+                        final ComponentIdentity subDependencyIdentity = identitiesByBomRef.get(subDependency.getRef());
+                        if (subDependencyIdentity != null) {
+                            jsonDependencies.put(subDependencyIdentity.toJSON());
                         } else {
                             LOGGER.warn("BOM ref " + dependency.getRef() + " does not match any component identity");
                         }
@@ -426,7 +473,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
 
                 final var jsonDependenciesStr = jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
-                final Component persistentComponent = componentsByIdentity.get(identity);
+                final Component persistentComponent = componentsByIdentity.get(dependencyIdentity);
                 if (persistentComponent != null) {
                     if (!Objects.equals(jsonDependenciesStr, persistentComponent.getDirectDependencies())) {
                         persistentComponent.setDirectDependencies(jsonDependenciesStr);
@@ -436,12 +483,20 @@ public class BomUploadProcessingTask implements Subscriber {
                     LOGGER.warn("""
                             Unable to resolve component identity %s to a persistent component; \
                             As a result, the dependency graph of project %s will likely be incomplete (%s)"""
-                            .formatted(identity.toJSON(), ctx.project, ctx));
+                            .formatted(dependencyIdentity.toJSON(), ctx.project, ctx));
                 }
             }
         }
     }
 
+    /**
+     * Re-implementation of {@link QueryManager#recursivelyDelete(Component, boolean)} that does not use multiple
+     * small {@link Transaction}s, but relies on an already active one instead. Instead of committing, it uses
+     * {@link FlushHelper} to flush changes every {@value #FLUSH_THRESHOLD} write operations.
+     *
+     * @param pm           The {@link PersistenceManager} to use
+     * @param componentIds IDs of {@link Component}s to delete
+     */
     private static void deleteComponentsById(final PersistenceManager pm, final Set<Long> componentIds) {
         if (componentIds.isEmpty()) {
             return;
@@ -449,23 +504,32 @@ public class BomUploadProcessingTask implements Subscriber {
 
         try (final var flushHelper = new FlushHelper(pm, FLUSH_THRESHOLD)) {
             for (final Long componentId : componentIds) {
-                // TODO: Re-implement qm.recursivelyDelete so that it uses the current active
-                //   transaction instead of creating and committing its own. The following delete
-                //   will fail due to FK constraints when there are metrics etc. associated with
-                //   the component.
-                final Query<Component> componentDeleteQuery = pm.newQuery(Component.class);
-                try {
-                    componentDeleteQuery.setFilter("id == :id");
-                    componentDeleteQuery.deletePersistentAll(componentId);
-                } finally {
-                    componentDeleteQuery.closeAll();
-                }
+                // Note: Bulk DELETE queries are executed directly in the database and do not need to be flushed.
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component.id == :cid").execute(componentId);
 
+                // Can't use bulk DELETE for the component itself, as it doesn't remove entries from
+                // relationship tables like COMPONENTS_VULNERABILITIES. deletePersistentAll does, but
+                // it will also fetch the component prior to deleting it, which is slightly inefficient.
+                pm.newQuery(Component.class, "id == :cid").deletePersistentAll(componentId);
                 flushHelper.maybeFlush();
             }
         }
     }
 
+    /**
+     * Lookup a {@link License} by its ID, and cache the result in {@code cache}.
+     *
+     * @param pm        The {@link PersistenceManager} to use
+     * @param cache     A {@link Map} to use for caching
+     * @param licenseId The {@link License} ID to lookup
+     * @return The resolved {@link License}, or {@code null} if no {@link License} was found
+     */
     private static License resolveLicense(final PersistenceManager pm, final Map<String, License> cache, final String licenseId) {
         if (cache.containsKey(licenseId)) {
             return cache.get(licenseId);
@@ -499,39 +563,6 @@ public class BomUploadProcessingTask implements Subscriber {
         return null;
     }
 
-    private org.cyclonedx.model.Bom parseBom(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
-        final byte[] bomBytes;
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
-            bomBytes = bomFileInputStream.readAllBytes();
-        } catch (IOException e) {
-            throw new BomProcessingException(ctx, "Failed to read BOM file", e);
-        }
-
-        if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
-            throw new BomProcessingException(ctx, """
-                    The BOM uploaded is not in a supported format. \
-                    Supported formats include CycloneDX XML and JSON""");
-        }
-
-        ctx.bomFormat = Bom.Format.CYCLONEDX;
-
-        final org.cyclonedx.model.Bom bom;
-        try {
-            final Parser parser = BomParserFactory.createParser(bomBytes);
-            bom = parser.parse(bomBytes);
-        } catch (ParseException e) {
-            throw new BomProcessingException(ctx, "Failed to parse BOM", e);
-        }
-
-        ctx.bomSpecVersion = bom.getSpecVersion();
-        if (bom.getSerialNumber() != null) {
-            ctx.bomSerialNumber = bom.getSerialNumber().replaceFirst("urn:uuid:", "");
-        }
-        ctx.bomVersion = bom.getVersion();
-
-        return bom;
-    }
-
     private static Set<Long> getAllComponentIds(final PersistenceManager pm, final Project project) {
         final Query<Component> query = pm.newQuery(Component.class);
         query.setFilter("project == :project");
@@ -545,23 +576,45 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static Predicate<Component> distinctComponentByIdentity(final Map<String, ComponentIdentity> componentIdentityBomRefs) {
-        final var componentIdentitiesSeen = new HashSet<ComponentIdentity>();
+    /**
+     * Factory for a stateful {@link Predicate} for de-duplicating {@link Component}s based on their {@link ComponentIdentity}.
+     * <p>
+     * The predicate will populate {@code identitiesByBomRef} and {@code bomRefsByIdentity}.
+     *
+     * @param identitiesByBomRef The mapping of BOM refs to {@link ComponentIdentity}s to populate
+     * @param bomRefsByIdentity  The mapping of {@link ComponentIdentity}s to BOM refs to populate
+     * @return A {@link Predicate} to use in {@link Stream#filter(Predicate)}
+     */
+    private static Predicate<Component> distinctComponentByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                    final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+        final var identitiesSeen = new HashSet<ComponentIdentity>();
 
         return component -> {
             final var componentIdentity = new ComponentIdentity(component);
-            componentIdentityBomRefs.putIfAbsent(component.getBomRef(), componentIdentity);
-            return componentIdentitiesSeen.add(componentIdentity);
+            identitiesByBomRef.putIfAbsent(component.getBomRef(), componentIdentity);
+            bomRefsByIdentity.put(componentIdentity, component.getBomRef());
+            return identitiesSeen.add(componentIdentity);
         };
     }
 
-    private static Predicate<ServiceComponent> distinctServiceByIdentity(final Map<String, ComponentIdentity> componentIdentityBomRefs) {
-        final var componentIdentitiesSeen = new HashSet<ComponentIdentity>();
+    /**
+     * Factory for a stateful {@link Predicate} for de-duplicating {@link ServiceComponent}s based on their {@link ComponentIdentity}.
+     * <p>
+     * The predicate will populate {@code identitiesByBomRef} and {@code bomRefsByIdentity}.
+     *
+     * @param identitiesByBomRef The mapping of BOM refs to {@link ComponentIdentity}s to populate
+     * @param bomRefsByIdentity  The mapping of {@link ComponentIdentity}s to BOM refs to populate
+     * @return A {@link Predicate} to use in {@link Stream#filter(Predicate)}
+     */
+    private static Predicate<ServiceComponent> distinctServiceByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                         final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+        final var identitiesSeen = new HashSet<ComponentIdentity>();
 
         return service -> {
             final var componentIdentity = new ComponentIdentity(service);
-            componentIdentityBomRefs.putIfAbsent(service.getBomRef(), componentIdentity);
-            return componentIdentitiesSeen.add(componentIdentity);
+            identitiesByBomRef.putIfAbsent(service.getBomRef(), componentIdentity);
+            bomRefsByIdentity.put(componentIdentity, service.getBomRef());
+            return identitiesSeen.add(componentIdentity);
         };
     }
 
