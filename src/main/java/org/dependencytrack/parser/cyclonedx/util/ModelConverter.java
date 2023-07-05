@@ -142,16 +142,16 @@ public class ModelConverter {
             for (final org.cyclonedx.model.Hash cdxHash : cdxComponent.getHashes()) {
                 final Consumer<String> hashSetter = switch (cdxHash.getAlgorithm().toLowerCase()) {
                     case "md5" -> component::setMd5;
-                    case "sha1" -> component::setSha1;
-                    case "sha256" -> component::setSha256;
-                    case "sha384" -> component::setSha384;
-                    case "sha512" -> component::setSha512;
-                    case "sha3_256" -> component::setSha3_256;
-                    case "sha3_384" -> component::setSha3_384;
-                    case "sha3_512" -> component::setSha3_512;
-                    case "blake2b_256" -> component::setBlake2b_256;
-                    case "blake2b_384" -> component::setBlake2b_384;
-                    case "blake2b_512" -> component::setBlake2b_512;
+                    case "sha-1" -> component::setSha1;
+                    case "sha-256" -> component::setSha256;
+                    case "sha-384" -> component::setSha384;
+                    case "sha-512" -> component::setSha512;
+                    case "sha3-256" -> component::setSha3_256;
+                    case "sha3-384" -> component::setSha3_384;
+                    case "sha3-512" -> component::setSha3_512;
+                    case "blake2b-256" -> component::setBlake2b_256;
+                    case "blake2b-384" -> component::setBlake2b_384;
+                    case "blake2b-512" -> component::setBlake2b_512;
                     case "blake3" -> component::setBlake3;
                     default -> null;
                 };

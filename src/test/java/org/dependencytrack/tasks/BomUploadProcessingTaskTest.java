@@ -288,6 +288,43 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         }
     }
 
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/1905
+    public void informIssue1905Test() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        for (int i = 0; i < 3; i++) {
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue1905.json"));
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+
+            // Make sure processing did not fail.
+            assertThat(kafkaMockProducer.history())
+                    .noneSatisfy(record -> {
+                        assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                        assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    });
+
+            // Ensure all expected components are present.
+            // In this particular case, both components from the BOM are supposed to NOT be merged.
+            assertThat(qm.getAllComponents(project)).satisfiesExactlyInAnyOrder(
+                    component -> {
+                        assertThat(component.getClassifier()).isEqualTo(Classifier.LIBRARY);
+                        assertThat(component.getName()).isEqualTo("cloud.google.com/go/storage");
+                        assertThat(component.getVersion()).isEqualTo("v1.13.0");
+                        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:golang/cloud.google.com/go/storage@v1.13.0?type=package");
+                        assertThat(component.getSha256()).isNull();
+                    },
+                    component -> {
+                        assertThat(component.getClassifier()).isEqualTo(Classifier.LIBRARY);
+                        assertThat(component.getName()).isEqualTo("cloud.google.com/go/storage");
+                        assertThat(component.getVersion()).isEqualTo("v1.13.0");
+                        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:golang/cloud.google.com/go/storage@v1.13.0?goarch=amd64&goos=darwin&type=module");
+                        assertThat(component.getSha256()).isEqualTo("6a63ef842388f8796da7aacfbbeeb661dc2122b8dffb7e0f29500be07c206309");
+                    }
+            );
+        }
+    }
+
     private static File createTempBomFile(final String testFileName) throws Exception {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
