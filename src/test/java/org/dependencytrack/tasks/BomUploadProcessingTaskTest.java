@@ -34,6 +34,7 @@ import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,13 +67,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -111,13 +106,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithEmptyBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -141,13 +130,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile));
+        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid.json")));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
@@ -184,13 +167,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBloatedBomTest() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/bloated.bom.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json"));
         new BomUploadProcessingTask().inform(bomUploadEvent);
 
         assertThat(kafkaMockProducer.history())
@@ -274,6 +251,49 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 .filter(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()::equals)
                 .count();
         assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
+    public void informIssue2519Test() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        // Make sure processing did not fail.
+        assertThat(kafkaMockProducer.history())
+                .noneSatisfy(record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                });
+
+        // Ensure the expected amount of components is present.
+        assertThat(qm.getAllComponents(project)).hasSize(1756);
+
+        // Upload the same BOM again a few times.
+        // Ensure processing does not fail, and the number of components ingested doesn't change.
+        for (int i = 0; i < 3; i++) {
+            bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+
+            assertThat(kafkaMockProducer.history())
+                    .noneSatisfy(record -> {
+                        assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                        assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    });
+
+            assertThat(qm.getAllComponents(project)).hasSize(1756);
+        }
+    }
+
+    private static File createTempBomFile(final String testFileName) throws Exception {
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        return bomFilePath.toFile();
     }
 
 }

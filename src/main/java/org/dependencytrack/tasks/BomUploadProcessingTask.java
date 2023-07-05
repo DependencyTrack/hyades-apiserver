@@ -331,7 +331,7 @@ public class BomUploadProcessingTask implements Subscriber {
             changed |= applyIfChanged(project, metadataComponent, Project::getPublisher, project::setPublisher);
             changed |= applyIfChanged(project, metadataComponent, Project::getClassifier, project::setClassifier);
             // TODO: Currently these properties are "decoupled" from the BOM and managed directly by DT users.
-            // Perhaps there could be a flag for BOM uploads saying "use BOM properties" or something?
+            //   Perhaps there could be a flag for BOM uploads saying "use BOM properties" or something?
             // changed |= applyIfChanged(project, metadataComponent, Project::getGroup, project::setGroup);
             // changed |= applyIfChanged(project, metadataComponent, Project::getName, project::setName);
             // changed |= applyIfChanged(project, metadataComponent, Project::getVersion, project::setVersion);

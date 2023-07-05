@@ -424,19 +424,24 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final var params = new HashMap<String, Object>();
 
         if (cid.getPurl() != null) {
-            filterParts.add("((purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates))");
+            filterParts.add("(purl != null && purl == :purl)");
             params.put("purl", cid.getPurl().canonicalize());
-            params.put("purlCoordinates", cid.getPurlCoordinates().canonicalize());
+        } else {
+            filterParts.add("purl == null");
         }
 
         if (cid.getCpe() != null) {
             filterParts.add("(cpe != null && cpe == :cpe)");
             params.put("cpe", cid.getCpe());
+        } else {
+            filterParts.add("cpe == null");
         }
 
         if (cid.getSwidTagId() != null) {
             filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
             params.put("swidTagId", cid.getSwidTagId());
+        } else {
+            filterParts.add("swidTagId == null");
         }
 
         var coordinatesFilter = "(";
@@ -457,7 +462,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         coordinatesFilter += ")";
         filterParts.add(coordinatesFilter);
 
-        final var filter = "project == :project && (" + String.join(" || ", filterParts) + ")";
+        final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
         params.put("project", project);
 
         final Query<Component> query = pm.newQuery(Component.class, filter);
