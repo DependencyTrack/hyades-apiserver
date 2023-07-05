@@ -179,15 +179,19 @@ public class BomUploadProcessingTask implements Subscriber {
         }
         List<Component> components = convertComponents(cdxBom.getComponents());
         components = flatten(components, Component::getChildren, Component::setChildren);
+        final int numComponentsTotal = components.size();
         components = components.stream()
                 .filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
         List<ServiceComponent> services = convertServices(cdxBom.getServices());
         services = flatten(services, ServiceComponent::getChildren, ServiceComponent::setChildren);
+        final int numServicesTotal = services.size();
         services = services.stream()
                 .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
 
+        LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
+                .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
         kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_CONSUMED)
