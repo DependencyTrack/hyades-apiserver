@@ -57,6 +57,7 @@ import org.json.JSONArray;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -112,7 +113,7 @@ public class BomUploadProcessingTask implements Subscriber {
             final var ctx = new Context(event.getProject(), event.getChainIdentifier());
             final Timer.Sample timerSample = Timer.start();
             try {
-                process(ctx, event);
+                processBom(ctx, event.getFile());
 
                 LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
@@ -131,8 +132,10 @@ public class BomUploadProcessingTask implements Subscriber {
                         .level(NotificationLevel.ERROR)
                         .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
                         .content("An error occurred while processing a BOM")
+                        // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
+                        //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
                         // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", "%s (%s)".formatted(ex.getMessage(), ex.ctx), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
@@ -149,9 +152,9 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private void process(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
+    private void processBom(final Context ctx, final File bomFile) throws BomProcessingException {
         LOGGER.info("Consuming uploaded BOM (%s)".formatted(ctx));
-        final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, event);
+        final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, bomFile);
 
         // Keep track of which BOM ref points to which component identity.
         // During component and service de-duplication, we'll potentially drop
@@ -243,7 +246,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     // Detaching would imply additional database interactions that we'd rather not do.
                     repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
-                            event.getChainIdentifier(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
+                            ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
                 }
 
                 trx.commit();
@@ -265,9 +268,9 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static org.cyclonedx.model.Bom parseBom(final Context ctx, final BomUploadEvent event) throws BomProcessingException {
+    private static org.cyclonedx.model.Bom parseBom(final Context ctx, final File bomFile) throws BomProcessingException {
         final byte[] bomBytes;
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
+        try (final var bomFileInputStream = Files.newInputStream(bomFile.toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             bomBytes = bomFileInputStream.readAllBytes();
         } catch (IOException e) {
             throw new BomProcessingException(ctx, "Failed to read BOM file", e);
@@ -507,7 +510,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static void processDependencyGraph(final Context ctx, final PersistenceManager pm, final org.cyclonedx.model.Bom cdxBom,
                                                final Project project, final Map<ComponentIdentity, Component> componentsByIdentity,
-                                               final Map<ComponentIdentity, ServiceComponent> servicesByIdentity,
+                                               @SuppressWarnings("unused") final Map<ComponentIdentity, ServiceComponent> servicesByIdentity,
                                                final Map<String, ComponentIdentity> identitiesByBomRef) {
         if (cdxBom.getMetadata() != null
                 && cdxBom.getMetadata().getComponent() != null
@@ -529,6 +532,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final Component persistentComponent = componentsByIdentity.get(dependencyIdentity);
                 // TODO: Check servicesByIdentity when persistentComponent is null
+                //   We do not currently store directDependencies for ServiceComponent
                 if (persistentComponent != null) {
                     if (!Objects.equals(directDependenciesJson, persistentComponent.getDirectDependencies())) {
                         persistentComponent.setDirectDependencies(directDependenciesJson);
@@ -570,6 +574,9 @@ public class BomUploadProcessingTask implements Subscriber {
      * Re-implementation of {@link QueryManager#recursivelyDelete(Component, boolean)} that does not use multiple
      * small {@link Transaction}s, but relies on an already active one instead. Instead of committing, it uses
      * {@link FlushHelper} to flush changes every {@value #FLUSH_THRESHOLD} write operations.
+     * <p>
+     * TODO: Move to {@link QueryManager}; Implement for {@link Project}s as well.
+     *   When working on <a href="https://github.com/DependencyTrack/hyades/issues/636">#636</a>.
      *
      * @param pm           The {@link PersistenceManager} to use
      * @param componentIds IDs of {@link Component}s to delete
@@ -761,8 +768,8 @@ public class BomUploadProcessingTask implements Subscriber {
                     "project=" + project.getUuid() +
                     ", uploadToken=" + uploadToken +
                     ", bomFormat=" + bomFormat +
-                    ", bomSpecVersion='" + bomSpecVersion + '\'' +
-                    ", bomSerialNumber='" + bomSerialNumber + '\'' +
+                    ", bomSpecVersion=" + bomSpecVersion +
+                    ", bomSerialNumber=" + bomSerialNumber +
                     ", bomVersion=" + bomVersion +
                     '}';
         }
