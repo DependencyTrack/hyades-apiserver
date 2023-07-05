@@ -188,6 +188,13 @@
             <groupId>us.springett</groupId>
             <artifactId>alpine-server</artifactId>
             <version>${lib.alpine.version}</version>
+            <exclusions>
+                <!-- this exclusion done to get rid of vulnerability in the project as this transitive dependency is not being used in the project -->
+                <exclusion>
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- CVSS Calculator -->
         <dependency>
