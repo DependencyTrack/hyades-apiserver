@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.Event;
@@ -73,6 +74,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
@@ -93,7 +95,7 @@ public class BomUploadProcessingTask implements Subscriber {
     static final Timer TIMER = Timer.builder("bom_upload_processing")
             .description("Time taken to process / ingest uploaded Bill of Materials")
             .register(Metrics.getRegistry());
-    private static final int FLUSH_THRESHOLD = 10000;
+    private static final int FLUSH_THRESHOLD = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD);
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
 
@@ -522,6 +524,12 @@ public class BomUploadProcessingTask implements Subscriber {
                 project.setDirectDependencies(directDependenciesJson);
                 pm.flush();
             }
+        } else {
+            // Make sure we don't retain stale data from previous BOM uploads.
+            if (project.getDirectDependencies() != null) {
+                project.setDirectDependencies(null);
+                pm.flush();
+            }
         }
 
         try (final var flushHelper = new FlushHelper(pm, FLUSH_THRESHOLD)) {
@@ -573,7 +581,7 @@ public class BomUploadProcessingTask implements Subscriber {
     /**
      * Re-implementation of {@link QueryManager#recursivelyDelete(Component, boolean)} that does not use multiple
      * small {@link Transaction}s, but relies on an already active one instead. Instead of committing, it uses
-     * {@link FlushHelper} to flush changes every {@value #FLUSH_THRESHOLD} write operations.
+     * {@link FlushHelper} to flush changes every {@link #FLUSH_THRESHOLD} write operations.
      * <p>
      * TODO: Move to {@link QueryManager}; Implement for {@link Project}s as well.
      *   When working on <a href="https://github.com/DependencyTrack/hyades/issues/636">#636</a>.
@@ -609,7 +617,7 @@ public class BomUploadProcessingTask implements Subscriber {
     /**
      * Re-implementation of {@link QueryManager#recursivelyDelete(ServiceComponent, boolean)} that does not use multiple
      * small {@link Transaction}s, but relies on an already active one instead. Instead of committing, it uses
-     * {@link FlushHelper} to flush changes every {@value #FLUSH_THRESHOLD} write operations.
+     * {@link FlushHelper} to flush changes every {@link #FLUSH_THRESHOLD} write operations.
      *
      * @param pm         The {@link PersistenceManager} to use
      * @param serviceIds IDs of {@link ServiceComponent}s to delete
