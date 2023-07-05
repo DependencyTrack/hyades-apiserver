@@ -72,10 +72,10 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertComponents;
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertServices;
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.convertToProject;
-import static org.dependencytrack.parser.cyclonedx.ModelConverterX.flatten;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
 import static org.dependencytrack.util.InternalComponentIdentificationUtil.isInternalComponent;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 
@@ -177,9 +177,9 @@ public class BomUploadProcessingTask implements Subscriber {
         components = components.stream()
                 .filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
-        List<ServiceComponent> serviceComponents = convertServices(cdxBom.getServices());
-        serviceComponents = flatten(serviceComponents, ServiceComponent::getChildren, ServiceComponent::setChildren);
-        serviceComponents = serviceComponents.stream()
+        List<ServiceComponent> services = convertServices(cdxBom.getServices());
+        services = flatten(services, ServiceComponent::getChildren, ServiceComponent::setChildren);
+        services = services.stream()
                 .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
 
@@ -206,7 +206,7 @@ public class BomUploadProcessingTask implements Subscriber {
             pm.setProperty(PropertyNames.PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
             LOGGER.info("Processing %d components and %d services from BOM (%s)"
-                    .formatted(components.size(), serviceComponents.size(), ctx));
+                    .formatted(components.size(), services.size(), ctx));
 
             final Transaction trx = pm.currentTransaction();
             try {
@@ -215,7 +215,9 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
                 final Map<ComponentIdentity, Component> persistentComponents =
                         processComponents(ctx, qm, project, components, identitiesByBomRef, bomRefsByIdentity);
-                processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, identitiesByBomRef);
+                final Map<ComponentIdentity, ServiceComponent> persistentServices =
+                        processServices(ctx, qm, project, services, identitiesByBomRef, bomRefsByIdentity);
+                processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
 
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
@@ -341,7 +343,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
         // Fetch IDs of all components that exist in the project already.
         // We'll need them later to determine which components to delete.
-        final Set<Long> oldComponentIds = getAllComponentIds(pm, persistentProject);
+        final Set<Long> oldComponentIds = getAllComponentIds(pm, persistentProject, Component.class);
 
         // Avoid redundant queries by caching resolved licenses.
         // It is likely that if license IDs were present in a BOM,
@@ -413,12 +415,12 @@ public class BomUploadProcessingTask implements Subscriber {
                 // Update component identities in our Identity->BOMRef map,
                 // as after persisting the components, their identities now include UUIDs.
                 // Applications like the frontend rely on UUIDs being there.
-                final var newComponentIdentity = new ComponentIdentity(persistentComponent);
-                final ComponentIdentity oldComponentIdentity = identitiesByBomRef.put(persistentComponent.getBomRef(), newComponentIdentity);
-                for (final String bomRef : bomRefsByIdentity.get(oldComponentIdentity)) {
-                    identitiesByBomRef.put(bomRef, newComponentIdentity);
+                final var newIdentity = new ComponentIdentity(persistentComponent);
+                final ComponentIdentity oldIdentity = identitiesByBomRef.put(persistentComponent.getBomRef(), newIdentity);
+                for (final String bomRef : bomRefsByIdentity.get(oldIdentity)) {
+                    identitiesByBomRef.put(bomRef, newIdentity);
                 }
-                persistentComponents.put(newComponentIdentity, persistentComponent);
+                persistentComponents.put(newIdentity, persistentComponent);
 
                 if (isNewOrUpdated) { // Flushing is only necessary when something changed
                     flushHelper.maybeFlush();
@@ -435,8 +437,77 @@ public class BomUploadProcessingTask implements Subscriber {
         return persistentComponents;
     }
 
+    private static Map<ComponentIdentity, ServiceComponent> processServices(final Context ctx, final QueryManager qm,
+                                                                            final Project persistentProject, final List<ServiceComponent> services,
+                                                                            final Map<String, ComponentIdentity> identitiesByBomRef,
+                                                                            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+        final PersistenceManager pm = qm.getPersistenceManager();
+
+        // Fetch IDs of all services that exist in the project already.
+        // We'll need them later to determine which services to delete.
+        final Set<Long> oldServiceIds = getAllComponentIds(pm, persistentProject, ServiceComponent.class);
+
+        final var persistentServices = new HashMap<ComponentIdentity, ServiceComponent>();
+
+        try (final var flushHelper = new FlushHelper(qm, FLUSH_THRESHOLD)) {
+            for (final ServiceComponent service : services) {
+                final boolean isNewOrUpdated;
+                final var componentIdentity = new ComponentIdentity(service);
+                ServiceComponent persistentService = qm.matchServiceIdentity(persistentProject, componentIdentity);
+                if (persistentService == null) {
+                    service.setProject(persistentProject);
+                    persistentService = pm.makePersistent(service);
+                    isNewOrUpdated = true;
+                } else {
+                    // Only call setters when values actually changed. Otherwise, we'll trigger lots of unnecessary
+                    // database calls.
+                    var changed = false;
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getGroup, persistentService::setGroup);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getName, persistentService::setName);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getVersion, persistentService::setVersion);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getDescription, persistentService::setDescription);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getAuthenticated, persistentService::setAuthenticated);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getCrossesTrustBoundary, persistentService::setCrossesTrustBoundary);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getExternalReferences, persistentService::setExternalReferences);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getProvider, persistentService::setProvider);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getData, persistentService::setData);
+                    changed |= applyIfChanged(persistentService, service, ServiceComponent::getEndpoints, persistentService::setEndpoints);
+                    isNewOrUpdated = changed;
+
+                    // BOM ref is transient and thus doesn't count towards the changed status.
+                    persistentService.setBomRef(service.getBomRef());
+
+                    // Exclude from components to delete.
+                    if (!oldServiceIds.isEmpty()) {
+                        oldServiceIds.remove(persistentService.getId());
+                    }
+                }
+
+                // Update component identities in our Identity->BOMRef map,
+                // as after persisting the services, their identities now include UUIDs.
+                // Applications like the frontend rely on UUIDs being there.
+                final var newIdentity = new ComponentIdentity(persistentService);
+                final ComponentIdentity oldIdentity = identitiesByBomRef.put(service.getBomRef(), newIdentity);
+                for (final String bomRef : bomRefsByIdentity.get(oldIdentity)) {
+                    identitiesByBomRef.put(bomRef, newIdentity);
+                }
+                persistentServices.put(newIdentity, persistentService);
+
+                if (isNewOrUpdated) { // Flushing is only necessary when something changed
+                    flushHelper.maybeFlush();
+                }
+            }
+        }
+
+        // Delete components that existed before this BOM import, but do not exist anymore.
+        deleteServicesById(pm, oldServiceIds);
+
+        return persistentServices;
+    }
+
     private static void processDependencyGraph(final Context ctx, final PersistenceManager pm, final org.cyclonedx.model.Bom cdxBom,
                                                final Project project, final Map<ComponentIdentity, Component> componentsByIdentity,
+                                               final Map<ComponentIdentity, ServiceComponent> servicesByIdentity,
                                                final Map<String, ComponentIdentity> identitiesByBomRef) {
         if (cdxBom.getMetadata() != null
                 && cdxBom.getMetadata().getComponent() != null
@@ -457,6 +528,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final Component persistentComponent = componentsByIdentity.get(dependencyIdentity);
+                // TODO: Check servicesByIdentity when persistentComponent is null
                 if (persistentComponent != null) {
                     if (!Objects.equals(directDependenciesJson, persistentComponent.getDirectDependencies())) {
                         persistentComponent.setDirectDependencies(directDependenciesJson);
@@ -528,6 +600,30 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     /**
+     * Re-implementation of {@link QueryManager#recursivelyDelete(ServiceComponent, boolean)} that does not use multiple
+     * small {@link Transaction}s, but relies on an already active one instead. Instead of committing, it uses
+     * {@link FlushHelper} to flush changes every {@value #FLUSH_THRESHOLD} write operations.
+     *
+     * @param pm         The {@link PersistenceManager} to use
+     * @param serviceIds IDs of {@link ServiceComponent}s to delete
+     */
+    private static void deleteServicesById(final PersistenceManager pm, final Set<Long> serviceIds) {
+        if (serviceIds.isEmpty()) {
+            return;
+        }
+
+        try (final var flushHelper = new FlushHelper(pm, FLUSH_THRESHOLD)) {
+            for (final Long serviceId : serviceIds) {
+                // Can't use bulk DELETE for the component itself, as it doesn't remove entries from
+                // relationship tables like COMPONENTS_VULNERABILITIES. deletePersistentAll does, but
+                // it will also fetch the component prior to deleting it, which is slightly inefficient.
+                pm.newQuery(ServiceComponent.class, "id == :cid").deletePersistentAll(serviceId);
+                flushHelper.maybeFlush();
+            }
+        }
+    }
+
+    /**
      * Lookup a {@link License} by its ID, and cache the result in {@code cache}.
      *
      * @param pm        The {@link PersistenceManager} to use
@@ -568,8 +664,8 @@ public class BomUploadProcessingTask implements Subscriber {
         return null;
     }
 
-    private static Set<Long> getAllComponentIds(final PersistenceManager pm, final Project project) {
-        final Query<Component> query = pm.newQuery(Component.class);
+    private static <T> Set<Long> getAllComponentIds(final PersistenceManager pm, final Project project, final Class<T> clazz) {
+        final Query<T> query = pm.newQuery(clazz);
         query.setFilter("project == :project");
         query.setParameters(project);
         query.setResult("id");
