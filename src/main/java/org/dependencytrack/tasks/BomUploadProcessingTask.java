@@ -127,7 +127,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
-                LOGGER.error("BOM processing failed (%s)".formatted(ctx), ex);
+                LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
                 kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)

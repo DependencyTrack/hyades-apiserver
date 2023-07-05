@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.tasks;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -32,13 +34,13 @@ import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.jdo.Query;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -185,7 +187,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
         final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/bloated.bom.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get(resourceToURL("/unit/bloated.bom.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
         final var bomFile = bomFilePath.toFile();
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
@@ -210,10 +212,46 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                 });
 
+        final List<Bom> boms = qm.getAllBoms(project);
+        assertThat(boms).hasSize(1);
+        final Bom bom = boms.get(0);
+        assertThat(bom.getBomFormat()).isEqualTo("CycloneDX");
+        assertThat(bom.getSpecVersion()).isEqualTo("1.3");
+        assertThat(bom.getBomVersion()).isEqualTo(1);
+        assertThat(bom.getSerialNumber()).isEqualTo("6d780157-0f8e-4ef1-8e9b-1eb48b2fad6f");
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getGroup()).isNull(); // Not overridden by BOM import
+        assertThat(project.getName()).isEqualTo("Acme Example"); // Not overridden by BOM import
+        assertThat(project.getVersion()).isEqualTo("1.0"); // Not overridden by BOM import
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getPurl()).isNotNull();
+        assertThat(project.getPurl().canonicalize()).isEqualTo("pkg:npm/bloated@1.0.0");
+        assertThat(project.getDirectDependencies()).isNotNull();
+
         // Make sure we ingested all components of the BOM.
-        final Query<Component> componentCountQuery = qm.getPersistenceManager().newQuery(Component.class);
-        componentCountQuery.setFilter("project == :project");
-        assertThat(qm.getCount(componentCountQuery, project)).isEqualTo(9056);
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(9056);
+
+        // Assert some basic properties that should be present on all components.
+        for (final Component component : components) {
+            assertThat(component.getName()).isNotEmpty();
+            assertThat(component.getVersion()).isNotEmpty();
+            assertThat(component.getPurl()).isNotNull();
+        }
+
+        // Ensure dependency graph has been ingested completely, by asserting on the number leaf nodes of the graph.
+        // This number can be verified using this Python script:
+        //
+        // import json
+        // with open("bloated.bom.json", "r") as f:
+        //     bom = json.load(f)
+        // len(list(filter(lambda x: len(x.get("dependsOn", [])) == 0, bom["dependencies"])))
+        final long componentsWithoutDirectDependencies = components.stream()
+                .map(Component::getDirectDependencies)
+                .filter(Objects::isNull)
+                .count();
+        assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
 
         // A VulnerabilityScan should've been initiated properly.
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
@@ -222,6 +260,20 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(vulnerabilityScan.getTargetIdentifier()).isEqualTo(project.getUuid());
         assertThat(vulnerabilityScan.getExpectedResults()).isEqualTo(9056);
         assertThat(vulnerabilityScan.getReceivedResults()).isZero();
+
+        // Verify that all vulnerability analysis commands have been sent.
+        final long vulnAnalysisCommandsSent = kafkaMockProducer.history().stream()
+                .map(ProducerRecord::topic)
+                .filter(KafkaTopics.VULN_ANALYSIS_COMMAND.name()::equals)
+                .count();
+        assertThat(vulnAnalysisCommandsSent).isEqualTo(9056);
+
+        // Verify that all repository meta analysis commands have been sent.
+        final long repoMetaAnalysisCommandsSent = kafkaMockProducer.history().stream()
+                .map(ProducerRecord::topic)
+                .filter(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()::equals)
+                .count();
+        assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
     }
 
 }
