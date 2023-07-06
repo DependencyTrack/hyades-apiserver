@@ -18,14 +18,10 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
-import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.datanucleus.PropertyNames;
@@ -33,6 +29,7 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -42,11 +39,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static java.time.Duration.ZERO;
-import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR;
-import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.getJdbcLockProviderInstance;
-import static org.dependencytrack.util.LockProvider.getLockingTaskExecutorInstance;
 
 /**
  * Subscriber task that identifies internal components throughout the entire portfolio.
@@ -63,24 +56,13 @@ public class InternalComponentIdentificationTask implements Subscriber {
         if (e instanceof InternalComponentIdentificationEvent) {
             LOGGER.info("Starting internal component identification");
             final Instant startTime = Instant.now();
-            try {
-                JdbcLockProvider instance = getJdbcLockProviderInstance();
-                LockingTaskExecutor executor = getLockingTaskExecutorInstance(instance);
-                LockConfiguration lockConfiguration = new LockConfiguration(Instant.now(),
-                        INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK.name(),
-                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR)),
-                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR)));
-
-                executor.executeWithLock((Runnable) () -> {
-                    try {
-                        analyze();
-                    } catch (Exception ex) {
-                        throw new RuntimeException("Error in acquiring lock for internal component identification", ex);
-                    }
-                }, lockConfiguration);
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while identifying internal components", ex);
-            }
+            LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, () -> {
+                try {
+                    analyze();
+                } catch (Exception ex) {
+                    throw new RuntimeException("Error in acquiring lock and executing internal component identification", ex);
+                }
+            });
             LOGGER.info("Internal component identification completed in "
                     + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
         }
@@ -98,11 +80,11 @@ public class InternalComponentIdentificationTask implements Subscriber {
             List<Component> components = fetchNextComponentsPage(pm, null);
             while (!components.isEmpty()) {
                 //Extend the lock by 5 min everytime we have a page.
-                //We will get max 500 components in a page
+                //We will get max 1000 components in a page
                 //Reason of not extending at the end of loop is if it does not have to do much,
                 //It might finish execution before lock could be extended resulting in error
                 LOGGER.debug("extending lock of internal component identification by 5 min");
-                LockExtender.extendActiveLock(Duration.ofMillis(300000), ZERO);
+                LockExtender.extendActiveLock(Duration.ofMinutes(5), ZERO);
                 for (final Component component : components) {
                     String coordinates = component.getName();
                     if (StringUtils.isNotBlank(component.getGroup())) {

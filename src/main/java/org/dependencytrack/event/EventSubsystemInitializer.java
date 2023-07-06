@@ -19,6 +19,7 @@
 package org.dependencytrack.event;
 
 import alpine.common.logging.Logger;
+import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import org.dependencytrack.RequirementsVerifier;

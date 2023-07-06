@@ -2,6 +2,7 @@ package org.dependencytrack.util;
 
 import alpine.Config;
 import net.javacrumbs.shedlock.core.DefaultLockingTaskExecutor;
+import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -10,37 +11,63 @@ import org.datanucleus.store.connection.ConnectionManagerImpl;
 import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
 import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.tasks.LockName;
 
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
+import java.time.Duration;
+import java.time.Instant;
+
+import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_METRICS_VULNERABILITY_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.LDAP_SYNC_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.VULNERABILITY_METRICS_TASK_LOCK;
 
 public class LockProvider {
 
-    private static JdbcLockProvider INSTANCE;
+    private static JdbcLockProvider instance;
 
-    private static LockingTaskExecutor LOCKING_TASK_EXECUTOR;
+    private static LockingTaskExecutor lockingTaskExecutor;
 
-    public static JdbcLockProvider getJdbcLockProviderInstance() {
-       if(INSTANCE == null || Config.isUnitTestsEnabled()) {
-           try (final QueryManager qm = new QueryManager();
-               PersistenceManager pm = qm.getPersistenceManager()) {
+    public static void executeWithLock(LockName lockName, Runnable task) {
+        LockConfiguration lockConfiguration = getLockConfigurationByLockName(lockName);
+        LockingTaskExecutor executor = getLockingTaskExecutorInstance();
+        executor.executeWithLock(task, lockConfiguration);
+    }
+
+    private static JdbcLockProvider getJdbcLockProviderInstance() {
+       if(instance == null || Config.isUnitTestsEnabled()) {
+           try (final QueryManager qm = new QueryManager()) {
+               PersistenceManager pm = qm.getPersistenceManager();
                JDOPersistenceManagerFactory pmf = (JDOPersistenceManagerFactory) pm.getPersistenceManagerFactory();
-               INSTANCE =  new JdbcLockProvider(getDataSource(pmf));
+               instance =  new JdbcLockProvider(getDataSource(pmf));
            } catch (IllegalAccessException e) {
                throw new RuntimeException("Failed to access data source", e);
            }
        }
-       return INSTANCE;
+       return instance;
     }
 
-    public static LockingTaskExecutor getLockingTaskExecutorInstance(JdbcLockProvider jdbcLockProvider) {
-        if(LOCKING_TASK_EXECUTOR == null || Config.isUnitTestsEnabled()) {
-            LOCKING_TASK_EXECUTOR = new DefaultLockingTaskExecutor(jdbcLockProvider);
+    private static LockingTaskExecutor getLockingTaskExecutorInstance() {
+        JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
+        if(lockingTaskExecutor == null || Config.isUnitTestsEnabled()) {
+            lockingTaskExecutor = new DefaultLockingTaskExecutor(jdbcLockProvider);
         }
-        return LOCKING_TASK_EXECUTOR;
+        return lockingTaskExecutor;
     }
 
-    public static DataSource getDataSource(final JDOPersistenceManagerFactory pmf) throws IllegalAccessException {
+    private static DataSource getDataSource(final JDOPersistenceManagerFactory pmf) throws IllegalAccessException {
         // DataNucleus doesn't provide access to the underlying DataSource
         // after the PMF has been created. We use reflection to still get access
         if (pmf.getNucleusContext().getStoreManager() instanceof final RDBMSStoreManager storeManager
@@ -56,5 +83,30 @@ public class LockProvider {
             return (DataSource) dataSource;
         }
         return null;
+    }
+
+    private static LockConfiguration getLockConfigurationByLockName(LockName lockName) {
+        return switch(lockName) {
+            case PORTFOLIO_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    PORTFOLIO_METRICS_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_LEAST_FOR)));
+            case LDAP_SYNC_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    LDAP_SYNC_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_LDAP_SYNC_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR)));
+            case EPSS_MIRROR_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    EPSS_MIRROR_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR)));
+            case VULNERABILITY_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    VULNERABILITY_METRICS_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_METRICS_VULNERABILITY_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR)));
+            case INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR)));
+        };
     }
 }
