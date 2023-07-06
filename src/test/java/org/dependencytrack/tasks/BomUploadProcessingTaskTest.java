@@ -256,27 +256,14 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
     public void informIssue2519Test() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
-        new BomUploadProcessingTask().inform(bomUploadEvent);
-
-        // Make sure processing did not fail.
-        assertThat(kafkaMockProducer.history())
-                .noneSatisfy(record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
-                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
-                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
-                });
-
-        // Ensure the expected amount of components is present.
-        assertThat(qm.getAllComponents(project)).hasSize(1756);
-
+        
         // Upload the same BOM again a few times.
         // Ensure processing does not fail, and the number of components ingested doesn't change.
         for (int i = 0; i < 3; i++) {
-            bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
             new BomUploadProcessingTask().inform(bomUploadEvent);
 
+            // Make sure processing did not fail.
             assertThat(kafkaMockProducer.history())
                     .noneSatisfy(record -> {
                         assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
@@ -284,6 +271,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                         assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                     });
 
+            // Ensure the expected amount of components is present.
             assertThat(qm.getAllComponents(project)).hasSize(1756);
         }
     }

@@ -32,7 +32,6 @@ import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.parsers.Parser;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.flush.FlushMode;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
@@ -74,6 +73,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
+import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -81,6 +82,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertTo
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
 import static org.dependencytrack.util.InternalComponentIdentificationUtil.isInternalComponent;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
+import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -208,11 +210,33 @@ public class BomUploadProcessingTask implements Subscriber {
 
             // Disable reachability checks on commit.
             // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
-            pm.setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
+            //
+            // Persistence-by-reachability is an expensive operation that involves traversing the entire
+            // object graph, and potentially issuing multiple database operations in doing so.
+            //
+            // It also enables cascading operations (both for persisting and deleting), but we don't need them here.
+            // If this circumstance ever changes, this property may be flicked to "true" again, at the cost of
+            // a noticeable performance hit.
+            // See:
+            //   https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#cascading
+            //   https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#_managing_relationships
+            pm.setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
 
             // Save some database round-trips by only flushing changes every FLUSH_THRESHOLD write operations.
             // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
-            pm.setProperty(PropertyNames.PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
+            //
+            // Note: Queries (SELECT) will always directly hit the database. Using manual flushing means
+            // changes made before flush are not visible to queries. If "read-your-writes" is critical,
+            // either flush immediately after making changes, or change the FlushMode back to AUTO (the default).
+            // AUTO will flush all changes to the database immediately, on every single setter invocation.
+            //
+            // Another option would be to set FlushMode to QUERY, where flushes will be performed before *any*
+            // query. Hibernate has a smart(er) behavior, where it checks if the query "touches" non-flushed
+            // data, and only flushes if that's the case. DataNucleus is not as smart, and will always flush.
+            // Still, QUERY may be a nice middle-ground between AUTO and MANUAL.
+            //
+            // BomUploadProcessingTaskTest#informWithBloatedBomTest can be used to profile the impact on large BOMs.
+            pm.setProperty(PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
             LOGGER.info("Processing %d components and %d services from BOM (%s)"
                     .formatted(components.size(), services.size(), ctx));
@@ -227,27 +251,16 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
                         processServices(ctx, qm, project, services, identitiesByBomRef, bomRefsByIdentity);
                 processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
+                recordBomImport(ctx, pm, project);
 
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
                 identitiesByBomRef.clear();
                 bomRefsByIdentity.clear();
 
-                final var bom = new Bom();
-                bom.setProject(project);
-                bom.setBomFormat(ctx.bomFormat);
-                bom.setSpecVersion(ctx.bomSpecVersion);
-                bom.setSerialNumber(ctx.bomSerialNumber);
-                bom.setBomVersion(ctx.bomVersion);
-                bom.setImported(new Date());
-                pm.makePersistent(bom);
-
-                project.setLastBomImport(bom.getImported());
-                project.setLastBomImportFormat(bom.getBomFormat());
-
                 for (final Component component : persistentComponents.values()) {
                     // Note: component does not need to be detached.
-                    // The constructors of ComponentRepositoryMetaAnalysisEvent ComponentVulnerabilityAnalysisEvent
+                    // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
                     // merely call a few getters on it, but the component object itself is not passed around.
                     // Detaching would imply additional database interactions that we'd rather not do.
                     repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
@@ -348,14 +361,16 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static Map<ComponentIdentity, Component> processComponents(final Context ctx, final QueryManager qm,
-                                                                       final Project persistentProject, final List<Component> components,
+                                                                       final Project project, final List<Component> components,
                                                                        final Map<String, ComponentIdentity> identitiesByBomRef,
                                                                        final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+        assertPersistent(project, "Project must be persistent");
+
         final PersistenceManager pm = qm.getPersistenceManager();
 
         // Fetch IDs of all components that exist in the project already.
         // We'll need them later to determine which components to delete.
-        final Set<Long> oldComponentIds = getAllComponentIds(pm, persistentProject, Component.class);
+        final Set<Long> oldComponentIds = getAllComponentIds(pm, project, Component.class);
 
         // Avoid redundant queries by caching resolved licenses.
         // It is likely that if license IDs were present in a BOM,
@@ -375,15 +390,13 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final boolean isNewOrUpdated;
                 final var componentIdentity = new ComponentIdentity(component);
-                Component persistentComponent = qm.matchSingleIdentity(persistentProject, componentIdentity);
+                Component persistentComponent = qm.matchSingleIdentity(project, componentIdentity);
                 if (persistentComponent == null) {
-                    component.setProject(persistentProject);
+                    component.setProject(project);
                     persistentComponent = pm.makePersistent(component);
-                    persistentComponent.setNew(true);
+                    persistentComponent.setNew(true); // transient
                     isNewOrUpdated = true;
                 } else {
-                    // Only call setters when values actually changed. Otherwise, we'll trigger lots of unnecessary
-                    // database calls.
                     var changed = false;
                     changed |= applyIfChanged(persistentComponent, component, Component::getAuthor, persistentComponent::setAuthor);
                     changed |= applyIfChanged(persistentComponent, component, Component::getPublisher, persistentComponent::setPublisher);
@@ -450,14 +463,16 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static Map<ComponentIdentity, ServiceComponent> processServices(final Context ctx, final QueryManager qm,
-                                                                            final Project persistentProject, final List<ServiceComponent> services,
+                                                                            final Project project, final List<ServiceComponent> services,
                                                                             final Map<String, ComponentIdentity> identitiesByBomRef,
                                                                             final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+        assertPersistent(project, "Project must be persistent");
+
         final PersistenceManager pm = qm.getPersistenceManager();
 
         // Fetch IDs of all services that exist in the project already.
         // We'll need them later to determine which services to delete.
-        final Set<Long> oldServiceIds = getAllComponentIds(pm, persistentProject, ServiceComponent.class);
+        final Set<Long> oldServiceIds = getAllComponentIds(pm, project, ServiceComponent.class);
 
         final var persistentServices = new HashMap<ComponentIdentity, ServiceComponent>();
 
@@ -465,14 +480,12 @@ public class BomUploadProcessingTask implements Subscriber {
             for (final ServiceComponent service : services) {
                 final boolean isNewOrUpdated;
                 final var componentIdentity = new ComponentIdentity(service);
-                ServiceComponent persistentService = qm.matchServiceIdentity(persistentProject, componentIdentity);
+                ServiceComponent persistentService = qm.matchServiceIdentity(project, componentIdentity);
                 if (persistentService == null) {
-                    service.setProject(persistentProject);
+                    service.setProject(project);
                     persistentService = pm.makePersistent(service);
                     isNewOrUpdated = true;
                 } else {
-                    // Only call setters when values actually changed. Otherwise, we'll trigger lots of unnecessary
-                    // database calls.
                     var changed = false;
                     changed |= applyIfChanged(persistentService, service, ServiceComponent::getGroup, persistentService::setGroup);
                     changed |= applyIfChanged(persistentService, service, ServiceComponent::getName, persistentService::setName);
@@ -521,6 +534,8 @@ public class BomUploadProcessingTask implements Subscriber {
                                                final Project project, final Map<ComponentIdentity, Component> componentsByIdentity,
                                                @SuppressWarnings("unused") final Map<ComponentIdentity, ServiceComponent> servicesByIdentity,
                                                final Map<String, ComponentIdentity> identitiesByBomRef) {
+        assertPersistent(project, "Project must be persistent");
+
         if (cdxBom.getMetadata() != null
                 && cdxBom.getMetadata().getComponent() != null
                 && cdxBom.getMetadata().getComponent().getBomRef() != null) {
@@ -545,12 +560,13 @@ public class BomUploadProcessingTask implements Subscriber {
                 final String directDependenciesJson = resolveDirectDependenciesJson(ctx, dependency, identitiesByBomRef);
 
                 final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
-                final Component persistentComponent = componentsByIdentity.get(dependencyIdentity);
+                final Component component = componentsByIdentity.get(dependencyIdentity);
+                assertPersistent(component, "Component must be persistent");
                 // TODO: Check servicesByIdentity when persistentComponent is null
                 //   We do not currently store directDependencies for ServiceComponent
-                if (persistentComponent != null) {
-                    if (!Objects.equals(directDependenciesJson, persistentComponent.getDirectDependencies())) {
-                        persistentComponent.setDirectDependencies(directDependenciesJson);
+                if (component != null) {
+                    if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
+                        component.setDirectDependencies(directDependenciesJson);
                         flushHelper.maybeFlush();
                     }
                 } else {
@@ -561,6 +577,24 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
         }
+    }
+
+    private static void recordBomImport(final Context ctx, final PersistenceManager pm, final Project project) {
+        assertPersistent(project, "Project must be persistent");
+
+        final var bomImportDate = new Date();
+
+        final var bom = new Bom();
+        bom.setProject(project);
+        bom.setBomFormat(ctx.bomFormat);
+        bom.setSpecVersion(ctx.bomSpecVersion);
+        bom.setSerialNumber(ctx.bomSerialNumber);
+        bom.setBomVersion(ctx.bomVersion);
+        bom.setImported(bomImportDate);
+        pm.makePersistent(bom);
+
+        project.setLastBomImport(bomImportDate);
+        project.setLastBomImportFormat(ctx.bomFormat.getFormatShortName());
     }
 
     private static String resolveDirectDependenciesJson(final Context ctx,
