@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.security.crypto.DataEncryption;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
@@ -178,7 +177,7 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createRepositoryTest() throws Exception{
+    public void createRepositoryTest() throws Exception {
         Repository repository = new Repository();
         repository.setAuthenticationRequired(true);
         repository.setEnabled(true);
@@ -238,7 +237,7 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateRepositoryTest() throws Exception{
+    public void updateRepositoryTest() throws Exception {
         Repository repository = new Repository();
         repository.setAuthenticationRequired(true);
         repository.setEnabled(true);
