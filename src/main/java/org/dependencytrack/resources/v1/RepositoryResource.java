@@ -51,6 +51,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.dependencytrack.resources.v1.AbstractConfigPropertyResource.ENCRYPTED_PLACEHOLDER;
+
 /**
  * JAX-RS resources for processing repositories.
  *
@@ -203,7 +205,7 @@ public class RepositoryResource extends AlpineResource {
                 final String url = StringUtils.trimToNull(jsonRepository.getUrl());
                 try {
                     // The password is not passed to the front-end, so it should only be overwritten if it is not null.
-                    final String updatedPassword = jsonRepository.getPassword() != null
+                    final String updatedPassword = !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
                             ? DataEncryption.encryptAsString(jsonRepository.getPassword())
                             : repository.getPassword();
 
