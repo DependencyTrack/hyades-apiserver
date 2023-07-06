@@ -24,7 +24,11 @@ import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import alpine.notification.NotificationLevel;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
+import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -36,7 +40,6 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.epss.EpssParser;
 import org.dependencytrack.persistence.QueryManager;
-import org.apache.http.HttpStatus;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.io.Closeable;
@@ -46,10 +49,17 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.zip.GZIPInputStream;
 
+import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_FEEDS_URL;
+import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.getJdbcLockProviderInstance;
+import static org.dependencytrack.util.LockProvider.getLockingTaskExecutorInstance;
 
 public class EpssMirrorTask implements LoggableSubscriber {
 
@@ -80,11 +90,25 @@ public class EpssMirrorTask implements LoggableSubscriber {
      */
     public void inform(final Event e) {
         if (e instanceof EpssMirrorEvent && this.isEnabled) {
+            JdbcLockProvider instance = getJdbcLockProviderInstance();
+            LockingTaskExecutor executor = getLockingTaskExecutorInstance(instance);
+            LockConfiguration lockConfiguration = new LockConfiguration(Instant.now(),
+                    EPSS_MIRROR_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR)));
+
             final long start = System.currentTimeMillis();
             LOGGER.info("Starting EPSS mirroring task");
             final File mirrorPath = new File(MIRROR_DIR);
             setOutputDir(mirrorPath.getAbsolutePath());
-            getAllFiles();
+            executor.executeWithLock((Runnable) () -> {
+                try {
+                    getAllFiles();
+                } catch (Exception ex) {
+                    throw new RuntimeException("Error in acquiring lock and epss mirroring", ex);
+                }
+            }, lockConfiguration);
+
             final long end = System.currentTimeMillis();
             LOGGER.info("EPSS mirroring complete");
             LOGGER.info("Time spent (d/l):   " + metricDownloadTime + "ms");

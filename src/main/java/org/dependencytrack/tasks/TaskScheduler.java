@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import alpine.common.util.BooleanUtil;
-import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
@@ -30,6 +29,7 @@ import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
+import org.dependencytrack.event.LdapSyncEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;

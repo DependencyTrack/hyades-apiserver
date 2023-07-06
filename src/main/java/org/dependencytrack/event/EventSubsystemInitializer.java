@@ -19,10 +19,8 @@
 package org.dependencytrack.event;
 
 import alpine.common.logging.Logger;
-import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
-import alpine.server.tasks.LdapSyncTask;
 import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
@@ -34,6 +32,7 @@ import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
 import org.dependencytrack.tasks.IndexTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
 import org.dependencytrack.tasks.KennaSecurityUploadTask;
+import org.dependencytrack.tasks.LdapSyncTaskWrapper;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvDownloadTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
@@ -78,7 +77,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         }
         EVENT_SERVICE.subscribe(BomUploadEvent.class, BomUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(VexUploadEvent.class, VexUploadProcessingTask.class);
-        EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTask.class);
+        EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvDownloadTask.class);
         EVENT_SERVICE.subscribe(VulnDbSyncEvent.class, VulnDbSyncTask.class);
@@ -116,7 +115,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         EVENT_SERVICE.unsubscribe(BomUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
-        EVENT_SERVICE.unsubscribe(LdapSyncTask.class);
+        EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.unsubscribe(OsvDownloadTask.class);
         EVENT_SERVICE.unsubscribe(VulnDbSyncTask.class);

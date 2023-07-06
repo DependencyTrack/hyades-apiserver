@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
+import org.apache.commons.io.IOUtils;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
@@ -29,13 +30,19 @@ import org.junit.Test;
 
 import javax.jdo.Query;
 import javax.jdo.Transaction;
+import javax.jdo.datastore.JDOConnection;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.SQLException;
 
+import static alpine.server.util.DbUtil.executeUpdate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class InternalComponentIdentificationTaskTest extends PersistenceCapableTest {
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         // Configure internal components to be identified by group "org.acme"
         // and names starting with "foobar-".
         qm.createConfigProperty(ConfigPropertyConstants.INTERNAL_COMPONENTS_GROUPS_REGEX.getGroupName(),
@@ -44,6 +51,12 @@ public class InternalComponentIdentificationTaskTest extends PersistenceCapableT
         qm.createConfigProperty(ConfigPropertyConstants.INTERNAL_COMPONENTS_NAMES_REGEX.getGroupName(),
                 ConfigPropertyConstants.INTERNAL_COMPONENTS_NAMES_REGEX.getPropertyName(),
                 "^foobar-.*", PropertyType.STRING, null);
+
+        final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
+        final Connection connection = (Connection) jdoConnection.getNativeConnection();
+        final String shedlockSql = IOUtils.resourceToString("/shedlock_h2.sql", StandardCharsets.UTF_8);
+        executeUpdate(connection, shedlockSql);
+        jdoConnection.close();
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
