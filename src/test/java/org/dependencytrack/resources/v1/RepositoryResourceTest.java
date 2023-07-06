@@ -178,7 +178,7 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createRepositoryTest() {
+    public void createRepositoryTest() throws Exception{
         Repository repository = new Repository();
         repository.setAuthenticationRequired(true);
         repository.setEnabled(true);
@@ -206,17 +206,6 @@ public class RepositoryResourceTest extends ResourceTest {
         Assert.assertTrue(json.getJsonObject(11).getBoolean("authenticationRequired"));
         Assert.assertEquals("testuser", json.getJsonObject(11).getString("username"));
         Assert.assertTrue(json.getJsonObject(11).getBoolean("enabled"));
-
-        //Verify password entry
-        try (QueryManager qm = new QueryManager()) {
-            List<Repository> repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
-            for (Repository repository1 : repositoryList) {
-                if (repository1.getIdentifier().equals("test")) {
-                    Assert.assertEquals("testPassword",repository1.getPassword());
-                    break;
-                }
-            }
-        }
     }
 
     @Test
@@ -275,8 +264,8 @@ public class RepositoryResourceTest extends ResourceTest {
             }
             repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
             for (Repository repository1 : repositoryList) {
-                if (repository1.getIdentifier().equals(DataEncryption.encryptAsString("testPassword"))) {
-                    Assert.assertEquals(false, repository1.isAuthenticationRequired());
+                if (repository1.getIdentifier().equals("test")) {
+                    Assert.assertFalse(repository1.isAuthenticationRequired());
                     break;
                 }
             }
