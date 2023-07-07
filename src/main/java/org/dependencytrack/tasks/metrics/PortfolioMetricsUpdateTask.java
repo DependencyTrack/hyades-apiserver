@@ -24,6 +24,7 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
 import net.javacrumbs.shedlock.core.LockExtender;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -59,13 +60,11 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
-            LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, () -> {
-                try {
-                    updateMetrics(event.isForceRefresh());
-                } catch (Exception ex) {
-                    throw new RuntimeException("Error in acquiring lock  occurred while updating portfolio metrics", ex);
-                }
-            });
+            try {
+                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+            } catch (Throwable ex) {
+                LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
+            }
         }
     }
 

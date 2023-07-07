@@ -46,6 +46,12 @@ public class LockProvider {
         executor.executeWithLock(task, lockConfiguration);
     }
 
+    public static void executeWithLock(LockName lockName, LockingTaskExecutor.Task task) throws Throwable {
+        LockConfiguration lockConfiguration = getLockConfigurationByLockName(lockName);
+        LockingTaskExecutor executor = getLockingTaskExecutorInstance();
+        executor.executeWithLock(task, lockConfiguration);
+    }
+
     private static JdbcLockProvider getJdbcLockProviderInstance() {
        if(instance == null || Config.isUnitTestsEnabled()) {
            try (final QueryManager qm = new QueryManager()) {

@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockExtender;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.datanucleus.PropertyNames;
@@ -56,13 +57,11 @@ public class InternalComponentIdentificationTask implements Subscriber {
         if (e instanceof InternalComponentIdentificationEvent) {
             LOGGER.info("Starting internal component identification");
             final Instant startTime = Instant.now();
-            LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, () -> {
-                try {
-                    analyze();
-                } catch (Exception ex) {
-                    throw new RuntimeException("Error in acquiring lock and executing internal component identification", ex);
-                }
-            });
+            try {
+                LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) () -> analyze());
+            } catch (Throwable ex) {
+                LOGGER.error("Error in acquiring lock and executing internal component identification task", ex);
+            }
             LOGGER.info("Internal component identification completed in "
                     + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
         }

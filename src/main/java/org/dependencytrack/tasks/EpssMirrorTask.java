@@ -87,7 +87,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
             final File mirrorPath = new File(MIRROR_DIR);
             setOutputDir(mirrorPath.getAbsolutePath());
 
-            LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, () -> getAllFiles());
+            LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, (Runnable) () -> getAllFiles());
 
             final long end = System.currentTimeMillis();
             LOGGER.info("EPSS mirroring complete");

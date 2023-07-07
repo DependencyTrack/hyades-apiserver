@@ -23,7 +23,7 @@ public class LdapSyncTaskWrapper implements Subscriber {
     @Override
     public void inform(Event e) {
         if (e instanceof LdapSyncEvent) {
-            LockProvider.executeWithLock(LDAP_SYNC_TASK_LOCK, () -> this.ldapSyncTask.inform(new LdapSyncEvent()));
+            LockProvider.executeWithLock(LDAP_SYNC_TASK_LOCK, (Runnable) () -> this.ldapSyncTask.inform(new LdapSyncEvent()));
         }
     }
 }
