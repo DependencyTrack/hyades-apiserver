@@ -24,9 +24,14 @@ import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.config.MeterFilter;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
 
 public class HealthCheckInitializer implements ServletContextListener {
 
@@ -42,6 +47,16 @@ public class HealthCheckInitializer implements ServletContextListener {
         LOGGER.info("Registering extra process metrics");
         new ProcessMemoryMetrics().bindTo(Metrics.getRegistry());
         new ProcessThreadMetrics().bindTo(Metrics.getRegistry());
+
+        var hostname = "unknown";
+        try {
+            hostname = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            LOGGER.warn("Failed to get name of local host; Falling back to \"%s\"".formatted(hostname), e);
+        }
+
+        Metrics.getRegistry().config()
+                .meterFilter(MeterFilter.commonTags(List.of(Tag.of("hostname", hostname))));
     }
 
 }
