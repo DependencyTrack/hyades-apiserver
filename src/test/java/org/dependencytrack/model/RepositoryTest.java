@@ -64,4 +64,18 @@ public class RepositoryTest {
         repo.setEnabled(true);
         Assert.assertTrue(repo.isEnabled());
     }
+
+    @Test
+    public void testAuthenticationRequiredTrue() {
+        Repository repo = new Repository();
+        repo.setAuthenticationRequired(true);
+        Assert.assertTrue(repo.isAuthenticationRequired());
+    }
+
+    @Test
+    public void testAuthenticationRequiredFalse() {
+        Repository repo = new Repository();
+        repo.setAuthenticationRequired(false);
+        Assert.assertFalse(repo.isAuthenticationRequired());
+    }
 } 
