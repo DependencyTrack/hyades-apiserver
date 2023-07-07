@@ -25,6 +25,7 @@ import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -36,7 +37,7 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.parser.epss.EpssParser;
 import org.dependencytrack.persistence.QueryManager;
-import org.apache.http.HttpStatus;
+import org.dependencytrack.util.LockProvider;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.io.Closeable;
@@ -50,6 +51,7 @@ import java.util.zip.GZIPInputStream;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_FEEDS_URL;
+import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
 
 public class EpssMirrorTask implements LoggableSubscriber {
 
@@ -70,7 +72,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
             this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
             this.feedUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(), VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName()).getPropertyValue();
             if (this.feedUrl.endsWith("/")) {
-                this.feedUrl = this.feedUrl.substring(0, this.feedUrl.length()-1);
+                this.feedUrl = this.feedUrl.substring(0, this.feedUrl.length() - 1);
             }
         }
     }
@@ -84,7 +86,9 @@ public class EpssMirrorTask implements LoggableSubscriber {
             LOGGER.info("Starting EPSS mirroring task");
             final File mirrorPath = new File(MIRROR_DIR);
             setOutputDir(mirrorPath.getAbsolutePath());
-            getAllFiles();
+
+            LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, (Runnable) () -> getAllFiles());
+
             final long end = System.currentTimeMillis();
             LOGGER.info("EPSS mirroring complete");
             LOGGER.info("Time spent (d/l):   " + metricDownloadTime + "ms");
@@ -96,6 +100,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
     /**
      * Defines the output directory where the mirrored files will be stored.
      * Creates the directory if non-existent.
+     *
      * @param outputDirPath the target output directory path
      */
     private void setOutputDir(final String outputDirPath) {
@@ -114,12 +119,13 @@ public class EpssMirrorTask implements LoggableSubscriber {
         doDownload(this.feedUrl + "/" + FILENAME);
         if (mirroredWithoutErrors) {
             String content = "Mirroring of the Exploit Prediction Scoring System completed successfully";
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.INFORMATIONAL);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content, NotificationLevel.INFORMATIONAL);
         }
     }
 
     /**
      * Performs a download of specified URL.
+     *
      * @param urlString the URL contents to download
      */
     private void doDownload(final String urlString) {
@@ -158,19 +164,20 @@ public class EpssMirrorTask implements LoggableSubscriber {
                     mirroredWithoutErrors = false;
                     LOGGER.warn("Unable to download - HTTP Response " + status.getStatusCode() + ": " + status.getReasonPhrase());
                     String content = "An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. HTTP Response: " + status.getStatusCode();
-                    NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.ERROR);
+                    NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content, NotificationLevel.ERROR);
                 }
             }
         } catch (IOException e) {
             mirroredWithoutErrors = false;
             LOGGER.error("Download failed : " + e.getMessage());
             String content = "An error occurred mirroring the contents of the Exploit Prediction Scoring System. Check log for details. " + e.getMessage();
-            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content , NotificationLevel.ERROR);
+            NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content, NotificationLevel.ERROR);
         }
     }
 
     /**
      * Extracts a GZip file.
+     *
      * @param file the file to extract
      */
     private void uncompress(final File file) {
@@ -203,6 +210,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
 
     /**
      * Closes a closable object.
+     *
      * @param object the object to close
      */
     private void close(final Closeable object) {

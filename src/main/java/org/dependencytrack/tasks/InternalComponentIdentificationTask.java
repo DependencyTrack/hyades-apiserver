@@ -21,6 +21,8 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import net.javacrumbs.shedlock.core.LockExtender;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.datanucleus.PropertyNames;
@@ -28,6 +30,7 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -35,6 +38,9 @@ import javax.jdo.Transaction;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+
+import static java.time.Duration.ZERO;
+import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
 
 /**
  * Subscriber task that identifies internal components throughout the entire portfolio.
@@ -52,9 +58,9 @@ public class InternalComponentIdentificationTask implements Subscriber {
             LOGGER.info("Starting internal component identification");
             final Instant startTime = Instant.now();
             try {
-                analyze();
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while identifying internal components", ex);
+                LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) () -> analyze());
+            } catch (Throwable ex) {
+                LOGGER.error("Error in acquiring lock and executing internal component identification task", ex);
             }
             LOGGER.info("Internal component identification completed in "
                     + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
@@ -72,6 +78,12 @@ public class InternalComponentIdentificationTask implements Subscriber {
 
             List<Component> components = fetchNextComponentsPage(pm, null);
             while (!components.isEmpty()) {
+                //Extend the lock by 5 min everytime we have a page.
+                //We will get max 1000 components in a page
+                //Reason of not extending at the end of loop is if it does not have to do much,
+                //It might finish execution before lock could be extended resulting in error
+                LOGGER.debug("extending lock of internal component identification by 5 min");
+                LockExtender.extendActiveLock(Duration.ofMinutes(5), ZERO);
                 for (final Component component : components) {
                     String coordinates = component.getName();
                     if (StringUtils.isNotBlank(component.getGroup())) {
@@ -129,7 +141,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
                 query.setParameters(lastId);
             }
             query.setOrdering("id DESC");
-            query.setRange(0, 500);
+            query.setRange(0, 1000);
             query.getFetchPlan().setGroup(Component.FetchGroup.INTERNAL_IDENTIFICATION.name());
             return List.copyOf(query.executeList());
         }

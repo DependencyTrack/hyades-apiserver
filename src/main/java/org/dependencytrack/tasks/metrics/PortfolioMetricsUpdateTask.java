@@ -18,16 +18,13 @@
  */
 package org.dependencytrack.tasks.metrics;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
-import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import net.javacrumbs.shedlock.provider.jdbc.JdbcLockProvider;
 import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -35,22 +32,18 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static java.time.Duration.ZERO;
-import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_LEAST_FOR;
-import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.getJdbcLockProviderInstance;
-import static org.dependencytrack.util.LockProvider.getLockingTaskExecutorInstance;
 
 
 /**
@@ -68,22 +61,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                JdbcLockProvider instance = getJdbcLockProviderInstance();
-                LockingTaskExecutor executor = getLockingTaskExecutorInstance(instance);
-                LockConfiguration lockConfiguration = new LockConfiguration(Instant.now(),
-                        PORTFOLIO_METRICS_TASK_LOCK.name(),
-                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
-                        Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_LEAST_FOR)));
-
-                executor.executeWithLock((Runnable) () -> {
-                    try {
-                        updateMetrics(event.isForceRefresh());
-                    } catch (Exception ex) {
-                        throw new RuntimeException("Error in acquiring lock and executing metrics", ex);
-                    }
-                }, lockConfiguration);
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while updating portfolio metrics", ex);
+                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+            } catch (Throwable ex) {
+                LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
         }
     }
