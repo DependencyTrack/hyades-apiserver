@@ -247,9 +247,9 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
                 final Map<ComponentIdentity, Component> persistentComponents =
-                        processComponents(ctx, qm, project, components, identitiesByBomRef, bomRefsByIdentity);
+                        processComponents(qm, project, components, identitiesByBomRef, bomRefsByIdentity);
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
-                        processServices(ctx, qm, project, services, identitiesByBomRef, bomRefsByIdentity);
+                        processServices(qm, project, services, identitiesByBomRef, bomRefsByIdentity);
                 processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
                 recordBomImport(ctx, pm, project);
 
@@ -360,8 +360,9 @@ public class BomUploadProcessingTask implements Subscriber {
         return project;
     }
 
-    private static Map<ComponentIdentity, Component> processComponents(final Context ctx, final QueryManager qm,
-                                                                       final Project project, final List<Component> components,
+    private static Map<ComponentIdentity, Component> processComponents(final QueryManager qm,
+                                                                       final Project project,
+                                                                       final List<Component> components,
                                                                        final Map<String, ComponentIdentity> identitiesByBomRef,
                                                                        final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
         assertPersistent(project, "Project must be persistent");
@@ -462,8 +463,9 @@ public class BomUploadProcessingTask implements Subscriber {
         return persistentComponents;
     }
 
-    private static Map<ComponentIdentity, ServiceComponent> processServices(final Context ctx, final QueryManager qm,
-                                                                            final Project project, final List<ServiceComponent> services,
+    private static Map<ComponentIdentity, ServiceComponent> processServices(final QueryManager qm,
+                                                                            final Project project,
+                                                                            final List<ServiceComponent> services,
                                                                             final Map<String, ComponentIdentity> identitiesByBomRef,
                                                                             final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
         assertPersistent(project, "Project must be persistent");

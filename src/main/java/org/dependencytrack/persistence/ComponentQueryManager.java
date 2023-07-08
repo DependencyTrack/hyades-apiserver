@@ -467,7 +467,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         final Query<Component> query = pm.newQuery(Component.class, filter);
         query.setNamedParameters(params);
-        return query.executeUnique();
+        try {
+            return query.executeUnique();
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**
