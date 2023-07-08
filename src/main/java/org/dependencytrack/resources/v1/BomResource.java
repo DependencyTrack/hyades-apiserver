@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
+import com.fasterxml.jackson.core.JsonParseException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -74,6 +75,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -206,6 +208,7 @@ public class BomResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Upload a supported bill of material format document", notes = "Expects CycloneDX along and a valid project UUID. If a UUID is not specified, then the projectName and projectVersion must be specified. Optionally, if autoCreate is specified and 'true' and the project does not exist, the project will be created. In this scenario, the principal making the request will additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.", response = BomUploadResponse.class, nickname = "UploadBomBase64Encoded")
     @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "The uploaded BOM is invalid"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
@@ -271,6 +274,7 @@ public class BomResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Upload a supported bill of material format document", notes = "Expects CycloneDX along and a valid project UUID. If a UUID is not specified, then the projectName and projectVersion must be specified. Optionally, if autoCreate is specified and 'true' and the project does not exist, the project will be created. In this scenario, the principal making the request will additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.", response = BomUploadResponse.class, nickname = "UploadBom")
     @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "The uploaded BOM is invalid"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
@@ -363,20 +367,26 @@ public class BomResource extends AlpineResource {
             if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
+
+            final File bomFile;
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                final File bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
-
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
-                Event.dispatch(bomUploadEvent);
-
-                BomUploadResponse bomUploadResponse = new BomUploadResponse();
-                bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
-                return Response.ok(bomUploadResponse).build();
-            } catch (IOException | ParseException e) {
-                return Response.status(Response.Status.BAD_REQUEST).build();
+                bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+            } catch (IllegalArgumentException | ParseException e) {
+                LOGGER.debug("Failed to validate BOM uploaded to project: " + project.getUuid(), e);
+                return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+            } catch (IOException e) {
+                LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
+
+            final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+            Event.dispatch(bomUploadEvent);
+
+            BomUploadResponse bomUploadResponse = new BomUploadResponse();
+            bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+            return Response.ok(bomUploadResponse).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
@@ -392,21 +402,27 @@ public class BomResource extends AlpineResource {
                 if (!qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
+
+                final File bomFile;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    final File bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
-
-                    // todo: make option to combine all the bom data so components are reconciled in a single pass.
-                    // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
-                    Event.dispatch(bomUploadEvent);
-
-                    BomUploadResponse bomUploadResponse = new BomUploadResponse();
-                    bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
-                    return Response.ok(bomUploadResponse).build();
-                } catch (IllegalArgumentException | IOException | ParseException e) {
-                    return Response.status(Response.Status.BAD_REQUEST).build();
+                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                } catch (IllegalArgumentException | ParseException e) {
+                    LOGGER.debug("Failed to validate BOM uploaded to project: " + project.getUuid(), e);
+                    return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+                } catch (IOException e) {
+                    LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
+
+                // todo: make option to combine all the bom data so components are reconciled in a single pass.
+                // todo: https://github.com/DependencyTrack/dependency-track/issues/130
+                final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+                Event.dispatch(bomUploadEvent);
+
+                BomUploadResponse bomUploadResponse = new BomUploadResponse();
+                bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+                return Response.ok(bomUploadResponse).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -419,9 +435,18 @@ public class BomResource extends AlpineResource {
             throw new IllegalArgumentException("The uploaded file is not a CycloneDX BOM");
         }
 
-        final Parser parser = BomParserFactory.createParser(bomBytes);
-        if (!parser.validate(bomBytes).isEmpty()) {
-            throw new IllegalArgumentException("The uploaded CycloneDX BOM is invalid");
+        final List<ParseException> validationErrors;
+        try {
+            final Parser parser = BomParserFactory.createParser(bomBytes);
+            validationErrors = parser.validate(bomBytes);
+        } catch (JsonParseException e) {
+            throw new IllegalArgumentException("The uploaded CycloneDX file contains malformed JSON or XML", e);
+        }
+
+        if (!validationErrors.isEmpty()) {
+            throw new IllegalArgumentException("The uploaded CycloneDX BOM is invalid: " + validationErrors.stream()
+                    .map(Throwable::getMessage)
+                    .collect(Collectors.joining("; ")));
         }
 
         // TODO: Store externally so other instances of the API server can pick it up.

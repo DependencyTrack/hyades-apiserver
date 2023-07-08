@@ -682,6 +682,59 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
+    public void uploadNonCycloneDxBomTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        String bomString = Base64.getEncoder().encodeToString("""
+                SPDXVersion: SPDX-2.2
+                DataLicense: CC0-1.0
+                """.getBytes());
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        Response response = target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus(), 0);
+        Assert.assertEquals("The uploaded file is not a CycloneDX BOM", getPlainTextBody(response));
+    }
+
+    @Test
+    public void uploadInvalidCycloneDxBomTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        String bomString = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "components": [
+                    {
+                      "version": "1.2.3"
+                    }
+                  ]
+                }
+                """.getBytes());
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        Response response = target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus(), 0);
+        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.version: is missing but it is required; $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
+    }
+
+    @Test
+    public void uploadInvalidFormatBomTest() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        File file = new File(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI());
+        String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        Response response = target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus(), 0);
+        Assert.assertEquals("The uploaded CycloneDX file contains malformed JSON or XML", getPlainTextBody(response));
+    }
+
+    @Test
     public void uploadBomInvalidProjectTest() throws Exception {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
         File file = new File(IOUtils.resourceToURL("/bom-1.xml").toURI());
