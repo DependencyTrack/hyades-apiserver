@@ -131,14 +131,14 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
     /**
      * Creates a new Repository.
      *
-     * @param type       the type of repository
-     * @param identifier a unique (to the type) identifier for the repo
-     * @param url        the URL to the repository
-     * @param enabled    if the repo is enabled or not
-     * @param internal if the repo is internal or not
+     * @param type                     the type of repository
+     * @param identifier               a unique (to the type) identifier for the repo
+     * @param url                      the URL to the repository
+     * @param enabled                  if the repo is enabled or not
+     * @param internal                 if the repo is internal or not
      * @param isAuthenticationRequired if the repository needs authentication or not
-     * @param username   the username to access the (authenticated) repository with
-     * @param password   the password to access the (authenticated) repository with
+     * @param username                 the username to access the (authenticated) repository with
+     * @param password                 the password to access the (authenticated) repository with
      * @return the created Repository
      */
     public Repository createRepository(RepositoryType type, String identifier, String url, boolean enabled, boolean internal, boolean isAuthenticationRequired, String username, String password) {
@@ -169,7 +169,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
                     repo.setPassword(DataEncryption.encryptAsString(password));
                 }
             } catch (Exception e) {
-                LOGGER.error("An error occurred while saving password in encrypted state");
+                LOGGER.error("An error occurred while saving password in encrypted state", e);
             }
         }
         return persist(repo);
@@ -178,14 +178,14 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
     /**
      * Updates an existing Repository.
      *
-     * @param uuid       the uuid of the repository to update
-     * @param identifier the identifier of the repository
-     * @param url        a url of the repository
-     * @param internal   specifies if the repository is internal
+     * @param uuid                   the uuid of the repository to update
+     * @param identifier             the identifier of the repository
+     * @param url                    a url of the repository
+     * @param internal               specifies if the repository is internal
      * @param authenticationRequired if the repository needs authentication or not
-     * @param username   the username to access the (authenticated) repository with
-     * @param password   the password to access the (authenticated) repository with
-     * @param enabled    specifies if the repository is enabled
+     * @param username               the username to access the (authenticated) repository with
+     * @param password               the password to access the (authenticated) repository with
+     * @param enabled                specifies if the repository is enabled
      * @return the updated Repository
      */
     public Repository updateRepository(UUID uuid, String identifier, String url, boolean internal, boolean authenticationRequired, String username, String password, boolean enabled) {
