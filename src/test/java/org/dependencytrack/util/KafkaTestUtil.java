@@ -13,6 +13,10 @@ public final class KafkaTestUtil {
     private KafkaTestUtil() {
     }
 
+    public static <K> K deserializeKey(final KafkaTopics.Topic<K, ?> topic, final ProducerRecord<byte[], ?> record) {
+        return topic.keySerde().deserializer().deserialize(topic.name(), record.key());
+    }
+
     public static <V> V deserializeValue(final KafkaTopics.Topic<?, V> topic, final ProducerRecord<?, byte[]> record) {
         return topic.valueSerde().deserializer().deserialize(topic.name(), record.value());
     }

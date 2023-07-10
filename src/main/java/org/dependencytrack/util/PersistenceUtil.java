@@ -3,10 +3,18 @@ package org.dependencytrack.util;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.postgresql.util.PSQLState;
 
+import javax.jdo.JDOHelper;
+import javax.jdo.ObjectState;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static javax.jdo.ObjectState.HOLLOW_PERSISTENT_NONTRANSACTIONAL;
+import static javax.jdo.ObjectState.PERSISTENT_CLEAN;
+import static javax.jdo.ObjectState.PERSISTENT_DIRTY;
+import static javax.jdo.ObjectState.PERSISTENT_NEW;
+import static javax.jdo.ObjectState.PERSISTENT_NONTRANSACTIONAL_DIRTY;
 
 public final class PersistenceUtil {
 
@@ -46,6 +54,31 @@ public final class PersistenceUtil {
         // to do the same for at least H2 and MSSQL.
         return ExceptionUtils.getRootCause(throwable) instanceof final SQLException se
                 && PSQLState.UNIQUE_VIOLATION.getState().equals(se.getSQLState());
+    }
+
+    /**
+     * Utility method to ensure that a given object is in a persistent state.
+     * <p>
+     * Useful when an object is supposed to be used as JDOQL query parameter,
+     * or changes made on it are intended to be flushed to the database.
+     * <p>
+     * Performing these operations on a non-persistent object will have to effect.
+     * It is preferable to catch these cases earlier to later.
+     *
+     * @param object  The object to check the state of
+     * @param message Message to use for the exception, if object is not persistent
+     * @throws IllegalStateException When the object is not in a persistent state
+     * @see <a href="https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle">Object Lifecycle</a>
+     */
+    public static void assertPersistent(final Object object, final String message) {
+        final ObjectState objectState = JDOHelper.getObjectState(object);
+        if (objectState != PERSISTENT_CLEAN
+                && objectState != PERSISTENT_DIRTY
+                && objectState != PERSISTENT_NEW
+                && objectState != PERSISTENT_NONTRANSACTIONAL_DIRTY
+                && objectState != HOLLOW_PERSISTENT_NONTRANSACTIONAL) {
+            throw new IllegalStateException(message != null ? message : "Object must be persistent");
+        }
     }
 
 }
