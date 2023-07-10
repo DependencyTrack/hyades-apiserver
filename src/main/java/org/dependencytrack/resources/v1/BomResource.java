@@ -252,7 +252,7 @@ public class BomResource extends AlpineResource {
 
                             if (parent == null) { // if parent project is specified but not found
                                 return Response.status(Response.Status.NOT_FOUND).entity("The parent component could not be found.").build();
-                            } else if (! qm.hasAccess(super.getPrincipal(), parent)) {
+                            } else if (!qm.hasAccess(super.getPrincipal(), parent)) {
                                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
                             }
                         }
@@ -315,7 +315,7 @@ public class BomResource extends AlpineResource {
 
                             if (parent == null) { // if parent project is specified but not found
                                 return Response.status(Response.Status.NOT_FOUND).entity("The parent component could not be found.").build();
-                            } else if (! qm.hasAccess(super.getPrincipal(), parent)) {
+                            } else if (!qm.hasAccess(super.getPrincipal(), parent)) {
                                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
                             }
                         }
@@ -355,7 +355,7 @@ public class BomResource extends AlpineResource {
         }
 
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-        response.setProcessing(processingInternally ||  vulnScanStatus == VulnerabilityScan.Status.IN_PROGRESS);
+        response.setProcessing(processingInternally || vulnScanStatus == VulnerabilityScan.Status.IN_PROGRESS);
         return Response.ok(response).build();
     }
 
@@ -381,7 +381,7 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+            final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             Event.dispatch(bomUploadEvent);
 
             BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -417,7 +417,7 @@ public class BomResource extends AlpineResource {
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
                 Event.dispatch(bomUploadEvent);
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();

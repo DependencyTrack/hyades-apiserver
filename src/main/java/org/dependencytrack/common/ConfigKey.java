@@ -2,8 +2,6 @@ package org.dependencytrack.common;
 
 import alpine.Config;
 
-import java.time.Duration;
-
 public enum ConfigKey implements Config.Key {
 
     SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
@@ -33,7 +31,8 @@ public enum ConfigKey implements Config.Key {
     TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR("task.componentIdentification.lockAtMostForInMillis", "900000"),
     TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR("task.componentIdentification.lockAtLeastForInMillis", "3000"),
     TASK_LDAP_SYNC_LOCK_AT_MOST_FOR("task.ldapSync.lockAtMostForInMillis", "900000"),
-    TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR("task.ldapSync.lockAtLeastForInMillis", "3000");
+    TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR("task.ldapSync.lockAtLeastForInMillis", "3000"),
+    BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000");
 
     private final String propertyName;
     private final Object defaultValue;

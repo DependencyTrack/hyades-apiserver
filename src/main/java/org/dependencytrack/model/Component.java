@@ -352,12 +352,12 @@ public class Component implements Serializable {
     private UUID uuid;
 
     private transient String bomRef;
+    private transient String licenseId;
     private transient DependencyMetrics metrics;
     private transient RepositoryMetaComponent repositoryMeta;
+    private transient boolean isNew;
     private transient int usedBy;
-
     private transient Set<String> dependencyGraph;
-
     private transient boolean expandDependencyGraph;
 
     public long getId() {
@@ -741,6 +741,14 @@ public class Component implements Serializable {
         this.repositoryMeta = repositoryMeta;
     }
 
+    public boolean isNew() {
+        return isNew;
+    }
+
+    public void setNew(final boolean aNew) {
+        isNew = aNew;
+    }
+
     public Double getLastInheritedRiskScore() {
         return lastInheritedRiskScore;
     }
@@ -755,6 +763,14 @@ public class Component implements Serializable {
 
     public void setBomRef(String bomRef) {
         this.bomRef = bomRef;
+    }
+
+    public String getLicenseId() {
+        return licenseId;
+    }
+
+    public void setLicenseId(final String licenseId) {
+        this.licenseId = licenseId;
     }
 
     public int getUsedBy() {

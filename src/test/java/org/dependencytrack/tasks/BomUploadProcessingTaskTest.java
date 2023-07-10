@@ -18,30 +18,36 @@
  */
 package org.dependencytrack.tasks;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.util.KafkaTestUtil;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
+import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
+import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -55,25 +61,13 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyType(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getDescription());
-
-        // Enable internal vulnerability analyzer
-        qm.createConfigProperty(ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getPropertyName(), "true",
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED.getDescription());
     }
 
     @Test
     public void informTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/bom-1.xml").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -112,13 +106,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithEmptyBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-empty.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        final var bomUploadEvent = new BomUploadEvent(project.getUuid(), bomFile);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -128,7 +116,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         );
 
         qm.getPersistenceManager().refresh(project);
-        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getClassifier()).isNull();
         assertThat(project.getLastBomImport()).isNotNull();
 
         final List<Component> components = qm.getAllComponents(project);
@@ -142,19 +130,13 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        final var bomFile = bomFilePath.toFile();
-
-        new BomUploadProcessingTask().inform(new BomUploadEvent(project.getUuid(), bomFile));
+        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid.json")));
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
                     assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
-                    final Notification notification = KafkaTestUtil.deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
                     assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
                     assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
                     assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
@@ -179,6 +161,164 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
+    }
+
+    @Test
+    public void informWithBloatedBomTest() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        assertThat(kafkaMockProducer.history())
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
+                })
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_PROCESSED);
+                })
+                .noneSatisfy(record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                });
+
+        final List<Bom> boms = qm.getAllBoms(project);
+        assertThat(boms).hasSize(1);
+        final Bom bom = boms.get(0);
+        assertThat(bom.getBomFormat()).isEqualTo("CycloneDX");
+        assertThat(bom.getSpecVersion()).isEqualTo("1.3");
+        assertThat(bom.getBomVersion()).isEqualTo(1);
+        assertThat(bom.getSerialNumber()).isEqualTo("6d780157-0f8e-4ef1-8e9b-1eb48b2fad6f");
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getGroup()).isNull(); // Not overridden by BOM import
+        assertThat(project.getName()).isEqualTo("Acme Example"); // Not overridden by BOM import
+        assertThat(project.getVersion()).isEqualTo("1.0"); // Not overridden by BOM import
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getPurl()).isNotNull();
+        assertThat(project.getPurl().canonicalize()).isEqualTo("pkg:npm/bloated@1.0.0");
+        assertThat(project.getDirectDependencies()).isNotNull();
+
+        // Make sure we ingested all components of the BOM.
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(9056);
+
+        // Assert some basic properties that should be present on all components.
+        for (final Component component : components) {
+            assertThat(component.getName()).isNotEmpty();
+            assertThat(component.getVersion()).isNotEmpty();
+            assertThat(component.getPurl()).isNotNull();
+        }
+
+        // Ensure dependency graph has been ingested completely, by asserting on the number leaf nodes of the graph.
+        // This number can be verified using this Python script:
+        //
+        // import json
+        // with open("bloated.bom.json", "r") as f:
+        //     bom = json.load(f)
+        // len(list(filter(lambda x: len(x.get("dependsOn", [])) == 0, bom["dependencies"])))
+        final long componentsWithoutDirectDependencies = components.stream()
+                .map(Component::getDirectDependencies)
+                .filter(Objects::isNull)
+                .count();
+        assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
+
+        // A VulnerabilityScan should've been initiated properly.
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        assertThat(vulnerabilityScan).isNotNull();
+        assertThat(vulnerabilityScan.getTargetType()).isEqualTo(VulnerabilityScan.TargetType.PROJECT);
+        assertThat(vulnerabilityScan.getTargetIdentifier()).isEqualTo(project.getUuid());
+        assertThat(vulnerabilityScan.getExpectedResults()).isEqualTo(9056);
+        assertThat(vulnerabilityScan.getReceivedResults()).isZero();
+
+        // Verify that all vulnerability analysis commands have been sent.
+        final long vulnAnalysisCommandsSent = kafkaMockProducer.history().stream()
+                .map(ProducerRecord::topic)
+                .filter(KafkaTopics.VULN_ANALYSIS_COMMAND.name()::equals)
+                .count();
+        assertThat(vulnAnalysisCommandsSent).isEqualTo(9056);
+
+        // Verify that all repository meta analysis commands have been sent.
+        final long repoMetaAnalysisCommandsSent = kafkaMockProducer.history().stream()
+                .map(ProducerRecord::topic)
+                .filter(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()::equals)
+                .count();
+        assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
+    public void informIssue2519Test() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        
+        // Upload the same BOM again a few times.
+        // Ensure processing does not fail, and the number of components ingested doesn't change.
+        for (int i = 0; i < 3; i++) {
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+
+            // Make sure processing did not fail.
+            assertThat(kafkaMockProducer.history())
+                    .noneSatisfy(record -> {
+                        assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                        assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    });
+
+            // Ensure the expected amount of components is present.
+            assertThat(qm.getAllComponents(project)).hasSize(1756);
+        }
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/1905
+    public void informIssue1905Test() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        for (int i = 0; i < 3; i++) {
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue1905.json"));
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+
+            // Make sure processing did not fail.
+            assertThat(kafkaMockProducer.history())
+                    .noneSatisfy(record -> {
+                        assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                        assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    });
+
+            // Ensure all expected components are present.
+            // In this particular case, both components from the BOM are supposed to NOT be merged.
+            assertThat(qm.getAllComponents(project)).satisfiesExactlyInAnyOrder(
+                    component -> {
+                        assertThat(component.getClassifier()).isEqualTo(Classifier.LIBRARY);
+                        assertThat(component.getName()).isEqualTo("cloud.google.com/go/storage");
+                        assertThat(component.getVersion()).isEqualTo("v1.13.0");
+                        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:golang/cloud.google.com/go/storage@v1.13.0?type=package");
+                        assertThat(component.getSha256()).isNull();
+                    },
+                    component -> {
+                        assertThat(component.getClassifier()).isEqualTo(Classifier.LIBRARY);
+                        assertThat(component.getName()).isEqualTo("cloud.google.com/go/storage");
+                        assertThat(component.getVersion()).isEqualTo("v1.13.0");
+                        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:golang/cloud.google.com/go/storage@v1.13.0?goarch=amd64&goos=darwin&type=module");
+                        assertThat(component.getSha256()).isEqualTo("6a63ef842388f8796da7aacfbbeeb661dc2122b8dffb7e0f29500be07c206309");
+                    }
+            );
+        }
+    }
+
+    private static File createTempBomFile(final String testFileName) throws Exception {
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        return bomFilePath.toFile();
     }
 
 }
