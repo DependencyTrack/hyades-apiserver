@@ -212,9 +212,15 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
     @SuppressWarnings("unchecked")
     public void removeProjectFromNotificationRules(final Project project) {
         final Query<NotificationRule> query = pm.newQuery(NotificationRule.class, "projects.contains(:project)");
-        for (final NotificationRule rule: (List<NotificationRule>) query.execute(project)) {
-            rule.getProjects().remove(project);
-            persist(rule);
+        try {
+            for (final NotificationRule rule : (List<NotificationRule>) query.execute(project)) {
+                rule.getProjects().remove(project);
+                if (!pm.currentTransaction().isActive()) {
+                    persist(rule);
+                }
+            }
+        } finally {
+            query.closeAll();
         }
     }
 

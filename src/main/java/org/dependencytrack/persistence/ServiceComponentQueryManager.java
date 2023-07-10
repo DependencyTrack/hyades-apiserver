@@ -233,9 +233,13 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
      * Deletes all services for the specified Project.
      * @param project the Project to delete services of
      */
-    private void deleteServiceComponents(Project project) {
+    public void deleteServiceComponents(Project project) {
         final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class, "project == :project");
-        query.deletePersistentAll(project);
+        try {
+            query.deletePersistentAll(project);
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**
