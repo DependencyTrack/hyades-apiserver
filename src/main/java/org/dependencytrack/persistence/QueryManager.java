@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.util.BooleanUtil;
-import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.Team;
@@ -34,7 +33,6 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -1249,27 +1247,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public void bind(Project project, List<Tag> tags) {
         getProjectQueryManager().bind(project, tags);
-    }
-
-    /**
-     * Commits the Lucene index.
-     *
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     * @param clazz       the indexable class to commit the index of
-     */
-    public void commitSearchIndex(boolean commitIndex, Class clazz) {
-        if (commitIndex) {
-            Event.dispatch(new IndexEvent(IndexEvent.Action.COMMIT, clazz));
-        }
-    }
-
-    /**
-     * Commits the Lucene index.
-     *
-     * @param clazz the indexable class to commit the index of
-     */
-    public void commitSearchIndex(Class clazz) {
-        commitSearchIndex(true, clazz);
     }
 
     public boolean hasAccessManagementPermission(final Object principal) {

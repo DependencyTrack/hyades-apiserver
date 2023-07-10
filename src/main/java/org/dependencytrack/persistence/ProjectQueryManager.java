@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -31,7 +30,6 @@ import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.Classifier;
@@ -450,7 +448,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final List<Tag> resolvedTags = resolveTags(tags);
         bind(project, resolvedTags);
 
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
         NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
                 NotificationScope.PORTFOLIO,
                 NotificationGroup.PROJECT_CREATED,
@@ -459,7 +457,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 NotificationLevel.INFORMATIONAL,
                 pm.detachCopy(result)
         );
-        commitSearchIndex(commitIndex, Project.class);
+        // commitSearchIndex(commitIndex, Project.class);
         return result;
     }
 
@@ -479,8 +477,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final List<Tag> resolvedTags = resolveTags(tags);
         bind(project, resolvedTags);
 
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Project.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Project.class);
         return result;
     }
 
@@ -513,8 +511,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         final Project result = persist(project);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Project.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Project.class);
         return result;
     }
 
@@ -565,8 +563,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         bind(project, resolvedTags);
 
         final Project result = persist(project);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Project.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Project.class);
         return result;
     }
 
@@ -671,8 +669,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
 
         project = getObjectById(Project.class, project.getId());
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(project)));
-        commitSearchIndex(true, Project.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(project)));
+        // commitSearchIndex(true, Project.class);
         return project;
     }
 
@@ -689,9 +687,9 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             }
         }
         pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        final Project result = pm.getObjectById(Project.class, project.getId());
-        Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Project.class);
+        // final Project result = pm.getObjectById(Project.class, project.getId());
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Project.class);
 
         deleteAnalysisTrail(project);
         deleteViolationAnalysisTrail(project);

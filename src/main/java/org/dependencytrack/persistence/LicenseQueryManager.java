@@ -18,10 +18,8 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.PolicyCondition;
 
@@ -101,8 +99,8 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
      */
     private License createLicense(License license, boolean commitIndex) {
         final License result = persist(license);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, License.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, License.class);
         return result;
     }
 
@@ -133,8 +131,8 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
             license.setSeeAlso(transientLicense.getSeeAlso());
 
             final License result = persist(license);
-            Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-            commitSearchIndex(commitIndex, License.class);
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
+            // commitSearchIndex(commitIndex, License.class);
             return result;
         }
         return null;
@@ -163,8 +161,8 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
     public License createCustomLicense(License license, boolean commitIndex) {
         license.setCustomLicense(true);
         final License result = persist(license);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, License.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, License.class);
         return result;
     }
 
@@ -176,7 +174,7 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
     public void deleteLicense(final License license, final boolean commitIndex) {
         final Query<PolicyCondition> query = pm.newQuery(PolicyCondition.class, "subject == :subject && value == :value");
         List<PolicyCondition> policyConditions = (List<PolicyCondition>)query.execute(PolicyCondition.Subject.LICENSE ,license.getUuid().toString());
-        commitSearchIndex(commitIndex, License.class);
+        // commitSearchIndex(commitIndex, License.class);
         delete(license);
         for (PolicyCondition policyCondition : policyConditions) {
             deletePolicyCondition(policyCondition);

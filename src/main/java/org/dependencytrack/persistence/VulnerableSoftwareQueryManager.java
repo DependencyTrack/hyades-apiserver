@@ -18,11 +18,9 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Vulnerability;
@@ -63,8 +61,8 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         Cpe result = getCpeBy23(cpe.getCpe23());
         if (result == null) {
             result = persist(cpe);
-            Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-            commitSearchIndex(commitIndex, Cpe.class);
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+            // commitSearchIndex(commitIndex, Cpe.class);
         }
         return result;
     }

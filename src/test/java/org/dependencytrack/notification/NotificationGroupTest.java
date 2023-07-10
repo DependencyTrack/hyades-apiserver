@@ -31,7 +31,6 @@ public class NotificationGroupTest {
         Assert.assertEquals("REPOSITORY", NotificationGroup.REPOSITORY.name());
         Assert.assertEquals("ANALYZER", NotificationGroup.ANALYZER.name());
         Assert.assertEquals("INTEGRATION", NotificationGroup.INTEGRATION.name());
-        Assert.assertEquals("INDEXING_SERVICE", NotificationGroup.INDEXING_SERVICE.name());
         // Portfolio Groups
         Assert.assertEquals("NEW_VULNERABILITY", NotificationGroup.NEW_VULNERABILITY.name());
         Assert.assertEquals("NEW_VULNERABLE_DEPENDENCY", NotificationGroup.NEW_VULNERABLE_DEPENDENCY.name());
