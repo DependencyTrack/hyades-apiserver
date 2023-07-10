@@ -96,7 +96,6 @@
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
         <lib.kafka-streams.version>3.5.0</lib.kafka-streams.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
-        <lib.lucene.version>8.11.2</lib.lucene.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
@@ -293,31 +292,6 @@
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>${lib.logstash-logback-encoder.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-            <version>${lib.lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers-common</artifactId>
-            <version>${lib.lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queryparser</artifactId>
-            <version>${lib.lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queries</artifactId>
-            <version>${lib.lucene.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-sandbox</artifactId>
-            <version>${lib.lucene.version}</version>
         </dependency>
         <!-- shedlock dependencies -->
         <dependency>

@@ -58,7 +58,6 @@ import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED
 import static org.hyades.proto.notification.v1.Group.GROUP_CONFIGURATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
 import static org.hyades.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
-import static org.hyades.proto.notification.v1.Group.GROUP_INDEXING_SERVICE;
 import static org.hyades.proto.notification.v1.Group.GROUP_INTEGRATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
@@ -155,25 +154,6 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(notification.getLevel()).isEqualTo(LEVEL_WARNING);
         assertThat(notification.getGroup()).isEqualTo(GROUP_INTEGRATION);
-        assertThat(notification.getTitle()).isEqualTo("Foo");
-        assertThat(notification.getContent()).isEqualTo("Bar");
-        assertThat(notification.getTimestamp().getSeconds()).isNotZero();
-        assertThat(notification.hasSubject()).isFalse();
-    }
-
-    @Test
-    public void testConvertIndexingServiceNotification() {
-        final var alpineNotification = new alpine.notification.Notification();
-        alpineNotification.setScope(NotificationScope.SYSTEM.name());
-        alpineNotification.setLevel(NotificationLevel.WARNING);
-        alpineNotification.setGroup(NotificationGroup.INDEXING_SERVICE.name());
-        alpineNotification.setTitle("Foo");
-        alpineNotification.setContent("Bar");
-
-        final Notification notification = NotificationModelConverter.convert(alpineNotification);
-        assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_WARNING);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_INDEXING_SERVICE);
         assertThat(notification.getTitle()).isEqualTo("Foo");
         assertThat(notification.getContent()).isEqualTo("Bar");
         assertThat(notification.getTimestamp().getSeconds()).isNotZero();
