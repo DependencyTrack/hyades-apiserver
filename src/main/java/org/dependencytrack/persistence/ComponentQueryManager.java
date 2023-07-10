@@ -380,7 +380,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     protected void deleteComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        query.deletePersistentAll(project);
+        try {
+            query.deletePersistentAll(project);
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**

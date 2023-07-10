@@ -599,11 +599,18 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
      */
     public void removeProjectFromPolicies(final Project project) {
         final Query<Policy> query = pm.newQuery(Policy.class, "projects.contains(:project)");
-        query.setParameters(project);
+        try {
+            query.setParameters(project);
 
-        for (final Policy policy: query.executeList()) {
-            policy.getProjects().remove(project);
-            persist(policy);
+            for (final Policy policy : query.executeList()) {
+                policy.getProjects().remove(project);
+
+                if (!pm.currentTransaction().isActive()) {
+                    persist(policy);
+                }
+            }
+        } finally {
+            query.closeAll();
         }
     }
 
