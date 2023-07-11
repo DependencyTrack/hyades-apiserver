@@ -82,17 +82,17 @@ public final class TaskScheduler extends BaseTaskScheduler {
         try {
             Map<Event, Schedule> configurableTasksMap = new HashMap<>();
             Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
-                    Map.entry(new LdapSyncEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
-                    Map.entry(new NistMirrorEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
-                    Map.entry(new OsvMirrorEvent(null), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
-                    Map.entry(new GitHubAdvisoryMirrorEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
-                    Map.entry(new PortfolioMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
-                    Map.entry(new VulnerabilityMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
-                    Map.entry(new InternalComponentIdentificationEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
-                    Map.entry(new VulnDbSyncEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
-                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
-                    Map.entry(new VulnerabilityScanCleanupEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
-                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
+                    Map.entry(new LdapSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
+                    Map.entry(new NistMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
+                    Map.entry(new OsvMirrorEvent(null), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
+                    Map.entry(new GitHubAdvisoryMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
+                    Map.entry(new PortfolioMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
+                    Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
+                    Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
+                    Map.entry(new VulnDbSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
+                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
+                    Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
+                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
             );
 
             if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
