@@ -73,39 +73,39 @@ public final class TaskScheduler extends BaseTaskScheduler {
     private static final Logger LOGGER = Logger.getLogger(TaskScheduler.class);
     // Holds an instance of TaskScheduler
     private static final TaskScheduler INSTANCE = new TaskScheduler();
-    private final Config CONFIG_INSTANCE = Config.getInstance();
 
     /**
      * Private constructor.
      */
     private TaskScheduler() {
+        final Config configInstance = Config.getInstance();
         try {
             Map<Event, Schedule> configurableTasksMap = new HashMap<>();
             Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
-                    Map.entry(new LdapSyncEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
-                    Map.entry(new NistMirrorEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
-                    Map.entry(new OsvMirrorEvent(null), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
-                    Map.entry(new GitHubAdvisoryMirrorEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
-                    Map.entry(new PortfolioMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
-                    Map.entry(new VulnerabilityMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
-                    Map.entry(new InternalComponentIdentificationEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
-                    Map.entry(new VulnDbSyncEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
-                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
-                    Map.entry(new VulnerabilityScanCleanupEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
-                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
+                    Map.entry(new LdapSyncEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
+                    Map.entry(new NistMirrorEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
+                    Map.entry(new OsvMirrorEvent(null), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
+                    Map.entry(new GitHubAdvisoryMirrorEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
+                    Map.entry(new PortfolioMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
+                    Map.entry(new VulnerabilityMetricsUpdateEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
+                    Map.entry(new InternalComponentIdentificationEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
+                    Map.entry(new VulnDbSyncEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
+                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
+                    Map.entry(new VulnerabilityScanCleanupEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
+                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), com.asahaf.javacron.Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
             );
 
             if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
+                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
             }
             if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
-                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
+                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
             }
             if (isTaskEnabled(KENNA_ENABLED)) {
-                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
+                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
             }
             if (isTaskEnabled(SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK)));
+                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK)));
             }
 
             Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(eventScheduleMap.entrySet().stream(), configurableTasksMap.entrySet().stream())
