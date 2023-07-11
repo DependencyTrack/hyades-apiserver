@@ -182,8 +182,6 @@ public class FindingResource extends AlpineResource {
                     Event.dispatch(vae);
                     final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
                     Event.dispatch(projectRepositoryMetaAnalysisEvent);
-                    final ProjectMetricsUpdateEvent projectMetricsUpdateEvent = new ProjectMetricsUpdateEvent(project.getUuid());
-                    Event.dispatch(projectMetricsUpdateEvent);
 
                     return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
                 } else {
