@@ -73,7 +73,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
     private static final Logger LOGGER = Logger.getLogger(TaskScheduler.class);
     // Holds an instance of TaskScheduler
     private static final TaskScheduler INSTANCE = new TaskScheduler();
-    private static final Config CONFIG_INSTANCE = Config.getInstance();
+    private final Config CONFIG_INSTANCE = Config.getInstance();
 
     /**
      * Private constructor.

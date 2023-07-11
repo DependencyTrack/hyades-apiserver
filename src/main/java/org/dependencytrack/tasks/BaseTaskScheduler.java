@@ -1,5 +1,6 @@
 package org.dependencytrack.tasks;
 
+import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
@@ -12,9 +13,11 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class BaseTaskScheduler {
 
+    private static final Logger LOGGER = Logger.getLogger(BaseTaskScheduler.class);
+
     private Timer timer;
 
-    private static final long POLLING_INTERVAL_IN_MILLIS = 1000;
+    private static final long POLLING_INTERVAL_IN_MILLIS = 10000;
 
     protected void scheduleTask(Map<Event, Schedule> eventScheduleMap) {
         timer = new Timer();
@@ -37,10 +40,11 @@ public abstract class BaseTaskScheduler {
          * Publishes the Event specified in the constructor.
          * This method publishes to all {@link EventService}s.
          */
-        @Override
+
         public void run() {
             this.eventScheduleMap.forEach((event, schedule) -> {
                 long timeToExecuteTask = schedule.nextDuration(TimeUnit.MILLISECONDS);
+                LOGGER.debug("Time in milliseconds to execute task " + timeToExecuteTask);
                 if (timeToExecuteTask <= POLLING_INTERVAL_IN_MILLIS) {
                     EventService.getInstance().publish(event);
                     SingleThreadedEventService.getInstance().publish(event);
