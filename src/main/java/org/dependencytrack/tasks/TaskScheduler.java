@@ -95,17 +95,17 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), com.asahaf.javacron.Schedule.create(CONFIG_INSTANCE.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
             );
 
-            if (isTaskToBeScheduled(FORTIFY_SSC_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(Config.getInstance().getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
+            if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
+                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
             }
-            if (isTaskToBeScheduled(DEFECTDOJO_ENABLED)) {
-                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(Config.getInstance().getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
+            if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
+                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
             }
-            if (isTaskToBeScheduled(KENNA_ENABLED)) {
-                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(Config.getInstance().getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
+            if (isTaskEnabled(KENNA_ENABLED)) {
+                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
             }
-            if (isTaskToBeScheduled(SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(Config.getInstance().getProperty(ConfigKey.CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK)));
+            if (isTaskEnabled(SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED)) {
+                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(CONFIG_INSTANCE.getProperty(ConfigKey.CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK)));
             }
 
             Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(eventScheduleMap.entrySet().stream(), configurableTasksMap.entrySet().stream())
@@ -129,7 +129,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
         return INSTANCE;
     }
 
-    private boolean isTaskToBeScheduled(final ConfigPropertyConstants enabledConstraint) {
+    private boolean isTaskEnabled(final ConfigPropertyConstants enabledConstraint) {
         try (QueryManager qm = new QueryManager()) {
             final ConfigProperty enabledProperty = qm.getConfigProperty(
                     enabledConstraint.getGroupName(), enabledConstraint.getPropertyName());
