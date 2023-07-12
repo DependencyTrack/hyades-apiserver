@@ -13,8 +13,6 @@ import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
-import java.util.UUID;
-
 public final class KafkaTopics {
 
     public static final Topic<String, Notification> NOTIFICATION_ANALYZER;
@@ -22,7 +20,6 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_CONFIGURATION;
     public static final Topic<String, Notification> NOTIFICATION_DATASOURCE_MIRRORING;
     public static final Topic<String, Notification> NOTIFICATION_FILE_SYSTEM;
-    public static final Topic<String, Notification> NOTIFICATION_INDEXING_SERVICE;
     public static final Topic<String, Notification> NOTIFICATION_INTEGRATION;
     public static final Topic<String, Notification> NOTIFICATION_NEW_VULNERABILITY;
     public static final Topic<String, Notification> NOTIFICATION_NEW_VULNERABLE_DEPENDENCY;
@@ -47,7 +44,6 @@ public final class KafkaTopics {
         NOTIFICATION_CONFIGURATION = new Topic<>("dtrack.notification.configuration", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_DATASOURCE_MIRRORING = new Topic<>("dtrack.notification.datasource-mirroring", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_FILE_SYSTEM = new Topic<>("dtrack.notification.file-system", Serdes.String(), NOTIFICATION_SERDE);
-        NOTIFICATION_INDEXING_SERVICE = new Topic<>("dtrack.notification.indexing-service", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_INTEGRATION = new Topic<>("dtrack.notification.integration", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_NEW_VULNERABILITY = new Topic<>("dtrack.notification.new-vulnerability", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_NEW_VULNERABLE_DEPENDENCY = new Topic<>("dtrack.notification.new-vulnerable-dependency", Serdes.String(), NOTIFICATION_SERDE);

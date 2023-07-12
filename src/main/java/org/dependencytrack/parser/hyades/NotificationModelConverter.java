@@ -59,7 +59,6 @@ import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED
 import static org.hyades.proto.notification.v1.Group.GROUP_CONFIGURATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
 import static org.hyades.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
-import static org.hyades.proto.notification.v1.Group.GROUP_INDEXING_SERVICE;
 import static org.hyades.proto.notification.v1.Group.GROUP_INTEGRATION;
 import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
@@ -135,7 +134,6 @@ public final class NotificationModelConverter {
             case DATASOURCE_MIRRORING -> GROUP_DATASOURCE_MIRRORING;
             case REPOSITORY -> GROUP_REPOSITORY;
             case INTEGRATION -> GROUP_INTEGRATION;
-            case INDEXING_SERVICE -> GROUP_INDEXING_SERVICE;
             case FILE_SYSTEM -> GROUP_FILE_SYSTEM;
             case ANALYZER -> GROUP_ANALYZER;
             case NEW_VULNERABILITY -> GROUP_NEW_VULNERABILITY;
