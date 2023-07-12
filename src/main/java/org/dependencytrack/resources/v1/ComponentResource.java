@@ -47,6 +47,7 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.PurlUtil;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -290,6 +291,7 @@ public class ComponentResource extends AlpineResource {
             component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
             component.setClassifier(jsonComponent.getClassifier());
             component.setPurl(jsonComponent.getPurl());
+            component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
             component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
             component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
             component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
