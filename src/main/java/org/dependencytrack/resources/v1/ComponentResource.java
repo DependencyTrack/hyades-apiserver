@@ -47,6 +47,7 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.PurlUtil;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -290,6 +291,7 @@ public class ComponentResource extends AlpineResource {
             component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
             component.setClassifier(jsonComponent.getClassifier());
             component.setPurl(jsonComponent.getPurl());
+            component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
             component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
             component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
             component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
@@ -435,7 +437,7 @@ public class ComponentResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
                 qm.recursivelyDelete(component, false);
-                qm.commitSearchIndex(Component.class);
+                // qm.commitSearchIndex(Component.class);
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

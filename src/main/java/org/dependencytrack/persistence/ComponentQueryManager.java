@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
@@ -27,7 +26,6 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -304,8 +302,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public Component createComponent(Component component, boolean commitIndex) {
         final Component result = persist(component);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Component.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -371,8 +369,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         final Component result = persist(component);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Component.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -398,15 +396,15 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
         pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         try {
-            final Component result = pm.getObjectById(Component.class, component.getId());
-            Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
+            // final Component result = pm.getObjectById(Component.class, component.getId());
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
             deleteAnalysisTrail(component);
             deleteViolationAnalysisTrail(component);
             deleteMetrics(component);
             deleteFindingAttributions(component);
             deletePolicyViolations(component);
             delete(component);
-            commitSearchIndex(commitIndex, Component.class);
+            // commitSearchIndex(commitIndex, Component.class);
         } catch (javax.jdo.JDOObjectNotFoundException | org.datanucleus.exceptions.NucleusObjectNotFoundException e) {
             LOGGER.warn("Deletion of component failed because it didn't exist anymore.");
         }
