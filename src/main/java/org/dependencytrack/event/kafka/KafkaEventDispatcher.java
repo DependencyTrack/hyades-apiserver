@@ -64,7 +64,7 @@ public class KafkaEventDispatcher {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
-            LOGGER.info("Dispatch internal called for component: "+e.purlCoordinates()+" Component is "+e.internal());
+            LOGGER.debug("Dispatch internal called for component: "+e.purlCoordinates()+" Component is internal: "+e.internal());
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final OsvMirrorEvent e) {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);
