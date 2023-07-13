@@ -116,7 +116,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
             scheduleTask(mergedEventScheduleMap);
 
         } catch (InvalidExpressionException invalidExpressionException) {
-            LOGGER.error("Exception in parsing cron expression and creating schedule", invalidExpressionException);
+            throw new RuntimeException("Cron expression cannot be parsed to schedule tasks", invalidExpressionException);
         }
     }
 

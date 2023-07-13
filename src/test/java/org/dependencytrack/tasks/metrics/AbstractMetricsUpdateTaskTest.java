@@ -32,6 +32,8 @@ import org.dependencytrack.persistence.QueryManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -44,6 +46,9 @@ import java.util.Properties;
 import java.util.UUID;
 
 abstract class AbstractMetricsUpdateTaskTest {
+
+    @Rule
+    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     protected final String postgresImageTag;
     protected PostgreSQLContainer<?> postgresContainer;
@@ -90,6 +95,7 @@ abstract class AbstractMetricsUpdateTaskTest {
         DbUtil.executeUpdate(connection, storedProcs);
         DbUtil.executeUpdate(connection, shedlockSql);
         jdoConnection.close();
+        environmentVariables.set("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS", "2000");
     }
 
     @After
@@ -98,6 +104,7 @@ abstract class AbstractMetricsUpdateTaskTest {
         if (postgresContainer != null) {
             postgresContainer.stop();
         }
+        environmentVariables.clear("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS");
     }
 
     protected PolicyViolation createPolicyViolation(final Component component, final Policy.ViolationState violationState, final PolicyViolation.Type type) {

@@ -1,10 +1,12 @@
 package org.dependencytrack.tasks;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import com.asahaf.javacron.Schedule;
+import org.dependencytrack.common.ConfigKey;
 
 import java.util.Map;
 import java.util.Timer;
@@ -17,11 +19,13 @@ public abstract class BaseTaskScheduler {
 
     private Timer timer;
 
-    private static final long POLLING_INTERVAL_IN_MILLIS = 10000;
+    private long pollingIntervalInMillis;
 
     protected void scheduleTask(Map<Event, Schedule> eventScheduleMap) {
+        pollingIntervalInMillis = Config.getInstance().getPropertyAsLong(ConfigKey.TASK_SCHEDULER_POLLING_INTERVAL);
+        long initialDelay = Config.getInstance().getPropertyAsLong(ConfigKey.TASK_SCHEDULER_INITIAL_DELAY);
         timer = new Timer();
-        timer.schedule(new ScheduleEvent().eventScheduleMap(eventScheduleMap), 100, 10000);
+        timer.schedule(new ScheduleEvent().eventScheduleMap(eventScheduleMap), initialDelay, pollingIntervalInMillis);
     }
 
     /**
@@ -40,12 +44,11 @@ public abstract class BaseTaskScheduler {
          * Publishes the Event specified in the constructor.
          * This method publishes to all {@link EventService}s.
          */
-
         public void run() {
             this.eventScheduleMap.forEach((event, schedule) -> {
                 long timeToExecuteTask = schedule.nextDuration(TimeUnit.MILLISECONDS);
-                LOGGER.debug("Time in milliseconds to execute task " + timeToExecuteTask);
-                if (timeToExecuteTask <= POLLING_INTERVAL_IN_MILLIS) {
+                LOGGER.debug("Time in milliseconds to execute " + event + "is: " + timeToExecuteTask);
+                if (timeToExecuteTask <= pollingIntervalInMillis) {
                     EventService.getInstance().publish(event);
                     SingleThreadedEventService.getInstance().publish(event);
                 }
