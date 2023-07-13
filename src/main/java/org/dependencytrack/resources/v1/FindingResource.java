@@ -31,6 +31,8 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.model.Finding;
@@ -174,12 +176,14 @@ public class FindingResource extends AlpineResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
-                  LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
+                    LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
-                  final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
-                  Event.dispatch(vae);
+                    final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                    Event.dispatch(vae);
+                    final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
+                    Event.dispatch(projectRepositoryMetaAnalysisEvent);
 
-                  return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
+                    return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }

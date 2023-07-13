@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
@@ -27,7 +26,6 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -304,8 +302,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public Component createComponent(Component component, boolean commitIndex) {
         final Component result = persist(component);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Component.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -371,8 +369,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         final Component result = persist(component);
-        Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        commitSearchIndex(commitIndex, Component.class);
+        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
+        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -398,15 +396,15 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
         pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
         try {
-            final Component result = pm.getObjectById(Component.class, component.getId());
-            Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
+            // final Component result = pm.getObjectById(Component.class, component.getId());
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
             deleteAnalysisTrail(component);
             deleteViolationAnalysisTrail(component);
             deleteMetrics(component);
             deleteFindingAttributions(component);
             deletePolicyViolations(component);
             delete(component);
-            commitSearchIndex(commitIndex, Component.class);
+            // commitSearchIndex(commitIndex, Component.class);
         } catch (javax.jdo.JDOObjectNotFoundException | org.datanucleus.exceptions.NucleusObjectNotFoundException e) {
             LOGGER.warn("Deletion of component failed because it didn't exist anymore.");
         }
@@ -420,19 +418,58 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return a Component object, or null if not found
      */
     public Component matchSingleIdentity(final Project project, final ComponentIdentity cid) {
-        String purlString = null;
-        String purlCoordinates = null;
+        var filterParts = new ArrayList<String>();
+        final var params = new HashMap<String, Object>();
+
         if (cid.getPurl() != null) {
-            try {
-                final PackageURL purl = cid.getPurl();
-                purlString = cid.getPurl().canonicalize();
-                purlCoordinates = new PackageURL(purl.getType(), purl.getNamespace(), purl.getName(), purl.getVersion(), null, null).canonicalize();
-            } catch (MalformedPackageURLException e) { // throw it away
-            }
+            filterParts.add("(purl != null && purl == :purl)");
+            params.put("purl", cid.getPurl().canonicalize());
+        } else {
+            filterParts.add("purl == null");
         }
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project && ((purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates) || (swidTagId != null && swidTagId == :swidTagId) || (cpe != null && cpe == :cpe) || (group == :group && name == :name && version == :version))");
-        query.setRange(0, 1);
-        return singleResult(query.executeWithArray(project, purlString, purlCoordinates, cid.getSwidTagId(), cid.getCpe(), cid.getGroup(), cid.getName(), cid.getVersion()));
+
+        if (cid.getCpe() != null) {
+            filterParts.add("(cpe != null && cpe == :cpe)");
+            params.put("cpe", cid.getCpe());
+        } else {
+            filterParts.add("cpe == null");
+        }
+
+        if (cid.getSwidTagId() != null) {
+            filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
+            params.put("swidTagId", cid.getSwidTagId());
+        } else {
+            filterParts.add("swidTagId == null");
+        }
+
+        var coordinatesFilter = "(";
+        if (cid.getGroup() != null) {
+            coordinatesFilter += "group == :group";
+            params.put("group", cid.getGroup());
+        } else {
+            coordinatesFilter += "group == null";
+        }
+        coordinatesFilter += " && name == :name";
+        params.put("name", cid.getName());
+        if (cid.getVersion() != null) {
+            coordinatesFilter += " && version == :version";
+            params.put("version", cid.getVersion());
+        } else {
+            coordinatesFilter += " && version == null";
+        }
+        coordinatesFilter += ")";
+        filterParts.add(coordinatesFilter);
+
+        final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
+        params.put("project", project);
+
+        final Query<Component> query = pm.newQuery(Component.class, filter);
+        query.setNamedParameters(params);
+        try {
+            return query.executeUnique();
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**

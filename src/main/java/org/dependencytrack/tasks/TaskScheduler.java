@@ -104,9 +104,6 @@ public final class TaskScheduler extends BaseTaskScheduler {
             if (isTaskEnabled(KENNA_ENABLED)) {
                 configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
             }
-            if (isTaskEnabled(SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK)));
-            }
 
             Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(eventScheduleMap.entrySet().stream(), configurableTasksMap.entrySet().stream())
                     .collect(Collectors.toMap(

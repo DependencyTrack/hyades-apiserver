@@ -48,7 +48,7 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purlCoordinates() == null) {
+        if (event == null || event.purlCoordinates()== null) {
             return null;
         }
 
@@ -75,7 +75,6 @@ final class KafkaEventConverter {
             case GROUP_BOM_CONSUMED -> KafkaTopics.NOTIFICATION_BOM;
             case GROUP_BOM_PROCESSED -> KafkaTopics.NOTIFICATION_BOM;
             case GROUP_FILE_SYSTEM -> KafkaTopics.NOTIFICATION_FILE_SYSTEM;
-            case GROUP_INDEXING_SERVICE -> KafkaTopics.NOTIFICATION_INDEXING_SERVICE;
             case GROUP_NEW_VULNERABILITY -> KafkaTopics.NOTIFICATION_NEW_VULNERABILITY;
             case GROUP_NEW_VULNERABLE_DEPENDENCY -> KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY;
             case GROUP_POLICY_VIOLATION -> KafkaTopics.NOTIFICATION_POLICY_VIOLATION;

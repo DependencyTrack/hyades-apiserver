@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.notification.NotificationLevel;
-import org.dependencytrack.event.IndexEvent;
 import org.dependencytrack.event.VulnDbSyncEvent;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
@@ -94,7 +93,7 @@ public class VulnDbSyncTask implements LoggableSubscriber {
                     }
                 }
             }
-            Event.dispatch(new IndexEvent(IndexEvent.Action.COMMIT, Vulnerability.class));
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.COMMIT, Vulnerability.class));
             LOGGER.info("VulnDB mirror synchronization task complete");
             if (successful) {
                 String content = "Mirroring of VulnDB completed successfully";
