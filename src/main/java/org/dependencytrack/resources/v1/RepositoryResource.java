@@ -161,7 +161,10 @@ public class RepositoryResource extends AlpineResource {
                 validator.validateProperty(jsonRepository, "identifier"),
                 validator.validateProperty(jsonRepository, "url")
         );
-
+        //TODO: When the UI changes are updated then this should be a validation check as part of line 160
+        if (jsonRepository.isAuthenticationRequired() == null) {
+            jsonRepository.setAuthenticationRequired(false);
+        }
         try (QueryManager qm = new QueryManager()) {
             final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
             if (!exists) {
@@ -198,14 +201,17 @@ public class RepositoryResource extends AlpineResource {
         failOnValidationError(validator.validateProperty(jsonRepository, "identifier"),
                 validator.validateProperty(jsonRepository, "url")
         );
-
+        //TODO: When the UI changes are updated then this should be a validation check as part of line 201
+        if (jsonRepository.isAuthenticationRequired() == null) {
+            jsonRepository.setAuthenticationRequired(false);
+        }
         try (QueryManager qm = new QueryManager()) {
             Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());
             if (repository != null) {
                 final String url = StringUtils.trimToNull(jsonRepository.getUrl());
                 try {
                     // The password is not passed to the front-end, so it should only be overwritten if it is not null.
-                    final String updatedPassword = jsonRepository.getPassword()!=null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
+                    final String updatedPassword = jsonRepository.getPassword() != null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
                             ? DataEncryption.encryptAsString(jsonRepository.getPassword())
                             : repository.getPassword();
 
