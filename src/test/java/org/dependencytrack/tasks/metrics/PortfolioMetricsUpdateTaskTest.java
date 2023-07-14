@@ -123,7 +123,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
         //sleep for the least duration lock held for, so lock could be released
-        Thread.sleep(3000);
+        Thread.sleep(2000);
 
         // Run the task a second time, without any metric being changed
         final var beforeSecondRun = new Date();
