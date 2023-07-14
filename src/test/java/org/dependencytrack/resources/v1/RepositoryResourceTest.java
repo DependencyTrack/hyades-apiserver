@@ -271,4 +271,34 @@ public class RepositoryResourceTest extends ResourceTest {
         }
 
     }
+
+    @Test
+    public void authenticationNullTest() throws Exception {
+        Repository repository = new Repository();
+        repository.setEnabled(true);
+        repository.setInternal(true);
+        repository.setIdentifier("test");
+        repository.setUrl("www.foobar.com");
+        repository.setType(RepositoryType.MAVEN);
+        Response response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
+                .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(201, response.getStatus());
+        try (QueryManager qm = new QueryManager()) {
+            List<Repository> repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
+            for (Repository repository1 : repositoryList) {
+                if (repository1.getIdentifier().equals("test")) {
+                    Assert.assertFalse(repository1.isAuthenticationRequired());
+                    break;
+                }
+            }
+            repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
+            for (Repository repository1 : repositoryList) {
+                if (repository1.getIdentifier().equals("test")) {
+                    Assert.assertFalse(repository1.isAuthenticationRequired());
+                    break;
+                }
+            }
+        }
+
+    }
 }
