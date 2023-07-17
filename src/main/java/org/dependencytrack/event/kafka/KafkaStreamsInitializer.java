@@ -10,9 +10,11 @@ import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.kafka.exception.KafkaStreamsDeserializationExceptionHandler;
+import org.dependencytrack.event.kafka.exception.KafkaStreamsProductionExceptionHandler;
+import org.dependencytrack.event.kafka.exception.KafkaStreamsUncaughtExceptionHandler;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -37,6 +39,7 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         }
 
         STREAMS = new KafkaStreams(new KafkaStreamsTopologyFactory().createTopology(), new StreamsConfig(getDefaultProperties()));
+        STREAMS.setUncaughtExceptionHandler(new KafkaStreamsUncaughtExceptionHandler());
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             LOGGER.info("Registering Kafka streams metrics");
@@ -72,7 +75,9 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         StringBuilder applicationName = new StringBuilder(Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX)).append(Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
         properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName.toString());
 
-        properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
+        properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, KafkaStreamsDeserializationExceptionHandler.class);
+        properties.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG, KafkaStreamsProductionExceptionHandler.class);
+
         properties.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_NUM_STREAM_THREADS));
         properties.put(StreamsConfig.STATE_DIR_CONFIG, Paths.get(Config.getInstance().getDataDirectorty().getAbsolutePath(), "kafka-streams").toString());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_AUTO_OFFSET_RESET));
