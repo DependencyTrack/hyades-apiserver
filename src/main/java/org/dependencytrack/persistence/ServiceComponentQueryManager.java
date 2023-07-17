@@ -24,9 +24,9 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 
-import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.Transaction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -248,21 +248,43 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
-        if (service.getChildren() != null) {
-            for (final ServiceComponent child: service.getChildren()) {
+        final Transaction trx = pm.currentTransaction();
+        final boolean isJoiningExistingTrx = trx.isActive();
+        try {
+            if (!isJoiningExistingTrx) {
+                trx.begin();
+            }
+
+            for (final ServiceComponent child : service.getChildren()) {
                 recursivelyDelete(child, false);
+                pm.flush();
+            }
+
+            // TODO: Add these in when these features are supported by service components
+            //deleteAnalysisTrail(service);
+            //deleteViolationAnalysisTrail(service);
+            //deleteMetrics(service);
+            //deleteFindingAttributions(service);
+            //deletePolicyViolations(service);
+
+            final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class);
+            query.setFilter("this == :service");
+            try {
+                query.deletePersistentAll(service);
+            } finally {
+                query.closeAll();
+            }
+
+            if (!isJoiningExistingTrx) {
+                trx.commit();
+            }
+
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, detachedService));
+            // commitSearchIndex(commitIndex, ServiceComponent.class);
+        } finally {
+            if (!isJoiningExistingTrx && trx.isActive()) {
+                trx.rollback();
             }
         }
-        pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        // final ServiceComponent result = pm.getObjectById(ServiceComponent.class, service.getId());
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
-        // TODO: Add these in when these features are supported by service components
-        //deleteAnalysisTrail(service);
-        //deleteViolationAnalysisTrail(service);
-        //deleteMetrics(service);
-        //deleteFindingAttributions(service);
-        //deletePolicyViolations(service);
-        delete(service);
-        // commitSearchIndex(commitIndex, ServiceComponent.class);
     }
 }

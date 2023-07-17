@@ -715,9 +715,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             removeProjectFromNotificationRules(project);
             removeProjectFromPolicies(project);
 
-            // Detach the project now; We'll need it to update the Lucene index post commit.
-            final Project detachedProject = pm.detachCopy(project);
-
             final Query<Project> projectQuery = pm.newQuery(Project.class, "this == :project");
             try {
                 projectQuery.deletePersistentAll(project);

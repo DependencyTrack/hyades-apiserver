@@ -414,9 +414,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component == :component"), component);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component == :component"), component);
 
-            // Detach the component now; We'll need it to update the Lucene index post commit.
-            final Component detachedComponent = pm.detachCopy(component);
-
             // The component itself must be deleted via deletePersistentAll, otherwise relationships
             // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
             final Query<Component> componentQuery = pm.newQuery(Component.class, "this == :component");
