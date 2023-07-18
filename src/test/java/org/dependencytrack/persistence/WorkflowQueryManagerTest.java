@@ -51,7 +51,7 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         workflowState.setUpdatedAt(Date.from(Instant.now()));
         WorkflowState result = qm.persist(workflowState);
 
-        assertThat(qm.getAllWorkflowStateById(result.getId())).satisfies(
+        assertThat(qm.getWorkflowStateById(result.getId())).satisfies(
                 state -> {
                     assertThat(state.getStatus()).isEqualTo("PENDING");
                     assertThat(state.getStep()).isEqualTo("Step-1");
@@ -66,31 +66,48 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     public void getWorkflowStatesHierarchically() {
 
         UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState = new WorkflowState();
-        workflowState.setParent(null);
-        workflowState.setFailureReason(null);
-        workflowState.setStep("Step-1");
-        workflowState.setStatus("PENDING");
-        workflowState.setToken(uuid);
-        workflowState.setStartedAt(Date.from(Instant.now()));
-        workflowState.setUpdatedAt(Date.from(Instant.now()));
-        WorkflowState result = qm.persist(workflowState);
+        WorkflowState workflowState1 = new WorkflowState();
+        workflowState1.setParent(null);
+        workflowState1.setFailureReason(null);
+        workflowState1.setStep("Step-1");
+        workflowState1.setStatus("PENDING");
+        workflowState1.setToken(uuid);
+        workflowState1.setStartedAt(Date.from(Instant.now()));
+        workflowState1.setUpdatedAt(Date.from(Instant.now()));
+        WorkflowState result1 = qm.persist(workflowState1);
 
         WorkflowState workflowState2 = new WorkflowState();
-        workflowState2.setParent(result);
+        workflowState2.setParent(result1);
         workflowState2.setFailureReason(null);
         workflowState2.setStep("Step-2");
         workflowState2.setStatus("PENDING");
         workflowState2.setToken(uuid);
         workflowState2.setStartedAt(Date.from(Instant.now()));
         workflowState2.setUpdatedAt(Date.from(Instant.now()));
-        qm.persist(workflowState2);
+        WorkflowState result2 = qm.persist(workflowState2);
 
-        assertThat(qm.getAllWorkflowStatesForParentByToken(uuid, result)).satisfiesExactly(
+        WorkflowState workflowState3 = new WorkflowState();
+        workflowState3.setParent(result2);
+        workflowState3.setFailureReason(null);
+        workflowState3.setStep("Step-3");
+        workflowState3.setStatus("PENDING");
+        workflowState3.setToken(uuid);
+        workflowState3.setStartedAt(Date.from(Instant.now()));
+        workflowState3.setUpdatedAt(Date.from(Instant.now()));
+        qm.persist(workflowState3);
+
+        assertThat(qm.getAllWorkflowStatesForParentByToken(uuid, result1)).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStatus()).isEqualTo("PENDING");
                     assertThat(state.getStep()).isEqualTo("Step-2");
-                    assertThat(state.getParent().getId()).isEqualTo(result.getId());
+                    assertThat(state.getParent().getId()).isEqualTo(result1.getId());
+                    assertThat(state.getFailureReason()).isNull();
+                    assertThat(state.getToken()).isEqualTo(uuid);
+                },
+                state -> {
+                    assertThat(state.getStatus()).isEqualTo("PENDING");
+                    assertThat(state.getStep()).isEqualTo("Step-3");
+                    assertThat(state.getParent().getId()).isEqualTo(result2.getId());
                     assertThat(state.getFailureReason()).isNull();
                     assertThat(state.getToken()).isEqualTo(uuid);
                 }
@@ -114,5 +131,23 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
 
         WorkflowState result  = qm.updateWorkflowState(persisted);
         assertThat(result.getStatus()).isEqualTo("CANCELLED");
+    }
+
+    @Test
+    public void testWorkflowStateIsDeleted() {
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState = new WorkflowState();
+        workflowState.setParent(null);
+        workflowState.setFailureReason(null);
+        workflowState.setStep("Step-1");
+        workflowState.setStatus("PENDING");
+        workflowState.setToken(uuid);
+        workflowState.setStartedAt(Date.from(Instant.now()));
+        workflowState.setUpdatedAt(Date.from(Instant.now()));
+        WorkflowState persisted = qm.persist(workflowState);
+
+
+        qm.deleteWorkflowState(persisted);
+        assertThat(qm.getWorkflowStateById(persisted.getId())).isNull();
     }
 }
