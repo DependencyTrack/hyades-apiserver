@@ -76,6 +76,7 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
@@ -1531,8 +1532,8 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
     }
 
-    public List<WorkflowState> getAllWorkflowStatesForParentByToken(UUID token, WorkflowState parent) {
-        return getWorkflowStateQueryManager().getAllWorkflowStatesForParentByToken(token, parent);
+    public List<WorkflowState> getAllWorkflowStatesForParent(WorkflowState parent) {
+        return getWorkflowStateQueryManager().getAllWorkflowStatesForParent(parent);
     }
 
     public WorkflowState getWorkflowStateById(long id) {
@@ -1541,6 +1542,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
         return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
+    }
+
+    public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
+        return getWorkflowStateQueryManager().getWorkflowStateByTokenAndStep(token, workflowStep);
     }
 
     public void deleteWorkflowState(WorkflowState workflowState) {

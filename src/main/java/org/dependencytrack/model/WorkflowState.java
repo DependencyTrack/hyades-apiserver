@@ -10,6 +10,7 @@ import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
+import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
@@ -28,6 +29,7 @@ import java.util.UUID;
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Unique(name = "WORKFLOW_STATE_COMPOSITE_IDX", members = {"token", "step"})
 public class WorkflowState implements Serializable {
 
     public enum FetchGroup {
@@ -49,12 +51,10 @@ public class WorkflowState implements Serializable {
 
     @Persistent
     @Column(name = "STARTED_AT", allowsNull = "true")
-    @NotNull
     private Date startedAt;
 
     @Persistent
     @Column(name = "UPDATED_AT", allowsNull = "true")
-    @NotNull
     private Date updatedAt;
 
     @Persistent

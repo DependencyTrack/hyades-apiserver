@@ -20,11 +20,12 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowStateQueryManager.class);
 
-    private static final String PARENT_QUERY = "CTE_WORKFLOW_STATE (ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT) AS (SELECT ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT FROM WORKFLOW_STATE ";
+    private static final String UPDATE_SUB_QUERY = "UPDATE WORKFLOW_STATE set STATUS = ? WHERE ID IN ( " ;
+    private static final String PARENT_SUB_QUERY = "CTE_WORKFLOW_STATE (ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT) AS (SELECT ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT FROM WORKFLOW_STATE  WHERE PARENT_STEP_ID = ? AND TOKEN = ? ";
     private static final String UNION_ALL = " UNION ALL ";
-    private static final String RECURSIVE_QUERY = " SELECT e.ID, e.PARENT_STEP_ID, e.STATUS, e.STEP, e.TOKEN, e.STARTED_AT, e.UPDATED_AT FROM WORKFLOW_STATE e INNER JOIN CTE_WORKFLOW_STATE o ON o.ID = e.PARENT_STEP_ID " + ")";
-    private static final String SELECT_QUERY = " SELECT ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT FROM CTE_WORKFLOW_STATE ";
-
+    private static final String RECURSIVE_SUB_QUERY = " SELECT e.ID, e.PARENT_STEP_ID, e.STATUS, e.STEP, e.TOKEN, e.STARTED_AT, e.UPDATED_AT FROM WORKFLOW_STATE e INNER JOIN CTE_WORKFLOW_STATE o ON o.ID = e.PARENT_STEP_ID " + ")";
+    private static final String SELECT_SUB_QUERY = " SELECT ID, PARENT_STEP_ID, STATUS, STEP, TOKEN, STARTED_AT, UPDATED_AT FROM CTE_WORKFLOW_STATE ";
+    private static final String SELECT_SUB_QUERY_FOR_STATUS_UPDATE = " SELECT ID FROM CTE_WORKFLOW_STATE  ";
     WorkflowStateQueryManager(final PersistenceManager pm) {
         super(pm);
     }
@@ -66,14 +67,24 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return query.executeList();
     }
 
-    public List<WorkflowState> getAllWorkflowStatesForParentByToken(UUID token, WorkflowState parentWorkflowState) {
-        StringBuilder filterCriteria = new StringBuilder();
-        filterCriteria = parentWorkflowState == null ? filterCriteria.append(" WHERE PARENT_STEP_ID IS NULL ") :
-                filterCriteria.append(" WHERE PARENT_STEP_ID = ? ");
-        filterCriteria = filterCriteria.append(" AND TOKEN = ? ");
+    public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep step) {
+        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == step");
+        query.setParameters(token, step);
+        return query.executeUnique();
+    }
+
+
+    public List<WorkflowState> getAllWorkflowStatesForParent(WorkflowState parentWorkflowState) {
+
+        if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
+            throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
+        }
 
         StringBuilder cteQuery = new StringBuilder();
-        cteQuery = cteQuery.append(PARENT_QUERY).append(filterCriteria).append(UNION_ALL).append(RECURSIVE_QUERY).append(SELECT_QUERY);
+        cteQuery = cteQuery.append(PARENT_SUB_QUERY)
+                .append(UNION_ALL)
+                .append(RECURSIVE_SUB_QUERY)
+                .append(SELECT_SUB_QUERY);
 
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -87,26 +98,23 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + cteQuery);
             }
 
-            if (parentWorkflowState == null) {
-                preparedStatement.setObject(1, token);
-            } else {
-                preparedStatement.setObject(1, parentWorkflowState.getId());
-                preparedStatement.setObject(2, parentWorkflowState.getToken());
-            }
+            preparedStatement.setObject(1, parentWorkflowState.getId());
+            preparedStatement.setObject(2, parentWorkflowState.getToken());
 
             preparedStatement.execute();
             rs = preparedStatement.getResultSet();
             while (rs.next()) {
                 WorkflowState workflowState = new WorkflowState();
-                workflowState.setId(rs.getLong(1));
+                workflowState.setId(rs.getLong("ID"));
                 WorkflowState parent = new WorkflowState();
-                parent.setId(rs.getLong(2));
+                parent.setId(rs.getLong("PARENT_STEP_ID"));
                 workflowState.setParent(parent);
-                workflowState.setStatus(WorkflowStatus.valueOf(rs.getString(3)));
-                workflowState.setStep(WorkflowStep.valueOf(rs.getString(4)));
-                workflowState.setToken(rs.getObject(5, UUID.class));
-                workflowState.setStartedAt(rs.getDate(6));
-                workflowState.setUpdatedAt(rs.getDate(7));
+                //check on db for enum values so value returned will be a valid string
+                workflowState.setStatus(WorkflowStatus.valueOf(rs.getString("STATUS")));
+                workflowState.setStep(WorkflowStep.valueOf(rs.getString("STEP")));
+                workflowState.setToken(rs.getObject("TOKEN", UUID.class));
+                workflowState.setStartedAt(rs.getDate("STARTED_AT"));
+                workflowState.setUpdatedAt(rs.getDate("UPDATED_AT"));
                 results.add(workflowState);
             }
 
