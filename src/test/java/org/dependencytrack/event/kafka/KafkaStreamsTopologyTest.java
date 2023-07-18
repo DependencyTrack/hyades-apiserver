@@ -7,6 +7,8 @@ import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.cyclonedx.proto.v1_4.Bom;
+import org.cyclonedx.proto.v1_4.Source;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
@@ -36,7 +38,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,8 +47,6 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
-import static org.hyades.proto.vuln.v1.Source.SOURCE_OSSINDEX;
-import static org.hyades.proto.vuln.v1.Source.SOURCE_SNYK;
 import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
@@ -150,13 +149,13 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setScanToken(scanToken.toString())
                 .setComponentUuid(componentB.getUuid().toString())
                 .build();
-        final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+        final var vulnComponentA = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SNYK-001")
-                .setSource(SOURCE_SNYK)
+                .setSource(Source.newBuilder().setName("SNYK").build())
                 .build();
-        final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+        final var vulnComponentB = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SONATYPE-001")
-                .setSource(SOURCE_OSSINDEX)
+                .setSource(Source.newBuilder().setName("OSSINDEX").build())
                 .build();
 
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
@@ -166,7 +165,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_SNYK)
                                                 .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .addVulnerabilities(vulnComponentA))
+                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentA)).build())
                                         .build()),
                         new KeyValue<>(scanKeyComponentB,
                                 ScanResult.newBuilder()
@@ -174,7 +173,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_OSSINDEX)
                                                 .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .addVulnerabilities(vulnComponentB))
+                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentB)).build())
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
@@ -366,13 +365,13 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setScanToken(scanToken.toString())
                 .setComponentUuid(componentB.getUuid().toString())
                 .build();
-        final var vulnComponentA = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+        final var vulnComponentA = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SNYK-001")
-                .setSource(SOURCE_SNYK)
+                .setSource(Source.newBuilder().setName("SNYK").build())
                 .build();
-        final var vulnComponentB = org.hyades.proto.vuln.v1.Vulnerability.newBuilder()
+        final var vulnComponentB = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SONATYPE-001")
-                .setSource(SOURCE_OSSINDEX)
+                .setSource(Source.newBuilder().setName("OSSINDEX").build())
                 .build();
 
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
@@ -382,7 +381,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_SNYK)
                                                 .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .addVulnerabilities(vulnComponentA))
+                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentA)).build())
                                         .build()),
                         new KeyValue<>(scanKeyComponentB,
                                 ScanResult.newBuilder()
@@ -390,7 +389,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_OSSINDEX)
                                                 .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .addVulnerabilities(vulnComponentB))
+                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentB)).build())
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
