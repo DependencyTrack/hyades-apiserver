@@ -75,6 +75,7 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
@@ -118,6 +119,7 @@ public class QueryManager extends AlpineQueryManager {
     private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
+    private WorkflowStateQueryManager workflowStateQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -327,6 +329,13 @@ public class QueryManager extends AlpineQueryManager {
             notificationQueryManager = (request == null) ? new NotificationQueryManager(getPersistenceManager()) : new NotificationQueryManager(getPersistenceManager(), request);
         }
         return notificationQueryManager;
+    }
+
+    private WorkflowStateQueryManager getWorkflowStateQueryManager() {
+        if (workflowStateQueryManager == null) {
+            workflowStateQueryManager = (request == null) ? new WorkflowStateQueryManager(getPersistenceManager()) : new WorkflowStateQueryManager(getPersistenceManager(), request);
+        }
+        return workflowStateQueryManager;
     }
 
     /**
@@ -1516,5 +1525,21 @@ public class QueryManager extends AlpineQueryManager {
 
     public VulnerableSoftware getVulnerableSoftwareByPurlAndVersion(String purlType, String purlNamespace, String purlName, String version) {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurlAndVersion(purlType, purlNamespace, purlName, version);
+    }
+
+    public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
+        return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
+    }
+
+    public List<WorkflowState> getAllWorkflowStatesForParentByToken(UUID token, WorkflowState parent) {
+        return getWorkflowStateQueryManager().getAllWorkflowStatesForParentByToken(token, parent);
+    }
+
+    public WorkflowState getAllWorkflowStateById(long id) {
+        return getWorkflowStateQueryManager().getWorkflowState(id);
+    }
+
+    public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
+        return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
     }
 }
