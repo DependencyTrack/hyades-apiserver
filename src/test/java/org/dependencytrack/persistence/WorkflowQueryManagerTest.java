@@ -14,6 +14,7 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.REPO_META_ANALYSIS;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WorkflowQueryManagerTest extends PersistenceCapableTest {
 
@@ -85,6 +86,20 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testShouldGetWorkflowStateByTokenAndStep() {
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState = new WorkflowState();
+        workflowState.setFailureReason(null);
+        workflowState.setStep(BOM_CONSUMPTION);
+        workflowState.setStatus(PENDING);
+        workflowState.setToken(uuid);
+
+        WorkflowState result = qm.persist(workflowState);
+
+        assertThat(qm.getWorkflowStateByTokenAndStep(uuid, BOM_CONSUMPTION)).isEqualTo(result);
+    }
+
+    @Test
     public void testGetWorkflowStatesHierarchically() {
 
         UUID uuid = UUID.randomUUID();
@@ -118,7 +133,7 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         workflowState3.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState3);
 
-        assertThat(qm.getAllWorkflowStatesForParentByToken(uuid, result1)).satisfiesExactlyInAnyOrder(
+        assertThat(qm.getAllWorkflowStatesForParent(result1)).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
@@ -134,6 +149,25 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
                     assertThat(state.getToken()).isEqualTo(uuid);
                 }
         );
+    }
+
+    @Test
+    public void testThrowsExceptionIfParentWorkflowStateIsNull() {
+        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(null));
+    }
+
+    @Test
+    public void testThrowsExceptionIfParentWorkflowStateIdIsMissing() {
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState1 = new WorkflowState();
+        workflowState1.setStep(BOM_CONSUMPTION);
+        workflowState1.setStatus(PENDING);
+        workflowState1.setToken(uuid);
+        WorkflowState result1 = qm.persist(workflowState1);
+
+        result1.setId(0);
+
+        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(result1));
     }
 
     @Test
