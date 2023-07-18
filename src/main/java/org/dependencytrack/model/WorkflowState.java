@@ -3,6 +3,7 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -59,12 +60,14 @@ public class WorkflowState implements Serializable {
     @Persistent
     @Column(name = "STEP", jdbcType = "VARCHAR", length = 64, allowsNull = "false")
     @NotNull
-    private String step;
+    @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
+    private WorkflowStep step;
 
     @Persistent
     @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64, allowsNull = "false")
     @NotNull
-    private String status;
+    @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
+    private WorkflowStatus status;
 
     @Persistent
     @Column(name = "FAILURE_REASON", jdbcType = "CLOB", allowsNull = "true")
@@ -110,19 +113,19 @@ public class WorkflowState implements Serializable {
         this.updatedAt = updatedAt;
     }
 
-    public String getStep() {
+    public WorkflowStep getStep() {
         return step;
     }
 
-    public void setStep(String step) {
+    public void setStep(WorkflowStep step) {
         this.step = step;
     }
 
-    public String getStatus() {
+    public WorkflowStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(WorkflowStatus status) {
         this.status = status;
     }
 

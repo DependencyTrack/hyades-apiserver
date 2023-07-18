@@ -4,6 +4,8 @@ import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -100,8 +102,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 WorkflowState parent = new WorkflowState();
                 parent.setId(rs.getLong(2));
                 workflowState.setParent(parent);
-                workflowState.setStatus(rs.getString(3));
-                workflowState.setStep(rs.getString(4));
+                workflowState.setStatus(WorkflowStatus.valueOf(rs.getString(3)));
+                workflowState.setStep(WorkflowStep.valueOf(rs.getString(4)));
                 workflowState.setToken(rs.getObject(5, UUID.class));
                 workflowState.setStartedAt(rs.getDate(6));
                 workflowState.setUpdatedAt(rs.getDate(7));
