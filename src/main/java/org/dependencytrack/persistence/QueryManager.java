@@ -1535,11 +1535,15 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForParentByToken(token, parent);
     }
 
-    public WorkflowState getAllWorkflowStateById(long id) {
+    public WorkflowState getWorkflowStateById(long id) {
         return getWorkflowStateQueryManager().getWorkflowState(id);
     }
 
     public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
         return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
+    }
+
+    public void deleteWorkflowState(WorkflowState workflowState) {
+        getWorkflowStateQueryManager().deleteWorkflowState(workflowState);
     }
 }
