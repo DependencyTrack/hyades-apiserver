@@ -34,4 +34,8 @@ message Component {
   // Whether the component is internal to the organization.
   // Internal components will only be looked up in internal repositories.
   optional bool internal = 2;
+  optional string md5Hash = 3;
+  optional string sha1Hash = 4;
+  optional string sha256Hash = 5;
+  optional string uuid = 6;
 }

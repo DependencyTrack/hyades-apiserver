@@ -141,7 +141,8 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
      * @param password                 the password to access the (authenticated) repository with
      * @return the created Repository
      */
-    public Repository createRepository(RepositoryType type, String identifier, String url, boolean enabled, boolean internal, boolean isAuthenticationRequired, String username, String password) {
+    public Repository createRepository(RepositoryType type, String identifier, String url, boolean enabled,
+                                       boolean internal, boolean isAuthenticationRequired, String username, String password, boolean isIntegrityCheckEnabled) {
         if (repositoryExist(type, identifier)) {
             return null;
         }
@@ -161,6 +162,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
         repo.setResolutionOrder(order + 1);
         repo.setEnabled(enabled);
         repo.setInternal(internal);
+        repo.setAuthenticationRequired(isIntegrityCheckEnabled);
         repo.setAuthenticationRequired(isAuthenticationRequired);
         if (Boolean.TRUE.equals(isAuthenticationRequired) && (username != null || password != null)) {
             repo.setUsername(StringUtils.trimToNull(username));
@@ -188,12 +190,14 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
      * @param enabled                specifies if the repository is enabled
      * @return the updated Repository
      */
-    public Repository updateRepository(UUID uuid, String identifier, String url, boolean internal, boolean authenticationRequired, String username, String password, boolean enabled) {
+    public Repository updateRepository(UUID uuid, String identifier, String url, boolean internal,
+                                       boolean authenticationRequired, String username, String password, boolean enabled, boolean isIntegrityCheckEnabled) {
         final Repository repository = getObjectByUuid(Repository.class, uuid);
         repository.setIdentifier(identifier);
         repository.setUrl(url);
         repository.setInternal(internal);
         repository.setAuthenticationRequired(authenticationRequired);
+        repository.setIntegrityCheckEnabled(isIntegrityCheckEnabled);
         if (!authenticationRequired) {
             repository.setUsername(null);
             repository.setPassword(null);

@@ -10,10 +10,10 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
-import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
+import org.dependencytrack.event.MavenComponentIntegrityCheckEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.model.Vulnerability;
@@ -64,7 +64,7 @@ public class KafkaEventDispatcher {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
-            LOGGER.info("Dispatch internal called for component: "+e.purlCoordinates()+" Component is "+e.internal());
+            LOGGER.info("Dispatch internal called for component: " + e.purlCoordinates() + " Component is " + e.internal());
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final OsvMirrorEvent e) {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);
@@ -72,9 +72,13 @@ public class KafkaEventDispatcher {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.NVD.name(), "", null), callback);
         } else if (event instanceof GitHubAdvisoryMirrorEvent) {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.GITHUB.name(), "", null), callback);
+       }
+        else if (event instanceof MavenComponentIntegrityCheckEvent e){
+            LOGGER.info("Dispatching integrity check event for repo type maven.");
+            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         }
 
-        throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
+            throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
     }
 
     /**

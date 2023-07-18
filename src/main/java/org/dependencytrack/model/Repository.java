@@ -93,6 +93,11 @@ public class Repository implements Serializable {
     private Boolean authenticationRequired;
 
     @Persistent
+    @Column(name = "INTEGRITYCHECKENABLED")
+    @NotNull
+    private Boolean integrityCheckEnabled;
+
+    @Persistent
     @Column(name = "USERNAME")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String username;
@@ -162,6 +167,14 @@ public class Repository implements Serializable {
 
     public Boolean isAuthenticationRequired() {
         return authenticationRequired;
+    }
+
+    public Boolean isintegrityCheckEnabled() {
+        return this.integrityCheckEnabled;
+    }
+
+    public void setIntegrityCheckEnabled(Boolean integrityCheckEnabled) {
+        this.integrityCheckEnabled = integrityCheckEnabled;
     }
 
     public void setAuthenticationRequired(Boolean authenticationRequired) {

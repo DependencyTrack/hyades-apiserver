@@ -36,12 +36,15 @@ import org.datanucleus.flush.FlushMode;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.MavenComponentIntegrityCheckEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Repository;
+import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
@@ -204,6 +207,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
+        final var integrityCheckEvents = new ArrayList<MavenComponentIntegrityCheckEvent>();
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -266,6 +270,27 @@ public class BomUploadProcessingTask implements Subscriber {
                     repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
                             ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
+                    RepositoryType repositoryType = switch (component.getPurl().getType().toUpperCase()) {
+                        case "MAVEN" -> RepositoryType.MAVEN;
+                        case "NPM" -> RepositoryType.NPM;
+                        case "GEM" -> RepositoryType.GEM;
+                        case "PYPI" -> RepositoryType.PYPI;
+                        case "NUGET" -> RepositoryType.NUGET;
+                        case "HEX" -> RepositoryType.HEX;
+                        case "COMPOSER" -> RepositoryType.COMPOSER;
+                        case "CARGO" -> RepositoryType.CARGO;
+                        case "GO_MODULES" -> RepositoryType.GO_MODULES;
+                        case "CPAN" -> RepositoryType.CPAN;
+                        default -> RepositoryType.UNSUPPORTED;
+                    };
+
+                    List<Repository> repositoryList = qm.getRepositories(repositoryType).getList(Repository.class);
+                    for (Repository repository : repositoryList) {
+                        if (repository.getType().equals(RepositoryType.MAVEN) && Boolean.TRUE.equals(repository.isintegrityCheckEnabled())) {
+                            integrityCheckEvents.add(new MavenComponentIntegrityCheckEvent(component));
+                        }
+                    }
+
                 }
 
                 trx.commit();
@@ -283,8 +308,12 @@ public class BomUploadProcessingTask implements Subscriber {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
                 vulnAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
             }
-
-            repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+            if (!repoMetaAnalysisEvents.isEmpty()) {
+                repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+            }
+            if (!integrityCheckEvents.isEmpty()) {
+                integrityCheckEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+            }
 
             // TODO: Trigger index updates
         }

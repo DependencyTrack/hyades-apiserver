@@ -2,6 +2,7 @@ package org.dependencytrack.event.kafka;
 
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.MavenComponentIntegrityCheckEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.hyades.proto.notification.v1.Notification;
@@ -47,8 +48,31 @@ final class KafkaEventConverter {
         );
     }
 
+    static KafkaEvent<String, AnalysisCommand> convert(final MavenComponentIntegrityCheckEvent event) {
+        if (event == null || event.purlCoordinates() == null) {
+            return null;
+        }
+
+        final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setPurl(event.purlCoordinates());
+        Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
+        String uuid = null;
+        if (event.uuid() != null) {
+            uuid = event.uuid().toString();
+        }
+        Optional.ofNullable(uuid).ifPresent(componentBuilder::setUuid);
+        Optional.ofNullable(event.md5()).ifPresent(componentBuilder::setMd5Hash);
+        Optional.ofNullable(event.sha1()).ifPresent(componentBuilder::setSha1Hash);
+        Optional.ofNullable(event.sha256()).ifPresent(componentBuilder::setSha256Hash);
+        final var analysisCommand = AnalysisCommand.newBuilder()
+                .setComponent(componentBuilder)
+                .build();
+
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
+    }
+
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purlCoordinates()== null) {
+        if (event == null || event.purlCoordinates() == null) {
             return null;
         }
 
