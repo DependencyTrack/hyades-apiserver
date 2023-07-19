@@ -988,6 +988,10 @@ public class QueryManager extends AlpineQueryManager {
         return getServiceComponentQueryManager().updateServiceComponent(transientServiceComponent, commitIndex);
     }
 
+    public void deleteServiceComponents(final Project project) {
+        getServiceComponentQueryManager().deleteServiceComponents(project);
+    }
+
     public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
         getServiceComponentQueryManager().recursivelyDelete(service, commitIndex);
     }
