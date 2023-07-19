@@ -22,7 +22,6 @@ import alpine.Config;
 import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.TestUtil;
 import org.dependencytrack.model.Component;
@@ -43,7 +42,6 @@ import javax.jdo.datastore.JDOConnection;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.Date;
-import java.util.Properties;
 import java.util.UUID;
 
 abstract class AbstractMetricsUpdateTaskTest {
@@ -72,7 +70,7 @@ abstract class AbstractMetricsUpdateTaskTest {
                 .withDatabaseName("dtrack");
         postgresContainer.start();
 
-        final var dnProps = TestUtil.getDatabaseProperties(postgresContainer.getJdbcUrl(),
+        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
                 postgresContainer.getDriverClassName(),
                 postgresContainer.getUsername(),
                 postgresContainer.getPassword());

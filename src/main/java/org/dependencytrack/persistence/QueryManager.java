@@ -1537,8 +1537,8 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
     }
 
-    public List<WorkflowState> getAllWorkflowStatesForParent(WorkflowState parent) {
-        return getWorkflowStateQueryManager().getAllWorkflowStatesForParent(parent);
+    public List<WorkflowState> getAllDescendantWorkflowStatesOfParent(WorkflowState parent) {
+        return getWorkflowStateQueryManager().getAllDescendantWorkflowStatesOfParent(parent);
     }
 
     public WorkflowState getWorkflowStateById(long id) {
@@ -1549,8 +1549,8 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
     }
 
-    public int updateAllWorkflowStatesForParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
-        return getWorkflowStateQueryManager().updateAllWorkflowStatesForParent(parentWorkflowState, transientStatus);
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+        return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus);
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {

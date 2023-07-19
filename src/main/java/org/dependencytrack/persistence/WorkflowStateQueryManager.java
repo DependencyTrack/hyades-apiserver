@@ -125,7 +125,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
      * Returned workflow states will only have id field in their parent workflow state field
      * This is because method uses CTE query which cannot return the associated parent fields other than id
      */
-    public List<WorkflowState> getAllWorkflowStatesForParent(WorkflowState parentWorkflowState) {
+    public List<WorkflowState> getAllDescendantWorkflowStatesOfParent(WorkflowState parentWorkflowState) {
 
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
@@ -143,7 +143,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
             }
 
-            preparedStatement.setObject(1, parentWorkflowState.getId());
+            preparedStatement.setLong(1, parentWorkflowState.getId());
             preparedStatement.setString(2, parentWorkflowState.getToken().toString());
 
             preparedStatement.execute();
@@ -174,7 +174,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return results;
     }
 
-    public int updateAllWorkflowStatesForParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
 
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
