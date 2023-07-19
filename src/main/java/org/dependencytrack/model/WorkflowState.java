@@ -28,6 +28,7 @@ public class WorkflowState implements Serializable {
     @Column(name = "PARENT_STEP_ID" , allowsNull = "true")
     private WorkflowState parent;
 
+    @Persistent
     @Column(name = "TOKEN", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
     @NotNull
     private UUID token;

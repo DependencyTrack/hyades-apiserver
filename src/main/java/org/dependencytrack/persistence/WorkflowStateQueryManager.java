@@ -21,40 +21,44 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowStateQueryManager.class);
 
-    private static final String CTE_WORKFLOW_STATE_QUERY = "CTE_WORKFLOW_STATE (ID,\n" +
-            "                                     PARENT_STEP_ID,\n" +
-            "                                     STATUS,\n" +
-            "                                     STEP,\n" +
-            "                                     TOKEN,\n" +
-            "                                     STARTED_AT,\n" +
-            "                                     UPDATED_AT) AS\n" +
-            "  (SELECT ID,\n" +
-            "          PARENT_STEP_ID,\n" +
-            "          STATUS,\n" +
-            "          STEP,\n" +
-            "          TOKEN,\n" +
-            "          STARTED_AT,\n" +
-            "          UPDATED_AT\n" +
-            "   FROM WORKFLOW_STATE\n" +
-            "   WHERE PARENT_STEP_ID = ?\n" +
-            "     AND TOKEN = ?\n" +
-            "   UNION ALL SELECT e.ID,\n" +
-            "                    e.PARENT_STEP_ID,\n" +
-            "                    e.STATUS,\n" +
-            "                    e.STEP,\n" +
-            "                    e.TOKEN,\n" +
-            "                    e.STARTED_AT,\n" +
-            "                    e.UPDATED_AT\n" +
-            "   FROM WORKFLOW_STATE e\n" +
-            "   INNER JOIN CTE_WORKFLOW_STATE o ON o.ID = e.PARENT_STEP_ID)\n" +
-            "SELECT ID,\n" +
-            "       PARENT_STEP_ID,\n" +
-            "       STATUS,\n" +
-            "       STEP,\n" +
-            "       TOKEN,\n" +
-            "       STARTED_AT,\n" +
-            "       UPDATED_AT\n" +
-            "FROM CTE_WORKFLOW_STATE";
+    private static final String CTE_WORKFLOW_STATE_QUERY = """
+            
+            "CTE_WORKFLOW_STATE" ("ID",
+                       "PARENT_STEP_ID",
+                       "STATUS",
+                       "STEP",
+                       "TOKEN",
+                       "STARTED_AT",
+                       "UPDATED_AT") AS
+              (SELECT "ID",
+                      "PARENT_STEP_ID",
+                      "STATUS",
+                      "STEP",
+                      "TOKEN",
+                      "STARTED_AT",
+                      "UPDATED_AT"
+               FROM "WORKFLOW_STATE"
+               WHERE "PARENT_STEP_ID" = ?
+                 AND "TOKEN" = ?
+               UNION ALL SELECT "e"."ID",
+                                "e"."PARENT_STEP_ID",
+                                "e"."STATUS",
+                                "e"."STEP",
+                                "e"."TOKEN",
+                                "e"."STARTED_AT",
+                                "e"."UPDATED_AT"
+               FROM "WORKFLOW_STATE" "e"
+               INNER JOIN "CTE_WORKFLOW_STATE" "o" ON "o"."ID" = "e"."PARENT_STEP_ID")
+            SELECT "ID",
+                   "PARENT_STEP_ID",
+                   "STATUS",
+                   "STEP",
+                   "TOKEN",
+                   "STARTED_AT",
+                   "UPDATED_AT"
+            FROM "CTE_WORKFLOW_STATE"
+            
+            """;
 
 
     WorkflowStateQueryManager(final PersistenceManager pm) {
@@ -173,8 +177,9 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             connection = (Connection) pm.getDataStoreConnection();
 
             //Using query string because binding is not working in preparedStatement for STATUS field
-            //There should not be risk of RCE because of constraint on db which will only let a
+            //There should not be risk of sql injection because of constraint on db which will only let a
             //valid enum value in STATUS field
+            //http://www.h2database.com/html/advanced.html#recursive_queries
             String query = "UPDATE \"WORKFLOW_STATE\" \n" +
                     "SET \"STATUS\" = " +"\'" + transientStatus.toString() +"\'" + "\n" +
                     "WHERE \"ID\" IN \n" +
