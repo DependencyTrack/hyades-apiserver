@@ -12,7 +12,6 @@ import javax.jdo.Query;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -59,7 +58,22 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             FROM "CTE_WORKFLOW_STATE"
             
             """;
-
+    public static final String UPDATE_WORKFLOW_STATES_QUERY = """
+            
+            UPDATE "WORKFLOW_STATE"
+            SET "STATUS" = ?
+            WHERE "ID" IN
+                (WITH RECURSIVE "CTE_WORKFLOW_STATE" ("ID") AS
+                   (SELECT "ID"
+                    FROM "WORKFLOW_STATE"
+                    WHERE "PARENT_STEP_ID" = ?
+                      AND "TOKEN" = ?
+                    UNION ALL SELECT "e"."ID"
+                    FROM "WORKFLOW_STATE" AS "e"
+                    INNER JOIN "CTE_WORKFLOW_STATE" AS "o" ON "o"."ID" = "e"."PARENT_STEP_ID") SELECT "ID"
+                 FROM "CTE_WORKFLOW_STATE")
+            
+            """;
 
     WorkflowStateQueryManager(final PersistenceManager pm) {
         super(pm);
@@ -67,11 +81,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
     WorkflowStateQueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
-    }
-
-    public WorkflowState createWorkflowState(WorkflowState workflowState) {
-        final WorkflowState result = persist(workflowState);
-        return result;
     }
 
     public WorkflowState getWorkflowState(long id) {
@@ -135,7 +144,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             }
 
             preparedStatement.setObject(1, parentWorkflowState.getId());
-            preparedStatement.setObject(2, parentWorkflowState.getToken());
+            preparedStatement.setString(2, parentWorkflowState.getToken().toString());
 
             preparedStatement.execute();
             rs = preparedStatement.getResultSet();
@@ -148,7 +157,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 //check on db for enum values so value returned will be a valid string
                 workflowState.setStatus(WorkflowStatus.valueOf(rs.getString("STATUS")));
                 workflowState.setStep(WorkflowStep.valueOf(rs.getString("STEP")));
-                workflowState.setToken(rs.getObject("TOKEN", UUID.class));
+                workflowState.setToken(UUID.fromString(rs.getString("TOKEN")));
                 workflowState.setStartedAt(rs.getDate("STARTED_AT"));
                 workflowState.setUpdatedAt(rs.getDate("UPDATED_AT"));
                 results.add(workflowState);
@@ -172,34 +181,21 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         }
 
         Connection connection = null;
-        Statement statement = null;
+        PreparedStatement preparedStatement = null;
         try {
             connection = (Connection) pm.getDataStoreConnection();
 
-            //Using query string because binding is not working in preparedStatement for STATUS field
-            //There should not be risk of sql injection because of constraint on db which will only let a
-            //valid enum value in STATUS field
-            //http://www.h2database.com/html/advanced.html#recursive_queries
-            String query = "UPDATE \"WORKFLOW_STATE\" \n" +
-                    "SET \"STATUS\" = " +"\'" + transientStatus.toString() +"\'" + "\n" +
-                    "WHERE \"ID\" IN \n" +
-                    " (WITH RECURSIVE \"CTE_WORKFLOW_STATE\" (\"ID\") AS \n" +
-                    "       (SELECT \"ID\" \n" +
-                    "        FROM public.\"WORKFLOW_STATE\"\n" +
-                    "        WHERE \"PARENT_STEP_ID\" = " +"\'" + parentWorkflowState.getId() +"\'" +"\n" +
-                    "          AND \"TOKEN\" = "  +"\'" + parentWorkflowState.getToken() +"\'" + "\n" +
-                    "        UNION ALL SELECT e.\"ID\" \n" +
-                    "        FROM \"WORKFLOW_STATE\" e\n" +
-                    "        INNER JOIN \"CTE_WORKFLOW_STATE\" o ON o.\"ID\" = e.\"PARENT_STEP_ID\") SELECT \"ID\"\n" +
-                    "     FROM \"CTE_WORKFLOW_STATE\"); ";
+            preparedStatement = connection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY);
+            preparedStatement.setString(1, transientStatus.name());
+            preparedStatement.setLong(2, parentWorkflowState.getId());
+            preparedStatement.setString(3, parentWorkflowState.getToken().toString());
 
-            statement = connection.createStatement();
-            return statement.executeUpdate(query);
+            return preparedStatement.executeUpdate();
         } catch (Exception ex) {
             LOGGER.error("error in executing workflow state cte query to update states", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(statement);
+            DbUtil.close(preparedStatement);
             DbUtil.close(connection);
         }
     }
