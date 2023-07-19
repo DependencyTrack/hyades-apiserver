@@ -8,17 +8,12 @@ import org.apache.kafka.streams.errors.ProductionExceptionHandler;
 import org.dependencytrack.common.ConfigKey;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 
-public class KafkaStreamsProductionExceptionHandler implements ProductionExceptionHandler {
+public class KafkaStreamsProductionExceptionHandler extends AbstractThresholdBasedExceptionHandler implements ProductionExceptionHandler {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaStreamsProductionExceptionHandler.class);
 
-    private final Duration exceptionThresholdInterval;
-    private final int exceptionThresholdCount;
-    private Instant firstExceptionOccurredAt;
-    private int exceptionOccurrences;
 
     @SuppressWarnings("unused") // Called by Kafka Streams via reflection
     public KafkaStreamsProductionExceptionHandler() {
@@ -30,8 +25,7 @@ public class KafkaStreamsProductionExceptionHandler implements ProductionExcepti
 
     KafkaStreamsProductionExceptionHandler(final Duration exceptionThresholdInterval,
                                            final int exceptionThresholdCount) {
-        this.exceptionThresholdInterval = exceptionThresholdInterval;
-        this.exceptionThresholdCount = exceptionThresholdCount;
+        super(exceptionThresholdInterval, exceptionThresholdCount);
     }
 
     /**
@@ -39,6 +33,7 @@ public class KafkaStreamsProductionExceptionHandler implements ProductionExcepti
      */
     @Override
     public void configure(final Map<String, ?> configs) {
+        // Configuration is done via Alpine config.
     }
 
     /**
@@ -57,29 +52,15 @@ public class KafkaStreamsProductionExceptionHandler implements ProductionExcepti
             return ProductionExceptionHandlerResponse.FAIL;
         }
 
-        final Instant now = Instant.now();
-        if (firstExceptionOccurredAt == null) {
-            firstExceptionOccurredAt = now;
-            exceptionOccurrences = 1;
-        } else {
-            exceptionOccurrences++;
-        }
-
-        final Instant cutoff = firstExceptionOccurredAt.plus(exceptionThresholdInterval);
-        if (now.isAfter(cutoff)) {
-            firstExceptionOccurredAt = now;
-            exceptionOccurrences = 1;
-        }
-
-        if (exceptionOccurrences >= exceptionThresholdCount) {
+        if (exceedsThreshold()) {
             LOGGER.error("""
                     Failed to produce record to topic %s; \
                     Stopping to produce records, as the error was encountered %d times since %s, \
                     exceeding the configured threshold of %d occurrences in an interval of %s\
                     """
                     .formatted(record.topic(),
-                            exceptionOccurrences, firstExceptionOccurredAt,
-                            exceptionThresholdCount, exceptionThresholdInterval), exception);
+                            exceptionOccurrences(), firstExceptionOccurredAt(),
+                            exceptionThresholdCount(), exceptionThresholdInterval()), exception);
             return ProductionExceptionHandlerResponse.FAIL;
         }
 
@@ -88,7 +69,7 @@ public class KafkaStreamsProductionExceptionHandler implements ProductionExcepti
                 Skipping and continuing to produce records, as the configured threshold of \
                 %d occurrences in an interval of %s has not been exceeded yet\
                 """
-                .formatted(record.topic(), exceptionThresholdCount, exceptionThresholdInterval), exception);
+                .formatted(record.topic(), exceptionThresholdCount(), exceptionThresholdInterval()), exception);
         return ProductionExceptionHandlerResponse.CONTINUE;
     }
 
