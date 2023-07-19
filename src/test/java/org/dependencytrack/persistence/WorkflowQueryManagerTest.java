@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class WorkflowQueryManagerTest  {
     private PostgreSQLContainer<?> postgresContainer;
     private QueryManager qm;
+
     @Before
     public void setUp() throws Exception {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
@@ -34,7 +35,7 @@ public class WorkflowQueryManagerTest  {
                 .withDatabaseName("dtrack");
         postgresContainer.start();
 
-        final var dnProps = TestUtil.getDatabaseProperties(postgresContainer.getJdbcUrl(),
+        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
                 postgresContainer.getDriverClassName(),
                 postgresContainer.getUsername(),
                 postgresContainer.getPassword());
@@ -167,7 +168,7 @@ public class WorkflowQueryManagerTest  {
         workflowState3.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState3);
 
-        assertThat(qm.getAllWorkflowStatesForParent(result1)).satisfiesExactlyInAnyOrder(
+        assertThat(qm.getAllDescendantWorkflowStatesOfParent(result1)).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
@@ -219,7 +220,7 @@ public class WorkflowQueryManagerTest  {
         workflowState3.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState3);
 
-        assertThat(qm.updateAllWorkflowStatesForParent(result1, CANCELLED)).isEqualTo(2);
+        assertThat(qm.updateAllDescendantStatesOfParent(result1, CANCELLED)).isEqualTo(2);
     }
 
     @Test
@@ -232,8 +233,8 @@ public class WorkflowQueryManagerTest  {
         WorkflowState result1 = qm.persist(workflowState1);
 
         result1.setId(0);
-        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(null));
-        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(result1));
+        assertThrows(IllegalArgumentException.class, () -> qm.getAllDescendantWorkflowStatesOfParent(null));
+        assertThrows(IllegalArgumentException.class, () -> qm.getAllDescendantWorkflowStatesOfParent(result1));
     }
 
     @Test

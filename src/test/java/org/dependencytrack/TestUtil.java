@@ -6,7 +6,7 @@ import java.util.Properties;
 
 public class TestUtil {
 
-    public static Properties getDatabaseProperties(String jdbcUrl, String driverName, String username, String pwd) {
+    public static Properties getDatanucleusProperties(String jdbcUrl, String driverName, String username, String pwd) {
         final var dnProps = new Properties();
         dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_DATABASE, "true");
         dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_TABLES, "true");
