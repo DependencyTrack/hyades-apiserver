@@ -1,9 +1,16 @@
 package org.dependencytrack.persistence;
 
-import org.dependencytrack.PersistenceCapableTest;
+import alpine.server.persistence.PersistenceManagerFactory;
+import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.TestUtil;
 import org.dependencytrack.model.WorkflowState;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
+import javax.jdo.JDOHelper;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -16,7 +23,35 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.REPO_META_ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class WorkflowQueryManagerTest extends PersistenceCapableTest {
+public class WorkflowQueryManagerTest  {
+    private PostgreSQLContainer<?> postgresContainer;
+    private QueryManager qm;
+    @Before
+    public void setUp() throws Exception {
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
+                .withUsername("dtrack")
+                .withPassword("dtrack")
+                .withDatabaseName("dtrack");
+        postgresContainer.start();
+
+        final var dnProps = TestUtil.getDatabaseProperties(postgresContainer.getJdbcUrl(),
+                postgresContainer.getDriverClassName(),
+                postgresContainer.getUsername(),
+                postgresContainer.getPassword());
+
+        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
+        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
+
+        qm = new QueryManager();
+    }
+
+    @After
+    public void tearDown() {
+        PersistenceManagerFactory.tearDown();
+        if (postgresContainer != null) {
+            postgresContainer.stop();
+        }
+    }
 
     @Test
     public void testWorkflowStateIsCreated() {
@@ -31,7 +66,6 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         workflowState.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState);
 
-        qm.getAllWorkflowStatesForAToken(uuid);
         assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactly(
                 state -> {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
@@ -189,11 +223,6 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testThrowsExceptionIfParentWorkflowStateIsNull() {
-        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(null));
-    }
-
-    @Test
     public void testThrowsExceptionIfParentWorkflowStateIdIsMissing() {
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState1 = new WorkflowState();
@@ -203,7 +232,7 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         WorkflowState result1 = qm.persist(workflowState1);
 
         result1.setId(0);
-
+        assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(null));
         assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(result1));
     }
 
@@ -238,7 +267,6 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         workflowState.setStartedAt(Date.from(Instant.now()));
         workflowState.setUpdatedAt(Date.from(Instant.now()));
         WorkflowState persisted = qm.persist(workflowState);
-
 
         qm.deleteWorkflowState(persisted);
         assertThat(qm.getWorkflowStateById(persisted.getId())).isNull();

@@ -24,6 +24,7 @@ import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.TestUtil;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -71,17 +72,10 @@ abstract class AbstractMetricsUpdateTaskTest {
                 .withDatabaseName("dtrack");
         postgresContainer.start();
 
-        final var dnProps = new Properties();
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_DATABASE, "true");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_TABLES, "true");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_COLUMNS, "true");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_CONSTRAINTS, "true");
-        dnProps.put("datanucleus.schema.generatedatabase.mode", "create");
-        dnProps.put("datanucleus.query.jdoql.allowall", "true");
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, postgresContainer.getJdbcUrl());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, postgresContainer.getDriverClassName());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
+        final var dnProps = TestUtil.getDatabaseProperties(postgresContainer.getJdbcUrl(),
+                postgresContainer.getDriverClassName(),
+                postgresContainer.getUsername(),
+                postgresContainer.getPassword());
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
         PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
