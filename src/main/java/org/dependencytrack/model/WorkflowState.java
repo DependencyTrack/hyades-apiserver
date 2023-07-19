@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.FetchGroup;
-import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -17,24 +15,9 @@ import java.util.Date;
 import java.util.UUID;
 
 @PersistenceCapable(table= "WORKFLOW_STATE")
-@FetchGroups({
-        @FetchGroup(name = "ALL", members = {
-                @Persistent(name = "id"),
-                @Persistent(name = "parent"),
-                @Persistent(name = "token"),
-                @Persistent(name = "updatedAt"),
-                @Persistent(name = "startedAt"),
-                @Persistent(name = "step"),
-                @Persistent(name = "status")
-        })
-})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Unique(name = "WORKFLOW_STATE_COMPOSITE_IDX", members = {"token", "step"})
 public class WorkflowState implements Serializable {
-
-    public enum FetchGroup {
-        ALL
-    }
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)

@@ -76,6 +76,7 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
@@ -1542,6 +1543,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
         return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
+    }
+
+    public int updateAllWorkflowStatesForParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+        return getWorkflowStateQueryManager().updateAllWorkflowStatesForParent(parentWorkflowState, transientStatus);
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
