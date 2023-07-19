@@ -33,9 +33,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 
-import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.Transaction;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
@@ -380,7 +380,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     protected void deleteComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        query.deletePersistentAll(project);
+        try {
+            query.deletePersistentAll(project);
+        } finally {
+            query.closeAll();
+        }
     }
 
     /**
@@ -389,26 +393,47 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     public void recursivelyDelete(Component component, boolean commitIndex) {
-        if (component.getChildren() != null) {
-            for (final Component child: component.getChildren()) {
+        final Transaction trx = pm.currentTransaction();
+        final boolean isJoiningExistingTrx = trx.isActive();
+        try {
+            if (!isJoiningExistingTrx) {
+                trx.begin();
+            }
+
+            for (final Component child : component.getChildren()) {
                 recursivelyDelete(child, false);
+                pm.flush();
+            }
+
+            // Use bulk DELETE queries to avoid having to fetch every single object from the database first.
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component == :component"), component);
+
+            // The component itself must be deleted via deletePersistentAll, otherwise relationships
+            // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
+            final Query<Component> componentQuery = pm.newQuery(Component.class, "this == :component");
+            try {
+                componentQuery.deletePersistentAll(component);
+            } finally {
+                componentQuery.closeAll();
+            }
+
+            if (!isJoiningExistingTrx) {
+                trx.commit();
+            }
+
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, detachedComponent));
+            // commitSearchIndex(commitIndex, Component.class);
+        } finally {
+            if (!isJoiningExistingTrx && trx.isActive()) {
+                trx.rollback();
             }
         }
-        pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        try {
-            // final Component result = pm.getObjectById(Component.class, component.getId());
-            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
-            deleteAnalysisTrail(component);
-            deleteViolationAnalysisTrail(component);
-            deleteMetrics(component);
-            deleteFindingAttributions(component);
-            deletePolicyViolations(component);
-            delete(component);
-            // commitSearchIndex(commitIndex, Component.class);
-        } catch (javax.jdo.JDOObjectNotFoundException | org.datanucleus.exceptions.NucleusObjectNotFoundException e) {
-            LOGGER.warn("Deletion of component failed because it didn't exist anymore.");
-        }
-
     }
 
     /**

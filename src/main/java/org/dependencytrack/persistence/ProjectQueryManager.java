@@ -38,7 +38,6 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
@@ -46,9 +45,9 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.util.NotificationUtil;
 
-import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.Transaction;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -681,34 +680,59 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        if (project.getChildren() != null) {
+        final Transaction trx = pm.currentTransaction();
+        final boolean isJoiningExistingTrx = trx.isActive();
+        try {
+            if (!isJoiningExistingTrx) {
+                trx.begin();
+            }
+
             for (final Project child : project.getChildren()) {
+                // Note: This could be refactored such that each project is deleted
+                //   in its own transaction. That would break semantics when it comes
+                //   to joining an existing transaction though, so needs a bit more thought.
                 recursivelyDelete(child, false);
+                pm.flush();
+            }
+
+            // Use bulk DELETE queries to avoid having to fetch every single object from the database first.
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetrics WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Bom WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Vex WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectProperty WHERE project == :project"), project);
+
+            // Projects, Components, and ServiceComponents must be deleted via deletePersistentAll, otherwise relationships
+            // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
+            deleteComponents(project);
+            deleteServiceComponents(project);
+            removeProjectFromNotificationRules(project);
+            removeProjectFromPolicies(project);
+
+            final Query<Project> projectQuery = pm.newQuery(Project.class, "this == :project");
+            try {
+                projectQuery.deletePersistentAll(project);
+            } finally {
+                projectQuery.closeAll();
+            }
+
+            if (!isJoiningExistingTrx) {
+                trx.commit();
+            }
+
+            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, detachedProject));
+            // commitSearchIndex(commitIndex, Project.class);
+        } finally {
+            if (!isJoiningExistingTrx && trx.isActive()) {
+                trx.rollback();
             }
         }
-        pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        // final Project result = pm.getObjectById(Project.class, project.getId());
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, pm.detachCopy(result)));
-        // commitSearchIndex(commitIndex, Project.class);
-
-        deleteAnalysisTrail(project);
-        deleteViolationAnalysisTrail(project);
-        deleteMetrics(project);
-        deleteFindingAttributions(project);
-        deletePolicyViolations(project);
-        deleteComponents(project);
-
-        for (final ServiceComponent s : getAllServiceComponents(project)) {
-            recursivelyDelete(s, false);
-        }
-        deleteBoms(project);
-        deleteVexs(project);
-        removeProjectFromNotificationRules(project);
-        removeProjectFromPolicies(project);
-        delete(project.getProperties());
-        delete(getAllBoms(project));
-        delete(project.getChildren());
-        delete(project);
     }
 
     /**
