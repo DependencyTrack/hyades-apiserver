@@ -152,6 +152,43 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testUpdateWorkflowStatesOfAllDescendants() {
+
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState1 = new WorkflowState();
+        workflowState1.setParent(null);
+        workflowState1.setFailureReason(null);
+        workflowState1.setStep(BOM_CONSUMPTION);
+        workflowState1.setStatus(PENDING);
+        workflowState1.setToken(uuid);
+        workflowState1.setStartedAt(Date.from(Instant.now()));
+        workflowState1.setUpdatedAt(Date.from(Instant.now()));
+        WorkflowState result1 = qm.persist(workflowState1);
+
+        WorkflowState workflowState2 = new WorkflowState();
+        workflowState2.setParent(result1);
+        workflowState2.setFailureReason(null);
+        workflowState2.setStep(BOM_PROCESSING);
+        workflowState2.setStatus(PENDING);
+        workflowState2.setToken(uuid);
+        workflowState2.setStartedAt(Date.from(Instant.now()));
+        workflowState2.setUpdatedAt(Date.from(Instant.now()));
+        WorkflowState result2 = qm.persist(workflowState2);
+
+        WorkflowState workflowState3 = new WorkflowState();
+        workflowState3.setParent(result2);
+        workflowState3.setFailureReason(null);
+        workflowState3.setStep(REPO_META_ANALYSIS);
+        workflowState3.setStatus(PENDING);
+        workflowState3.setToken(uuid);
+        workflowState3.setStartedAt(Date.from(Instant.now()));
+        workflowState3.setUpdatedAt(Date.from(Instant.now()));
+        qm.persist(workflowState3);
+
+        assertThat(qm.updateAllWorkflowStatesForParent(result1, CANCELLED)).isEqualTo(2);
+    }
+
+    @Test
     public void testThrowsExceptionIfParentWorkflowStateIsNull() {
         assertThrows(IllegalArgumentException.class, () -> qm.getAllWorkflowStatesForParent(null));
     }
