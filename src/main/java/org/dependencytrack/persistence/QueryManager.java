@@ -1529,6 +1529,22 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurlAndVersion(purlType, purlNamespace, purlName, version);
     }
 
+    /**
+     * Execute a give {@link Query} and ensure that resources associated with it are released post execution.
+     *
+     * @param query      The {@link Query} to execute
+     * @param parameters The parameters of the query
+     * @return The result of the query
+     */
+    public Object executeAndClose(final Query<?> query, final Object... parameters) {
+        try {
+            return query.executeWithArray(parameters);
+        } finally {
+            query.closeAll();
+        }
+    }
+
+
     public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
     }

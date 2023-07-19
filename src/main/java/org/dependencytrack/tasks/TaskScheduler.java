@@ -18,12 +18,15 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.Config;
+import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
-import alpine.model.IConfigProperty.PropertyType;
-import alpine.server.tasks.AlpineTaskScheduler;
+import com.asahaf.javacron.InvalidExpressionException;
+import com.asahaf.javacron.Schedule;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
@@ -40,33 +43,34 @@ import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
-import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_LDAP_SYNC_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_SYNC_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_SYNC_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_SYNC_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_GHSA_MIRROR_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_NIST_MIRROR_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_OSV_MIRROR_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_PORTFOLIO_METRICS_UPDATE_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_PORTFOLIO_VULNERABILITY_ANALYSIS_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_REPOSITORY_METADATA_FETCH_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_VULNDB_MIRROR_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.TASK_SCHEDULER_VULNERABILITY_METRICS_UPDATE_CADENCE;
+import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
 
 /**
- * A Singleton implementation of {@link AlpineTaskScheduler} that configures scheduled and repeatable tasks.
- *
  * @author Steve Springett
  * @since 3.0.0
  */
-public final class TaskScheduler extends AlpineTaskScheduler {
+public final class TaskScheduler extends BaseTaskScheduler {
 
+    private static final Logger LOGGER = Logger.getLogger(TaskScheduler.class);
     // Holds an instance of TaskScheduler
     private static final TaskScheduler INSTANCE = new TaskScheduler();
 
@@ -74,81 +78,67 @@ public final class TaskScheduler extends AlpineTaskScheduler {
      * Private constructor.
      */
     private TaskScheduler() {
-        try (QueryManager qm = new QueryManager()) {
-            // Creates a new event that executes every 6 hours (21600000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new LdapSyncEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_LDAP_SYNC_CADENCE));
+        final Config configInstance = Config.getInstance();
+        try {
+            Map<Event, Schedule> configurableTasksMap = new HashMap<>();
+            Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
+                    Map.entry(new LdapSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
+                    Map.entry(new NistMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
+                    Map.entry(new OsvMirrorEvent(null), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
+                    Map.entry(new GitHubAdvisoryMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
+                    Map.entry(new PortfolioMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
+                    Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
+                    Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
+                    Map.entry(new VulnDbSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
+                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
+                    Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
+                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
+            );
 
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new GitHubAdvisoryMirrorEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_GHSA_MIRROR_CADENCE));
+            if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
+                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
+            }
+            if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
+                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
+            }
+            if (isTaskEnabled(KENNA_ENABLED)) {
+                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
+            }
 
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new OsvMirrorEvent(null), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_OSV_MIRROR_CADENCE));
+            Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(eventScheduleMap.entrySet().stream(), configurableTasksMap.entrySet().stream())
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue));
 
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 1 minute (60000) delay
-            scheduleEvent(new NistMirrorEvent(), 60000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_NIST_MIRROR_CADENCE));
+            scheduleTask(mergedEventScheduleMap);
 
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 1 minute (60000) delay
-            scheduleEvent(new VulnDbSyncEvent(), 60000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_VULNDB_MIRROR_CADENCE));
-
-            // Creates a new event that executes every 1 hour (3600000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new PortfolioMetricsUpdateEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_PORTFOLIO_METRICS_UPDATE_CADENCE));
-
-            // Creates a new event that executes every 1 hour (3600000) by default after an initial 10 second (10000) delay
-            scheduleEvent(new VulnerabilityMetricsUpdateEvent(), 10000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_VULNERABILITY_METRICS_UPDATE_CADENCE));
-
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 6 hour (21600000) delay
-            scheduleEvent(new PortfolioVulnerabilityAnalysisEvent(), 21600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_PORTFOLIO_VULNERABILITY_ANALYSIS_CADENCE));
-
-            // Creates a new event that executes every 24 hours (86400000) by default after an initial 1 hour (3600000) delay
-            scheduleEvent(new PortfolioRepositoryMetaAnalysisEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_REPOSITORY_METADATA_FETCH_CADENCE));
-
-            // Creates a new event that executes every 6 hours (21600000) by default after an initial 1 hour (3600000) delay
-            scheduleEvent(new InternalComponentIdentificationEvent(), 3600000, getCadenceConfigPropertyValueInMilliseconds(qm, TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE));
-
-            scheduleEvent(new VulnerabilityScanCleanupEvent(), Duration.ofSeconds(30).toMillis(), Duration.ofDays(6).toMillis());
+        } catch (InvalidExpressionException invalidExpressionException) {
+            throw new RuntimeException("Cron expression cannot be parsed to schedule tasks", invalidExpressionException);
         }
-
-        // Configurable tasks
-        scheduleConfigurableTask(300000, FORTIFY_SSC_ENABLED, FORTIFY_SSC_SYNC_CADENCE, new FortifySscUploadEventAbstract());
-        scheduleConfigurableTask(300000, DEFECTDOJO_ENABLED, DEFECTDOJO_SYNC_CADENCE, new DefectDojoUploadEventAbstract());
-        scheduleConfigurableTask(300000, KENNA_ENABLED, KENNA_SYNC_CADENCE, new KennaSecurityUploadEventAbstract());
     }
 
     /**
      * Return an instance of the TaskScheduler instance.
+     *
      * @return a TaskScheduler instance
      */
     public static TaskScheduler getInstance() {
         return INSTANCE;
     }
 
-    private void scheduleConfigurableTask(final long initialDelay, final ConfigPropertyConstants enabledConstraint,
-                                          final ConfigPropertyConstants constraint, final Event event) {
+    private boolean isTaskEnabled(final ConfigPropertyConstants enabledConstraint) {
         try (QueryManager qm = new QueryManager()) {
             final ConfigProperty enabledProperty = qm.getConfigProperty(
                     enabledConstraint.getGroupName(), enabledConstraint.getPropertyName());
             if (enabledProperty != null && enabledProperty.getPropertyValue() != null) {
                 final boolean isEnabled = BooleanUtil.valueOf(enabledProperty.getPropertyValue());
                 if (!isEnabled) {
-                    return;
+                    return false;
                 }
             } else {
-                return;
+                return false;
             }
-            final ConfigProperty property = qm.getConfigProperty(constraint.getGroupName(), constraint.getPropertyName());
-            if (property != null && property.getPropertyValue() != null) {
-                final Integer minutes = Integer.valueOf(property.getPropertyValue());
-                scheduleEvent(event, initialDelay, (long)minutes * (long)60 * (long)1000);
-            }
+            return true;
         }
-    }
-
-    private long getCadenceConfigPropertyValueInMilliseconds(QueryManager qm, ConfigPropertyConstants configProperty) {
-        long result = 0;
-        ConfigProperty property = qm.getConfigProperty(configProperty.getGroupName(), configProperty.getPropertyName());
-        if(PropertyType.INTEGER.equals(property.getPropertyType()) && property.getPropertyValue() != null) {
-            result = Long.valueOf(property.getPropertyValue()) * 3600 * 1000;
-        }
-        return result;
     }
 }
