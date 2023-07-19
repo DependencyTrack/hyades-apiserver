@@ -989,7 +989,7 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public void deleteServiceComponents(final Project project) {
-       getServiceComponentQueryManager().deleteServiceComponents(project);
+        getServiceComponentQueryManager().deleteServiceComponents(project);
     }
 
     public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
