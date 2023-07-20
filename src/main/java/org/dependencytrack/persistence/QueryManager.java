@@ -75,6 +75,9 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
@@ -118,6 +121,7 @@ public class QueryManager extends AlpineQueryManager {
     private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
+    private WorkflowStateQueryManager workflowStateQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -327,6 +331,13 @@ public class QueryManager extends AlpineQueryManager {
             notificationQueryManager = (request == null) ? new NotificationQueryManager(getPersistenceManager()) : new NotificationQueryManager(getPersistenceManager(), request);
         }
         return notificationQueryManager;
+    }
+
+    private WorkflowStateQueryManager getWorkflowStateQueryManager() {
+        if (workflowStateQueryManager == null) {
+            workflowStateQueryManager = (request == null) ? new WorkflowStateQueryManager(getPersistenceManager()) : new WorkflowStateQueryManager(getPersistenceManager(), request);
+        }
+        return workflowStateQueryManager;
     }
 
     /**
@@ -978,7 +989,7 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public void deleteServiceComponents(final Project project) {
-       getServiceComponentQueryManager().deleteServiceComponents(project);
+        getServiceComponentQueryManager().deleteServiceComponents(project);
     }
 
     public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
@@ -1537,4 +1548,32 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
+
+    public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
+        return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
+    }
+
+    public List<WorkflowState> getAllDescendantWorkflowStatesOfParent(WorkflowState parent) {
+        return getWorkflowStateQueryManager().getAllDescendantWorkflowStatesOfParent(parent);
+    }
+
+    public WorkflowState getWorkflowStateById(long id) {
+        return getWorkflowStateQueryManager().getWorkflowState(id);
+    }
+
+    public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
+        return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
+    }
+
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+        return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus);
+    }
+
+    public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
+        return getWorkflowStateQueryManager().getWorkflowStateByTokenAndStep(token, workflowStep);
+    }
+
+    public void deleteWorkflowState(WorkflowState workflowState) {
+        getWorkflowStateQueryManager().deleteWorkflowState(workflowState);
+    }
 }
