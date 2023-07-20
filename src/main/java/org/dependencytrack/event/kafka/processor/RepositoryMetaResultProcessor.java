@@ -191,11 +191,10 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             HashMatchStatus sha1HashMatch = record.value().getIntegrityResult().getSha1HashMatch();
             HashMatchStatus sha256HashMatch = record.value().getIntegrityResult().getSha256Match();
             persistentIntegrityResult.setMd5HashMatched(md5HashMatch.name());
-            persistentIntegrityResult.setSha256HashMatched(sha1HashMatch.name());
-            persistentIntegrityResult.setSha1HashMatched(sha256HashMatch.name());
-            try (QueryManager qm = new QueryManager()) {
-                persistentIntegrityResult.setComponent(qm.getObjectByUuid(Component.class, record.value().getComponent().getUuid()));
-            }
+            persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
+            persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
+            persistentIntegrityResult.setUuid(UUID.fromString(record.value().getComponent().getUuid()));
+            persistentIntegrityResult.setComponent(pm.getObjectById(Component.class, record.value().getComponent().getComponentId()));
             persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
             if (md5HashMatch.equals(HashMatchStatus.UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.UNKNOWN)) {
                 persistentIntegrityResult.setIntegrityCheckPassed(false);
