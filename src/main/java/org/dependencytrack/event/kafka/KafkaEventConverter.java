@@ -63,6 +63,7 @@ final class KafkaEventConverter {
         Optional.ofNullable(event.md5()).ifPresent(componentBuilder::setMd5Hash);
         Optional.ofNullable(event.sha1()).ifPresent(componentBuilder::setSha1Hash);
         Optional.ofNullable(event.sha256()).ifPresent(componentBuilder::setSha256Hash);
+        Optional.of(event.componentId()).ifPresent(componentBuilder::setComponentId);
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();

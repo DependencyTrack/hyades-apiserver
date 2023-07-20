@@ -39,6 +39,7 @@ message Component {
   optional string sha1Hash = 4;
   optional string sha256Hash = 5;
   optional string uuid = 6;
+  optional double componentId = 7;
 }
 
 message IntegrityResult {

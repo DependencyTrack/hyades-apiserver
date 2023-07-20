@@ -23,6 +23,7 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
@@ -164,10 +165,10 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             trx.begin();
 
             final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
-            query.setFilter("repositoryType == :repositoryType && uuid == :uuid && url == :url");
+            query.setFilter("repositoryType == :repositoryType && uuid == :id && repositoryUrl == :url");
             query.setParameters(
                     RepositoryType.resolve(purl),
-                    record.value().getIntegrityResult().getUuid(),
+                    UUID.fromString(record.value().getComponent().getUuid()),
                     record.value().getIntegrityResult().getUrl()
             );
             IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();

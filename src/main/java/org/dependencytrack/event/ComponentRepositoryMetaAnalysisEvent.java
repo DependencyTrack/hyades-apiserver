@@ -14,11 +14,11 @@ import java.util.UUID;
  * @param internal        Whether the {@link Component} is internal
  */
 public record ComponentRepositoryMetaAnalysisEvent(String purlCoordinates, Boolean internal, String md5, String sha1,
-                                                   String sha256, UUID uuid) implements Event {
+                                                   String sha256, UUID uuid, long componentId) implements Event {
 
     public ComponentRepositoryMetaAnalysisEvent(final Component component) {
         this(Optional.ofNullable(component.getPurlCoordinates()).map(PackageURL::canonicalize).orElse(null), component.isInternal(), component.getMd5(),
-                component.getSha1(), component.getSha256(), component.getUuid());
+                component.getSha1(), component.getSha256(), component.getUuid(), component.getId());
     }
 
 }
