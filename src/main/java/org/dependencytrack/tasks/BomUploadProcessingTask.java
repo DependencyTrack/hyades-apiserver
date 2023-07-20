@@ -36,7 +36,6 @@ import org.datanucleus.flush.FlushMode;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.MavenComponentIntegrityCheckEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
@@ -207,7 +206,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
-        final var integrityCheckEvents = new ArrayList<MavenComponentIntegrityCheckEvent>();
+        final var integrityCheckEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -287,7 +286,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     List<Repository> repositoryList = qm.getRepositories(repositoryType).getList(Repository.class);
                     for (Repository repository : repositoryList) {
                         if (repository.getType().equals(RepositoryType.MAVEN) && Boolean.TRUE.equals(repository.isintegrityCheckEnabled())) {
-                            integrityCheckEvents.add(new MavenComponentIntegrityCheckEvent(component));
+                            integrityCheckEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
                         }
                     }
 

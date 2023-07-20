@@ -15,7 +15,7 @@ message AnalysisCommand {
 
 message AnalysisResult {
   // The component this result is for.
-  Component component = 1;
+  optional Component component = 1;
 
   // Identifier of the repository where the result was found.
   optional string repository = 2;
@@ -25,6 +25,7 @@ message AnalysisResult {
 
   // When the latest version was published.
   optional google.protobuf.Timestamp published = 4;
+  optional IntegrityResult integrity_result = 5;
 }
 
 message Component {
@@ -38,4 +39,21 @@ message Component {
   optional string sha1Hash = 4;
   optional string sha256Hash = 5;
   optional string uuid = 6;
+}
+
+message IntegrityResult {
+  // The uuid of the component for which the integrity check was done
+  string uuid = 1;
+  HashMatchStatus md5HashMatch = 2;
+  HashMatchStatus sha1HashMatch = 3;
+  HashMatchStatus sha256Match = 4;
+  string url = 5;
+  double componentId = 6;
+}
+
+enum HashMatchStatus {
+  PASS = 0;
+  FAIL = 1;
+  UNKNOWN = 2;
+  COMPONENT_MISSING_HASH = 3;
 }

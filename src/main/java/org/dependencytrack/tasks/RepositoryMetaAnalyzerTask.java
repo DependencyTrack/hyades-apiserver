@@ -118,7 +118,8 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private void dispatchComponents(final List<ComponentProjection> components) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal()));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal(), component.md5(), component.sha1(),
+                    component.sha256(), component.uuid()));
         }
     }
 
@@ -140,7 +141,8 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
         }
     }
 
-    public record ComponentProjection(String purlCoordinates, Boolean internal) {
+    public record ComponentProjection(String purlCoordinates, Boolean internal, String md5, String sha1,
+                                      String sha256, UUID uuid) {
     }
 
 }
