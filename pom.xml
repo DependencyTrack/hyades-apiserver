@@ -94,7 +94,7 @@
         <lib.json-unit.version>3.0.0</lib.json-unit.version>
         <lib.kafka-clients.version>3.5.0</lib.kafka-clients.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
-        <lib.kafka-streams.version>3.5.0</lib.kafka-streams.version>
+        <lib.kafka-streams.version>3.5.1</lib.kafka-streams.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
