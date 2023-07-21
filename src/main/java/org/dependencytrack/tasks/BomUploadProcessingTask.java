@@ -45,6 +45,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -61,6 +64,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -130,6 +134,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
                 LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED);
                 kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -142,6 +147,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED);
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -158,6 +164,15 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private void processBom(final Context ctx, final File bomFile) throws BomProcessingException {
         LOGGER.info("Consuming uploaded BOM (%s)".formatted(ctx));
+        WorkflowState bomConsumptionState = null;
+        List<Component> components = null;
+        List<ServiceComponent> services = null;
+        try (final var qm = new QueryManager()) {
+            WorkflowState consumptionState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.BOM_CONSUMPTION);
+            consumptionState.setStartedAt(Date.from(Instant.now()));
+            bomConsumptionState = qm.persist(consumptionState);
+        }
+
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, bomFile);
 
         // Keep track of which BOM ref points to which component identity.
@@ -179,28 +194,42 @@ public class BomUploadProcessingTask implements Subscriber {
         } else {
             metadataComponent = null;
         }
-        List<Component> components = convertComponents(cdxBom.getComponents());
-        components = flatten(components, Component::getChildren, Component::setChildren);
-        final int numComponentsTotal = components.size();
-        components = components.stream()
-                .filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                .toList();
-        List<ServiceComponent> services = convertServices(cdxBom.getServices());
-        services = flatten(services, ServiceComponent::getChildren, ServiceComponent::setChildren);
-        final int numServicesTotal = services.size();
-        services = services.stream()
-                .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
-                .toList();
+        try {
+            components = convertComponents(cdxBom.getComponents());
+            components = flatten(components, Component::getChildren, Component::setChildren);
+            final int numComponentsTotal = components.size();
+            components = components.stream()
+                    .filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                    .toList();
+            services = convertServices(cdxBom.getServices());
+            services = flatten(services, ServiceComponent::getChildren, ServiceComponent::setChildren);
+            final int numServicesTotal = services.size();
+            services = services.stream()
+                    .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
+                    .toList();
 
-        LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
-                .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
-        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_CONSUMED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.BOM_CONSUMED)
-                .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+
+            LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
+                    .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
+
+            try (var qm = new QueryManager()) {
+                bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
+                bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
+                qm.updateWorkflowState(bomConsumptionState);
+            }
+
+            kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+                    .scope(NotificationScope.PORTFOLIO)
+                    .group(NotificationGroup.BOM_CONSUMED)
+                    .level(NotificationLevel.INFORMATIONAL)
+                    .title(NotificationConstants.Title.BOM_CONSUMED)
+                    .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
+                    .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+        } catch (Exception ex) {
+            LOGGER.error("BOM Consumption failed", ex);
+            updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED);
+            return;
+        }
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
@@ -287,6 +316,15 @@ public class BomUploadProcessingTask implements Subscriber {
             repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
 
             // TODO: Trigger index updates
+        }
+    }
+
+    private static void updateStateAndCancelDescendants(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus) {
+        try (var qm = new QueryManager()) {
+            WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, transientStep);
+            workflowState.setStatus(transientStatus);
+            WorkflowState updatedState = qm.updateWorkflowState(workflowState);
+            qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
         }
     }
 

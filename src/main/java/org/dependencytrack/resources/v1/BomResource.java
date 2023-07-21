@@ -42,6 +42,9 @@ import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -71,7 +74,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.Principal;
+import java.time.Instant;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -418,6 +423,8 @@ public class BomResource extends AlpineResource {
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
                 final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+
+                createWorkflowSteps(qm, bomUploadEvent.getChainIdentifier());
                 Event.dispatch(bomUploadEvent);
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -463,4 +470,25 @@ public class BomResource extends AlpineResource {
         return tmpFile;
     }
 
+    private static void createWorkflowSteps(QueryManager qm, UUID token) {
+        WorkflowState consumptionState = new WorkflowState();
+        consumptionState.setToken(token);
+        consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
+        consumptionState.setStatus(WorkflowStatus.PENDING);
+        WorkflowState parent = qm.persist(consumptionState);
+
+        WorkflowState processingState = new WorkflowState();
+        processingState.setParent(parent);
+        processingState.setToken(token);
+        processingState.setStep(WorkflowStep.BOM_PROCESSING);
+        processingState.setStatus(WorkflowStatus.PENDING);
+        WorkflowState processingParent = qm.persist(processingState);
+
+        WorkflowState vulnAnalysisState = new WorkflowState();
+        vulnAnalysisState.setParent(processingParent);
+        vulnAnalysisState.setToken(token);
+        vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+        vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+        qm.persist(vulnAnalysisState);
+    }
 }

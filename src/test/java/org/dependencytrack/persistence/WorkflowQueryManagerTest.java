@@ -220,7 +220,7 @@ public class WorkflowQueryManagerTest  {
         workflowState3.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState3);
 
-        assertThat(qm.updateAllDescendantStatesOfParent(result1, CANCELLED)).isEqualTo(2);
+        assertThat(qm.updateAllDescendantStatesOfParent(result1, CANCELLED, Date.from(Instant.now()))).isEqualTo(2);
     }
 
     @Test

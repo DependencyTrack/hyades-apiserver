@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +62,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     public static final String UPDATE_WORKFLOW_STATES_QUERY = """
             
             UPDATE "WORKFLOW_STATE"
-            SET "STATUS" = ?
+            SET "STATUS" = ?,
+            "UPDATED_AT" = ?
             WHERE "ID" IN
                 (WITH RECURSIVE "CTE_WORKFLOW_STATE" ("ID") AS
                    (SELECT "ID"
@@ -113,8 +115,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep step) {
         final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == step");
-        query.setParameters(token, step);
-        return query.executeUnique();
+        query.setRange(0, 1);
+        return singleResult(query.execute(token, step));
     }
 
     /**
@@ -174,7 +176,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return results;
     }
 
-    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
 
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
@@ -187,8 +189,9 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
             preparedStatement = connection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY);
             preparedStatement.setString(1, transientStatus.name());
-            preparedStatement.setLong(2, parentWorkflowState.getId());
-            preparedStatement.setString(3, parentWorkflowState.getToken().toString());
+            preparedStatement.setDate(2, new java.sql.Date(updatedAt.getTime()));
+            preparedStatement.setLong(3, parentWorkflowState.getId());
+            preparedStatement.setString(4, parentWorkflowState.getToken().toString());
 
             return preparedStatement.executeUpdate();
         } catch (Exception ex) {
