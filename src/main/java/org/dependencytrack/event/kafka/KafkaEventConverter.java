@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.common.logging.Logger;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
@@ -18,6 +19,8 @@ import java.util.UUID;
  * to {@link KafkaEvent}s.
  */
 final class KafkaEventConverter {
+
+    private static final Logger LOGGER = Logger.getLogger(KafkaEventDispatcher.class);
 
     private KafkaEventConverter() {
     }
@@ -67,7 +70,7 @@ final class KafkaEventConverter {
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
-
+        LOGGER.info("Dispatching repo meta analysis event for component:"+componentBuilder.getUuid());
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
