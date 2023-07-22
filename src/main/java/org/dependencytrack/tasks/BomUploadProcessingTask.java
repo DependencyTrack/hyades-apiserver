@@ -224,19 +224,20 @@ public class BomUploadProcessingTask implements Subscriber {
                     qm.updateWorkflowState(bomConsumptionState);
                 }
             }
-
-            kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(NotificationGroup.BOM_CONSUMED)
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .title(NotificationConstants.Title.BOM_CONSUMED)
-                    .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
-                    .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
         } catch (Exception ex) {
             LOGGER.error("BOM Consumption failed", ex);
             updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED);
             return;
         }
+
+        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.BOM_CONSUMED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .title(NotificationConstants.Title.BOM_CONSUMED)
+                .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
+                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
