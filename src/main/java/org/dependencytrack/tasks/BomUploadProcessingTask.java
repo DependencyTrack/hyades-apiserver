@@ -134,7 +134,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
                 LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
-                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -147,7 +147,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
-                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -226,7 +226,7 @@ public class BomUploadProcessingTask implements Subscriber {
             }
         } catch (Exception ex) {
             LOGGER.error("BOM Consumption failed", ex);
-            updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED);
+            updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
             return;
         }
 
@@ -327,11 +327,12 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static void updateStateAndCancelDescendants(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus) {
+    private static void updateStateAndCancelDescendants(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus, String failureReason) {
         try (var qm = new QueryManager()) {
             WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, transientStep);
             if (workflowState != null) {
                 workflowState.setStatus(transientStatus);
+                workflowState.setFailureReason(failureReason);
                 WorkflowState updatedState = qm.updateWorkflowState(workflowState);
                 qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
             }
