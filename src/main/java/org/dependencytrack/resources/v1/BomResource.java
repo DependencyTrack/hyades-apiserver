@@ -387,6 +387,7 @@ public class BomResource extends AlpineResource {
             }
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+            createWorkflowSteps(qm, bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
 
             BomUploadResponse bomUploadResponse = new BomUploadResponse();

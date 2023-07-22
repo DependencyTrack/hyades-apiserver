@@ -84,6 +84,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(project.getExternalReferences()).isNotNull();
         assertThat(project.getExternalReferences()).hasSize(4);
 
+
+
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).hasSize(1);
 

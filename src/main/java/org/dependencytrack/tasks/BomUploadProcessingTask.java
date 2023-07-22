@@ -169,8 +169,12 @@ public class BomUploadProcessingTask implements Subscriber {
         List<ServiceComponent> services = null;
         try (final var qm = new QueryManager()) {
             WorkflowState consumptionState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.BOM_CONSUMPTION);
-            consumptionState.setStartedAt(Date.from(Instant.now()));
-            bomConsumptionState = qm.persist(consumptionState);
+            if (consumptionState != null) {
+                consumptionState.setStartedAt(Date.from(Instant.now()));
+                bomConsumptionState = qm.persist(consumptionState);
+            } else {
+                LOGGER.warn("Workflow state not found in database so cannot be updated");
+            }
         }
 
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, bomFile);
@@ -189,12 +193,13 @@ public class BomUploadProcessingTask implements Subscriber {
         final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
 
         final Project metadataComponent;
-        if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
-            metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
-        } else {
-            metadataComponent = null;
-        }
         try {
+            if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
+                metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
+            } else {
+                metadataComponent = null;
+            }
+
             components = convertComponents(cdxBom.getComponents());
             components = flatten(components, Component::getChildren, Component::setChildren);
             final int numComponentsTotal = components.size();
@@ -212,10 +217,12 @@ public class BomUploadProcessingTask implements Subscriber {
             LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
                     .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
 
-            try (var qm = new QueryManager()) {
-                bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
-                bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
-                qm.updateWorkflowState(bomConsumptionState);
+            if (bomConsumptionState != null) {
+                try (var qm = new QueryManager()) {
+                    bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
+                    bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
+                    qm.updateWorkflowState(bomConsumptionState);
+                }
             }
 
             kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
@@ -322,9 +329,11 @@ public class BomUploadProcessingTask implements Subscriber {
     private static void updateStateAndCancelDescendants(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus) {
         try (var qm = new QueryManager()) {
             WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, transientStep);
-            workflowState.setStatus(transientStatus);
-            WorkflowState updatedState = qm.updateWorkflowState(workflowState);
-            qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
+            if (workflowState != null) {
+                workflowState.setStatus(transientStatus);
+                WorkflowState updatedState = qm.updateWorkflowState(workflowState);
+                qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
+            }
         }
     }
 
