@@ -36,7 +36,7 @@ public class WorkflowResource {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response isTokenBeingProcessed(
+    public Response getWorkflowStates(
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") String uuid) {
         List<WorkflowState> workflowStates;

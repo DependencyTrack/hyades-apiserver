@@ -12,17 +12,19 @@ import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Test;
 
-import javax.json.JsonArray;
 import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.hamcrest.CoreMatchers.equalTo;
 
 public class WorkflowResourceTest extends ResourceTest {
 
@@ -60,21 +62,28 @@ public class WorkflowResourceTest extends ResourceTest {
         Response response = target(V1_WORKFLOW + "/token/" + uuid + "/status").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
-        JsonArray json = parseJsonArray(response);
-        assertThat(json).isNotNull();
-        assertThat(json.size()).isEqualTo(2);
-        var result = json.getJsonObject(0);
-        assertThat(result.getInt("id")).isEqualTo(1);
-        assertThat(result.getString("token")).isEqualTo(uuid.toString());
-        assertThat(result.getString("step")).isEqualTo("BOM_CONSUMPTION");
-        assertThat(result.getString("status")).isEqualTo("COMPLETED");
-        result = json.getJsonObject(1);
-        assertThat(result.getInt("id")).isEqualTo(2);
-        assertThat(result.getString("token")).isEqualTo(uuid.toString());
-        assertThat(result.getString("step")).isEqualTo("BOM_PROCESSING");
-        assertThat(result.getString("status")).isEqualTo("PENDING");
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatJson(jsonResponse)
+                .withMatcher("token", equalTo(uuid.toString()))
+                .withMatcher("step1", equalTo("BOM_CONSUMPTION"))
+                .withMatcher("status1", equalTo("COMPLETED"))
+                .withMatcher("step2", equalTo("BOM_PROCESSING"))
+                .withMatcher("status2", equalTo("PENDING"))
+                .isEqualTo(json("""
+                    [{
+                        "token": "${json-unit.matches:token}",
+                        "step": "${json-unit.matches:step1}",
+                        "status": "${json-unit.matches:status1}"
+                    },
+                    {
+                        "token": "${json-unit.matches:token}",
+                        "startedAt": "${json-unit.any-number}",
+                        "updatedAt": "${json-unit.any-number}",
+                        "step": "${json-unit.matches:step2}",
+                        "status": "${json-unit.matches:status2}"
+                    }]
+                """));
     }
 
     @Test
