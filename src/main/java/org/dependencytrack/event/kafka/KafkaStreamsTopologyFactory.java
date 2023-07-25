@@ -21,12 +21,16 @@ import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -66,7 +70,14 @@ class KafkaStreamsTopologyFactory {
                         // causing the call to getStatus() to trigger a database query behind the scenes.
                         qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_DETACH_ALL_ON_COMMIT, "true");
 
-                        final VulnerabilityScan vulnScan = qm.recordVulnerabilityScanResult(scanToken);
+                        final VulnerabilityScan vulnScan = qm.recordVulnerabilityScanResult(scanToken, value);
+                        if (vulnScan != null && vulnScan.getStatus() == VulnerabilityScan.Status.FAILED) {
+                            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
+                            vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
+                            vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                            qm.updateWorkflowState(vulnAnalysisState);
+                            qm.updateAllDescendantStatesOfParent(vulnAnalysisState, WorkflowStatus.CANCELLED);
+                        }
                         if (vulnScan == null || vulnScan.getStatus() != VulnerabilityScan.Status.COMPLETED) {
                             // When the vulnerability scan is not completed, we don't care about it.
                             // We'll filter out nulls in the next filter step.
@@ -81,12 +92,18 @@ class KafkaStreamsTopologyFactory {
         completedVulnScanStream.filter((scantoken, vulnscan) -> vulnscan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
                         Named.as("filter_vuln_scans_with_project_target"))
                 .map((scantoken, vulnscan) -> {
+                    // change the status of vuln-analysis workflow
+                    try (var qm = new QueryManager()) {
+                        var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
+                        vulnAnalysisState.setStatus(WorkflowStatus.COMPLETED);
+                        vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                        qm.updateWorkflowState(vulnAnalysisState);
+                    }
                     var notification = NotificationModelConverter.convert(NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(vulnscan));
                     return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), notification);
                 }).to(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(),
                         Produced.with(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.keySerde(),
                                 KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde()));
-
 
         completedVulnScanStream
                 .foreach((scanToken, vulnScan) -> {

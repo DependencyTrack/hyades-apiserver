@@ -80,6 +80,7 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 
 import javax.jdo.FetchPlan;
@@ -1457,6 +1458,7 @@ public class QueryManager extends AlpineQueryManager {
             scan.setTargetType(targetType);
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
+            scan.setFailureThreshold(0.05);
             final var startDate = new Date();
             scan.setStartedAt(startDate);
             scan.setUpdatedAt(startDate);
@@ -1499,10 +1501,11 @@ public class QueryManager extends AlpineQueryManager {
      * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
      * locking to be used.
      *
-     * @param scanToken The token that uniquely identifies the scan for clients
+     * @param scanToken    The token that uniquely identifies the scan for clients
+     * @param scanResult ScanResult for the scan
      * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
      */
-    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken) {
+    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, ScanResult scanResult) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         try {
@@ -1516,9 +1519,16 @@ public class QueryManager extends AlpineQueryManager {
             }
             final int received = scan.getReceivedResults() + 1;
             scan.setReceivedResults(received);
-            scan.setStatus(scan.getExpectedResults() - received == 0
-                    ? VulnerabilityScan.Status.COMPLETED
-                    : VulnerabilityScan.Status.IN_PROGRESS);
+            scan.setSuccessScans(scan.getSuccessScans() + scanResult.getScanSuccessCount());
+            scan.setFailureScans(scan.getFailureScans() + scanResult.getScanFailureCount());
+            if (scan.getExpectedResults() - received == 0) {
+                final double failureRate = scan.getFailureScans() / (scan.getSuccessScans() + scan.getFailureScans());
+                scan.setStatus(failureRate > scan.getFailureThreshold()
+                        ? VulnerabilityScan.Status.FAILED
+                        : VulnerabilityScan.Status.COMPLETED);
+            } else {
+                scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
+            }
             scan.setUpdatedAt(new Date());
             trx.commit();
             return scan;

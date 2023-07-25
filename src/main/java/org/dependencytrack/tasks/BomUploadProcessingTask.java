@@ -45,6 +45,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -61,6 +62,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -282,6 +284,12 @@ public class BomUploadProcessingTask implements Subscriber {
             if (!vulnAnalysisEvents.isEmpty()) {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
                 vulnAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+                // Initiate vuln-analysis workflow for the token
+                var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
+                if (vulnAnalysisState != null) {
+                    vulnAnalysisState.setStartedAt(Date.from(Instant.now()));
+                    qm.persist(vulnAnalysisState);
+                }
             }
 
             repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
