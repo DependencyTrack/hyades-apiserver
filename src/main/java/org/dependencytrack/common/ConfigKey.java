@@ -55,7 +55,11 @@ public enum ConfigKey implements Config.Key {
     TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR("task.componentIdentification.lockAtLeastForInMillis", "90000"),
     TASK_LDAP_SYNC_LOCK_AT_MOST_FOR("task.ldapSync.lockAtMostForInMillis", "900000"),
     TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR("task.ldapSync.lockAtLeastForInMillis", "90000"),
-    BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000");
+    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_MOST_FOR("task.componentIdentification.lockAtMostForInMillis", "900000"),
+    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_LEAST_FOR("task.componentIdentification.lockAtLeastForInMillis", "90000"),
+    BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
+    WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3T"),
+    WORKFLOW_STEP_TIMEOUT("workflow.step.timeout.duration", "PT1H");
 
     private final String propertyName;
     private final Object defaultValue;
