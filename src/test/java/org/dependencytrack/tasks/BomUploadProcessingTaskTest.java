@@ -28,6 +28,9 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
@@ -68,6 +71,13 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+
+        var workflowState = new WorkflowState();
+        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
+        workflowState.setStatus(WorkflowStatus.PENDING);
+        workflowState.setToken(bomUploadEvent.getChainIdentifier());
+        qm.persist(workflowState);
+
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -77,7 +87,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
-
+        qm.getPersistenceManager().refresh(workflowState);
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
@@ -100,6 +110,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
         assertThat(vulnerabilityScan).isNotNull();
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
 
     @Test
