@@ -98,8 +98,7 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         assertThat(parentState.getUpdatedAt()).isAfter(timeoutCutoff);
         assertThat(childState.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
         assertThat(childState.getFailureReason()).isNull();
-        // TODO: Cancelling should also update updatedAt
-        // assertThat(childState.getUpdatedAt()).isAfter(timeoutCutoff);
+        assertThat(childState.getUpdatedAt()).isAfter(timeoutCutoff);
     }
 
     @Test
