@@ -1,24 +1,15 @@
 package org.dependencytrack.tasks;
 
-import alpine.Config;
-import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.dependencytrack.TestUtil;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.WorkflowStateReaperEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.QueryManager;
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-import javax.jdo.JDOHelper;
 import javax.jdo.JDOObjectNotFoundException;
 import javax.jdo.datastore.JDOConnection;
 import java.nio.charset.StandardCharsets;
@@ -33,47 +24,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-public class WorkflowStateReaperTaskTest {
-
-    private PostgreSQLContainer<?> postgresContainer;
-    private QueryManager qm;
-
-    @BeforeClass
-    public static void init() {
-        Config.enableUnitTests();
-    }
+public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
 
     @Before
     public void setUp() throws Exception {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
-                .withUsername("dtrack")
-                .withPassword("dtrack")
-                .withDatabaseName("dtrack");
-        postgresContainer.start();
-
-        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
-                postgresContainer.getDriverClassName(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
-
-        qm = new QueryManager();
+        super.setUp();
 
         final String shedlockSql = IOUtils.resourceToString("/shedlock.sql", StandardCharsets.UTF_8);
         final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
         final Connection connection = (Connection) jdoConnection.getNativeConnection();
         DbUtil.executeUpdate(connection, shedlockSql);
         jdoConnection.close();
-    }
-
-    @After
-    public void tearDown() {
-        PersistenceManagerFactory.tearDown();
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
     }
 
     @Test
