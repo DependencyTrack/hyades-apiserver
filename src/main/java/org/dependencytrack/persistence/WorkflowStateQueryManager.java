@@ -206,11 +206,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
     public void createWorkflowSteps(UUID token) {
         final Transaction trx = pm.currentTransaction();
-        final boolean isJoiningExistingTrx = trx.isActive();
         try {
-            if (!isJoiningExistingTrx) {
-                trx.begin();
-            }
+            trx.begin();
             WorkflowState consumptionState = new WorkflowState();
             consumptionState.setToken(token);
             consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
@@ -230,12 +227,9 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
             pm.makePersistent(vulnAnalysisState);
-            if (!isJoiningExistingTrx) {
-                trx.commit();
-            }
-
+            trx.commit();
         } finally {
-            if (!isJoiningExistingTrx && trx.isActive()) {
+            if (trx.isActive()) {
                 trx.rollback();
             }
         }
