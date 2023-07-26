@@ -157,8 +157,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
@@ -234,13 +233,8 @@ public class BomUploadProcessingTask implements Subscriber {
                 qm.updateWorkflowState(bomConsumptionState);
 
                 WorkflowState processingState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.BOM_PROCESSING);
-                if (processingState != null) {
-                    processingState.setStartedAt(Date.from(Instant.now()));
-                    qm.persist(processingState);
-                } else {
-                    //TODO change the log level to error and throw exception once the workflow has been migrated completely
-                    LOGGER.warn("Workflow state for BOM_PROCESSING not found in database so cannot be updated for context: (%s)".formatted(ctx));
-                }
+                processingState.setStartedAt(Date.from(Instant.now()));
+                qm.persist(processingState);
             }
         }
 
