@@ -126,12 +126,11 @@ public class WorkflowStateReaperTask implements Subscriber {
         try {
             for (final WorkflowState state : failedQuery.executeList()) {
                 stepsCancelled += qm.runInTransaction(() -> {
+                    final Date now = new Date();
                     state.setStatus(WorkflowStatus.FAILED);
                     state.setFailureReason("Timed out");
-                    state.setUpdatedAt(new Date());
-
-                    // TODO: Changing the status should also update updatedAt
-                    return qm.updateAllDescendantStatesOfParent(state, WorkflowStatus.CANCELLED);
+                    state.setUpdatedAt(now);
+                    return qm.updateAllDescendantStatesOfParent(state, WorkflowStatus.CANCELLED, now);
                 });
                 stepsFailed++;
             }
