@@ -145,7 +145,21 @@ public class BomUploadProcessingTask implements Subscriber {
                         //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
-            } catch (Exception ex) {
+            } catch (BomProcessingException ex) {
+                LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
+                kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                        .level(NotificationLevel.ERROR)
+                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                        .content("An error occurred while processing a BOM")
+                        // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
+                        //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
+                        // FIXME: Add reference to BOM after we have dedicated BOM server
+                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+            }
+            catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
