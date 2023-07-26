@@ -1548,6 +1548,10 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
+    public void createWorkflowSteps(UUID token) {
+        getWorkflowStateQueryManager().createWorkflowSteps(token);
+    }
+
 
     public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);

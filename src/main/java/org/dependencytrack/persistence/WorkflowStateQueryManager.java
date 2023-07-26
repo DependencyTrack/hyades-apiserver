@@ -9,6 +9,7 @@ import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -114,9 +115,9 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep step) {
-        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == step");
-        query.setRange(0, 1);
-        return singleResult(query.execute(token, step));
+        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == :step");
+        query.setParameters(token, step);
+        return query.executeUnique();
     }
 
     /**
@@ -189,7 +190,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
             preparedStatement = connection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY);
             preparedStatement.setString(1, transientStatus.name());
-            preparedStatement.setDate(2, new java.sql.Date(updatedAt.getTime()));
+            preparedStatement.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
             preparedStatement.setLong(3, parentWorkflowState.getId());
             preparedStatement.setString(4, parentWorkflowState.getToken().toString());
 
@@ -200,6 +201,43 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         } finally {
             DbUtil.close(preparedStatement);
             DbUtil.close(connection);
+        }
+    }
+
+    public void createWorkflowSteps(UUID token) {
+        final Transaction trx = pm.currentTransaction();
+        final boolean isJoiningExistingTrx = trx.isActive();
+        try {
+            if (!isJoiningExistingTrx) {
+                trx.begin();
+            }
+            WorkflowState consumptionState = new WorkflowState();
+            consumptionState.setToken(token);
+            consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
+            consumptionState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState parent = pm.makePersistent(consumptionState);
+
+            WorkflowState processingState = new WorkflowState();
+            processingState.setParent(parent);
+            processingState.setToken(token);
+            processingState.setStep(WorkflowStep.BOM_PROCESSING);
+            processingState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState processingParent = pm.makePersistent(processingState);
+
+            WorkflowState vulnAnalysisState = new WorkflowState();
+            vulnAnalysisState.setParent(processingParent);
+            vulnAnalysisState.setToken(token);
+            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            pm.makePersistent(vulnAnalysisState);
+            if (!isJoiningExistingTrx) {
+                trx.commit();
+            }
+
+        } finally {
+            if (!isJoiningExistingTrx && trx.isActive()) {
+                trx.rollback();
+            }
         }
     }
 }

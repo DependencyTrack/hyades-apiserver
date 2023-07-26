@@ -1,16 +1,9 @@
 package org.dependencytrack.persistence;
 
-import alpine.server.persistence.PersistenceManagerFactory;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.dependencytrack.TestUtil;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.model.WorkflowState;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-import javax.jdo.JDOHelper;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -23,36 +16,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.REPO_META_ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class WorkflowQueryManagerTest  {
-    private PostgreSQLContainer<?> postgresContainer;
-    private QueryManager qm;
-
-    @Before
-    public void setUp() throws Exception {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
-                .withUsername("dtrack")
-                .withPassword("dtrack")
-                .withDatabaseName("dtrack");
-        postgresContainer.start();
-
-        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
-                postgresContainer.getDriverClassName(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
-
-        qm = new QueryManager();
-    }
-
-    @After
-    public void tearDown() {
-        PersistenceManagerFactory.tearDown();
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-    }
+public class WorkflowQueryManagerTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void testWorkflowStateIsCreated() {
