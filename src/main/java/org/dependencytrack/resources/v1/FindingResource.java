@@ -31,7 +31,6 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;

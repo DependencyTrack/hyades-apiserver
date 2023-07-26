@@ -163,16 +163,16 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
-
             final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
-            query.setFilter("repositoryType == :repositoryType && uuid == :id && repositoryUrl == :url");
+            query.setFilter("repositoryType == :repositoryType && component.id == :id && component.uuid == :uuid && repositoryUrl == :url");
             query.setParameters(
                     RepositoryType.resolve(purl),
+                    record.value().getComponent().getComponentId(),
                     UUID.fromString(record.value().getComponent().getUuid()),
                     record.value().getIntegrityResult().getUrl()
             );
             IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();
-            if (persistentIntegrityResult == null) {
+            if (persistentIntegrityResult == null || persistentIntegrityResult.getComponent()==null) {
                 persistentIntegrityResult = new IntegrityAnalysisComponent();
             }
 
@@ -184,7 +184,10 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                         """.formatted(purl));
                 return;
             }
-
+            final Query<Component> queryComponent = pm.newQuery(Component.class);
+            queryComponent.setFilter("id == :id");
+            queryComponent.setParameters(record.value().getComponent().getComponentId());
+            Component component = queryComponent.executeUnique();
             persistentIntegrityResult.setRepositoryType(RepositoryType.resolve(purl));
             persistentIntegrityResult.setRepositoryUrl(record.value().getIntegrityResult().getUrl());
             HashMatchStatus md5HashMatch = record.value().getIntegrityResult().getMd5HashMatch();
@@ -194,9 +197,13 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
             persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
             persistentIntegrityResult.setUuid(UUID.fromString(record.value().getComponent().getUuid()));
-            persistentIntegrityResult.setComponent(pm.getObjectById(Component.class, record.value().getComponent().getComponentId()));
+            persistentIntegrityResult.setComponent(component);
             persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
-            if (md5HashMatch.equals(HashMatchStatus.UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.UNKNOWN)) {
+            if (md5HashMatch.equals(HashMatchStatus.FAIL) || sha1HashMatch.equals(HashMatchStatus.FAIL) || sha256HashMatch.equals(HashMatchStatus.FAIL)) {
+                persistentIntegrityResult.setIntegrityCheckPassed(false);
+            } else if (md5HashMatch.equals(HashMatchStatus.UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.UNKNOWN)) {
+                persistentIntegrityResult.setIntegrityCheckPassed(false);
+            } else if (md5HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH)) {
                 persistentIntegrityResult.setIntegrityCheckPassed(false);
             } else {
                 boolean flag = (md5HashMatch.equals(HashMatchStatus.PASS) || md5HashMatch.equals(HashMatchStatus.UNKNOWN))
