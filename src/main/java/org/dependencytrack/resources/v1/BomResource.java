@@ -379,6 +379,7 @@ public class BomResource extends AlpineResource {
             }
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
 
             BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -415,6 +416,8 @@ public class BomResource extends AlpineResource {
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
                 final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+
+                qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
                 Event.dispatch(bomUploadEvent);
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -459,5 +462,4 @@ public class BomResource extends AlpineResource {
 
         return tmpFile;
     }
-
 }

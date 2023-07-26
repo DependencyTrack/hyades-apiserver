@@ -34,6 +34,8 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
@@ -685,6 +687,22 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        UUID uuid = UUID.fromString(json.getString("token"));
+        assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactlyInAnyOrder(
+               workflowState -> {
+                   assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
+                   assertThat(workflowState.getToken()).isEqualTo(uuid);
+                   assertThat(workflowState.getParent()).isNull();
+               },
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                },
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                }
+        );
     }
 
     @Test
