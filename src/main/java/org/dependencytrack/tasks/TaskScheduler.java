@@ -40,6 +40,7 @@ import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnDbSyncEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
+import org.dependencytrack.event.WorkflowStateReaperEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -59,10 +60,10 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNDB_SY
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_STATE_REAPER_TASK;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
 
 /**
  * @author Steve Springett
@@ -92,7 +93,8 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new VulnDbSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
                     Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
                     Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
-                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK)))
+                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK))),
+                    Map.entry(new WorkflowStateReaperEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_WORKFLOW_STATE_REAPER_TASK)))
             );
 
             if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
