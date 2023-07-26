@@ -1548,6 +1548,10 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
+    public void createWorkflowSteps(UUID token) {
+        getWorkflowStateQueryManager().createWorkflowSteps(token);
+    }
+
 
     public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
@@ -1565,8 +1569,8 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
     }
 
-    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
-        return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus);
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
+        return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus, updatedAt);
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {

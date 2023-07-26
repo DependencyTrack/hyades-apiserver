@@ -9,10 +9,12 @@ import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +63,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     public static final String UPDATE_WORKFLOW_STATES_QUERY = """
             
             UPDATE "WORKFLOW_STATE"
-            SET "STATUS" = ?
+            SET "STATUS" = ?,
+            "UPDATED_AT" = ?
             WHERE "ID" IN
                 (WITH RECURSIVE "CTE_WORKFLOW_STATE" ("ID") AS
                    (SELECT "ID"
@@ -112,7 +115,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep step) {
-        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == step");
+        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == :step");
         query.setParameters(token, step);
         return query.executeUnique();
     }
@@ -174,7 +177,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return results;
     }
 
-    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus) {
+    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
 
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
@@ -187,8 +190,9 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
 
             preparedStatement = connection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY);
             preparedStatement.setString(1, transientStatus.name());
-            preparedStatement.setLong(2, parentWorkflowState.getId());
-            preparedStatement.setString(3, parentWorkflowState.getToken().toString());
+            preparedStatement.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
+            preparedStatement.setLong(3, parentWorkflowState.getId());
+            preparedStatement.setString(4, parentWorkflowState.getToken().toString());
 
             return preparedStatement.executeUpdate();
         } catch (Exception ex) {
@@ -197,6 +201,37 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         } finally {
             DbUtil.close(preparedStatement);
             DbUtil.close(connection);
+        }
+    }
+
+    public void createWorkflowSteps(UUID token) {
+        final Transaction trx = pm.currentTransaction();
+        try {
+            trx.begin();
+            WorkflowState consumptionState = new WorkflowState();
+            consumptionState.setToken(token);
+            consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
+            consumptionState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState parent = pm.makePersistent(consumptionState);
+
+            WorkflowState processingState = new WorkflowState();
+            processingState.setParent(parent);
+            processingState.setToken(token);
+            processingState.setStep(WorkflowStep.BOM_PROCESSING);
+            processingState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState processingParent = pm.makePersistent(processingState);
+
+            WorkflowState vulnAnalysisState = new WorkflowState();
+            vulnAnalysisState.setParent(processingParent);
+            vulnAnalysisState.setToken(token);
+            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            pm.makePersistent(vulnAnalysisState);
+            trx.commit();
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
         }
     }
 }

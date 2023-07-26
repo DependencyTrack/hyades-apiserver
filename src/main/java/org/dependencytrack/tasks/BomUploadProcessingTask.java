@@ -45,6 +45,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -61,6 +64,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -118,8 +122,8 @@ public class BomUploadProcessingTask implements Subscriber {
             final Timer.Sample timerSample = Timer.start();
             try {
                 processBom(ctx, event.getFile());
-
                 LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
+                updateState(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.COMPLETED);
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSED)
@@ -128,8 +132,21 @@ public class BomUploadProcessingTask implements Subscriber {
                         .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+            } catch (BomConsumptionException ex) {
+                LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
+                kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                        .level(NotificationLevel.ERROR)
+                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                        .content("An error occurred while processing a BOM")
+                        // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
+                        // FIXME: Add reference to BOM after we have dedicated BOM server
+                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
                 LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -142,6 +159,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
+                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
                 kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
@@ -156,8 +174,19 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private void processBom(final Context ctx, final File bomFile) throws BomProcessingException {
+    private void processBom(final Context ctx, final File bomFile) throws BomConsumptionException, BomProcessingException {
         LOGGER.info("Consuming uploaded BOM (%s)".formatted(ctx));
+        WorkflowState bomConsumptionState = null;
+        try (final var qm = new QueryManager()) {
+            WorkflowState consumptionState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.BOM_CONSUMPTION);
+            if (consumptionState != null) {
+                consumptionState.setStartedAt(Date.from(Instant.now()));
+                bomConsumptionState = qm.persist(consumptionState);
+            } else {
+                //TODO change the log level to error and throw exception once the workflow has been migrated completely
+                LOGGER.warn("Workflow state for BOM_CONSUMPTION not found in database so cannot be updated for context: (%s)".formatted(ctx));
+            }
+        }
         final org.cyclonedx.model.Bom cdxBom = parseBom(ctx, bomFile);
 
         // Keep track of which BOM ref points to which component identity.
@@ -192,8 +221,23 @@ public class BomUploadProcessingTask implements Subscriber {
                 .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
 
+
         LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
                 .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
+
+        //complete the Bom consumption state and start the processing state
+        if (bomConsumptionState != null) {
+            try (var qm = new QueryManager()) {
+                bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
+                bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
+                qm.updateWorkflowState(bomConsumptionState);
+
+                WorkflowState processingState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.BOM_PROCESSING);
+                processingState.setStartedAt(Date.from(Instant.now()));
+                qm.persist(processingState);
+            }
+        }
+
         kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_CONSUMED)
@@ -201,6 +245,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 .title(NotificationConstants.Title.BOM_CONSUMED)
                 .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
                 .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
@@ -290,16 +335,41 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static org.cyclonedx.model.Bom parseBom(final Context ctx, final File bomFile) throws BomProcessingException {
+    private static void updateStateAndCancelDescendants(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus, String failureReason) {
+        try (var qm = new QueryManager()) {
+            WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, transientStep);
+            if (workflowState != null) {
+                workflowState.setStatus(transientStatus);
+                workflowState.setFailureReason(failureReason);
+                workflowState.setUpdatedAt(Date.from(Instant.now()));
+                WorkflowState updatedState = qm.updateWorkflowState(workflowState);
+                qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
+            }
+        }
+    }
+
+    private static void updateState(final Context ctx, WorkflowStep transientStep, WorkflowStatus transientStatus) {
+        try (var qm = new QueryManager()) {
+            WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, transientStep);
+            if (workflowState != null) {
+                workflowState.setStatus(transientStatus);
+                workflowState.setUpdatedAt(Date.from(Instant.now()));
+                qm.updateWorkflowState(workflowState);
+            }
+        }
+    }
+
+
+    private static org.cyclonedx.model.Bom parseBom(final Context ctx, final File bomFile) throws BomConsumptionException {
         final byte[] bomBytes;
         try (final var bomFileInputStream = Files.newInputStream(bomFile.toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             bomBytes = bomFileInputStream.readAllBytes();
         } catch (IOException e) {
-            throw new BomProcessingException(ctx, "Failed to read BOM file", e);
+            throw new BomConsumptionException(ctx, "Failed to read BOM file", e);
         }
 
         if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
-            throw new BomProcessingException(ctx, """
+            throw new BomConsumptionException(ctx, """
                     The BOM uploaded is not in a supported format. \
                     Supported formats include CycloneDX XML and JSON""");
         }
@@ -311,7 +381,7 @@ public class BomUploadProcessingTask implements Subscriber {
             final Parser parser = BomParserFactory.createParser(bomBytes);
             bom = parser.parse(bomBytes);
         } catch (ParseException e) {
-            throw new BomProcessingException(ctx, "Failed to parse BOM", e);
+            throw new BomConsumptionException(ctx, "Failed to parse BOM", e);
         }
 
         ctx.bomSpecVersion = bom.getSpecVersion();
@@ -790,6 +860,24 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         private BomProcessingException(final Context ctx, final String message) {
+            this(ctx, message, null);
+        }
+
+    }
+
+    /**
+     * An {@link Exception} that signals failures during BOM consumption.
+     */
+    private static final class BomConsumptionException extends Exception {
+
+        private final Context ctx;
+
+        private BomConsumptionException(final Context ctx, final String message, final Throwable cause) {
+            super(message, cause);
+            this.ctx = ctx;
+        }
+
+        private BomConsumptionException(final Context ctx, final String message) {
             this(ctx, message, null);
         }
 
