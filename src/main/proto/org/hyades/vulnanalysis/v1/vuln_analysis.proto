@@ -77,12 +77,6 @@ message ScanResult {
 
   // Results of all applicable scanners.
   repeated ScannerResult scanner_results = 2;
-
-  // Number of failures of all applicable scanners.
-  optional int32 scan_failure_count = 3;
-
-  // Number of successes of all applicable scanners.
-  optional int32 scan_success_count = 4;
 }
 
 enum ScanStatus {

@@ -82,6 +82,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
+import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -97,6 +98,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -1459,6 +1462,8 @@ public class QueryManager extends AlpineQueryManager {
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
             scan.setFailureThreshold(0.05);
+            scan.setScanFailed(0);
+            scan.setScanTotal(0);
             final var startDate = new Date();
             scan.setStartedAt(startDate);
             scan.setUpdatedAt(startDate);
@@ -1501,11 +1506,11 @@ public class QueryManager extends AlpineQueryManager {
      * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
      * locking to be used.
      *
-     * @param scanToken    The token that uniquely identifies the scan for clients
-     * @param scanResult ScanResult for the scan
+     * @param scanToken The token that uniquely identifies the scan for clients
+     * @param value
      * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
      */
-    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, ScanResult scanResult) {
+    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, ScanResult value) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         try {
@@ -1519,16 +1524,16 @@ public class QueryManager extends AlpineQueryManager {
             }
             final int received = scan.getReceivedResults() + 1;
             scan.setReceivedResults(received);
-            scan.setSuccessScans(scan.getSuccessScans() + scanResult.getScanSuccessCount());
-            scan.setFailureScans(scan.getFailureScans() + scanResult.getScanFailureCount());
-            if (scan.getExpectedResults() - received == 0) {
-                final double failureRate = scan.getFailureScans() / (scan.getSuccessScans() + scan.getFailureScans());
-                scan.setStatus(failureRate > scan.getFailureThreshold()
-                        ? VulnerabilityScan.Status.FAILED
-                        : VulnerabilityScan.Status.COMPLETED);
-            } else {
-                scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-            }
+            final long failedScanCount = value.getScannerResultsList().stream()
+                    .map(ScannerResult::getStatus)
+                    .filter(SCAN_STATUS_FAILED::equals)
+                    .count() + scan.getScanFailed();
+            scan.setScanFailed(failedScanCount);
+            final long totalScanCount = value.getScannerResultsCount() + scan.getScanTotal();
+            scan.setScanTotal(totalScanCount);
+            scan.setStatus(scan.getExpectedResults() - received == 0
+                    ? VulnerabilityScan.Status.COMPLETED
+                    : VulnerabilityScan.Status.IN_PROGRESS);
             scan.setUpdatedAt(new Date());
             trx.commit();
             return scan;
