@@ -1,5 +1,6 @@
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
@@ -21,6 +22,7 @@ public class WorkflowState implements Serializable {
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
+    @JsonIgnore
     private long id;
 
     // null allowed because first step will have no parent and will be the first step of recursion
