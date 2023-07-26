@@ -2,6 +2,8 @@ package org.dependencytrack.common;
 
 import alpine.Config;
 
+import java.time.Duration;
+
 public enum ConfigKey implements Config.Key {
 
     SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
@@ -43,6 +45,7 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC("task.cron.fortify.ssc.sync", "0 2 * * *"),
     CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC("task.cron.defectdojo.sync", "0 2 * * *"),
     CRON_EXPRESSION_FOR_KENNA_SYNC("task.cron.kenna.sync", "0 2 * * *"),
+    CRON_EXPRESSION_FOR_WORKFLOW_STATE_REAPER_TASK("task.cron.workflow.state.reaper", "*/15 * * * *"),
     TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
     TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
     TASK_PORTFOLIO_LOCK_AT_MOST_FOR("task.metrics.portfolio.lockAtMostForInMillis", "900000"),
@@ -55,11 +58,11 @@ public enum ConfigKey implements Config.Key {
     TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR("task.componentIdentification.lockAtLeastForInMillis", "90000"),
     TASK_LDAP_SYNC_LOCK_AT_MOST_FOR("task.ldapSync.lockAtMostForInMillis", "900000"),
     TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR("task.ldapSync.lockAtLeastForInMillis", "90000"),
-    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_MOST_FOR("task.componentIdentification.lockAtMostForInMillis", "900000"),
-    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_LEAST_FOR("task.componentIdentification.lockAtLeastForInMillis", "90000"),
+    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_MOST_FOR("task.workflow.state.reaper.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    TASK_WORKFLOW_STEP_REAPER_LOCK_AT_LEAST_FOR("task.workflow.state.reaper.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
     BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
-    WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3T"),
-    WORKFLOW_STEP_TIMEOUT("workflow.step.timeout.duration", "PT1H");
+    WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3D"),
+    WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H");
 
     private final String propertyName;
     private final Object defaultValue;
