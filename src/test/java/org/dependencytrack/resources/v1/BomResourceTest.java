@@ -34,6 +34,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -54,6 +55,11 @@ import java.util.UUID;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
+import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStatus.PENDING;
+import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
+import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class BomResourceTest extends ResourceTest {
@@ -864,5 +870,65 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertEquals(404, response.getStatus(), 0);
         body = getPlainTextBody(response);
         Assert.assertEquals("The parent component could not be found.", body);
+    }
+
+    @Test
+    public void isTokenBeingProcessedTrueTest() {
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState1 = new WorkflowState();
+        workflowState1.setParent(null);
+        workflowState1.setStep(BOM_CONSUMPTION);
+        workflowState1.setStatus(COMPLETED);
+        workflowState1.setToken(uuid);
+        var workflowState1Persisted = qm.persist(workflowState1);
+        WorkflowState workflowState2 = new WorkflowState();
+        workflowState2.setParent(workflowState1Persisted);
+        workflowState2.setStep(BOM_PROCESSING);
+        workflowState2.setStatus(PENDING);
+        workflowState2.setToken(uuid);
+        qm.persist(workflowState2);
+
+        Response response = target(V1_BOM + "/token/" + uuid).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatJson(jsonResponse)
+                .withMatcher("isBeingProcessed", equalTo(true))
+                .isEqualTo(json("""
+                    {
+                        "processing": "${json-unit.matches:isBeingProcessed}"
+                    }
+                """));
+    }
+
+    @Test
+    public void isTokenBeingProcessedFalseTest() {
+        UUID uuid = UUID.randomUUID();
+        WorkflowState workflowState1 = new WorkflowState();
+        workflowState1.setParent(null);
+        workflowState1.setStep(BOM_CONSUMPTION);
+        workflowState1.setStatus(COMPLETED);
+        workflowState1.setToken(uuid);
+        var workflowState1Persisted = qm.persist(workflowState1);
+        WorkflowState workflowState2 = new WorkflowState();
+        workflowState2.setParent(workflowState1Persisted);
+        workflowState2.setStep(BOM_PROCESSING);
+        workflowState2.setStatus(FAILED);
+        workflowState2.setToken(uuid);
+        qm.persist(workflowState2);
+
+        Response response = target(V1_BOM + "/token/" + uuid).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatJson(jsonResponse)
+                .withMatcher("isBeingProcessed", equalTo(false))
+                .isEqualTo(json("""
+                    {
+                        "processing": "${json-unit.matches:isBeingProcessed}"
+                    }
+                """));
     }
 }
