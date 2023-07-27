@@ -87,15 +87,15 @@ class KafkaStreamsTopologyFactory {
                         Named.as("filter_vuln_scans_with_project_target"))
                 .map((scantoken, vulnscan) -> {
                     // check the failure rate and update workflow status accordingly.
-                    final double failureRate = vulnscan.getScanFailed() / vulnscan.getScanTotal();
+                    final double failureRate = (double) vulnscan.getScanFailed() / vulnscan.getScanTotal();
                     try (var qm = new QueryManager()) {
                         if (failureRate > vulnscan.getFailureThreshold()) {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
                             vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
                             vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
                             qm.updateWorkflowState(vulnAnalysisState);
-                            qm.updateAllDescendantStatesOfParent(vulnAnalysisState, WorkflowStatus.CANCELLED);
                             vulnscan.setStatus(VulnerabilityScan.Status.FAILED);
+                            qm.persist(vulnscan);
                             return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), null);
                         } else {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);

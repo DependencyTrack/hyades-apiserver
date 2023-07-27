@@ -1462,8 +1462,6 @@ public class QueryManager extends AlpineQueryManager {
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
             scan.setFailureThreshold(0.05);
-            scan.setScanFailed(0);
-            scan.setScanTotal(0);
             final var startDate = new Date();
             scan.setStartedAt(startDate);
             scan.setUpdatedAt(startDate);
@@ -1527,10 +1525,9 @@ public class QueryManager extends AlpineQueryManager {
             final long failedScanCount = value.getScannerResultsList().stream()
                     .map(ScannerResult::getStatus)
                     .filter(SCAN_STATUS_FAILED::equals)
-                    .count() + scan.getScanFailed();
-            scan.setScanFailed(failedScanCount);
-            final long totalScanCount = value.getScannerResultsCount() + scan.getScanTotal();
-            scan.setScanTotal(totalScanCount);
+                    .count();
+            scan.setScanFailed(scan.getScanFailed() + failedScanCount);
+            scan.setScanTotal(value.getScannerResultsCount() + scan.getScanTotal());
             scan.setStatus(scan.getExpectedResults() - received == 0
                     ? VulnerabilityScan.Status.COMPLETED
                     : VulnerabilityScan.Status.IN_PROGRESS);

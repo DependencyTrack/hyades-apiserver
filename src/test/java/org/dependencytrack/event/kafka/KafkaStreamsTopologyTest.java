@@ -343,6 +343,13 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         qm.persist(componentB);
 
         final var scanToken = UUID.randomUUID().toString();
+
+        var workflowState = new WorkflowState();
+        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
+        workflowState.setStatus(WorkflowStatus.PENDING);
+        workflowState.setToken(UUID.fromString(scanToken));
+        qm.persist(workflowState);
+
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
         final var scanKeyA = ScanKey.newBuilder()
                 .setScanToken(scanToken)
