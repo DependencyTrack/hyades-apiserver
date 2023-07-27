@@ -21,6 +21,7 @@ import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.parser.hyades.NotificationModelConverter;
@@ -93,7 +94,8 @@ class KafkaStreamsTopologyFactory {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
                             vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
                             vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
-                            qm.updateWorkflowState(vulnAnalysisState);
+                            WorkflowState updatedState = qm.updateWorkflowState(vulnAnalysisState);
+                            qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
                             vulnscan.setStatus(VulnerabilityScan.Status.FAILED);
                             qm.persist(vulnscan);
                             return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), null);

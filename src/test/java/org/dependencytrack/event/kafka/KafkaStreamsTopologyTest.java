@@ -56,7 +56,7 @@ import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
-public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
+public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
     public static class EventSubscriber implements Subscriber {
 
@@ -162,12 +162,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setSource(Source.newBuilder().setName("OSSINDEX").build())
                 .build();
 
-        var workflowState = new WorkflowState();
-        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-        workflowState.setStatus(WorkflowStatus.PENDING);
-        workflowState.setToken(scanToken);
-        qm.persist(workflowState);
-
+        qm.createWorkflowSteps(scanToken);
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
                         new KeyValue<>(scanKeyComponentA,
                                 ScanResult.newBuilder()
@@ -205,11 +200,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         final var scanToken = UUID.randomUUID().toString();
 
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, projectUuid, scanToken, 500);
-        var workflowState = new WorkflowState();
-        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-        workflowState.setStatus(WorkflowStatus.PENDING);
-        workflowState.setToken(UUID.fromString(scanToken));
-        qm.persist(workflowState);
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
 
         final var componentUuids = new ArrayList<UUID>();
         for (int i = 0; i < 500; i++) {
@@ -244,7 +235,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     qm.getPersistenceManager().refresh(scan);
-                    qm.getPersistenceManager().refresh(workflowState);
                     assertThat(scan).isNotNull();
                     assertThat(scan.getReceivedResults()).isEqualTo(500);
                 });
@@ -267,11 +257,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         final var scanToken = UUID.randomUUID().toString();
 
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, projectUuid, scanToken, 100);
-        var workflowState = new WorkflowState();
-        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-        workflowState.setStatus(WorkflowStatus.PENDING);
-        workflowState.setToken(UUID.fromString(scanToken));
-        qm.persist(workflowState);
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
 
         final var componentUuids = new ArrayList<UUID>();
         for (int i = 0; i < 100; i++) {
@@ -305,7 +291,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     qm.getPersistenceManager().refresh(scan);
-                    qm.getPersistenceManager().refresh(workflowState);
                     assertThat(scan).isNotNull();
                     assertThat(scan.getReceivedResults()).isEqualTo(100);
                 });
@@ -320,6 +305,12 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.FAILED);
+
+        workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.POLICY_EVALUATION);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
+
+        workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.METRICS_UPDATE);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
     }
 
     @Test

@@ -56,6 +56,8 @@ import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
+import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
@@ -127,6 +129,20 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 state -> {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isNull();
+                },
+                state -> {
+                    //policy evaluation has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isNull();
+                },
+                state -> {
+                    //metrics update has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isNull();
