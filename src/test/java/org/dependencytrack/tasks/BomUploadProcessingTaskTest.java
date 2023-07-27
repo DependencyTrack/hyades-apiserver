@@ -137,24 +137,12 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     //policy evaluation has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
-                },
-                state -> {
-                    //metrics update has not been handled yet, so it will be in pending state
-                    assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
-                },
-                state -> {
-                    assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isNull();
                 },
                 state -> {
+                    //metrics update has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
