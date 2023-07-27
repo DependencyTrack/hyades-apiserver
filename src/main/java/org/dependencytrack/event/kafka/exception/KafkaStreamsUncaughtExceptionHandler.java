@@ -12,6 +12,7 @@ import org.dependencytrack.common.ConfigKey;
 import javax.jdo.JDOOptimisticVerificationException;
 import java.net.SocketTimeoutException;
 import java.sql.SQLTransientException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -28,19 +29,23 @@ public class KafkaStreamsUncaughtExceptionHandler implements StreamsUncaughtExce
 
     private static final Logger LOGGER = Logger.getLogger(KafkaStreamsUncaughtExceptionHandler.class);
 
+    private final Clock clock;
     private final Map<Class<? extends Throwable>, ExceptionOccurrence> transientExceptionOccurrences;
     private final Duration transientExceptionThresholdInterval;
     private final int transientExceptionThresholdCount;
 
     public KafkaStreamsUncaughtExceptionHandler() {
         this(
+                Clock.systemUTC(),
                 Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_TRANSIENT_PROCESSING_EXCEPTION_THRESHOLD_INTERVAL)),
                 Config.getInstance().getPropertyAsInt(ConfigKey.KAFKA_STREAMS_TRANSIENT_PROCESSING_EXCEPTION_THRESHOLD_COUNT)
         );
     }
 
-    KafkaStreamsUncaughtExceptionHandler(final Duration transientExceptionThresholdInterval,
+    KafkaStreamsUncaughtExceptionHandler(final Clock clock,
+                                         final Duration transientExceptionThresholdInterval,
                                          final int transientExceptionThresholdCount) {
+        this.clock = clock;
         this.transientExceptionOccurrences = new ConcurrentHashMap<>();
         this.transientExceptionThresholdInterval = transientExceptionThresholdInterval;
         this.transientExceptionThresholdCount = transientExceptionThresholdCount;
@@ -62,7 +67,7 @@ public class KafkaStreamsUncaughtExceptionHandler implements StreamsUncaughtExce
                 || rootCause instanceof SQLTransientException) {
             final ExceptionOccurrence occurrence = transientExceptionOccurrences
                     .compute(rootCause.getClass(), (key, oldValue) -> {
-                        final Instant now = Instant.now();
+                        final Instant now = Instant.now(clock);
                         if (oldValue == null) {
                             return new ExceptionOccurrence(now, 1);
                         }
