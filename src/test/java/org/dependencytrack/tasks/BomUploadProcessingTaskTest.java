@@ -19,7 +19,7 @@
 package org.dependencytrack.tasks;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Bom;
@@ -28,8 +28,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
@@ -43,22 +41,33 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
+import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
+import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStatus.PENDING;
+import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
+import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
-public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
+public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        super.setUp();
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getGroupName(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
@@ -71,12 +80,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
-
-        var workflowState = new WorkflowState();
-        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-        workflowState.setStatus(WorkflowStatus.PENDING);
-        workflowState.setToken(bomUploadEvent.getChainIdentifier());
-        qm.persist(workflowState);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
@@ -87,7 +91,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
-        qm.getPersistenceManager().refresh(workflowState);
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
@@ -108,6 +111,27 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //vuln analysis has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isNull();
+                }
+        );
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
         assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
@@ -119,6 +143,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -131,6 +156,27 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(project.getClassifier()).isNull();
         assertThat(project.getLastBomImport()).isNotNull();
 
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isNull();
+                }
+        );
+
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
 
@@ -141,8 +187,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-
-        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid.json")));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 2, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
@@ -166,6 +213,27 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         );
 
         qm.getPersistenceManager().refresh(project);
+
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(FAILED);
+                    assertThat(state.getFailureReason()).isEqualTo("Failed to parse BOM");
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(CANCELLED);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(CANCELLED);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                }
+        );
         assertThat(project.getClassifier()).isNull();
         assertThat(project.getLastBomImport()).isNull();
         assertThat(project.getExternalReferences()).isNull();
@@ -173,6 +241,40 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
+    }
+
+    @Test
+    public void testBomProcessingShouldFailIfProjectDoesNotExists() throws Exception {
+        //project should not be persisted for this test condition
+        Project project = new Project();
+        project.setUuid(UUID.randomUUID());
+        project.setName("test-project");
+        project.setId(1);
+        var bomUploadEvent = new BomUploadEvent(project, createTempBomFile("bom-1.xml"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(FAILED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getFailureReason()).isEqualTo("Project does not exist");
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(CANCELLED);
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                }
+        );
     }
 
     @Test

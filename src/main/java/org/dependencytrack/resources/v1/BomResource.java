@@ -41,7 +41,8 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -73,8 +74,8 @@ import java.nio.file.StandardOpenOption;
 import java.security.Principal;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -342,20 +343,16 @@ public class BomResource extends AlpineResource {
     public Response isTokenBeingProcessed(
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") String uuid) {
-        // Check whether any internal tasks are processing events related to the token.
-        final boolean processingInternally = Event.isEventBeingProcessed(UUID.fromString(uuid));
-
-        // Check for pending vulnerability scans.
-        final VulnerabilityScan.Status vulnScanStatus;
+        // Check workflow states for the token.
+        List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
-            final VulnerabilityScan vulnScan = qm.getVulnerabilityScan(uuid);
-            vulnScanStatus = Optional.ofNullable(vulnScan)
-                    .map(VulnerabilityScan::getStatus)
-                    .orElse(VulnerabilityScan.Status.UNKNOWN);
+            workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
         }
-
+        AtomicBoolean hasTerminalStatus = new AtomicBoolean(true);
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-        response.setProcessing(processingInternally || vulnScanStatus == VulnerabilityScan.Status.IN_PROGRESS);
+        workflowStates.stream().forEach(workflowState -> hasTerminalStatus.set(hasTerminalStatus.get() && (workflowState.getStatus() != WorkflowStatus.PENDING
+                && workflowState.getStatus() != WorkflowStatus.TIMED_OUT)));
+        response.setProcessing(!hasTerminalStatus.get());
         return Response.ok(response).build();
     }
 
@@ -382,6 +379,7 @@ public class BomResource extends AlpineResource {
             }
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
 
             BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -418,6 +416,8 @@ public class BomResource extends AlpineResource {
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
                 final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+
+                qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
                 Event.dispatch(bomUploadEvent);
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
@@ -462,5 +462,4 @@ public class BomResource extends AlpineResource {
 
         return tmpFile;
     }
-
 }
