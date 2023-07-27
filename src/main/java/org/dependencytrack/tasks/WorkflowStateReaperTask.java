@@ -67,7 +67,6 @@ public class WorkflowStateReaperTask implements Subscriber {
 
     /**
      * Transition steps to {@link WorkflowStatus#TIMED_OUT}, if:
-     * - they have been started
      * - their state is non-terminal, and
      * - they have not been updated for the threshold time frame
      * <p>
@@ -82,7 +81,7 @@ public class WorkflowStateReaperTask implements Subscriber {
      */
     private static void transitionPendingStepsToTimedOut(final QueryManager qm, final Date timeoutCutoff) {
         final Query<WorkflowState> timeoutQuery = qm.getPersistenceManager().newQuery(WorkflowState.class);
-        timeoutQuery.setFilter("status == :status && startedAt != null && updatedAt < :cutoff");
+        timeoutQuery.setFilter("status == :status && updatedAt < :cutoff");
         timeoutQuery.setNamedParameters(Map.of(
                 "status", WorkflowStatus.PENDING,
                 "cutoff", timeoutCutoff
