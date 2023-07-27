@@ -94,6 +94,7 @@ class KafkaStreamsTopologyFactory {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
                             vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
                             vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                            vulnAnalysisState.setFailureReason("Failure threshold of " + vulnscan.getFailureThreshold() + "% exceeded: " + failureRate + "% of scans failed");
                             WorkflowState updatedState = qm.updateWorkflowState(vulnAnalysisState);
                             qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
                             vulnscan.setStatus(VulnerabilityScan.Status.FAILED);

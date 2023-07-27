@@ -305,6 +305,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.FAILED);
+        assertThat(workflowStatus.getFailureReason()).isEqualTo("Failure threshold of 0.05% exceeded: 0.06% of scans failed");
 
         workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.POLICY_EVALUATION);
         assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
