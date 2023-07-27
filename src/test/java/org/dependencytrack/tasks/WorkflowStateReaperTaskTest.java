@@ -57,15 +57,16 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         childState.setStep(WorkflowStep.BOM_PROCESSING);
         childState.setStatus(WorkflowStatus.PENDING);
         childState.setToken(token);
+        childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
         new WorkflowStateReaperTask(timeoutDuration, retentionDuration).inform(new WorkflowStateReaperEvent());
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.TIMED_OUT);
-        assertThat(parentState.getUpdatedAt()).isAfter(timeoutCutoff);
+        assertThat(parentState.getUpdatedAt()).isAfter(Date.from(timeoutCutoff)); // Modified.
         assertThat(childState.getStatus()).isEqualTo(WorkflowStatus.PENDING);
-        assertThat(childState.getUpdatedAt()).isNull();
+        assertThat(childState.getUpdatedAt()).isEqualToIgnoringMillis(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS))); // Not modified.
     }
 
     @Test
@@ -88,6 +89,7 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         childState.setStep(WorkflowStep.BOM_PROCESSING);
         childState.setStatus(WorkflowStatus.PENDING);
         childState.setToken(token);
+        childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
         new WorkflowStateReaperTask(timeoutDuration, retentionDuration).inform(new WorkflowStateReaperEvent());
@@ -95,10 +97,10 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.FAILED);
         assertThat(parentState.getFailureReason()).isEqualTo("Timed out");
-        assertThat(parentState.getUpdatedAt()).isAfter(timeoutCutoff);
+        assertThat(parentState.getUpdatedAt()).isAfter(timeoutCutoff); // Modified.
         assertThat(childState.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
         assertThat(childState.getFailureReason()).isNull();
-        assertThat(childState.getUpdatedAt()).isAfter(timeoutCutoff);
+        assertThat(childState.getUpdatedAt()).isEqualTo(parentState.getUpdatedAt()); // Modified.
     }
 
     @Test
