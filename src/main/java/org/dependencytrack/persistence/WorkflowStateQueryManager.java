@@ -13,6 +13,7 @@ import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -202,6 +203,15 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             DbUtil.close(preparedStatement);
             DbUtil.close(connection);
         }
+    }
+
+    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
+        WorkflowState currentState = getWorkflowStateByTokenAndStep(token, workflowStep);
+        if (currentState != null) {
+            currentState.setStartedAt(Date.from(Instant.now()));
+            return persist(currentState);
+        }
+        return null;
     }
 
     public void createWorkflowSteps(UUID token) {

@@ -1579,4 +1579,9 @@ public class QueryManager extends AlpineQueryManager {
             query.closeAll();
         }
     }
+
+    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
+        return getWorkflowStateQueryManager().updateStartTimeIfWorkflowStateExists(token, workflowStep);
+    }
 }
+
