@@ -692,26 +692,36 @@ public class BomResourceTest extends ResourceTest {
                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
                    assertThat(workflowState.getToken()).isEqualTo(uuid);
                    assertThat(workflowState.getParent()).isNull();
+                   assertThat(workflowState.getStartedAt()).isNull();
+                   assertThat(workflowState.getUpdatedAt()).isNotNull();
                },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.METRICS_UPDATE);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 }
         );
     }
