@@ -226,7 +226,22 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setToken(token);
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-            pm.makePersistent(vulnAnalysisState);
+            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
+
+            WorkflowState policyEvaluationState = new WorkflowState();
+            policyEvaluationState.setParent(vulnAnalysisParent);
+            policyEvaluationState.setToken(token);
+            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState policyEvaluationParent = pm.makePersistent(policyEvaluationState);
+
+            WorkflowState metricsUpdateState = new WorkflowState();
+            metricsUpdateState.setParent(policyEvaluationParent);
+            metricsUpdateState.setToken(token);
+            metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
+            metricsUpdateState.setStatus(WorkflowStatus.PENDING);
+            pm.makePersistent(metricsUpdateState);
+
             trx.commit();
         } finally {
             if (trx.isActive()) {

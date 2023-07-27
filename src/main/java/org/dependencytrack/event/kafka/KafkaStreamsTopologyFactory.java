@@ -98,10 +98,12 @@ class KafkaStreamsTopologyFactory {
                     policyEvaluationEvent.setChainIdentifier(UUID.fromString(vulnScan.getToken()));
 
                     // Trigger a metrics update no matter if the policy evaluation succeeded or not.
-                    final Event metricsUpdateEvent = switch (vulnScan.getTargetType()) {
+                    final ChainableEvent metricsUpdateEvent = switch (vulnScan.getTargetType()) {
                         case COMPONENT -> new ComponentMetricsUpdateEvent(vulnScan.getTargetIdentifier());
                         case PROJECT -> new ProjectMetricsUpdateEvent(vulnScan.getTargetIdentifier());
                     };
+                    metricsUpdateEvent.setChainIdentifier(UUID.fromString(vulnScan.getToken()));
+
                     policyEvaluationEvent.onFailure(metricsUpdateEvent);
                     policyEvaluationEvent.onSuccess(metricsUpdateEvent);
 
