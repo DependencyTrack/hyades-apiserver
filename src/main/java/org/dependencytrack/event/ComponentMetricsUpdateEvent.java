@@ -19,7 +19,6 @@
 package org.dependencytrack.event;
 
 import alpine.event.framework.AbstractChainableEvent;
-import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import org.dependencytrack.model.Component;
 

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks.metrics;
 
-import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;

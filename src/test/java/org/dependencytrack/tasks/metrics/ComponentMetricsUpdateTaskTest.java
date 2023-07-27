@@ -20,6 +20,7 @@ package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Policy;
@@ -29,8 +30,6 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.model.AnalyzerIdentity;
-import org.dependencytrack.model.WorkflowStep;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
