@@ -257,7 +257,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
             vulnAnalysisState.setUpdatedAt(now);
-            pm.makePersistent(vulnAnalysisState);
             WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
             WorkflowState policyEvaluationState = new WorkflowState();
