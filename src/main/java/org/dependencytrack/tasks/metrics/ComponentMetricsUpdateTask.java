@@ -27,13 +27,13 @@ import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.UUID;
+
+import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 /**
  * A {@link Subscriber} task that updates {@link Component} metrics.
@@ -51,7 +51,7 @@ public class ComponentMetricsUpdateTask implements Subscriber {
             final Timer.Sample timerSample = Timer.start();
             WorkflowState metricsUpdateState = null;
             try (final var qm = new QueryManager()) {
-               metricsUpdateState = updateStartTimeIfWorkflowStateExists(qm, event.getChainIdentifier());
+               metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), METRICS_UPDATE);
                 try {
                     Metrics.updateComponentMetrics(event.getUuid());
                     if (metricsUpdateState != null) {
@@ -77,14 +77,4 @@ public class ComponentMetricsUpdateTask implements Subscriber {
             }
         }
     }
-
-    private static WorkflowState updateStartTimeIfWorkflowStateExists(QueryManager qm, UUID token) {
-        WorkflowState currentState = qm.getWorkflowStateByTokenAndStep(token, WorkflowStep.METRICS_UPDATE);
-        if (currentState != null) {
-            currentState.setStartedAt(Date.from(Instant.now()));
-            return qm.persist(currentState);
-        }
-        return null;
-    }
-
 }

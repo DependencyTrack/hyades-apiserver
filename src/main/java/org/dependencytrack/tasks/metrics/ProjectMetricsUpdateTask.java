@@ -54,7 +54,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         if (e instanceof final ProjectMetricsUpdateEvent event) {
             WorkflowState metricsUpdateState;
             try (final var qm = new QueryManager()) {
-                metricsUpdateState = updateStartTimeIfWorkflowStateExists(qm, event.getChainIdentifier());
+                metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), WorkflowStep.METRICS_UPDATE);
                 try {
                     updateMetrics(event.getUuid(), event.isForceRefresh());
                     if (metricsUpdateState != null) {
@@ -148,14 +148,4 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
     public record ComponentProjection(long id, UUID uuid) {
     }
-
-    private static WorkflowState updateStartTimeIfWorkflowStateExists(QueryManager qm, UUID token) {
-        WorkflowState currentState = qm.getWorkflowStateByTokenAndStep(token, WorkflowStep.METRICS_UPDATE);
-        if (currentState != null) {
-            currentState.setStartedAt(Date.from(Instant.now()));
-            return qm.persist(currentState);
-        }
-        return null;
-    }
-
 }
