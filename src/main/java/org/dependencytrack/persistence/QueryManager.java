@@ -1592,4 +1592,8 @@ public class QueryManager extends AlpineQueryManager {
     public void deleteWorkflowState(WorkflowState workflowState) {
         getWorkflowStateQueryManager().deleteWorkflowState(workflowState);
     }
+
+    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
+        return getWorkflowStateQueryManager().updateStartTimeIfWorkflowStateExists(token, workflowStep);
+    }
 }

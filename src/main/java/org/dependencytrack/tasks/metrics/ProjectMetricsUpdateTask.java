@@ -26,11 +26,16 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -47,10 +52,25 @@ public class ProjectMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final ProjectMetricsUpdateEvent event) {
-            try {
-                updateMetrics(event.getUuid(), event.isForceRefresh());
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while updating metrics for project " + event.getUuid(), ex);
+            WorkflowState metricsUpdateState;
+            try (final var qm = new QueryManager()) {
+                metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), WorkflowStep.METRICS_UPDATE);
+                try {
+                    updateMetrics(event.getUuid(), event.isForceRefresh());
+                    if (metricsUpdateState != null) {
+                        metricsUpdateState.setStatus(WorkflowStatus.COMPLETED);
+                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
+                        qm.updateWorkflowState(metricsUpdateState);
+                    }
+                } catch (Exception ex) {
+                    if (metricsUpdateState != null) {
+                        metricsUpdateState.setFailureReason(ex.getMessage());
+                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
+                        metricsUpdateState.setStatus(WorkflowStatus.FAILED);
+                        qm.updateWorkflowState(metricsUpdateState);
+                    }
+                    LOGGER.error("An unexpected error occurred while updating metrics for project " + event.getUuid(), ex);
+                }
             }
         }
     }
@@ -128,5 +148,4 @@ public class ProjectMetricsUpdateTask implements Subscriber {
 
     public record ComponentProjection(long id, UUID uuid) {
     }
-
 }

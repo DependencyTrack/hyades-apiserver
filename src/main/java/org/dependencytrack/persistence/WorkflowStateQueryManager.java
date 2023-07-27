@@ -13,6 +13,7 @@ import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -204,6 +205,15 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         }
     }
 
+    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
+        WorkflowState currentState = getWorkflowStateByTokenAndStep(token, workflowStep);
+        if (currentState != null) {
+            currentState.setStartedAt(Date.from(Instant.now()));
+            return persist(currentState);
+        }
+        return null;
+    }
+
     public void createWorkflowSteps(UUID token) {
         final Transaction trx = pm.currentTransaction();
         try {
@@ -226,17 +236,17 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setToken(token);
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-            processingParent = pm.makePersistent(vulnAnalysisState);
+            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
-            WorkflowState policyEvalState = new WorkflowState();
-            policyEvalState.setParent(processingParent);
-            policyEvalState.setToken(token);
-            policyEvalState.setStep(WorkflowStep.POLICY_EVALUATION);
-            policyEvalState.setStatus(WorkflowStatus.PENDING);
-            processingParent = pm.makePersistent(policyEvalState);
+            WorkflowState policyEvaluationState = new WorkflowState();
+            policyEvaluationState.setParent(vulnAnalysisParent);
+            policyEvaluationState.setToken(token);
+            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            pm.makePersistent(policyEvaluationState);
 
             WorkflowState metricsUpdateState = new WorkflowState();
-            metricsUpdateState.setParent(processingParent);
+            metricsUpdateState.setParent(vulnAnalysisParent);
             metricsUpdateState.setToken(token);
             metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
