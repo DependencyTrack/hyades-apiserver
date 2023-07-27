@@ -7,6 +7,7 @@ import org.apache.kafka.streams.errors.DeserializationExceptionHandler;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.dependencytrack.common.ConfigKey;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
 
@@ -18,14 +19,16 @@ public class KafkaStreamsDeserializationExceptionHandler extends AbstractThresho
     @SuppressWarnings("unused") // Called by Kafka Streams via reflection
     public KafkaStreamsDeserializationExceptionHandler() {
         this(
+                Clock.systemUTC(),
                 Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_INTERVAL)),
                 Config.getInstance().getPropertyAsInt(ConfigKey.KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_COUNT)
         );
     }
 
-    KafkaStreamsDeserializationExceptionHandler(final Duration exceptionThresholdInterval,
+    KafkaStreamsDeserializationExceptionHandler(final Clock clock,
+                                                final Duration exceptionThresholdInterval,
                                                 final int exceptionThresholdCount) {
-        super(exceptionThresholdInterval, exceptionThresholdCount);
+        super(clock, exceptionThresholdInterval, exceptionThresholdCount);
     }
 
     /**
