@@ -30,17 +30,23 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.WorkflowStep;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
+import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 @RunWith(Parameterized.class)
 public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -98,6 +104,24 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         qm.getPersistenceManager().refresh(component);
         assertThat(component.getLastInheritedRiskScore()).isZero();
+    }
+
+    @Test
+    public void testWorkflowStateOnMetricsUpdateFailure() {
+
+        var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(UUID.randomUUID());
+        qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
+        new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
+
+        assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
+                workflowState -> {
+                    assertThat(workflowState.getStatus()).isEqualTo(FAILED);
+                    assertThat(workflowState.getStartedAt()).isNotNull();
+                    assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(workflowState.getFailureReason()).isEqualTo("Error encountered when extracting results for SQL query \"\"UPDATE_COMPONENT_METRICS\"\"");
+                }
+        );
     }
 
     @Test
@@ -163,7 +187,10 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
         qm.makeAnalysis(component, vulnSuppressed, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
+        var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
+        qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
+        new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
+
         final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
@@ -193,6 +220,13 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
         qm.getPersistenceManager().refresh(component);
+        assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
+                state -> {
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isNotNull();
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                }
+        );
         assertThat(component.getLastInheritedRiskScore()).isEqualTo(8.0);
     }
 
