@@ -40,8 +40,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
+import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 @RunWith(Parameterized.class)
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -182,7 +186,9 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
         qm.persist(componentSuppressedOldMetrics);
 
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        var projectMetricsUpdateEvent = new ProjectMetricsUpdateEvent(project.getUuid());
+        qm.createWorkflowSteps(projectMetricsUpdateEvent.getChainIdentifier());
+        new ProjectMetricsUpdateTask().inform(projectMetricsUpdateEvent);
 
         final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
         assertThat(metrics.getComponents()).isEqualTo(3);
@@ -219,6 +225,14 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isEqualTo(5.0);
         assertThat(componentAudited.getLastInheritedRiskScore()).isEqualTo(5.0);
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+
+        assertThat(qm.getWorkflowStateByTokenAndStep(projectMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
+                state -> {
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isNotNull();
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                }
+        );
     }
 
     @Test
@@ -315,4 +329,22 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
     }
 
+    @Test
+    public void testWorkflowStateOnProjectMetricsUpdateFailure() {
+        var projectUuid = UUID.randomUUID();
+        var projectMetricsUpdateEvent = new ProjectMetricsUpdateEvent(projectUuid);
+        qm.createWorkflowSteps(projectMetricsUpdateEvent.getChainIdentifier());
+        //trigger metrics for project that does not exist
+        new ProjectMetricsUpdateTask().inform(projectMetricsUpdateEvent);
+        String failureReason = "Project " + projectUuid + " does not exist";
+        assertThat(qm.getWorkflowStateByTokenAndStep(projectMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
+                workflowState -> {
+                    assertThat(workflowState.getStatus()).isEqualTo(FAILED);
+                    assertThat(workflowState.getStartedAt()).isNotNull();
+                    assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(workflowState.getFailureReason()).isEqualTo(failureReason);
+                }
+        );
+    }
 }

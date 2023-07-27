@@ -697,10 +697,22 @@ public class BomResourceTest extends ResourceTest {
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNotNull();
+                },
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNotNull();
+                },
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.METRICS_UPDATE);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNotNull();
                 }
         );
     }

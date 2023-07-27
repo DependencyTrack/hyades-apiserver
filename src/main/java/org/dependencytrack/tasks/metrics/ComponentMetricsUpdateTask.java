@@ -25,8 +25,15 @@ import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.persistence.QueryManager;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+
+import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 /**
  * A {@link Subscriber} task that updates {@link Component} metrics.
@@ -40,20 +47,34 @@ public class ComponentMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final ComponentMetricsUpdateEvent event) {
-            LOGGER.debug("Executing metrics update for component " + event.uuid());
+            LOGGER.debug("Executing metrics update for component " + event.getUuid());
             final Timer.Sample timerSample = Timer.start();
-            try {
-                Metrics.updateComponentMetrics(event.uuid());
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while updating metrics of component " + event.uuid(), ex);
+            WorkflowState metricsUpdateState = null;
+            try (final var qm = new QueryManager()) {
+               metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), METRICS_UPDATE);
+                try {
+                    Metrics.updateComponentMetrics(event.getUuid());
+                    if (metricsUpdateState != null) {
+                        metricsUpdateState.setStatus(WorkflowStatus.COMPLETED);
+                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
+                        qm.persist(metricsUpdateState);
+                    }
+                } catch (Exception ex) {
+                    if(metricsUpdateState != null) {
+                        metricsUpdateState.setFailureReason(ex.getMessage());
+                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
+                        metricsUpdateState.setStatus(WorkflowStatus.FAILED);
+                        qm.persist(metricsUpdateState);
+                    }
+                    LOGGER.error("An unexpected error occurred while updating metrics of component " + event.getUuid(), ex);
+                }
             } finally {
                 final long durationNanos = timerSample.stop(Timer
                         .builder("metrics_update")
                         .tag("target", "component")
                         .register(alpine.common.metrics.Metrics.getRegistry()));
-                LOGGER.debug("Completed metrics update for component " + event.uuid() + " in " + Duration.ofNanos(durationNanos));
+                LOGGER.debug("Completed metrics update for component " + event.getUuid() + " in " + Duration.ofNanos(durationNanos));
             }
         }
     }
-
 }

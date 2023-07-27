@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.event;
 
+import alpine.event.framework.AbstractChainableEvent;
 import alpine.event.framework.Event;
 import org.dependencytrack.model.Component;
 
@@ -25,9 +26,17 @@ import java.util.UUID;
 
 /**
  * Defines an {@link Event} used to trigger {@link Component} metrics updates.
- *
- * @param uuid {@link UUID} of the {@link Component} to update metrics for
  * @since 4.6.0
  */
-public record ComponentMetricsUpdateEvent(UUID uuid) implements Event {
+public class ComponentMetricsUpdateEvent extends AbstractChainableEvent {
+
+    private final UUID uuid;
+
+    public ComponentMetricsUpdateEvent(final UUID uuid) {
+        this.uuid = uuid;
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
 }

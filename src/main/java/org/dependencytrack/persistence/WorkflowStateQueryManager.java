@@ -13,6 +13,7 @@ import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -204,6 +205,15 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         }
     }
 
+    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
+        WorkflowState currentState = getWorkflowStateByTokenAndStep(token, workflowStep);
+        if (currentState != null) {
+            currentState.setStartedAt(Date.from(Instant.now()));
+            return persist(currentState);
+        }
+        return null;
+    }
+
     public void createWorkflowSteps(UUID token) {
         final Transaction trx = pm.currentTransaction();
         try {
@@ -226,7 +236,22 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setToken(token);
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-            pm.makePersistent(vulnAnalysisState);
+            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
+
+            WorkflowState policyEvaluationState = new WorkflowState();
+            policyEvaluationState.setParent(vulnAnalysisParent);
+            policyEvaluationState.setToken(token);
+            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            WorkflowState policyEvaluationParent = pm.makePersistent(policyEvaluationState);
+
+            WorkflowState metricsUpdateState = new WorkflowState();
+            metricsUpdateState.setParent(policyEvaluationParent);
+            metricsUpdateState.setToken(token);
+            metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
+            metricsUpdateState.setStatus(WorkflowStatus.PENDING);
+            pm.makePersistent(metricsUpdateState);
+
             trx.commit();
         } finally {
             if (trx.isActive()) {
