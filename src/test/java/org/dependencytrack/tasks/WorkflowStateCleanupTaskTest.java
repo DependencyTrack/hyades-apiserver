@@ -3,7 +3,7 @@ package org.dependencytrack.tasks;
 import alpine.server.util.DbUtil;
 import org.apache.commons.io.IOUtils;
 import org.dependencytrack.AbstractPostgresEnabledTest;
-import org.dependencytrack.event.WorkflowStateReaperEvent;
+import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
+public class WorkflowStateCleanupTaskTest extends AbstractPostgresEnabledTest {
 
     @Before
     public void setUp() throws Exception {
@@ -60,7 +60,7 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateReaperTask(timeoutDuration, retentionDuration).inform(new WorkflowStateReaperEvent());
+        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.TIMED_OUT);
@@ -92,7 +92,7 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateReaperTask(timeoutDuration, retentionDuration).inform(new WorkflowStateReaperEvent());
+        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.FAILED);
@@ -165,7 +165,7 @@ public class WorkflowStateReaperTaskTest extends AbstractPostgresEnabledTest {
         childStateC.setUpdatedAt(Date.from(retentionCutoff.minus(1, ChronoUnit.HOURS)));
         qm.persist(childStateC);
 
-        new WorkflowStateReaperTask(timeoutDuration, retentionDuration).inform(new WorkflowStateReaperEvent());
+        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
 
         // Workflow A must've been deleted, because all steps are in terminal status, and fall below the retention cutoff.
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(WorkflowState.class, childStateA.getId()));

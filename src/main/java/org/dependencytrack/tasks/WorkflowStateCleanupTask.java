@@ -6,7 +6,7 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.WorkflowStateReaperEvent;
+import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.persistence.QueryManager;
@@ -21,26 +21,26 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.apache.commons.lang3.time.DateFormatUtils.ISO_8601_EXTENDED_DATETIME_FORMAT;
-import static org.dependencytrack.tasks.LockName.WORKFLOW_STEP_REAPER_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.WORKFLOW_STEP_CLEANUP_TASK_LOCK;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 
-public class WorkflowStateReaperTask implements Subscriber {
+public class WorkflowStateCleanupTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(WorkflowStateReaperTask.class);
+    private static final Logger LOGGER = Logger.getLogger(WorkflowStateCleanupTask.class);
 
     private final Duration stepTimeoutDuration;
     private final Duration retentionDuration;
 
 
     @SuppressWarnings("unused") // Called by Alpine's event system
-    public WorkflowStateReaperTask() {
+    public WorkflowStateCleanupTask() {
         this(
                 Duration.parse(Config.getInstance().getProperty(ConfigKey.WORKFLOW_STEP_TIMEOUT_DURATION)),
                 Duration.parse(Config.getInstance().getProperty(ConfigKey.WORKFLOW_RETENTION_DURATION))
         );
     }
 
-    WorkflowStateReaperTask(final Duration stepTimeoutDuration, final Duration retentionDuration) {
+    WorkflowStateCleanupTask(final Duration stepTimeoutDuration, final Duration retentionDuration) {
         this.stepTimeoutDuration = stepTimeoutDuration;
         this.retentionDuration = retentionDuration;
     }
@@ -50,12 +50,12 @@ public class WorkflowStateReaperTask implements Subscriber {
      */
     @Override
     public void inform(final Event e) {
-        if (e instanceof WorkflowStateReaperEvent) {
+        if (e instanceof WorkflowStateCleanupEvent) {
             final Instant now = Instant.now();
             final Date timeoutCutoff = Date.from(now.minus(stepTimeoutDuration));
             final Date retentionCutoff = Date.from(now.minus(retentionDuration));
 
-            executeWithLock(WORKFLOW_STEP_REAPER_TASK_LOCK, (Runnable) () -> {
+            executeWithLock(WORKFLOW_STEP_CLEANUP_TASK_LOCK, (Runnable) () -> {
                 try (final var qm = new QueryManager()) {
                     transitionPendingStepsToTimedOut(qm, timeoutCutoff);
                     transitionTimedOutStepsToFailed(qm, timeoutCutoff);
