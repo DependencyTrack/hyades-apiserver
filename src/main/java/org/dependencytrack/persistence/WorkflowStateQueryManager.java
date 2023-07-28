@@ -214,6 +214,23 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return null;
     }
 
+    public void updateWorkflowStateToComplete(WorkflowState workflowState) {
+        if(workflowState != null) {
+            workflowState.setStatus(WorkflowStatus.COMPLETED);
+            workflowState.setUpdatedAt(Date.from(Instant.now()));
+            persist(workflowState);
+        }
+    }
+
+    public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
+        if(workflowState != null) {
+            workflowState.setFailureReason(failureReason);
+            workflowState.setUpdatedAt(Date.from(Instant.now()));
+            workflowState.setStatus(WorkflowStatus.FAILED);
+            persist(workflowState);
+        }
+    }
+
     public void createWorkflowSteps(UUID token) {
         final Transaction trx = pm.currentTransaction();
         try {
