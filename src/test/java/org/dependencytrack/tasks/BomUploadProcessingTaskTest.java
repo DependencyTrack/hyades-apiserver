@@ -53,6 +53,7 @@ import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeou
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStatus.NOT_APPLICABLE;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
@@ -189,24 +190,24 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
 

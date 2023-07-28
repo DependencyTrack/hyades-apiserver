@@ -324,14 +324,22 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
+            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
             if (!vulnAnalysisEvents.isEmpty()) {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
                 vulnAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
                 // Initiate vuln-analysis workflow for the token
-                var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
                 if (vulnAnalysisState != null) {
                     vulnAnalysisState.setStartedAt(Date.from(Instant.now()));
                     qm.persist(vulnAnalysisState);
+                }
+            } else {
+                if (vulnAnalysisState != null) {
+                    vulnAnalysisState.setStatus(WorkflowStatus.NOT_APPLICABLE);
+                    vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                    var updatedState = qm.updateWorkflowState(vulnAnalysisState);
+                    qm.updateAllDescendantStatesOfParent(updatedState,
+                            WorkflowStatus.NOT_APPLICABLE, Date.from(Instant.now()));
                 }
             }
 

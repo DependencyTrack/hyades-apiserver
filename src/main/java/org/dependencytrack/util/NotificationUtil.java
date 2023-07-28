@@ -41,7 +41,6 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
-import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
@@ -310,7 +309,7 @@ public final class NotificationUtil {
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 
-    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan) {
+    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan, String status) {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
             List<Finding> findings = qm.getFindings(project);
@@ -342,7 +341,7 @@ public final class NotificationUtil {
                     .level(NotificationLevel.INFORMATIONAL)
                     .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
                     .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
-                    .subject(new ProjectVulnAnalysisComplete(project, componentAnalysisCompleteList));
+                    .subject(new ProjectVulnAnalysisComplete(project, componentAnalysisCompleteList, status));
         }
     }
 
