@@ -213,7 +213,6 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
-
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
         assertThat(vulnerabilityScan).isNull();
     }
