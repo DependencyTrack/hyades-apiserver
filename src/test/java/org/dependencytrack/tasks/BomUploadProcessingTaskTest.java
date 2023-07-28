@@ -204,10 +204,10 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
-                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getUpdatedAt()).isNull();
                 }
         );
 
