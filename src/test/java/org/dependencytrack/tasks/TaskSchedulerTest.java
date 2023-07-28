@@ -40,8 +40,8 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
     @Before
     public void before() throws Exception {
         environmentVariables.set("TASK_CRON_VULNSCANCLEANUP", "* * * * * *");
-        environmentVariables.set("TASK_SCHEDULER_INITIAL_DELAY", "100");
-        environmentVariables.set("TASK_SCHEDULER_POLLING_INTERVAL", "30000");
+        environmentVariables.set("TASK_SCHEDULER_INITIAL_DELAY", "5");
+        environmentVariables.set("TASK_SCHEDULER_POLLING_INTERVAL", "500");
         super.before();
     }
 
