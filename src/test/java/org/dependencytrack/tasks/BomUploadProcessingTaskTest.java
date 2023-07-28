@@ -131,21 +131,21 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
@@ -188,21 +188,21 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
 
