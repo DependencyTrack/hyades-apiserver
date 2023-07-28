@@ -178,6 +178,7 @@ public class FindingResource extends AlpineResource {
                     LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
                     final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                    qm.createReanalyzeSteps(vae.getChainIdentifier());
                     Event.dispatch(vae);
                     final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
                     Event.dispatch(projectRepositoryMetaAnalysisEvent);
