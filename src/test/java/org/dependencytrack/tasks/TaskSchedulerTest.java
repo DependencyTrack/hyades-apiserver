@@ -41,7 +41,7 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
     public void before() throws Exception {
         environmentVariables.set("TASK_CRON_VULNSCANCLEANUP", "* * * * * *");
         environmentVariables.set("TASK_SCHEDULER_INITIAL_DELAY", "5");
-        environmentVariables.set("TASK_SCHEDULER_POLLING_INTERVAL", "500");
+        environmentVariables.set("TASK_SCHEDULER_POLLING_INTERVAL", "1000");
         super.before();
     }
 
@@ -65,7 +65,7 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
         final var scanC = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-1y3", 3);
         qm.runInTransaction(() -> scanC.setUpdatedAt(Date.from(Instant.now().minus(13, ChronoUnit.HOURS))));
         //Sleeping for 500ms after initial delay so event would be sent
-        Thread.sleep(500);
+        Thread.sleep(1000);
 
         assertThat(qm.getVulnerabilityScan("token-123")).isNotNull();
         assertThat(qm.getVulnerabilityScan("token-xyz")).isNull();
