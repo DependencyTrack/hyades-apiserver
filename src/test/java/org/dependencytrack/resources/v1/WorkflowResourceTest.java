@@ -47,6 +47,7 @@ public class WorkflowResourceTest extends ResourceTest {
         workflowState1.setStep(BOM_CONSUMPTION);
         workflowState1.setStatus(COMPLETED);
         workflowState1.setToken(uuid);
+        workflowState1.setUpdatedAt(new Date());
         var workflowState1Persisted = qm.persist(workflowState1);
 
         WorkflowState workflowState2 = new WorkflowState();
@@ -74,7 +75,8 @@ public class WorkflowResourceTest extends ResourceTest {
                     [{
                         "token": "${json-unit.matches:token}",
                         "step": "${json-unit.matches:step1}",
-                        "status": "${json-unit.matches:status1}"
+                        "status": "${json-unit.matches:status1}",
+                        "updatedAt": "${json-unit.any-number}"
                     },
                     {
                         "token": "${json-unit.matches:token}",
@@ -94,6 +96,7 @@ public class WorkflowResourceTest extends ResourceTest {
         workflowState1.setStep(BOM_CONSUMPTION);
         workflowState1.setStatus(COMPLETED);
         workflowState1.setToken(UUID.randomUUID());
+        workflowState1.setUpdatedAt(new Date());
         qm.persist(workflowState1);
 
         UUID randomUuid = UUID.randomUUID();
