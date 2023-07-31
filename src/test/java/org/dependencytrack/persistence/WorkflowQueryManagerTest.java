@@ -92,6 +92,7 @@ public class WorkflowQueryManagerTest extends AbstractPostgresEnabledTest {
         workflowState.setStep(BOM_CONSUMPTION);
         workflowState.setStatus(PENDING);
         workflowState.setToken(uuid);
+        workflowState.setUpdatedAt(new Date());
 
         WorkflowState result = qm.persist(workflowState);
 
@@ -194,6 +195,7 @@ public class WorkflowQueryManagerTest extends AbstractPostgresEnabledTest {
         workflowState1.setStep(BOM_CONSUMPTION);
         workflowState1.setStatus(PENDING);
         workflowState1.setToken(uuid);
+        workflowState1.setUpdatedAt(new Date());
         WorkflowState result1 = qm.persist(workflowState1);
 
         result1.setId(0);

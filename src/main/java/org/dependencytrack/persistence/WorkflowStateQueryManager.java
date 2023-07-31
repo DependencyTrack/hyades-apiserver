@@ -265,10 +265,12 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
+            final Date now = new Date();
             WorkflowState consumptionState = new WorkflowState();
             consumptionState.setToken(token);
             consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
             consumptionState.setStatus(WorkflowStatus.PENDING);
+            consumptionState.setUpdatedAt(now);
             WorkflowState parent = pm.makePersistent(consumptionState);
 
             WorkflowState processingState = new WorkflowState();
@@ -276,6 +278,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             processingState.setToken(token);
             processingState.setStep(WorkflowStep.BOM_PROCESSING);
             processingState.setStatus(WorkflowStatus.PENDING);
+            processingState.setUpdatedAt(now);
             WorkflowState processingParent = pm.makePersistent(processingState);
 
             WorkflowState vulnAnalysisState = new WorkflowState();
@@ -283,6 +286,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             vulnAnalysisState.setToken(token);
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            vulnAnalysisState.setUpdatedAt(now);
             WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
             WorkflowState policyEvaluationState = new WorkflowState();
@@ -290,6 +294,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             policyEvaluationState.setToken(token);
             policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
             policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            policyEvaluationState.setUpdatedAt(now);
             WorkflowState policyEvaluationParent = pm.makePersistent(policyEvaluationState);
 
             WorkflowState metricsUpdateState = new WorkflowState();
@@ -297,6 +302,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             metricsUpdateState.setToken(token);
             metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
+            metricsUpdateState.setUpdatedAt(now);
             pm.makePersistent(metricsUpdateState);
 
             trx.commit();

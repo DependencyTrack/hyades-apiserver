@@ -51,6 +51,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.util.Base64;
+import java.util.Date;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -692,26 +693,36 @@ public class BomResourceTest extends ResourceTest {
                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
                    assertThat(workflowState.getToken()).isEqualTo(uuid);
                    assertThat(workflowState.getParent()).isNull();
+                   assertThat(workflowState.getStartedAt()).isNull();
+                   assertThat(workflowState.getUpdatedAt()).isNotNull();
                },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.METRICS_UPDATE);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
                     assertThat(workflowState.getParent()).isNotNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
                 }
         );
     }
@@ -909,12 +920,14 @@ public class BomResourceTest extends ResourceTest {
         workflowState1.setStep(BOM_CONSUMPTION);
         workflowState1.setStatus(COMPLETED);
         workflowState1.setToken(uuid);
+        workflowState1.setUpdatedAt(new Date());
         var workflowState1Persisted = qm.persist(workflowState1);
         WorkflowState workflowState2 = new WorkflowState();
         workflowState2.setParent(workflowState1Persisted);
         workflowState2.setStep(BOM_PROCESSING);
         workflowState2.setStatus(PENDING);
         workflowState2.setToken(uuid);
+        workflowState2.setUpdatedAt(new Date());
         qm.persist(workflowState2);
 
         Response response = target(V1_BOM + "/token/" + uuid).request()
@@ -939,12 +952,14 @@ public class BomResourceTest extends ResourceTest {
         workflowState1.setStep(BOM_CONSUMPTION);
         workflowState1.setStatus(COMPLETED);
         workflowState1.setToken(uuid);
+        workflowState1.setUpdatedAt(new Date());
         var workflowState1Persisted = qm.persist(workflowState1);
         WorkflowState workflowState2 = new WorkflowState();
         workflowState2.setParent(workflowState1Persisted);
         workflowState2.setStep(BOM_PROCESSING);
         workflowState2.setStatus(FAILED);
         workflowState2.setToken(uuid);
+        workflowState2.setUpdatedAt(new Date());
         qm.persist(workflowState2);
 
         Response response = target(V1_BOM + "/token/" + uuid).request()
