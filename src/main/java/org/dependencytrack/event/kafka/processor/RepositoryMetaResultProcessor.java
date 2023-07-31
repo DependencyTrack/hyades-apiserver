@@ -8,13 +8,10 @@ import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
-import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDODataStoreException;
@@ -23,7 +20,6 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.sql.SQLException;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
@@ -37,16 +33,6 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
 
     @Override
     public void process(final Record<String, AnalysisResult> record) {
-        if (record.value().hasIntegrityResult()) {
-            final Timer.Sample timerSample = Timer.start();
-            try (final var qm = new QueryManager()) {
-                synchronizeComponentIntegrity(qm.getPersistenceManager(), record);
-            } catch (Exception e) {
-                LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
-            } finally {
-                timerSample.stop(TIMER);
-            }
-        }
         if (record.value().hasLatestVersion()) {
             final Timer.Sample timerSample = Timer.start();
             try (final var qm = new QueryManager()) {
@@ -144,83 +130,5 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-
-    private void synchronizeComponentIntegrity(final PersistenceManager pm, final Record<String, AnalysisResult> record) {
-
-        final AnalysisResult result = record.value();
-
-        final PackageURL purl;
-        try {
-            purl = new PackageURL(result.getComponent().getPurl());
-        } catch (MalformedPackageURLException e) {
-            LOGGER.warn("""
-                    Received repository meta information with invalid PURL,\s
-                    will not be able to correlate; Dropping
-                    """, e);
-            return;
-        }
-
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
-            final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
-            query.setFilter("repositoryType == :repositoryType && component.id == :id && component.uuid == :uuid && repositoryUrl == :url");
-            query.setParameters(
-                    RepositoryType.resolve(purl),
-                    record.value().getComponent().getComponentId(),
-                    UUID.fromString(record.value().getComponent().getUuid()),
-                    record.value().getIntegrityResult().getUrl()
-            );
-            IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();
-            if (persistentIntegrityResult == null || persistentIntegrityResult.getComponent()==null) {
-                persistentIntegrityResult = new IntegrityAnalysisComponent();
-            }
-
-            if (persistentIntegrityResult.getLastCheck() != null
-                    && persistentIntegrityResult.getLastCheck().after(new Date(record.timestamp()))) {
-                LOGGER.warn("""
-                        Received repository meta information for %s that is older\s
-                        than what's already in the database; Discarding
-                        """.formatted(purl));
-                return;
-            }
-            final Query<Component> queryComponent = pm.newQuery(Component.class);
-            queryComponent.setFilter("id == :id");
-            queryComponent.setParameters(record.value().getComponent().getComponentId());
-            Component component = queryComponent.executeUnique();
-            persistentIntegrityResult.setRepositoryType(RepositoryType.resolve(purl));
-            persistentIntegrityResult.setRepositoryUrl(record.value().getIntegrityResult().getUrl());
-            HashMatchStatus md5HashMatch = record.value().getIntegrityResult().getMd5HashMatch();
-            HashMatchStatus sha1HashMatch = record.value().getIntegrityResult().getSha1HashMatch();
-            HashMatchStatus sha256HashMatch = record.value().getIntegrityResult().getSha256Match();
-            persistentIntegrityResult.setMd5HashMatched(md5HashMatch.name());
-            persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
-            persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
-            persistentIntegrityResult.setUuid(UUID.fromString(record.value().getComponent().getUuid()));
-            persistentIntegrityResult.setComponent(component);
-            persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
-            if (md5HashMatch.equals(HashMatchStatus.FAIL) || sha1HashMatch.equals(HashMatchStatus.FAIL) || sha256HashMatch.equals(HashMatchStatus.FAIL)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.UNKNOWN)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else {
-                boolean flag = (md5HashMatch.equals(HashMatchStatus.PASS) || md5HashMatch.equals(HashMatchStatus.UNKNOWN))
-                        && (sha1HashMatch.equals(HashMatchStatus.PASS) || sha1HashMatch.equals(HashMatchStatus.UNKNOWN))
-                        && (sha256HashMatch.equals(HashMatchStatus.PASS) || sha256HashMatch.equals(HashMatchStatus.UNKNOWN));
-                persistentIntegrityResult.setIntegrityCheckPassed(flag);
-            }
-            pm.makePersistent(persistentIntegrityResult);
-
-            trx.commit();
-        } catch (JDODataStoreException e) {
-            throw e;
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-    }
 
 }

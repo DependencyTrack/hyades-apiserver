@@ -10,6 +10,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
+import org.dependencytrack.event.ComponentIntegrityCheckEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
@@ -63,7 +64,14 @@ public class KafkaEventDispatcher {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
+<<<<<<< HEAD
             LOGGER.debug("Dispatch internal called for component: " + e.purlCoordinates() + " Component is internal: " + e.internal());
+=======
+            LOGGER.debug("Dispatch internal called for component: " + e.purlCoordinates() + " Component is " + e.internal());
+            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
+        }else if (event instanceof final ComponentIntegrityCheckEvent e) {
+            LOGGER.debug("Dispatching integrity check event for : " + e.purl() + " Component id is: "+e.componentId());
+>>>>>>> 1782cb7a (topic segregation tested)
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final OsvMirrorEvent e) {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);

@@ -23,13 +23,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * Tracks integrity analysis results for components tracked by their uuid's.
@@ -49,29 +47,21 @@ public class IntegrityAnalysisComponent {
     private Component component;
 
 
-    /**
-     * This is an indirect representation of a the Package URL "type" field.
-     */
-    @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REPOSITORY_TYPE", jdbcType = "VARCHAR", allowsNull = "false")
-    @NotNull
-    private RepositoryType repositoryType;
+    public String getRepositoryIdentifier() {
+        return repositoryIdentifier;
+    }
 
-    /**
-     * This is a representation of the Package URL "namespace" field.
-     */
-    @Persistent
-    @Column(name = "COMPONENT_UUID")
-    @NotNull
-    private UUID uuid;
+    public void setRepositoryIdentifier(String repositoryIdentifier) {
+        this.repositoryIdentifier = repositoryIdentifier;
+    }
 
     /**
      * This is a representation of the Package URL "name" field.
      */
     @Persistent
-    @Column(name = "REPOSITORY_URL", allowsNull = "false")
+    @Column(name = "REPOSITORY_IDENTIFIER", allowsNull = "false")
     @NotNull
-    private String repositoryUrl;
+    private String repositoryIdentifier;
 
     /**
      * The latest version of the component.
@@ -91,25 +81,6 @@ public class IntegrityAnalysisComponent {
     @NotNull
     private String sha1HashMatched;
 
-    //last checked
-    //
-
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public String getRepositoryUrl() {
-        return repositoryUrl;
-    }
-
-    public void setRepositoryUrl(String repositoryUrl) {
-        this.repositoryUrl = repositoryUrl;
-    }
 
     public String isMd5HashMatched() {
         return md5HashMatched;
@@ -171,14 +142,6 @@ public class IntegrityAnalysisComponent {
 
     public void setId(long id) {
         this.id = id;
-    }
-
-    public RepositoryType getRepositoryType() {
-        return repositoryType;
-    }
-
-    public void setRepositoryType(RepositoryType repositoryType) {
-        this.repositoryType = repositoryType;
     }
 
     public Date getLastCheck() {

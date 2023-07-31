@@ -9,6 +9,7 @@ import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
 import org.hyades.proto.vulnanalysis.v1.ScanCommand;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -31,10 +32,13 @@ public final class KafkaTopics {
     public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
     public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
+
+    public static final Topic<String, AnalysisCommand> INTEGRITY_ANALYSIS_COMMAND;
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
 
+    public static final Topic<String, IntegrityResult>INTEGRITY_ANALYSIS_RESULT;
     public static final Topic<String, Notification> NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
@@ -55,6 +59,8 @@ public final class KafkaTopics {
         VULNERABILITY_MIRROR_COMMAND = new Topic<>("dtrack.vulnerability.mirror.command", Serdes.String(), Serdes.String());
         NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new KafkaProtobufSerde<>(Bom.parser()));
         REPO_META_ANALYSIS_COMMAND = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
+        INTEGRITY_ANALYSIS_COMMAND = new Topic<>("dtrack.integrity-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
+        INTEGRITY_ANALYSIS_RESULT = new Topic<>("dtrack.integrity-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(IntegrityResult.parser()));
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));

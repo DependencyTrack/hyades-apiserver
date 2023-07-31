@@ -17,6 +17,7 @@ import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
+import org.dependencytrack.event.kafka.processor.IntegrityAnalysiResultProcessor;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
@@ -112,6 +113,12 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.REPO_META_ANALYSIS_RESULT.keySerde(), KafkaTopics.REPO_META_ANALYSIS_RESULT.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())))
                 .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
+
+        streamsBuilder
+                .stream(KafkaTopics.INTEGRITY_ANALYSIS_RESULT.name(),
+                        Consumed.with(KafkaTopics.INTEGRITY_ANALYSIS_RESULT.keySerde(), KafkaTopics.INTEGRITY_ANALYSIS_RESULT.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.INTEGRITY_ANALYSIS_RESULT.name())))
+                .process(IntegrityAnalysiResultProcessor::new, Named.as("process_component_integrity_analysis_result"));
 
         streamsBuilder
                 .stream(KafkaTopics.NEW_VULNERABILITY.name(),

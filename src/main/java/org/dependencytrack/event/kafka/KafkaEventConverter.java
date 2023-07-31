@@ -1,6 +1,7 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.event.ComponentIntegrityCheckEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
@@ -58,6 +59,21 @@ final class KafkaEventConverter {
         final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                 .setPurl(event.purlCoordinates());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
+        final var analysisCommand = AnalysisCommand.newBuilder()
+                .setComponent(componentBuilder)
+                .build();
+        LOGGER.info("Dispatching repo meta analysis event for component:" + componentBuilder.getUuid());
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
+    }
+
+    static KafkaEvent<String, AnalysisCommand> convert(final ComponentIntegrityCheckEvent event) {
+        if (event == null || event.purl() == null) {
+            return null;
+        }
+
+        final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setPurl(event.purl());
+        Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
         String uuid = null;
         if (event.uuid() != null) {
             uuid = event.uuid().toString();
@@ -70,8 +86,8 @@ final class KafkaEventConverter {
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
-        LOGGER.info("Dispatching repo meta analysis event for component:"+componentBuilder.getUuid());
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
+        LOGGER.info("Dispatching integrity check event for component:" + componentBuilder.getUuid());
+        return new KafkaEvent<>(KafkaTopics.INTEGRITY_ANALYSIS_COMMAND, event.componentId() + "_" + event.purl(), analysisCommand, null);
     }
 
     static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
