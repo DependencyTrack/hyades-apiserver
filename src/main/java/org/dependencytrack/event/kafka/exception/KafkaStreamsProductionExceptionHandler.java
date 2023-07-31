@@ -7,6 +7,7 @@ import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.apache.kafka.streams.errors.ProductionExceptionHandler;
 import org.dependencytrack.common.ConfigKey;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
 
@@ -18,14 +19,16 @@ public class KafkaStreamsProductionExceptionHandler extends AbstractThresholdBas
     @SuppressWarnings("unused") // Called by Kafka Streams via reflection
     public KafkaStreamsProductionExceptionHandler() {
         this(
+                Clock.systemUTC(),
                 Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_INTERVAL)),
                 Config.getInstance().getPropertyAsInt(ConfigKey.KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_COUNT)
         );
     }
 
-    KafkaStreamsProductionExceptionHandler(final Duration exceptionThresholdInterval,
+    KafkaStreamsProductionExceptionHandler(final Clock clock,
+                                           final Duration exceptionThresholdInterval,
                                            final int exceptionThresholdCount) {
-        super(exceptionThresholdInterval, exceptionThresholdCount);
+        super(clock, exceptionThresholdInterval, exceptionThresholdCount);
     }
 
     /**

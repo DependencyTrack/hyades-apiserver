@@ -214,28 +214,35 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return null;
     }
 
-    public void createWorkflowSteps(UUID token) {
+    public void updateWorkflowStateToComplete(WorkflowState workflowState) {
+        if(workflowState != null) {
+            workflowState.setStatus(WorkflowStatus.COMPLETED);
+            workflowState.setUpdatedAt(Date.from(Instant.now()));
+            persist(workflowState);
+        }
+    }
+
+    public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
+        if(workflowState != null) {
+            workflowState.setFailureReason(failureReason);
+            workflowState.setUpdatedAt(Date.from(Instant.now()));
+            workflowState.setStatus(WorkflowStatus.FAILED);
+            persist(workflowState);
+        }
+    }
+
+    public void createReanalyzeSteps(UUID token) {
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
-            WorkflowState consumptionState = new WorkflowState();
-            consumptionState.setToken(token);
-            consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
-            consumptionState.setStatus(WorkflowStatus.PENDING);
-            WorkflowState parent = pm.makePersistent(consumptionState);
-
-            WorkflowState processingState = new WorkflowState();
-            processingState.setParent(parent);
-            processingState.setToken(token);
-            processingState.setStep(WorkflowStep.BOM_PROCESSING);
-            processingState.setStatus(WorkflowStatus.PENDING);
-            WorkflowState processingParent = pm.makePersistent(processingState);
+            Date now = new Date();
 
             WorkflowState vulnAnalysisState = new WorkflowState();
-            vulnAnalysisState.setParent(processingParent);
+            vulnAnalysisState.setParent(null);
             vulnAnalysisState.setToken(token);
             vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
             vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            vulnAnalysisState.setUpdatedAt(now);
             WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
             WorkflowState policyEvaluationState = new WorkflowState();
@@ -243,6 +250,51 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             policyEvaluationState.setToken(token);
             policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
             policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            policyEvaluationState.setUpdatedAt(now);
+            pm.makePersistent(policyEvaluationState);
+
+            trx.commit();
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
+    public void createWorkflowSteps(UUID token) {
+        final Transaction trx = pm.currentTransaction();
+        try {
+            trx.begin();
+            final Date now = new Date();
+            WorkflowState consumptionState = new WorkflowState();
+            consumptionState.setToken(token);
+            consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
+            consumptionState.setStatus(WorkflowStatus.PENDING);
+            consumptionState.setUpdatedAt(now);
+            WorkflowState parent = pm.makePersistent(consumptionState);
+
+            WorkflowState processingState = new WorkflowState();
+            processingState.setParent(parent);
+            processingState.setToken(token);
+            processingState.setStep(WorkflowStep.BOM_PROCESSING);
+            processingState.setStatus(WorkflowStatus.PENDING);
+            processingState.setUpdatedAt(now);
+            WorkflowState processingParent = pm.makePersistent(processingState);
+
+            WorkflowState vulnAnalysisState = new WorkflowState();
+            vulnAnalysisState.setParent(processingParent);
+            vulnAnalysisState.setToken(token);
+            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            vulnAnalysisState.setUpdatedAt(now);
+            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
+
+            WorkflowState policyEvaluationState = new WorkflowState();
+            policyEvaluationState.setParent(vulnAnalysisParent);
+            policyEvaluationState.setToken(token);
+            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            policyEvaluationState.setUpdatedAt(now);
             WorkflowState policyEvaluationParent = pm.makePersistent(policyEvaluationState);
 
             WorkflowState metricsUpdateState = new WorkflowState();
@@ -250,6 +302,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             metricsUpdateState.setToken(token);
             metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
+            metricsUpdateState.setUpdatedAt(now);
             pm.makePersistent(metricsUpdateState);
             trx.commit();
         } finally {

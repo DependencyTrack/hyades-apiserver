@@ -40,7 +40,7 @@ public class WorkflowState implements Serializable {
     private Date startedAt;
 
     @Persistent
-    @Column(name = "UPDATED_AT", allowsNull = "true")
+    @Column(name = "UPDATED_AT", allowsNull = "false")
     private Date updatedAt;
 
     @Persistent

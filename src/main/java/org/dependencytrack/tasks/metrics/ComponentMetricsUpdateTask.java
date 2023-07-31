@@ -54,18 +54,9 @@ public class ComponentMetricsUpdateTask implements Subscriber {
                metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), METRICS_UPDATE);
                 try {
                     Metrics.updateComponentMetrics(event.getUuid());
-                    if (metricsUpdateState != null) {
-                        metricsUpdateState.setStatus(WorkflowStatus.COMPLETED);
-                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
-                        qm.persist(metricsUpdateState);
-                    }
+                    qm.updateWorkflowStateToComplete(metricsUpdateState);
                 } catch (Exception ex) {
-                    if(metricsUpdateState != null) {
-                        metricsUpdateState.setFailureReason(ex.getMessage());
-                        metricsUpdateState.setUpdatedAt(Date.from(Instant.now()));
-                        metricsUpdateState.setStatus(WorkflowStatus.FAILED);
-                        qm.persist(metricsUpdateState);
-                    }
+                    qm.updateWorkflowStateToFailed(metricsUpdateState, ex.getMessage());
                     LOGGER.error("An unexpected error occurred while updating metrics of component " + event.getUuid(), ex);
                 }
             } finally {

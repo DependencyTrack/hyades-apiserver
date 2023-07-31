@@ -1564,6 +1564,9 @@ public class QueryManager extends AlpineQueryManager {
         getWorkflowStateQueryManager().createWorkflowSteps(token);
     }
 
+    public void createReanalyzeSteps(UUID token) {
+        getWorkflowStateQueryManager().createReanalyzeSteps(token);
+    }
 
     public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
@@ -1595,5 +1598,13 @@ public class QueryManager extends AlpineQueryManager {
 
     public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
         return getWorkflowStateQueryManager().updateStartTimeIfWorkflowStateExists(token, workflowStep);
+    }
+
+    public void updateWorkflowStateToComplete(WorkflowState workflowState) {
+        getWorkflowStateQueryManager().updateWorkflowStateToComplete(workflowState);
+    }
+
+    public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
+        getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
 }

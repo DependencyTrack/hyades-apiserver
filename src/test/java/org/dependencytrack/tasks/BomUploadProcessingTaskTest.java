@@ -131,7 +131,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
                     assertThat(state.getUpdatedAt()).isNull();
                 },
                 state -> {
@@ -140,7 +140,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     //metrics update has not been handled yet, so it will be in pending state
@@ -148,7 +148,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
@@ -207,7 +207,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
-                    assertThat(state.getUpdatedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
 
