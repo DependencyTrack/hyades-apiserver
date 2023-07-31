@@ -108,7 +108,7 @@ class KafkaStreamsTopologyFactory {
                             final var vulnScanUpdated = qm.updateVulnerabilityScanStatus(vulnscan.getToken(), VulnerabilityScan.Status.FAILED);
                             var notification = NotificationModelConverter.convert(
                                     NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnScanUpdated, ProjectVulnAnalysisStatus.FAILED));
+                                            vulnScanUpdated, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_FAILED));
                             return KeyValue.pair(vulnScanUpdated.getTargetIdentifier().toString(), notification);
                         } else {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
@@ -117,7 +117,7 @@ class KafkaStreamsTopologyFactory {
                             qm.updateWorkflowState(vulnAnalysisState);
                             var notification = NotificationModelConverter.convert(
                                     NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnscan, ProjectVulnAnalysisStatus.COMPLETED));
+                                            vulnscan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_COMPLETED));
                             return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), notification);
                         }
                     }
