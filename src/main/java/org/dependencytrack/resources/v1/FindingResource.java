@@ -31,7 +31,6 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
@@ -179,6 +178,7 @@ public class FindingResource extends AlpineResource {
                     LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
                     final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                    qm.createReanalyzeSteps(vae.getChainIdentifier());
                     Event.dispatch(vae);
                     final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
                     Event.dispatch(projectRepositoryMetaAnalysisEvent);
