@@ -728,7 +728,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setGroup(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.COMPLETED));
+        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
