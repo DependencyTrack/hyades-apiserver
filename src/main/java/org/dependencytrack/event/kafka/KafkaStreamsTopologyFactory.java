@@ -27,6 +27,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
+import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
@@ -104,11 +105,10 @@ class KafkaStreamsTopologyFactory {
                             vulnAnalysisState.setFailureReason("Failure threshold of " + vulnscan.getFailureThreshold() + "% exceeded: " + failureRate + "% of scans failed");
                             WorkflowState updatedState = qm.updateWorkflowState(vulnAnalysisState);
                             qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
-                            vulnscan.setStatus(VulnerabilityScan.Status.FAILED);
-                            var vulnScanUpdated = qm.persist(vulnscan);
+                            final var vulnScanUpdated = qm.updateVulnerabilityScanStatus(vulnscan.getToken(), VulnerabilityScan.Status.FAILED);
                             var notification = NotificationModelConverter.convert(
                                     NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnScanUpdated, WorkflowStatus.FAILED.name()));
+                                            vulnScanUpdated, ProjectVulnAnalysisStatus.FAILED));
                             return KeyValue.pair(vulnScanUpdated.getTargetIdentifier().toString(), notification);
                         } else {
                             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
@@ -117,7 +117,7 @@ class KafkaStreamsTopologyFactory {
                             qm.updateWorkflowState(vulnAnalysisState);
                             var notification = NotificationModelConverter.convert(
                                     NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnscan, WorkflowStatus.COMPLETED.name()));
+                                            vulnscan, ProjectVulnAnalysisStatus.COMPLETED));
                             return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), notification);
                         }
                     }

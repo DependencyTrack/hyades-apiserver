@@ -37,6 +37,7 @@ import org.hyades.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSub
 import org.hyades.proto.notification.v1.PolicyViolationSubject;
 import org.hyades.proto.notification.v1.Project;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.hyades.proto.notification.v1.Vulnerability;
 import org.hyades.proto.notification.v1.VulnerabilityAnalysis;
@@ -727,7 +728,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setGroup(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete), "COMPLETED"));
+        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.COMPLETED));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);

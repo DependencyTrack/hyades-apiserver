@@ -45,6 +45,7 @@ import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
+import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 
 import javax.jdo.FetchPlan;
 import java.io.File;
@@ -309,7 +310,7 @@ public final class NotificationUtil {
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 
-    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan, String status) {
+    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan, ProjectVulnAnalysisStatus status) {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
             List<Finding> findings = qm.getFindings(project);

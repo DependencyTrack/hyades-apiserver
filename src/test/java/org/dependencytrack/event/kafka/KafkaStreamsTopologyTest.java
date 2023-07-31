@@ -336,11 +336,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
         final var scanToken = UUID.randomUUID().toString();
 
-        var workflowState = new WorkflowState();
-        workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-        workflowState.setStatus(WorkflowStatus.PENDING);
-        workflowState.setToken(UUID.fromString(scanToken));
-        qm.persist(workflowState);
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
 
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
         final var scanKeyA = ScanKey.newBuilder()

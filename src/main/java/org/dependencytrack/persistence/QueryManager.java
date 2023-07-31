@@ -1541,6 +1541,36 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
+    /**
+     * Updates the status of given {@link VulnerabilityScan}.
+     *
+     * @param scanToken The token that uniquely identifies the scan for clients
+     * @param status
+     * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
+     */
+    public VulnerabilityScan updateVulnerabilityScanStatus(final String scanToken, final VulnerabilityScan.Status status) {
+        final Transaction trx = pm.currentTransaction();
+        trx.setOptimistic(true);
+        try {
+            trx.begin();
+            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
+            scanQuery.setFilter("token == :token");
+            scanQuery.setParameters(scanToken);
+            final VulnerabilityScan scan = scanQuery.executeUnique();
+            if (scan == null) {
+                return null;
+            }
+            scan.setStatus(status);
+            scan.setUpdatedAt(new Date());
+            trx.commit();
+            return scan;
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
     public VulnerableSoftware getVulnerableSoftwareByPurlAndVersion(String purlType, String purlNamespace, String purlName, String version) {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurlAndVersion(purlType, purlNamespace, purlName, version);
     }
