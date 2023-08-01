@@ -80,7 +80,9 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
+import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -96,6 +98,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -1457,6 +1461,7 @@ public class QueryManager extends AlpineQueryManager {
             scan.setTargetType(targetType);
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
+            scan.setFailureThreshold(0.05);
             final var startDate = new Date();
             scan.setStartedAt(startDate);
             scan.setUpdatedAt(startDate);
@@ -1500,9 +1505,10 @@ public class QueryManager extends AlpineQueryManager {
      * locking to be used.
      *
      * @param scanToken The token that uniquely identifies the scan for clients
+     * @param value
      * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
      */
-    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken) {
+    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, ScanResult value) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         try {
@@ -1516,9 +1522,45 @@ public class QueryManager extends AlpineQueryManager {
             }
             final int received = scan.getReceivedResults() + 1;
             scan.setReceivedResults(received);
+            final long failedScanCount = value.getScannerResultsList().stream()
+                    .map(ScannerResult::getStatus)
+                    .filter(SCAN_STATUS_FAILED::equals)
+                    .count();
+            scan.setScanFailed(scan.getScanFailed() + failedScanCount);
+            scan.setScanTotal(value.getScannerResultsCount() + scan.getScanTotal());
             scan.setStatus(scan.getExpectedResults() - received == 0
                     ? VulnerabilityScan.Status.COMPLETED
                     : VulnerabilityScan.Status.IN_PROGRESS);
+            scan.setUpdatedAt(new Date());
+            trx.commit();
+            return scan;
+        } finally {
+            if (trx.isActive()) {
+                trx.rollback();
+            }
+        }
+    }
+
+    /**
+     * Updates the status of given {@link VulnerabilityScan}.
+     *
+     * @param scanToken The token that uniquely identifies the scan for clients
+     * @param status
+     * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
+     */
+    public VulnerabilityScan updateVulnerabilityScanStatus(final String scanToken, final VulnerabilityScan.Status status) {
+        final Transaction trx = pm.currentTransaction();
+        trx.setOptimistic(true);
+        try {
+            trx.begin();
+            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
+            scanQuery.setFilter("token == :token");
+            scanQuery.setParameters(scanToken);
+            final VulnerabilityScan scan = scanQuery.executeUnique();
+            if (scan == null) {
+                return null;
+            }
+            scan.setStatus(status);
             scan.setUpdatedAt(new Date());
             trx.commit();
             return scan;

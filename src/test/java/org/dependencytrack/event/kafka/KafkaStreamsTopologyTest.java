@@ -20,6 +20,9 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.util.NotificationUtil;
@@ -47,12 +50,13 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
 import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
-public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
+public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
     public static class EventSubscriber implements Subscriber {
 
@@ -158,6 +162,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                 .setSource(Source.newBuilder().setName("OSSINDEX").build())
                 .build();
 
+        qm.createWorkflowSteps(scanToken);
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
                         new KeyValue<>(scanKeyComponentA,
                                 ScanResult.newBuilder()
@@ -185,6 +190,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
                 });
 
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.PENDING);
     }
 
     @Test
@@ -193,6 +200,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         final var scanToken = UUID.randomUUID().toString();
 
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, projectUuid, scanToken, 500);
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
 
         final var componentUuids = new ArrayList<UUID>();
         for (int i = 0; i < 500; i++) {
@@ -238,6 +246,72 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         assertThat(scan.getReceivedResults()).isEqualTo(500);
         assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.COMPLETED);
         assertThat(scan.getUpdatedAt()).isAfter(scan.getStartedAt());
+
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
+    }
+
+    @Test
+    public void vulnScanFailureTest() throws Exception {
+        final var projectUuid = UUID.randomUUID();
+        final var scanToken = UUID.randomUUID().toString();
+
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, projectUuid, scanToken, 100);
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
+
+        final var componentUuids = new ArrayList<UUID>();
+        for (int i = 0; i < 100; i++) {
+            componentUuids.add(UUID.randomUUID());
+        }
+
+        for (int i = 0; i < 100; i++) {
+            var scanStatus = i < 6 ? SCAN_STATUS_FAILED : SCAN_STATUS_SUCCESSFUL;
+            final ScanKey scanKey = ScanKey.newBuilder()
+                    .setScanToken(scanToken)
+                    .setComponentUuid(componentUuids.get(i).toString())
+                    .build();
+            kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                            new KeyValue<>(
+                                    scanKey,
+                                    ScanResult.newBuilder()
+                                            .setKey(scanKey)
+                                            .addScannerResults(ScannerResult.newBuilder()
+                                                    .setScanner(SCANNER_INTERNAL)
+                                                    .setStatus(scanStatus))
+                                            .addScannerResults(ScannerResult.newBuilder()
+                                                    .setScanner(SCANNER_OSSINDEX)
+                                                    .setStatus(scanStatus))
+                                            .build()))
+                    )
+                    .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                    .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+        }
+        await()
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(250))
+                .untilAsserted(() -> {
+                    qm.getPersistenceManager().refresh(scan);
+                    assertThat(scan).isNotNull();
+                    assertThat(scan.getReceivedResults()).isEqualTo(100);
+                });
+
+        assertThat(scan.getToken()).isEqualTo(scanToken);
+        assertThat(scan.getTargetType()).isEqualTo(TargetType.PROJECT);
+        assertThat(scan.getTargetIdentifier()).isEqualTo(projectUuid);
+        assertThat(scan.getExpectedResults()).isEqualTo(100);
+        assertThat(scan.getReceivedResults()).isEqualTo(100);
+        assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.FAILED);
+        assertThat(scan.getUpdatedAt()).isAfter(scan.getStartedAt());
+
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.FAILED);
+        assertThat(workflowStatus.getFailureReason()).isEqualTo("Failure threshold of 0.05% exceeded: 0.06% of scans failed");
+
+        workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.POLICY_EVALUATION);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
+
+        workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.METRICS_UPDATE);
+        assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
     }
 
     @Test
@@ -261,6 +335,9 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         qm.persist(componentB);
 
         final var scanToken = UUID.randomUUID().toString();
+
+        qm.createWorkflowSteps(UUID.fromString(scanToken));
+
         final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken, 2);
         final var scanKeyA = ScanKey.newBuilder()
                 .setScanToken(scanToken)

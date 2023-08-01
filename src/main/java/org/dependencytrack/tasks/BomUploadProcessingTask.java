@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
@@ -37,6 +38,7 @@ import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentIntegrityCheckEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
@@ -352,9 +354,30 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
+            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
             if (!vulnAnalysisEvents.isEmpty()) {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
                 vulnAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+                // Initiate vuln-analysis workflow for the token
+                if (vulnAnalysisState != null) {
+                    vulnAnalysisState.setStartedAt(Date.from(Instant.now()));
+                    qm.persist(vulnAnalysisState);
+                }
+            } else {
+                if (vulnAnalysisState != null) {
+                    vulnAnalysisState.setStatus(WorkflowStatus.NOT_APPLICABLE);
+                    vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                    qm.updateWorkflowState(vulnAnalysisState);
+                    // make only policy evaluation state NA
+                    var policyEvaluationState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.POLICY_EVALUATION);
+                    policyEvaluationState.setStatus(WorkflowStatus.NOT_APPLICABLE);
+                    policyEvaluationState.setUpdatedAt(Date.from(Instant.now()));
+                    qm.updateWorkflowState(policyEvaluationState);
+                    // Trigger project metrics update no matter if vuln analysis is applicable or not
+                    final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
+                    metricsUpdateEvent.setChainIdentifier(ctx.uploadToken);
+                    Event.dispatch(metricsUpdateEvent);
+                }
             }
             if (!repoMetaAnalysisEvents.isEmpty()) {
                 repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
