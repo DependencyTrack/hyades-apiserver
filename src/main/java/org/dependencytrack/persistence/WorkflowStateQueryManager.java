@@ -304,7 +304,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
             metricsUpdateState.setUpdatedAt(now);
             pm.makePersistent(metricsUpdateState);
-
             trx.commit();
         } finally {
             if (trx.isActive()) {

@@ -28,6 +28,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowStep;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
@@ -52,6 +53,7 @@ import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeou
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
+import static org.dependencytrack.model.WorkflowStatus.NOT_APPLICABLE;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
@@ -92,7 +94,6 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
-
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
@@ -130,10 +131,11 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
+                    //policy evaluation has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
@@ -141,6 +143,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
+                    //metrics update has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
                     assertThat(state.getParent()).isNotNull();
@@ -150,6 +153,8 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         );
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
         assertThat(vulnerabilityScan).isNotNull();
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
 
     @Test
@@ -185,14 +190,14 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
-                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStatus()).isEqualTo(NOT_APPLICABLE);
                     assertThat(state.getParent()).isNotNull();
                     assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
@@ -208,7 +213,6 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
-
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
         assertThat(vulnerabilityScan).isNull();
     }
