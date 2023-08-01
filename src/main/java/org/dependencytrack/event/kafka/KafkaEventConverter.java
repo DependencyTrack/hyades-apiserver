@@ -62,7 +62,7 @@ final class KafkaEventConverter {
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
-        LOGGER.info("Dispatching repo meta analysis event for component:" + componentBuilder.getUuid());
+        LOGGER.debug("Dispatching repo meta analysis event for component:" + componentBuilder.getUuid());
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
@@ -86,8 +86,8 @@ final class KafkaEventConverter {
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
                 .build();
-        LOGGER.info("Dispatching integrity check event for component:" + componentBuilder.getUuid());
-        return new KafkaEvent<>(KafkaTopics.INTEGRITY_ANALYSIS_COMMAND, event.componentId() + "_" + event.purl(), analysisCommand, null);
+        LOGGER.debug("Dispatching integrity check event for component:" + componentBuilder.getUuid());
+        return new KafkaEvent<>(KafkaTopics.INTEGRITY_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
     static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
