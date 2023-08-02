@@ -744,5 +744,6 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertProject(subject.getProject());
         assertComponent(subject.getFindingsList().get(0).getComponent());
         assertVulnerability(subject.getFindingsList().get(0).getVulnerability(0));
+        assertThat(subject.getStatus()).isEqualTo(ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
     }
 }
