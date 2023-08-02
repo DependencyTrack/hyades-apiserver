@@ -23,4 +23,8 @@ public class ProjectVulnAnalysisComplete {
     public Project getProject(){
         return this.project;
     }
+
+    public ProjectVulnAnalysisStatus getStatus() {
+        return status;
+    }
 }

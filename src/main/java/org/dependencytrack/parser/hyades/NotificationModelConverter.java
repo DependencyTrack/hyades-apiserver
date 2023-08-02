@@ -318,6 +318,7 @@ public final class NotificationModelConverter {
         builder.setProject(convert(notification.getProject()));
         List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
         builder.addAllFindings(componentAnalysisCompleteSubjects);
+        builder.setStatus(notification.getStatus());
         return builder.build();
     }
 
