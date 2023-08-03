@@ -24,9 +24,8 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.parser.hyades.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.NotificationUtil;
+import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -35,6 +34,9 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Properties;
 import java.util.UUID;
+
+import static org.dependencytrack.parser.hyades.NotificationModelConverter.convert;
+import static org.dependencytrack.util.NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification;
 
 class KafkaStreamsTopologyFactory {
 
@@ -90,41 +92,63 @@ class KafkaStreamsTopologyFactory {
                     }
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,
-                        Named.as("filter_completed_vuln_scans"));
+                        Named.as("filter_completed_vuln_scans"))
+                .mapValues((scanToken, vulnScan) -> {
+                    final double failureRate = (double) vulnScan.getScanFailed() / vulnScan.getScanTotal();
 
-        completedVulnScanStream.filter((scantoken, vulnscan) -> vulnscan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
-                        Named.as("filter_vuln_scans_with_project_target"))
-                .map((scantoken, vulnscan) -> {
-                    // check the failure rate and update workflow status accordingly.
-                    final double failureRate = (double) vulnscan.getScanFailed() / vulnscan.getScanTotal();
-                    try (var qm = new QueryManager()) {
-                        if (failureRate > vulnscan.getFailureThreshold()) {
-                            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
-                            vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
-                            vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
-                            vulnAnalysisState.setFailureReason("Failure threshold of " + vulnscan.getFailureThreshold() + "% exceeded: " + failureRate + "% of scans failed");
-                            WorkflowState updatedState = qm.updateWorkflowState(vulnAnalysisState);
-                            qm.updateAllDescendantStatesOfParent(updatedState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
-                            final var vulnScanUpdated = qm.updateVulnerabilityScanStatus(vulnscan.getToken(), VulnerabilityScan.Status.FAILED);
-                            var notification = NotificationModelConverter.convert(
-                                    NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnScanUpdated, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED));
-                            return KeyValue.pair(vulnScanUpdated.getTargetIdentifier().toString(), notification);
-                        } else {
-                            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scantoken), WorkflowStep.VULN_ANALYSIS);
-                            vulnAnalysisState.setStatus(WorkflowStatus.COMPLETED);
-                            vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
-                            qm.updateWorkflowState(vulnAnalysisState);
-                            var notification = NotificationModelConverter.convert(
-                                    NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification(
-                                            vulnscan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
-                            return KeyValue.pair(vulnscan.getTargetIdentifier().toString(), notification);
+                    if (failureRate > vulnScan.getFailureThreshold()) {
+                        try (var qm = new QueryManager()) {
+                            // Detach VulnerabilityScan objects when committing changes. Without this,
+                            // all fields except the ID field will be unloaded on commit (the object will become HOLLOW).
+                            qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_DETACH_ALL_ON_COMMIT, "true");
+                            vulnScan = qm.updateVulnerabilityScanStatus(vulnScan.getToken(), VulnerabilityScan.Status.FAILED);
+                            vulnScan.setFailureReason("Failure threshold of " + vulnScan.getFailureThreshold() + "% exceeded: " + failureRate + "% of scans failed");
                         }
                     }
-                }, Named.as("map_vuln_scans_with_failure_rate"))
-                .to(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(),
-                        Produced.with(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.keySerde(),
-                                KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde()));
+
+                    return vulnScan;
+                }, Named.as("evaluate_vuln_scan_failure_rate"));
+
+        completedVulnScanStream
+                .foreach((scanToken, vulnScan) -> {
+                    try (var qm = new QueryManager()) {
+                        final WorkflowState vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
+                        if (vulnAnalysisState == null) {
+                            // No workflow exists for this scan; Nothing to update.
+                            return;
+                        }
+
+                        if (vulnScan.getStatus() == VulnerabilityScan.Status.FAILED) {
+                            vulnAnalysisState.setStatus(WorkflowStatus.FAILED);
+                            vulnAnalysisState.setUpdatedAt(new Date());
+                            vulnAnalysisState.setFailureReason(vulnScan.getFailureReason());
+                            final WorkflowState updatedVulnAnalysisState = qm.updateWorkflowState(vulnAnalysisState);
+                            qm.updateAllDescendantStatesOfParent(updatedVulnAnalysisState, WorkflowStatus.CANCELLED, Date.from(Instant.now()));
+                            return;
+                        }
+
+                        vulnAnalysisState.setStatus(WorkflowStatus.COMPLETED);
+                        vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
+                        qm.updateWorkflowState(vulnAnalysisState);
+                    }
+                }, Named.as("update_vuln_analysis_workflow_status"));
+
+        completedVulnScanStream
+                .filter((scanToken, vulnScan) -> vulnScan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
+                        Named.as("filter_vuln_scans_with_project_target"))
+                .map((scanToken, vulnScan) -> {
+                    final Notification notification = convert(vulnScan.getStatus() == VulnerabilityScan.Status.FAILED
+                            ? createProjectVulnerabilityAnalysisCompleteNotification(vulnScan,
+                            ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED)
+                            : createProjectVulnerabilityAnalysisCompleteNotification(
+                            vulnScan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
+
+                    return KeyValue.pair(vulnScan.getTargetIdentifier().toString(), notification);
+                }, Named.as("map_vuln_scan_to_vuln_analysis_complete_notification"))
+                .to(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), Produced
+                        .with(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.keySerde(),
+                                KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde())
+                        .withName("produce_to_%s_topic".formatted(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name())));
 
         completedVulnScanStream
                 .filter((scanToken, vulnScan) -> vulnScan.getStatus() != VulnerabilityScan.Status.FAILED,
