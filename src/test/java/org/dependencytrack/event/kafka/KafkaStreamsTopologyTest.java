@@ -214,7 +214,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
         await("Result processing")
-                .atMost(Duration.ofSeconds(5))
+                .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
@@ -222,7 +222,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 });
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(15))
+                .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
