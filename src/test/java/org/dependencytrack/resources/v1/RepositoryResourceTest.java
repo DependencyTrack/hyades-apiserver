@@ -186,6 +186,7 @@ public class RepositoryResourceTest extends ResourceTest {
         repository.setInternal(true);
         repository.setIdentifier("test");
         repository.setUrl("www.foobar.com");
+        repository.setIntegrityCheckEnabled(false);
         repository.setType(RepositoryType.MAVEN);
         Response response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
                 .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
@@ -204,6 +205,7 @@ public class RepositoryResourceTest extends ResourceTest {
         Assert.assertTrue(json.getJsonObject(11).getInt("resolutionOrder") > 0);
         Assert.assertTrue(json.getJsonObject(11).getBoolean("authenticationRequired"));
         Assert.assertEquals("testuser", json.getJsonObject(11).getString("username"));
+        Assert.assertFalse(json.getJsonObject(11).getBoolean("integrityCheckEnabled"));
         Assert.assertTrue(json.getJsonObject(11).getBoolean("enabled"));
     }
 
@@ -214,6 +216,7 @@ public class RepositoryResourceTest extends ResourceTest {
         repository.setEnabled(true);
         repository.setInternal(true);
         repository.setIdentifier("test");
+        repository.setIntegrityCheckEnabled(false);
         repository.setUrl("www.foobar.com");
         repository.setType(RepositoryType.MAVEN);
         Response response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
@@ -232,12 +235,13 @@ public class RepositoryResourceTest extends ResourceTest {
         Assert.assertEquals("www.foobar.com", json.getJsonObject(11).getString("url"));
         Assert.assertTrue(json.getJsonObject(11).getInt("resolutionOrder") > 0);
         Assert.assertFalse(json.getJsonObject(11).getBoolean("authenticationRequired"));
+        Assert.assertFalse(json.getJsonObject(11).getBoolean("integrityCheckEnabled"));
         Assert.assertTrue(json.getJsonObject(11).getBoolean("enabled"));
 
     }
 
     @Test
-    public void updateRepositoryTest() throws Exception {
+    public void deleteRepositoryTest() throws Exception {
         Repository repository = new Repository();
         repository.setAuthenticationRequired(true);
         repository.setEnabled(true);
@@ -246,6 +250,7 @@ public class RepositoryResourceTest extends ResourceTest {
         repository.setInternal(true);
         repository.setIdentifier("test");
         repository.setUrl("www.foobar.com");
+        repository.setIntegrityCheckEnabled(true);
         repository.setType(RepositoryType.MAVEN);
         Response response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
                 .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
@@ -254,7 +259,36 @@ public class RepositoryResourceTest extends ResourceTest {
             List<Repository> repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
             for (Repository repository1 : repositoryList) {
                 if (repository1.getIdentifier().equals("test")) {
-                    repository1.setAuthenticationRequired(false);
+                    response = target(V1_REPOSITORY+"/"+repository1.getUuid().toString()).request().header(X_API_KEY, apiKey)
+                            .delete();
+                    Assert.assertEquals(204, response.getStatus());
+                    break;
+                }
+            }
+        }
+
+    }
+
+    @Test
+    public void updateRepositoryIntegrityCheckTest() {
+        Repository repository = new Repository();
+        repository.setAuthenticationRequired(true);
+        repository.setEnabled(true);
+        repository.setUsername("testuser");
+        repository.setPassword("testPassword");
+        repository.setInternal(true);
+        repository.setIdentifier("test");
+        repository.setUrl("www.foobar.com");
+        repository.setIntegrityCheckEnabled(false);
+        repository.setType(RepositoryType.MAVEN);
+        Response response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
+                .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(201, response.getStatus());
+        try (QueryManager qm = new QueryManager()) {
+            List<Repository> repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
+            for (Repository repository1 : repositoryList) {
+                if (repository1.getIdentifier().equals("test")) {
+                    repository1.setIntegrityCheckEnabled(true);
                     response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
                             .post(Entity.entity(repository1, MediaType.APPLICATION_JSON));
                     Assert.assertEquals(200, response.getStatus());
@@ -264,7 +298,7 @@ public class RepositoryResourceTest extends ResourceTest {
             repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
             for (Repository repository1 : repositoryList) {
                 if (repository1.getIdentifier().equals("test")) {
-                    Assert.assertFalse(repository1.isAuthenticationRequired());
+                    Assert.assertTrue(repository1.isintegrityCheckEnabled());
                     break;
                 }
             }

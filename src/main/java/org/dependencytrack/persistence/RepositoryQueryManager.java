@@ -162,7 +162,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
         repo.setResolutionOrder(order + 1);
         repo.setEnabled(enabled);
         repo.setInternal(internal);
-        repo.setAuthenticationRequired(isIntegrityCheckEnabled);
+        repo.setIntegrityCheckEnabled(isIntegrityCheckEnabled);
         repo.setAuthenticationRequired(isAuthenticationRequired);
         if (Boolean.TRUE.equals(isAuthenticationRequired) && (username != null || password != null)) {
             repo.setUsername(StringUtils.trimToNull(username));

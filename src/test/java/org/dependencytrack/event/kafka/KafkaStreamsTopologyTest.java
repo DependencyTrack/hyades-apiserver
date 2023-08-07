@@ -3,6 +3,7 @@ package org.dependencytrack.event.kafka;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
+import com.google.protobuf.Timestamp;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
@@ -18,6 +19,8 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.IntegrityAnalysisComponent;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
@@ -34,6 +37,8 @@ import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
+import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
@@ -44,6 +49,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
+import javax.jdo.JDODataStoreException;
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
+import javax.jdo.Transaction;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -152,6 +161,75 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
         assertThat(metaComponent.getPublished()).isNull();
         assertThat(metaComponent.getLastCheck()).isAfter(beforeTestTimestamp);
+    }
+
+    @Test
+    public void repoIntegrityAnalysisResultProcessingTest() throws Exception {
+        Project project = new Project();
+        project.setName("testproject");
+        Component component = new Component();
+        component.setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2");
+        component.setProject(project);
+        component.setMd5("test");
+        component.setSha1("test3");
+        component.setSha256("test465");
+        component.setName("testComponent");
+        qm.createComponent(component, false);
+        final Date beforeTestTimestamp = Date.from(Instant.now());
+        UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
+        final var result = IntegrityResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
+                        .setComponentId(1)
+                        .setUuid(uuid.toString()))
+                .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
+                .setRepository("testRepo")
+                .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
+                .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(1639098000))
+                .build();
+
+
+        kafka.send(SendKeyValues.to(KafkaTopics.INTEGRITY_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result)
+                ))
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+
+        final Supplier<IntegrityAnalysisComponent> repoMetaSupplier =
+                () -> {
+                    PersistenceManager pm = qm.getPersistenceManager();
+                    pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
+                    final Transaction trx = pm.currentTransaction();
+                    try {
+                        trx.begin();
+                        final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
+                        query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
+                        query.setParameters(
+                                "testRepo",
+                                1,
+                                UUID.fromString(uuid.toString())
+                        );
+                        IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();
+                        trx.commit();
+                        return persistentIntegrityResult;
+                    } catch (JDODataStoreException ex) {
+                        throw ex;
+                    }
+
+                };
+        assertConditionWithTimeout(() -> repoMetaSupplier.get() != null, Duration.ofSeconds(5));
+
+        final IntegrityAnalysisComponent integrityAnalysisComponent = repoMetaSupplier.get();
+        assertThat(integrityAnalysisComponent).isNotNull();
+        assertThat(integrityAnalysisComponent.getRepositoryIdentifier()).isEqualTo("testRepo");
+        assertThat(integrityAnalysisComponent.getComponent().getId()).isEqualTo(1);
+        assertThat(integrityAnalysisComponent.getComponent().getUuid()).isEqualTo(uuid);
+        assertThat(integrityAnalysisComponent.isIntegrityCheckPassed()).isTrue();
+        assertThat(integrityAnalysisComponent.isMd5HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        assertThat(integrityAnalysisComponent.isSha1HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        assertThat(integrityAnalysisComponent.isSha256HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
     }
 
     @Test

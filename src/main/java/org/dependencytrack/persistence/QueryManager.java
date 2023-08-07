@@ -50,6 +50,7 @@ import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
+import org.dependencytrack.model.IntegrityAnalysisComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -121,6 +122,9 @@ public class QueryManager extends AlpineQueryManager {
     private PolicyQueryManager policyQueryManager;
     private ProjectQueryManager projectQueryManager;
     private RepositoryQueryManager repositoryQueryManager;
+
+    private ComponentIntegrityQueryManager componentIntegrityQueryManager;
+
     private ServiceComponentQueryManager serviceComponentQueryManager;
     private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
@@ -314,15 +318,22 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Lazy instantiation of RepositoryQueryManager.
+     * Lazy instantiation of ComponentIntegrityQueryManager.
      *
-     * @return a RepositoryQueryManager object
+     * @return a ComponentIntegrityQueryManager object
      */
     private RepositoryQueryManager getRepositoryQueryManager() {
         if (repositoryQueryManager == null) {
             repositoryQueryManager = (request == null) ? new RepositoryQueryManager(getPersistenceManager()) : new RepositoryQueryManager(getPersistenceManager(), request);
         }
         return repositoryQueryManager;
+    }
+
+    private ComponentIntegrityQueryManager getComponentIntegrityQueryManager() {
+        if (componentIntegrityQueryManager == null) {
+            componentIntegrityQueryManager = (request == null) ? new ComponentIntegrityQueryManager(getPersistenceManager()) : new ComponentIntegrityQueryManager(getPersistenceManager(), request);
+        }
+        return componentIntegrityQueryManager;
     }
 
     /**
@@ -1636,6 +1647,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
+    }
+
+    public IntegrityAnalysisComponent getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
+        return getComponentIntegrityQueryManager().getIntegrityAnalysisComponentResult(uuid, repositoryIdentifier, componentId);
     }
 }
 

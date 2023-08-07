@@ -135,13 +135,12 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             query.setNamedParameters(params);
             query.setOrdering("purlCoordinates ASC"); // Keep the order somewhat consistent
             query.setRange(offset, offset + 5000);
-            query.setResult("purlCoordinates, internal, md5, sha1, sha256, uuid, id");
+            query.setResult("DISTINCT purlCoordinates, internal");
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
     }
 
-    public record ComponentProjection(String purlCoordinates, Boolean internal, String md5, String sha1,
-                                      String sha256, UUID uuid, long componentId) {
+    public record ComponentProjection(String purlCoordinates, Boolean internal) {
     }
 
 }

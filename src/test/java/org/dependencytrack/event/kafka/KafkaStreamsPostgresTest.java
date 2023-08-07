@@ -48,6 +48,10 @@ abstract class KafkaStreamsPostgresTest extends AbstractPostgresEnabledTest {
                 .withName(KafkaTopics.NEW_VULNERABILITY.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
+        kafka.createTopic(TopicConfig
+                .withName(KafkaTopics.INTEGRITY_ANALYSIS_RESULT.name())
+                .withNumberOfPartitions(3)
+                .withNumberOfReplicas(1));
 
         kafkaStreamsStateDirectory = Files.createTempDirectory(getClass().getSimpleName());
 

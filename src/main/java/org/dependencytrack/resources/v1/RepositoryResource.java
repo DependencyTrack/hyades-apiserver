@@ -165,6 +165,10 @@ public class RepositoryResource extends AlpineResource {
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
         }
+        //TODO: When the UI changes are updated then this should be a validation check as part of line 160
+        if (jsonRepository.isintegrityCheckEnabled() == null) {
+            jsonRepository.setIntegrityCheckEnabled(false);
+        }
         try (QueryManager qm = new QueryManager()) {
             final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
             if (!exists) {
@@ -203,9 +207,14 @@ public class RepositoryResource extends AlpineResource {
         failOnValidationError(validator.validateProperty(jsonRepository, "identifier"),
                 validator.validateProperty(jsonRepository, "url")
         );
-        //TODO: When the UI changes are updated then this should be a validation check as part of line 201
+        //TODO: When the UI changes are updated then this should be a validation check as part of line 207
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
+        }
+
+        //TODO: When the UI changes are updated then this should be a validation check as part of line 207
+        if (jsonRepository.isintegrityCheckEnabled() == null) {
+            jsonRepository.setIntegrityCheckEnabled(false);
         }
         try (QueryManager qm = new QueryManager()) {
             Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());

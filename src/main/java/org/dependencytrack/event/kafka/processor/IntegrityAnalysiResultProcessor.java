@@ -47,7 +47,7 @@ public class IntegrityAnalysiResultProcessor implements Processor<String, Integr
             purl = new PackageURL(result.getComponent().getPurl());
         } catch (MalformedPackageURLException e) {
             LOGGER.warn("""
-                    Received repository meta information with invalid PURL,\s
+                    Received repository integrity information with invalid PURL,\s
                     will not be able to correlate; Dropping
                     """, e);
             return;
@@ -71,7 +71,7 @@ public class IntegrityAnalysiResultProcessor implements Processor<String, Integr
             if (persistentIntegrityResult.getLastCheck() != null
                     && persistentIntegrityResult.getLastCheck().after(new Date(record.timestamp()))) {
                 LOGGER.warn("""
-                        Received repository meta information for %s that is older\s
+                        Received integrity check information for %s that is older\s
                         than what's already in the database; Discarding
                         """.formatted(purl));
                 return;
@@ -83,22 +83,22 @@ public class IntegrityAnalysiResultProcessor implements Processor<String, Integr
             persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepository());
             HashMatchStatus md5HashMatch = record.value().getMd5HashMatch();
             HashMatchStatus sha1HashMatch = record.value().getSha1HashMatch();
-            HashMatchStatus sha256HashMatch = record.value().getSha256Match();
+            HashMatchStatus sha256HashMatch = record.value().getSha256HashMatch();
             persistentIntegrityResult.setMd5HashMatched(md5HashMatch.name());
             persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
             persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
             persistentIntegrityResult.setComponent(component);
             persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
-            if (md5HashMatch.equals(HashMatchStatus.FAIL) || sha1HashMatch.equals(HashMatchStatus.FAIL) || sha256HashMatch.equals(HashMatchStatus.FAIL)) {
+            if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL)) {
                 persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.UNKNOWN)) {
+            } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)) {
                 persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.COMPONENT_MISSING_HASH)) {
+            } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)) {
                 persistentIntegrityResult.setIntegrityCheckPassed(false);
             } else {
-                boolean flag = (md5HashMatch.equals(HashMatchStatus.PASS) || md5HashMatch.equals(HashMatchStatus.UNKNOWN))
-                        && (sha1HashMatch.equals(HashMatchStatus.PASS) || sha1HashMatch.equals(HashMatchStatus.UNKNOWN))
-                        && (sha256HashMatch.equals(HashMatchStatus.PASS) || sha256HashMatch.equals(HashMatchStatus.UNKNOWN));
+                boolean flag = (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
+                        && (sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
+                        && (sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN));
                 persistentIntegrityResult.setIntegrityCheckPassed(flag);
             }
             pm.makePersistent(persistentIntegrityResult);
