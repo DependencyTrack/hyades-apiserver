@@ -34,6 +34,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -165,11 +166,11 @@ public class Repository implements Serializable {
     }
 
     public void setAuthenticationRequired(Boolean authenticationRequired) {
-        this.authenticationRequired = authenticationRequired;
+        this.authenticationRequired = Optional.ofNullable(authenticationRequired).orElse(false);
     }
 
     public void setInternal(Boolean internal) {
-        this.internal = internal;
+        this.internal = Optional.ofNullable(internal).orElse(false);
     }
 
     public String getUsername() {
