@@ -84,13 +84,13 @@ public class Repository implements Serializable {
     @Persistent
     @Column(name = "INTERNAL")
     @NotNull
-    private Boolean internal; // New column, must allow nulls on existing databases
+    private boolean internal; // New column, must allow nulls on existing databases
 
     //New column to determine if authentication is required for a repository
     @Persistent
     @Column(name = "AUTHENTICATIONREQUIRED")
     @NotNull
-    private Boolean authenticationRequired;
+    private boolean authenticationRequired;
 
     @Persistent
     @Column(name = "USERNAME")
@@ -156,19 +156,19 @@ public class Repository implements Serializable {
         this.enabled = enabled;
     }
 
-    public Boolean isInternal() {
+    public boolean isInternal() {
         return internal;
     }
 
-    public Boolean isAuthenticationRequired() {
+    public boolean isAuthenticationRequired() {
         return authenticationRequired;
     }
 
-    public void setAuthenticationRequired(Boolean authenticationRequired) {
+    public void setAuthenticationRequired(boolean authenticationRequired) {
         this.authenticationRequired = authenticationRequired;
     }
 
-    public void setInternal(Boolean internal) {
+    public void setInternal(boolean internal) {
         this.internal = internal;
     }
 
