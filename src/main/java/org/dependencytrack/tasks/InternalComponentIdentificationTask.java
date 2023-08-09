@@ -55,19 +55,17 @@ public class InternalComponentIdentificationTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof InternalComponentIdentificationEvent) {
-            LOGGER.info("Starting internal component identification");
-            final Instant startTime = Instant.now();
             try {
                 LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) () -> analyze());
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing internal component identification task", ex);
             }
-            LOGGER.info("Internal component identification completed in "
-                    + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
         }
     }
 
     private void analyze() throws Exception {
+        final Instant startTime = Instant.now();
+        LOGGER.info("Starting internal component identification");
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
@@ -123,6 +121,8 @@ public class InternalComponentIdentificationTask implements Subscriber {
                 components = fetchNextComponentsPage(pm, lastId);
             }
         }
+        LOGGER.info("Internal component identification completed in "
+                + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
     }
 
     /**
