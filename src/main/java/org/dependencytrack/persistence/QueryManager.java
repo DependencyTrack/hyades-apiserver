@@ -318,9 +318,9 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Lazy instantiation of ComponentIntegrityQueryManager.
+     * Lazy instantiation of RepositoryQueryManager.
      *
-     * @return a ComponentIntegrityQueryManager object
+     * @return a RepositoryQueryManager object
      */
     private RepositoryQueryManager getRepositoryQueryManager() {
         if (repositoryQueryManager == null) {
@@ -329,6 +329,11 @@ public class QueryManager extends AlpineQueryManager {
         return repositoryQueryManager;
     }
 
+    /**
+     * Lazy instantiation of ComponentIntegrityQueryManager.
+     *
+     * @return a ComponentIntegrityQueryManager object
+     */
     private ComponentIntegrityQueryManager getComponentIntegrityQueryManager() {
         if (componentIntegrityQueryManager == null) {
             componentIntegrityQueryManager = (request == null) ? new ComponentIntegrityQueryManager(getPersistenceManager()) : new ComponentIntegrityQueryManager(getPersistenceManager(), request);
