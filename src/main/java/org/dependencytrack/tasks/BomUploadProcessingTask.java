@@ -346,10 +346,6 @@ public class BomUploadProcessingTask implements Subscriber {
                 trx.commit();
             } finally {
                 if (trx.isActive()) {
-                    LOGGER.warn("""
-                            Rolling back uncommitted transaction; This suggests that the transaction was not committed \
-                            by accident, or the default rollback behavior in case of an exception has changed (%s)"""
-                            .formatted(ctx));
                     trx.rollback();
                 }
             }
