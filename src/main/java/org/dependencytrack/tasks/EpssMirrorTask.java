@@ -82,18 +82,7 @@ public class EpssMirrorTask implements LoggableSubscriber {
      */
     public void inform(final Event e) {
         if (e instanceof EpssMirrorEvent && this.isEnabled) {
-            final long start = System.currentTimeMillis();
-            LOGGER.info("Starting EPSS mirroring task");
-            final File mirrorPath = new File(MIRROR_DIR);
-            setOutputDir(mirrorPath.getAbsolutePath());
-
             LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, (Runnable) () -> getAllFiles());
-
-            final long end = System.currentTimeMillis();
-            LOGGER.info("EPSS mirroring complete");
-            LOGGER.info("Time spent (d/l):   " + metricDownloadTime + "ms");
-            LOGGER.info("Time spent (parse): " + metricParseTime + "ms");
-            LOGGER.info("Time spent (total): " + (end - start) + "ms");
         }
     }
 
@@ -116,11 +105,20 @@ public class EpssMirrorTask implements LoggableSubscriber {
      * Download all EPSS files
      */
     private void getAllFiles() {
+        final long start = System.currentTimeMillis();
+        LOGGER.info("Starting EPSS mirroring task");
+        final File mirrorPath = new File(MIRROR_DIR);
+        setOutputDir(mirrorPath.getAbsolutePath());
         doDownload(this.feedUrl + "/" + FILENAME);
         if (mirroredWithoutErrors) {
             String content = "Mirroring of the Exploit Prediction Scoring System completed successfully";
             NotificationUtil.dispatchExceptionNotifications(NotificationScope.SYSTEM, NotificationGroup.DATASOURCE_MIRRORING, NotificationConstants.Title.EPSS_MIRROR, content, NotificationLevel.INFORMATIONAL);
         }
+        LOGGER.info("EPSS mirroring complete");
+        final long end = System.currentTimeMillis();
+        LOGGER.info("Time spent (d/l):   " + metricDownloadTime + "ms");
+        LOGGER.info("Time spent (parse): " + metricParseTime + "ms");
+        LOGGER.info("Time spent (total): " + (end - start) + "ms");
     }
 
     /**
