@@ -387,12 +387,7 @@ public class BomUploadProcessingTask implements Subscriber {
             throw new BomConsumptionException(ctx, "Failed to read BOM file", e);
         }
 
-        if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
-            throw new BomConsumptionException(ctx, """
-                    The BOM uploaded is not in a supported format. \
-                    Supported formats include CycloneDX XML and JSON""");
-        }
-
+        // The file is verified to contain valid CycloneDX upon upload.
         ctx.bomFormat = Bom.Format.CYCLONEDX;
 
         final org.cyclonedx.model.Bom bom;

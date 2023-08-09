@@ -740,7 +740,7 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded file is not a CycloneDX BOM", getPlainTextBody(response));
+        Assert.assertEquals("The specified BOM is not in a supported format. Supported formats are XML and JSON", getPlainTextBody(response));
     }
 
     @Test
@@ -777,7 +777,7 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded CycloneDX file contains malformed JSON or XML", getPlainTextBody(response));
+        Assert.assertEquals("The uploaded file contains malformed JSON or XML", getPlainTextBody(response));
     }
 
     @Test

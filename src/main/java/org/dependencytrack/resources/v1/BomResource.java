@@ -431,16 +431,12 @@ public class BomResource extends AlpineResource {
     }
 
     private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException, ParseException {
-        if (!BomParserFactory.looksLikeCycloneDX(bomBytes)) {
-            throw new IllegalArgumentException("The uploaded file is not a CycloneDX BOM");
-        }
-
         final List<ParseException> validationErrors;
         try {
             final Parser parser = BomParserFactory.createParser(bomBytes);
             validationErrors = parser.validate(bomBytes);
         } catch (JsonParseException e) {
-            throw new IllegalArgumentException("The uploaded CycloneDX file contains malformed JSON or XML", e);
+            throw new IllegalArgumentException("The uploaded file contains malformed JSON or XML", e);
         }
 
         if (!validationErrors.isEmpty()) {
