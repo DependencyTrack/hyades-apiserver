@@ -23,6 +23,7 @@ import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import io.micrometer.core.instrument.Timer;
+import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.commons.collections4.ListUtils;
@@ -84,7 +85,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                     .builder("metrics_update")
                     .tag("target", "portfolio")
                     .register(alpine.common.metrics.Metrics.getRegistry()));
-            LOGGER.debug("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
+            LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
         }
     }
 
@@ -93,10 +94,11 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
+            LockConfiguration portfolioMetricsTaskConfig = LockProvider.getLockConfigurationByLockName(PORTFOLIO_METRICS_TASK_LOCK);
             List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
-
+            long processStartTime = System.currentTimeMillis();
             while (!activeProjects.isEmpty()) {
-                long startTime = System.currentTimeMillis();
+                long startTimeOfBatch = System.currentTimeMillis();
                 final long firstId = activeProjects.get(0).id();
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
@@ -130,14 +132,17 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
                 long now = System.currentTimeMillis();
-                long processDurationInMillis = now - startTime;
+                long processDurationInMillis = now - startTimeOfBatch;
+                long cumulativeDurationInMillis = now - processStartTime;
                 //extend the lock for the duration of process
-                //initial duration of portfolio metrics can be set to 20min. No thread calculating
-                //metrics would be executing for more than 15min.
-                //if one partition of metrics calculation lasted long, lock will be extended by that duration
+                //initial duration of portfolio metrics can be set to 20min.
+                //No thread calculating metrics would be executing for more than 15min.
                 //lock can only be extended if lock until is held for time after current db time
-                LOGGER.debug("Extending lock duration by ms: " + processDurationInMillis);
-                LockExtender.extendActiveLock(Duration.ofMillis(processDurationInMillis), ZERO);
+                if(isLockToBeExtended(cumulativeDurationInMillis)) {
+                    Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
+                    LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
+                    LockExtender.extendActiveLock(extendLockByDuration, ZERO);
+                }
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
         }
@@ -156,6 +161,11 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             query.setResult("id, uuid");
             return List.copyOf(query.executeResultList(ProjectProjection.class));
         }
+    }
+
+    private static boolean isLockToBeExtended(long cumulativeDurationInMillis) {
+        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(PORTFOLIO_METRICS_TASK_LOCK);
+        return cumulativeDurationInMillis >=  (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
     }
 
     public record ProjectProjection(long id, UUID uuid) {
