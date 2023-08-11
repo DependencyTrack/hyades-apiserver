@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.TopologyDescription;
 import org.assertj.core.api.SoftAssertions;
 import org.cyclonedx.proto.v1_4.Bom;
@@ -23,14 +24,11 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
-import org.dependencytrack.util.NotificationUtil;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
@@ -42,7 +40,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -50,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
@@ -243,7 +239,20 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                                         notification.getSubject().unpack(ProjectVulnAnalysisCompleteSubject.class);
                                 assertThat(subject.getStatus()).isEqualTo(PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
                                 assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
-                                assertThat(subject.getFindingsCount()).isEqualTo(2);
+                                assertThat(subject.getFindingsList()).satisfiesExactlyInAnyOrder(
+                                        finding -> {
+                                            assertThat(finding.getComponent().getUuid()).isEqualTo(componentA.getUuid().toString());
+                                            assertThat(finding.getVulnerabilityCount()).isEqualTo(1);
+                                            assertThat(finding.getVulnerability(0).getVulnId()).isEqualTo("SNYK-001");
+                                            assertThat(finding.getVulnerability(0).getSource()).isEqualTo("SNYK");
+                                        },
+                                        finding -> {
+                                            assertThat(finding.getComponent().getUuid()).isEqualTo(componentB.getUuid().toString());
+                                            assertThat(finding.getVulnerabilityCount()).isEqualTo(1);
+                                            assertThat(finding.getVulnerability(0).getVulnId()).isEqualTo("SONATYPE-001");
+                                            assertThat(finding.getVulnerability(0).getSource()).isEqualTo("OSSINDEX");
+                                        }
+                                );
                             }
                     );
                 });
@@ -503,80 +512,48 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
     }
 
     @Test
-    public void createListTest() throws Exception {
-        var project = new Project();
-        project.setName("acme-app");
-        project.setVersion("1.0.0");
-        project = qm.createProject(project, null, false);
-
-        final var componentA = new org.dependencytrack.model.Component();
-        componentA.setName("acme-lib-a");
-        componentA.setVersion("1.1.0");
-        componentA.setProject(project);
-        componentA.setPurl("pkg:maven/org.acme/acme-lib-a@1.1.0");
-        qm.persist(componentA);
-
-        final var componentB = new org.dependencytrack.model.Component();
-        componentB.setName("acme-lib-b");
-        componentB.setVersion("1.2.0");
-        componentB.setProject(project);
-        qm.persist(componentB);
+    public void projectVulnAnalysisCompleteNotificationFailureTest() throws Exception {
+        // Initiate a vulnerability scan, but do not create a corresponding project.
+        // Scan and workflow completion should work just fine, but assembling a notification
+        // for PROJECT_VULN_ANALYSIS_COMPLETE will fail.
         final var scanToken = UUID.randomUUID();
-        final var scanKeyComponentA = ScanKey.newBuilder()
+        final var scanKey = ScanKey.newBuilder()
                 .setScanToken(scanToken.toString())
-                .setComponentUuid(componentA.getUuid().toString())
+                .setComponentUuid(UUID.randomUUID().toString())
                 .build();
-        final var scanKeyComponentB = ScanKey.newBuilder()
-                .setScanToken(scanToken.toString())
-                .setComponentUuid(componentB.getUuid().toString())
-                .build();
-        final var vulnComponentA = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
-                .setId("SNYK-001")
-                .setSource(Source.newBuilder().setName("SNYK").build())
-                .build();
-        final var vulnComponentB = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
-                .setId("SONATYPE-001")
-                .setSource(Source.newBuilder().setName("OSSINDEX").build())
-                .build();
+        qm.createVulnerabilityScan(TargetType.PROJECT, UUID.randomUUID(), scanToken.toString(), 1);
+        qm.createWorkflowSteps(scanToken);
 
         kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
-                        new KeyValue<>(scanKeyComponentA,
+                        new KeyValue<>(scanKey,
                                 ScanResult.newBuilder()
-                                        .setKey(scanKeyComponentA)
+                                        .setKey(scanKey)
                                         .addScannerResults(ScannerResult.newBuilder()
                                                 .setScanner(SCANNER_SNYK)
                                                 .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentA)).build())
-                                        .build()),
-                        new KeyValue<>(scanKeyComponentB,
-                                ScanResult.newBuilder()
-                                        .setKey(scanKeyComponentB)
-                                        .addScannerResults(ScannerResult.newBuilder()
-                                                .setScanner(SCANNER_OSSINDEX)
-                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
-                                                .setBom(Bom.newBuilder().addVulnerabilities(vulnComponentB)).build())
+                                                .setBom(Bom.newBuilder().build())
+                                                .build())
                                         .build())))
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
-        await()
-                .atMost(Duration.ofSeconds(10))
+
+        await("Workflow completion")
+                .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
-                    assertThat(qm.getAllVulnerabilities(componentA)).hasSize(1);
-                    assertThat(qm.getAllVulnerabilities(componentB)).hasSize(1);
+                    var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
+                    assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
                 });
-        ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
-        map.put(componentA.getUuid().toString(), qm.getAllVulnerabilities(componentA));
-        map.put(componentB.getUuid().toString(), qm.getAllVulnerabilities(componentB));
-        List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = NotificationUtil.createList(qm.getAllComponents(project), map);
-        assertThat(componentAnalysisCompleteList.get(0).getComponent().getName()).isEqualTo("acme-lib-a");
-        Assertions.assertEquals(1, componentAnalysisCompleteList.get(0).getVulnerabilityList().size());
-        Assertions.assertEquals("SNYK", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getSource());
-        Assertions.assertEquals("SNYK-001", componentAnalysisCompleteList.get(0).getVulnerabilityList().get(0).getVulnId());
-        assertThat(componentAnalysisCompleteList.get(1).getComponent().getName()).isEqualTo("acme-lib-b");
-        Assertions.assertEquals(1, componentAnalysisCompleteList.get(1).getVulnerabilityList().size());
-        Assertions.assertEquals("OSSINDEX", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getSource());
-        Assertions.assertEquals("SONATYPE-001", componentAnalysisCompleteList.get(1).getVulnerabilityList().get(0).getVulnId());
+
+        // Verify that no notification was sent.
+        final List<Notification> notifications = kafka.readValues(ReadKeyValues
+                .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
+                .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+                .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class));
+        assertThat(notifications).isEmpty();
+
+        // Ensure that Kafka Streams did not terminate due to project not existing.
+        assertThat(kafkaStreams.state()).isEqualTo(KafkaStreams.State.RUNNING);
     }
 
     public static class NotificationDeserializer extends KafkaProtobufDeserializer<Notification> {

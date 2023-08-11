@@ -55,6 +55,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -310,15 +311,32 @@ public final class NotificationUtil {
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 
-    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnscan, ProjectVulnAnalysisStatus status) {
+    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, ProjectVulnAnalysisStatus status) {
         try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, vulnscan.getTargetIdentifier());
+            Project project = qm.getObjectByUuid(Project.class, vulnScan.getTargetIdentifier());
+            if (project == null) {
+                // This can happen when the project was deleted before completion of the vuln scan is detected.
+                throw new NoSuchElementException("Project with UUID %s does not exist".formatted(vulnScan.getTargetIdentifier()));
+            }
+
             List<Finding> findings = qm.getFindings(project);
             List<Component> componentList = new ArrayList<>();
             ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
             for (Finding finding : findings) {
-                Component component = qm.getObjectByUuid(Component.class, (String) finding.getComponent().get("uuid"));
-                Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (String) finding.getVulnerability().get("uuid"));
+                final var componentUuid = (String) finding.getComponent().get("uuid");
+                Component component = qm.getObjectByUuid(Component.class, componentUuid);
+                if (component == null) {
+                    // This can happen when the project was deleted while this method is executing.
+                    throw new NoSuchElementException("Component with UUID %s does not exist in project %s"
+                            .formatted(componentUuid, project.getUuid()));
+                }
+                final var vulnerabilityUuid = (String) finding.getVulnerability().get("uuid");
+                Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, vulnerabilityUuid);
+                if (vulnerability == null) {
+                    // Unlikely to happen, but when in doubt it's still better to raise this exception
+                    // instead of running into a generic NPE.
+                    throw new NoSuchElementException("Vulnerability with UUID %s does not exist".formatted(vulnerabilityUuid));
+                }
                 final List<VulnerabilityAlias> aliases = qm.detach(qm.getVulnerabilityAliases(vulnerability));
                 vulnerability.setAliases(aliases);
                 if (map.containsKey(component.getUuid().toString())) {
