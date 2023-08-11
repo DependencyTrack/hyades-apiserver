@@ -43,6 +43,7 @@ import java.util.List;
 import static java.time.Duration.ZERO;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
 
 /**
  * Subscriber task that identifies internal components throughout the entire portfolio.
@@ -85,7 +86,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
                 //It might finish execution before lock could be extended resulting in error
                 LOGGER.debug("extending lock of internal component identification by 5 min");
                 long cumulativeProcessingDuration = System.currentTimeMillis() - startTime.toEpochMilli();
-                if(isLockToBeExtended(cumulativeProcessingDuration)) {
+                if(isLockToBeExtended(cumulativeProcessingDuration, INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK)) {
                     LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
                 }
                 for (final Component component : components) {
@@ -151,11 +152,6 @@ public class InternalComponentIdentificationTask implements Subscriber {
             query.getFetchPlan().setGroup(Component.FetchGroup.INTERNAL_IDENTIFICATION.name());
             return List.copyOf(query.executeList());
         }
-    }
-
-    private static boolean isLockToBeExtended(long cumulativeDurationInMillis) {
-        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK);
-        return cumulativeDurationInMillis >=  (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
     }
 
 }

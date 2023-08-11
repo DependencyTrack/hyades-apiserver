@@ -28,12 +28,18 @@ import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_LEAS
 import static org.dependencytrack.common.ConfigKey.TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.LDAP_SYNC_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.PORTFOLIO_VULN_ANALYSIS_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.VULNERABILITY_METRICS_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.WORKFLOW_STEP_CLEANUP_TASK_LOCK;
 
@@ -120,6 +126,20 @@ public class LockProvider {
                     WORKFLOW_STEP_CLEANUP_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR)),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR)));
+            case PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_LEAST_FOR)));
+            case PORTFOLIO_VULN_ANALYSIS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    PORTFOLIO_VULN_ANALYSIS_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR)));
         };
+
+    }
+
+    public static boolean isLockToBeExtended(long cumulativeDurationInMillis, LockName lockName) {
+        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(lockName);
+        return cumulativeDurationInMillis >=  (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
     }
 }
