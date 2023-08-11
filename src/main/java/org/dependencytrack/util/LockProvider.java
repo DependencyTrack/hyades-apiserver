@@ -94,7 +94,7 @@ public class LockProvider {
         return null;
     }
 
-    private static LockConfiguration getLockConfigurationByLockName(LockName lockName) {
+    public static LockConfiguration getLockConfigurationByLockName(LockName lockName) {
         return switch(lockName) {
             case PORTFOLIO_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
                     PORTFOLIO_METRICS_TASK_LOCK.name(),
