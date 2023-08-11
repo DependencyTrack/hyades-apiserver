@@ -141,7 +141,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 if(isLockToBeExtended(cumulativeDurationInMillis)) {
                     Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
                     LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
-                    LockExtender.extendActiveLock(extendLockByDuration, ZERO);
+                    LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
                 }
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
