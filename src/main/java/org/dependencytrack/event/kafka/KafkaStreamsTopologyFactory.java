@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import org.apache.kafka.common.serialization.Serdes;
@@ -24,8 +25,8 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
@@ -39,6 +40,8 @@ import static org.dependencytrack.parser.hyades.NotificationModelConverter.conve
 import static org.dependencytrack.util.NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification;
 
 class KafkaStreamsTopologyFactory {
+
+    private static final Logger LOGGER = Logger.getLogger(KafkaStreamsTopologyFactory.class);
 
     Topology createTopology() {
         final var streamsBuilder = new StreamsBuilder();
@@ -137,14 +140,24 @@ class KafkaStreamsTopologyFactory {
                 .filter((scanToken, vulnScan) -> vulnScan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
                         Named.as("filter_vuln_scans_with_project_target"))
                 .map((scanToken, vulnScan) -> {
-                    final Notification notification = convert(vulnScan.getStatus() == VulnerabilityScan.Status.FAILED
-                            ? createProjectVulnerabilityAnalysisCompleteNotification(vulnScan,
-                            ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED)
-                            : createProjectVulnerabilityAnalysisCompleteNotification(
-                            vulnScan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
+                    final alpine.notification.Notification alpineNotification;
+                    try {
+                        alpineNotification = vulnScan.getStatus() == VulnerabilityScan.Status.FAILED
+                                ? createProjectVulnerabilityAnalysisCompleteNotification(vulnScan,
+                                ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED)
+                                : createProjectVulnerabilityAnalysisCompleteNotification(
+                                vulnScan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
+                    } catch (RuntimeException e) {
+                        LOGGER.warn("Failed to generate a %s notification (project: %s; token: %s)"
+                                .formatted(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE,
+                                        vulnScan.getTargetIdentifier(), vulnScan.getToken()), e);
+                        return KeyValue.pair(vulnScan.getTargetIdentifier().toString(), null);
+                    }
 
-                    return KeyValue.pair(vulnScan.getTargetIdentifier().toString(), notification);
+                    return KeyValue.pair(vulnScan.getTargetIdentifier().toString(), convert(alpineNotification));
                 }, Named.as("map_vuln_scan_to_vuln_analysis_complete_notification"))
+                .filter((projectUuid, notification) -> notification != null,
+                        Named.as("filter_valid_project-vuln-analysis-complete_notification"))
                 .to(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), Produced
                         .with(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.keySerde(),
                                 KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde())
