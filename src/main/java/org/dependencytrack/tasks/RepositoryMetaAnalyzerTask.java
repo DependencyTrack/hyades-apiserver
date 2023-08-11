@@ -21,6 +21,9 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockExtender;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
@@ -28,12 +31,17 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
+import static org.dependencytrack.tasks.LockName.PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
 
 /**
  * A {@link Subscriber} to {@link ProjectRepositoryMetaAnalysisEvent} and {@link PortfolioRepositoryMetaAnalysisEvent}
@@ -65,8 +73,8 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
         } else if (e instanceof PortfolioRepositoryMetaAnalysisEvent) {
             try {
-                processPortfolio();
-            } catch (Exception ex) {
+                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task)() -> processPortfolio());
+            } catch (Throwable ex) {
                 LOGGER.error("An unexpected error occurred while submitting components for repository meta analysis", ex);
             }
         }
@@ -100,12 +108,19 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
     private void processPortfolio() throws Exception {
         LOGGER.info("Submitting all components in portfolio for repository meta analysis");
 
+        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK);
+
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             long offset = 0;
+            long startTime = System.currentTimeMillis();
             List<ComponentProjection> components = fetchNextComponentsPage(pm, null, offset);
             while (!components.isEmpty()) {
+                long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
+                if(isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
+                    LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
+                }
                 dispatchComponents(components);
 
                 offset += components.size();

@@ -1,6 +1,6 @@
 package org.dependencytrack.tasks;
 
-import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
-public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
+public class RepositoryMetaAnalyzerTaskTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void testPortfolioRepositoryMetaAnalysis() {
@@ -69,7 +69,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
 
         new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectA
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectB
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
@@ -140,7 +140,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
 
         new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());

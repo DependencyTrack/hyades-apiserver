@@ -43,8 +43,8 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static java.time.Duration.ZERO;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
 
 
 /**
@@ -138,7 +138,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 //initial duration of portfolio metrics can be set to 20min.
                 //No thread calculating metrics would be executing for more than 15min.
                 //lock can only be extended if lock until is held for time after current db time
-                if(isLockToBeExtended(cumulativeDurationInMillis)) {
+                if(isLockToBeExtended(cumulativeDurationInMillis, PORTFOLIO_METRICS_TASK_LOCK)) {
                     Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
                     LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
                     LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
@@ -161,11 +161,6 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             query.setResult("id, uuid");
             return List.copyOf(query.executeResultList(ProjectProjection.class));
         }
-    }
-
-    private static boolean isLockToBeExtended(long cumulativeDurationInMillis) {
-        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(PORTFOLIO_METRICS_TASK_LOCK);
-        return cumulativeDurationInMillis >=  (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
     }
 
     public record ProjectProjection(long id, UUID uuid) {

@@ -60,6 +60,10 @@ public enum ConfigKey implements Config.Key {
     TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR("task.ldapSync.lockAtLeastForInMillis", "90000"),
     TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR("task.workflow.state.cleanup.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
     TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR("task.workflow.state.cleanup.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_MOST_FOR("task.portfolio.repoMetaAnalysis.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_LEAST_FOR("task.portfolio.repoMetaAnalysis.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
+    TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR("task.portfolio.vulnAnalysis.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR("task.portfolio.vulnAnalysis.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
     WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3D"),
     WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H");
