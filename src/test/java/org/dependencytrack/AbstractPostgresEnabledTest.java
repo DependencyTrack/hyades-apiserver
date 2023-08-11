@@ -53,11 +53,9 @@ public abstract class AbstractPostgresEnabledTest {
 
         qm = new QueryManager();
 
-        final String storedProcs = IOUtils.resourceToString("/storedprocs-postgres.sql", StandardCharsets.UTF_8);
         final String shedlockSql = IOUtils.resourceToString("/shedlock.sql", StandardCharsets.UTF_8);
         final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
         final Connection connection = (Connection) jdoConnection.getNativeConnection();
-        DbUtil.executeUpdate(connection, storedProcs);
         DbUtil.executeUpdate(connection, shedlockSql);
         jdoConnection.close();
         environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
