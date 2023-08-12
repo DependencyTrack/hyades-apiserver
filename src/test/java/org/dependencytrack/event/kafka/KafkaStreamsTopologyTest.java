@@ -616,7 +616,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(10))
+                .atMost(Duration.ofSeconds(20)) //increasing the timeout since 5 seconds was not working on git pipeline
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
