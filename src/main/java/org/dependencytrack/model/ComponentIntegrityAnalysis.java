@@ -67,17 +67,17 @@ public class ComponentIntegrityAnalysis {
      * The latest version of the component.
      */
     @Persistent
-    @Column(name = "MD5HASH_MATCHED", allowsNull = "false")
+    @Column(name = "MD5_HASH_MATCHED", allowsNull = "false")
     @NotNull
     private String md5HashMatched;
 
     @Persistent
-    @Column(name = "SHA256_MATCHED", allowsNull = "false")
+    @Column(name = "SHA256_HASH_MATCHED", allowsNull = "false")
     @NotNull
     private String sha256HashMatched;
 
     @Persistent
-    @Column(name = "SHA1_MATCHED", allowsNull = "false")
+    @Column(name = "SHA1_HASH_MATCHED", allowsNull = "false")
     @NotNull
     private String sha1HashMatched;
 
