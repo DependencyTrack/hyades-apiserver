@@ -19,7 +19,7 @@
 package org.dependencytrack.persistence;
 
 import alpine.resources.AlpineRequest;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 
 import javax.jdo.JDODataStoreException;
 import javax.jdo.PersistenceManager;
@@ -48,17 +48,17 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
         super(pm, request);
     }
 
-    public IntegrityAnalysisComponent getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
-        IntegrityAnalysisComponent persistentIntegrityResult;
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
+        ComponentIntegrityAnalysis persistentIntegrityResult;
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
-            final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
+            final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
             query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
             query.setParameters(
                     repositoryIdentifier,
                     componentId,
-                    UUID.fromString(uuid.toString())
+                    uuid
             );
             persistentIntegrityResult = query.executeUnique();
             trx.commit();

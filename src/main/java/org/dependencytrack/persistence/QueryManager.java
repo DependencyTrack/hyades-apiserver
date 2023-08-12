@@ -50,7 +50,7 @@ import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -1654,7 +1654,7 @@ public class QueryManager extends AlpineQueryManager {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
 
-    public IntegrityAnalysisComponent getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
         return getComponentIntegrityQueryManager().getIntegrityAnalysisComponentResult(uuid, repositoryIdentifier, componentId);
     }
 }

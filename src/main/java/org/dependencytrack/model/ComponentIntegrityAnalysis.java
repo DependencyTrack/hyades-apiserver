@@ -34,9 +34,9 @@ import java.util.Date;
  *
  * @author Meha Bhargava
  */
-@PersistenceCapable(table = "INTEGRITY_ANALYSIS_COMPONENT")
+@PersistenceCapable(table = "COMPONENT_INTEGRITY_ANALYSIS")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class IntegrityAnalysisComponent {
+public class ComponentIntegrityAnalysis {
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
@@ -115,7 +115,7 @@ public class IntegrityAnalysisComponent {
     }
 
     @Persistent
-    @Column(name = "INTEGRITYCHECKPASSED", allowsNull = "false")
+    @Column(name = "INTEGRITY_CHECK_PASSED", allowsNull = "false")
     @NotNull
     private boolean integrityCheckPassed;
 

@@ -8,7 +8,7 @@ import io.micrometer.core.instrument.Timer;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.persistence.QueryManager;
 import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
 import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
@@ -20,8 +20,8 @@ import javax.jdo.Transaction;
 import java.util.Date;
 import java.util.UUID;
 
-public class IntegrityAnalysiResultProcessor implements Processor<String, IntegrityResult, Void, Void> {
-    private static final Logger LOGGER = Logger.getLogger(IntegrityAnalysiResultProcessor.class);
+public class IntegrityAnalysisResultProcessor implements Processor<String, IntegrityResult, Void, Void> {
+    private static final Logger LOGGER = Logger.getLogger(IntegrityAnalysisResultProcessor.class);
     private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
             .description("Time taken to process repository meta analysis results")
             .register(Metrics.getRegistry());
@@ -56,16 +56,16 @@ public class IntegrityAnalysiResultProcessor implements Processor<String, Integr
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
-            final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
+            final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
             query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
             query.setParameters(
                     record.value().getRepository(),
                     record.value().getComponent().getComponentId(),
                     UUID.fromString(record.value().getComponent().getUuid())
             );
-            IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();
+            ComponentIntegrityAnalysis persistentIntegrityResult = query.executeUnique();
             if (persistentIntegrityResult == null || persistentIntegrityResult.getComponent() == null) {
-                persistentIntegrityResult = new IntegrityAnalysisComponent();
+                persistentIntegrityResult = new ComponentIntegrityAnalysis();
             }
 
             if (persistentIntegrityResult.getLastCheck() != null

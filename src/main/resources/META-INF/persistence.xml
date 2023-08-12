@@ -43,7 +43,7 @@
         <class>org.dependencytrack.model.ProjectProperty</class>
         <class>org.dependencytrack.model.Repository</class>
         <class>org.dependencytrack.model.RepositoryMetaComponent</class>
-        <class>org.dependencytrack.model.IntegrityAnalysisComponent</class>
+        <class>org.dependencytrack.model.ComponentIntegrityAnalysis</class>
         <class>org.dependencytrack.model.ServiceComponent</class>
         <class>org.dependencytrack.model.Tag</class>
         <class>org.dependencytrack.model.Vex</class>

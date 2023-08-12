@@ -397,7 +397,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         query.setParameters(project);
         List<Component> components = query.executeList();
         for(Component component : components){
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysisComponent WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ComponentIntegrityAnalysis WHERE component == :component"), component);
 
         }
         try {
@@ -434,7 +434,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component == :component"), component);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component == :component"), component);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysisComponent WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ComponentIntegrityAnalysis WHERE component == :component"), component);
 
             // The component itself must be deleted via deletePersistentAll, otherwise relationships
             // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.

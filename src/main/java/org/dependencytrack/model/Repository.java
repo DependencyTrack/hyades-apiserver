@@ -88,12 +88,12 @@ public class Repository implements Serializable {
 
     //New column to determine if authentication is required for a repository
     @Persistent
-    @Column(name = "AUTHENTICATIONREQUIRED")
+    @Column(name = "AUTHENTICATION_REQUIRED")
     @NotNull
     private Boolean authenticationRequired;
 
     @Persistent
-    @Column(name = "INTEGRITYCHECKENABLED")
+    @Column(name = "INTEGRITY_CHECK_ENABLED")
     @NotNull
     private Boolean integrityCheckEnabled;
 

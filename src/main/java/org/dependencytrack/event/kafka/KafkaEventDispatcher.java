@@ -64,14 +64,10 @@ public class KafkaEventDispatcher {
         if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
-<<<<<<< HEAD
             LOGGER.debug("Dispatch internal called for component: " + e.purlCoordinates() + " Component is internal: " + e.internal());
-=======
-            LOGGER.debug("Dispatch internal called for component: " + e.purlCoordinates() + " Component is " + e.internal());
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
-        }else if (event instanceof final ComponentIntegrityCheckEvent e) {
-            LOGGER.debug("Dispatching integrity check event for : " + e.purl() + " Component id is: "+e.componentId());
->>>>>>> 1782cb7a (topic segregation tested)
+        } else if (event instanceof final ComponentIntegrityCheckEvent e) {
+            LOGGER.debug("Dispatching integrity check event for : " + e.purl() + " Component id is: " + e.componentId());
             return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
         } else if (event instanceof final OsvMirrorEvent e) {
             return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);

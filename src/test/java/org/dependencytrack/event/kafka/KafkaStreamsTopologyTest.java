@@ -20,7 +20,7 @@ import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
@@ -197,21 +197,21 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
-        final Supplier<IntegrityAnalysisComponent> repoMetaSupplier =
+        final Supplier<ComponentIntegrityAnalysis> repoMetaSupplier =
                 () -> {
                     PersistenceManager pm = qm.getPersistenceManager();
-                    pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
+                    pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
                     final Transaction trx = pm.currentTransaction();
                     try {
                         trx.begin();
-                        final Query<IntegrityAnalysisComponent> query = pm.newQuery(IntegrityAnalysisComponent.class);
+                        final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
                         query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
                         query.setParameters(
                                 "testRepo",
                                 1,
-                                UUID.fromString(uuid.toString())
+                                uuid
                         );
-                        IntegrityAnalysisComponent persistentIntegrityResult = query.executeUnique();
+                        ComponentIntegrityAnalysis persistentIntegrityResult = query.executeUnique();
                         trx.commit();
                         return persistentIntegrityResult;
                     } catch (JDODataStoreException ex) {
@@ -221,15 +221,15 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 };
         assertConditionWithTimeout(() -> repoMetaSupplier.get() != null, Duration.ofSeconds(5));
 
-        final IntegrityAnalysisComponent integrityAnalysisComponent = repoMetaSupplier.get();
-        assertThat(integrityAnalysisComponent).isNotNull();
-        assertThat(integrityAnalysisComponent.getRepositoryIdentifier()).isEqualTo("testRepo");
-        assertThat(integrityAnalysisComponent.getComponent().getId()).isEqualTo(1);
-        assertThat(integrityAnalysisComponent.getComponent().getUuid()).isEqualTo(uuid);
-        assertThat(integrityAnalysisComponent.isIntegrityCheckPassed()).isTrue();
-        assertThat(integrityAnalysisComponent.isMd5HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
-        assertThat(integrityAnalysisComponent.isSha1HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
-        assertThat(integrityAnalysisComponent.isSha256HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        final ComponentIntegrityAnalysis componentIntegrityAnalysis = repoMetaSupplier.get();
+        assertThat(componentIntegrityAnalysis).isNotNull();
+        assertThat(componentIntegrityAnalysis.getRepositoryIdentifier()).isEqualTo("testRepo");
+        assertThat(componentIntegrityAnalysis.getComponent().getId()).isEqualTo(1);
+        assertThat(componentIntegrityAnalysis.getComponent().getUuid()).isEqualTo(uuid);
+        assertThat(componentIntegrityAnalysis.isIntegrityCheckPassed()).isTrue();
+        assertThat(componentIntegrityAnalysis.isMd5HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        assertThat(componentIntegrityAnalysis.isSha1HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        assertThat(componentIntegrityAnalysis.isSha256HashMatched()).isEqualTo(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
     }
 
     @Test

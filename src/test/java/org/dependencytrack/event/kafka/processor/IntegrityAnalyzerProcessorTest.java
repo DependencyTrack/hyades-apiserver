@@ -11,7 +11,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityAnalysisComponent;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.Project;
 import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
 import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
@@ -25,7 +25,6 @@ import javax.jdo.Transaction;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +40,7 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         topology.addSource("sourceProcessor",
                 new StringDeserializer(), new KafkaProtobufDeserializer<>(IntegrityResult.parser()), "input-topic");
         topology.addProcessor("integrityResultProcessor",
-                IntegrityAnalysiResultProcessor::new, "sourceProcessor");
+                IntegrityAnalysisResultProcessor::new, "sourceProcessor");
 
         testDriver = new TopologyTestDriver(topology);
         inputTopic = testDriver.createInputTopic("input-topic",
@@ -83,9 +82,9 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
-        pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
+        pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
         final Transaction trx = pm.currentTransaction();
-        IntegrityAnalysisComponent persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -121,8 +120,8 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
-        pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
-        IntegrityAnalysisComponent persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -162,9 +161,9 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
-        pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
+        pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
         final Transaction trx = pm.currentTransaction();
-        IntegrityAnalysisComponent persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -191,7 +190,7 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
 
         inputTopic.pipeInput("foo", result);
 
-        final Query<IntegrityAnalysisComponent> query = qm.getPersistenceManager().newQuery(IntegrityAnalysisComponent.class);
+        final Query<ComponentIntegrityAnalysis> query = qm.getPersistenceManager().newQuery(ComponentIntegrityAnalysis.class);
         query.setResult("count(this)");
 
         assertThat(query.executeResultUnique(Long.class)).isZero();
@@ -210,7 +209,7 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         component.setName("testComponent");
         qm.createComponent(component, false);
         UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
-        final var integrityAnalysisComponent = new IntegrityAnalysisComponent();
+        final var integrityAnalysisComponent = new ComponentIntegrityAnalysis();
         integrityAnalysisComponent.setComponent(component);
         integrityAnalysisComponent.setIntegrityCheckPassed(false);
         integrityAnalysisComponent.setRepositoryIdentifier("testRepo");
@@ -272,10 +271,7 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
                 .build();
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
-        PersistenceManager pm = qm.getPersistenceManager();
-        pm.newQuery(pm.newQuery(IntegrityAnalysisComponent.class));
-        final Transaction trx = pm.currentTransaction();
-        IntegrityAnalysisComponent persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -289,7 +285,7 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
     public void processUpdateOutOfOrderMetaModelTest() {
         final var testStartTime = new Date();
 
-        final var integrityAnalysisComponent = new IntegrityAnalysisComponent();
+        final var integrityAnalysisComponent = new ComponentIntegrityAnalysis();
         Project project = new Project();
         project.setName("testproject");
         Component component = new Component();
