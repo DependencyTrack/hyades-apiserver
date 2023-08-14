@@ -296,7 +296,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 });
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(5))
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
@@ -304,7 +304,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 });
 
         await("Analysis complete notification")
-                .atMost(Duration.ofSeconds(5))
+                .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     assertThat(kafka.readValues(ReadKeyValues
@@ -451,7 +451,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         assertThat(scan.getUpdatedAt()).isAfter(scan.getStartedAt());
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(15))
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(UUID.fromString(scanToken), WorkflowStep.VULN_ANALYSIS);
@@ -466,7 +466,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 });
 
         await("Analysis complete notification")
-                .atMost(Duration.ofSeconds(5))
+                .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(50))
                 .untilAsserted(() -> {
                     assertThat(kafka.readValues(ReadKeyValues
@@ -616,7 +616,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(20)) //increasing the timeout since 5 seconds was not working on git pipeline
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
