@@ -307,9 +307,9 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         // Evaluate policies and ensure that a notification has been sent.
         final var policyEngine = new PolicyEngine();
         assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
-
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.hyades.proto.notification.v1.Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(0));
+        //2 Notifications will be sent, one for project created and another for policy violation
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        final org.hyades.proto.notification.v1.Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(1));
         assertThat(notification).isNotNull();
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
         assertThat(notification.getGroup()).isEqualTo(GROUP_POLICY_VIOLATION);
@@ -322,7 +322,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         final var policyConditionB = qm.createPolicyCondition(policy, PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.2.3");
         assertThat(policyEngine.evaluate(component.getUuid())).hasSize(2);
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 3, Duration.ofSeconds(5));
         final org.hyades.proto.notification.v1.Notification notificationPolicyA = deserializeValue(KafkaTopics.NOTIFICATION_POLICY_VIOLATION, kafkaMockProducer.history().get(0));
         assertThat(notificationPolicyA).isNotNull();
 
@@ -337,7 +337,7 @@ public class PolicyEngineTest extends PersistenceCapableTest {
         // Delete a policy condition and re-evaluate policies again. No new notifications should be sent.
         qm.deletePolicyCondition(policyConditionA);
         assertThat(policyEngine.evaluate(component.getUuid())).hasSize(1);
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 3, Duration.ofSeconds(5));
     }
 
     @Test

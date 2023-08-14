@@ -23,10 +23,12 @@ import alpine.notification.Notification;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.notification.NotificationConstants;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -42,6 +44,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +53,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
+import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 public class ProjectResourceTest extends ResourceTest {
 
@@ -287,7 +295,7 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createProjectTest() {
+    public void createProjectTest() throws Exception {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -304,6 +312,14 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("Test project", json.getString("description"));
         Assert.assertTrue(json.getBoolean("active"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
+        final org.hyades.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
+        assertThat(projectNotification).isNotNull();
+        assertThat(projectNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(projectNotification.getGroup()).isEqualTo(GROUP_PROJECT_CREATED);
+        assertThat(projectNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+        assertThat(projectNotification.getTitle()).isEqualTo(NotificationConstants.Title.PROJECT_CREATED);
     }
 
     @Test
