@@ -222,6 +222,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
+                    qm.getPersistenceManager().refresh(workflowStatus); // Ensure we're not getting stale values from L1 cache
                     assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
                 });
 
@@ -542,6 +543,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
+                    qm.getPersistenceManager().refresh(workflowStatus); // Ensure we're not getting stale values from L1 cache
                     assertThat(workflowStatus.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
                 });
 
