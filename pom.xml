@@ -121,7 +121,7 @@
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
-        <tool.protoc.version>com.google.protobuf:protoc:3.21.12</tool.protoc.version>
+        <tool.protoc.version>com.google.protobuf:protoc:${lib.protobuf-java.version}</tool.protoc.version>
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
