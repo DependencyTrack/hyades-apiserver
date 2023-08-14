@@ -478,6 +478,15 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
         // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
         // commitSearchIndex(commitIndex, Project.class);
+
+        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
+                NotificationScope.PORTFOLIO,
+                NotificationGroup.PROJECT_CREATED,
+                NotificationConstants.Title.PROJECT_CREATED,
+                result.getName() + " was created",
+                NotificationLevel.INFORMATIONAL,
+                pm.detachCopy(result)
+        );
         return result;
     }
 
