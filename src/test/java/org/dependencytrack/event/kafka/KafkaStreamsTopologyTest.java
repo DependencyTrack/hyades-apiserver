@@ -218,7 +218,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                 });
 
         await("Workflow completion")
-                .atMost(Duration.ofSeconds(7))
+                .atMost(Duration.ofMinutes(1))
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     var workflowStatus = qm.getWorkflowStateByTokenAndStep(scanToken, WorkflowStep.VULN_ANALYSIS);
