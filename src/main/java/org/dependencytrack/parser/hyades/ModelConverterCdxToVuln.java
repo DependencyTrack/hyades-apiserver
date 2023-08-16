@@ -49,9 +49,15 @@ public final class ModelConverterCdxToVuln {
         vuln.setDescription(cycloneVuln.getDescription());
         vuln.setDetail(cycloneVuln.getDetail());
         vuln.setRecommendation(cycloneVuln.getRecommendation());
-        vuln.setPublished(Date.from(Instant.ofEpochSecond(cycloneVuln.getPublished().getSeconds())));
-        vuln.setUpdated(Date.from(Instant.ofEpochSecond(cycloneVuln.getUpdated().getSeconds())));
-        vuln.setCreated(Date.from(Instant.ofEpochSecond(cycloneVuln.getCreated().getSeconds())));
+        if (cycloneVuln.getPublished().getSeconds() != 0) {
+            vuln.setPublished(Date.from(Instant.ofEpochSecond(cycloneVuln.getPublished().getSeconds())));
+        }
+        if (cycloneVuln.getUpdated().getSeconds() != 0) {
+            vuln.setUpdated(Date.from(Instant.ofEpochSecond(cycloneVuln.getUpdated().getSeconds())));
+        }
+        if (cycloneVuln.getCreated().getSeconds() != 0) {
+            vuln.setCreated(Date.from(Instant.ofEpochSecond(cycloneVuln.getCreated().getSeconds())));
+        }
 
         if (cycloneVuln.hasCredits()) {
             vuln.setCredits(String.join(", ", cycloneVuln.getCredits().toString()));
