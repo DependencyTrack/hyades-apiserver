@@ -92,9 +92,8 @@
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.json-unit.version>3.0.0</lib.json-unit.version>
-        <lib.kafka-clients.version>3.5.1</lib.kafka-clients.version>
+        <lib.kafka.version>3.5.1</lib.kafka.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
-        <lib.kafka-streams.version>3.5.1</lib.kafka-streams.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
@@ -111,9 +110,6 @@
         <lib.net.javacrumbs.shedlock.version>5.6.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <!-- JDBC Drivers -->
-        <lib.jdbc-driver.mssql.version>12.3.0.jre17-preview</lib.jdbc-driver.mssql.version>
-        <!-- Leave at 8.0.29 until https://github.com/datanucleus/datanucleus-rdbms/issues/446 is resolved! -->
-        <lib.jdbc-driver.mysql.version>8.0.29</lib.jdbc-driver.mysql.version>
         <lib.jdbc-driver.postgresql.version>42.5.1</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
@@ -277,17 +273,17 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>${lib.kafka-clients.version}</version>
+            <version>${lib.kafka.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
-            <version>${lib.kafka-streams.version}</version>
+            <version>${lib.kafka.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams-test-utils</artifactId>
-            <version>${lib.kafka-streams.version}</version>
+            <version>${lib.kafka.version}</version>
         </dependency>
         <dependency>
             <groupId>net.logstash.logback</groupId>
@@ -377,26 +373,6 @@
         </dependency>
 
         <!-- Bundle JDBC drivers -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>${lib.jdbc-driver.mssql.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${lib.jdbc-driver.mysql.version}</version>
-            <exclusions>
-                <!--
-                    Protobuf is only required for MySQL X DevAPI, which we do not use.
-                    https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-installing-maven.html
-                -->
-                <exclusion>
-                    <groupId>com.google.protobuf</groupId>
-                    <artifactId>protobuf-java</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
