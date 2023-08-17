@@ -3,6 +3,7 @@ package org.dependencytrack.parser.hyades;
 import com.google.protobuf.Timestamp;
 import org.cyclonedx.proto.v1_4.Advisory;
 import org.cyclonedx.proto.v1_4.Bom;
+import org.cyclonedx.proto.v1_4.Property;
 import org.cyclonedx.proto.v1_4.Source;
 import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.cyclonedx.proto.v1_4.VulnerabilityReference;
@@ -39,7 +40,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                 org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                         .setId("CVE-2021-44228")
                         .setSource(Source.newBuilder().setName("NVD").build())
-                        .setDescription("Foo Bar")
+                        .setDescription("Foo Bar Description")
                         .setDetail("Foo Bar Baz Qux Quux")
                         .setRecommendation("Do this remedy as a fix")
                         .setCreated(Timestamp.newBuilder()
@@ -68,13 +69,17 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                         .addReferences(VulnerabilityReference.newBuilder()
                                 .setId("SNYK-JAVA-ORGAPACHELOGGINGLOG4J-2314720")
                                 .setSource(Source.newBuilder().setName("SNYK").build()).build())
+                        .addProperties(Property.newBuilder()
+                                .setName(ModelConverterCdxToVuln.TITLE_PROPERTY_NAME)
+                                .setValue("Foo Bar Title").build())
                         .build()).build();
 
         final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln.getVulnId()).isEqualTo("CVE-2021-44228");
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.NVD.name());
-        assertThat(vuln.getTitle()).isEqualTo("Foo Bar");
-        assertThat(vuln.getDescription()).isEqualTo("Foo Bar Baz Qux Quux");
+        assertThat(vuln.getTitle()).isEqualTo("Foo Bar Title");
+        assertThat(vuln.getDescription()).isEqualTo("Foo Bar Description");
+        assertThat(vuln.getDetail()).isEqualTo("Foo Bar Baz Qux Quux");
         assertThat(vuln.getRecommendation()).isEqualTo("Do this remedy as a fix");
         assertThat(vuln.getCvssV3Vector()).isEqualTo("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H");
         assertThat(vuln.getCvssV3BaseScore()).isEqualTo(BigDecimal.valueOf(10.0));
