@@ -25,6 +25,8 @@ import java.util.Comparator;
 
 public final class ModelConverterCdxToVuln {
 
+    static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
+
     public static Vulnerability convert(final QueryManager qm, final Bom bom,
                                         final org.cyclonedx.proto.v1_4.Vulnerability cycloneVuln,
                                         boolean isAliasSyncEnabled) {
@@ -36,12 +38,26 @@ public final class ModelConverterCdxToVuln {
             vuln.setSource(extractSource(cycloneVuln.getId(), cycloneVuln.getSource()));
         }
         vuln.setVulnId(cycloneVuln.getId());
-        vuln.setTitle(StringUtils.abbreviate(cycloneVuln.getDescription(), 255));
-        vuln.setDescription(cycloneVuln.getDetail());
+        if (cycloneVuln.getPropertiesCount() != 0) {
+            var titleProperty = cycloneVuln.getProperties(0);
+            if (titleProperty != null
+                    && titleProperty.getName().equals(TITLE_PROPERTY_NAME)
+                    && titleProperty.hasValue()) {
+                vuln.setTitle(StringUtils.abbreviate(titleProperty.getValue(), 255));
+            }
+        }
+        vuln.setDescription(cycloneVuln.getDescription());
+        vuln.setDetail(cycloneVuln.getDetail());
         vuln.setRecommendation(cycloneVuln.getRecommendation());
-        vuln.setPublished(Date.from(Instant.ofEpochSecond(cycloneVuln.getPublished().getSeconds())));
-        vuln.setUpdated(Date.from(Instant.ofEpochSecond(cycloneVuln.getUpdated().getSeconds())));
-        vuln.setCreated(Date.from(Instant.ofEpochSecond(cycloneVuln.getCreated().getSeconds())));
+        if (cycloneVuln.getPublished().getSeconds() != 0) {
+            vuln.setPublished(Date.from(Instant.ofEpochSecond(cycloneVuln.getPublished().getSeconds())));
+        }
+        if (cycloneVuln.getUpdated().getSeconds() != 0) {
+            vuln.setUpdated(Date.from(Instant.ofEpochSecond(cycloneVuln.getUpdated().getSeconds())));
+        }
+        if (cycloneVuln.getCreated().getSeconds() != 0) {
+            vuln.setCreated(Date.from(Instant.ofEpochSecond(cycloneVuln.getCreated().getSeconds())));
+        }
 
         if (cycloneVuln.hasCredits()) {
             vuln.setCredits(String.join(", ", cycloneVuln.getCredits().toString()));
