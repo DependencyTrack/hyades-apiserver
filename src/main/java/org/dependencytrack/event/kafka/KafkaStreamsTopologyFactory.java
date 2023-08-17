@@ -16,6 +16,7 @@ import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
+import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
@@ -60,6 +61,12 @@ class KafkaStreamsTopologyFactory {
 
         // Re-key processed results to their respective scan token, and record their arrival.
         final KStream<String, VulnerabilityScan> completedVulnScanStream = processedVulnScanResultStream
+                // Vulnerability scans targeting the entire portfolio are currently not tracked.
+                // There's no point in including results in the following repartition, and querying
+                // the database for their scan token, given the queries will never return anything anyway.
+                // Filtering results of portfolio analyses here also reduces the chance of hot partitions.
+                .filter((scanKey, scanResult) -> !scanKey.getScanToken().equals(PortfolioVulnerabilityAnalysisEvent.CHAIN_IDENTIFIER.toString()),
+                        Named.as("filter_out_portfolio_vuln_scan_results"))
                 .map((scanKey, scanResult) -> {
                     // Drop vulnerabilities from scanner results, as they can be rather large, and we don't need them anymore.
                     // Dropping them will save us some compression and network overhead during the repartition.

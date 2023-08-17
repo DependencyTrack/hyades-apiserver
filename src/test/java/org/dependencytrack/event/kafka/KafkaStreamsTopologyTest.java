@@ -15,6 +15,7 @@ import org.apache.kafka.streams.TopologyDescription;
 import org.assertj.core.api.SoftAssertions;
 import org.cyclonedx.proto.v1_4.Bom;
 import org.cyclonedx.proto.v1_4.Source;
+import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
@@ -556,6 +557,60 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
         // Ensure that Kafka Streams did not terminate due to project not existing.
         assertThat(kafkaStreams.state()).isEqualTo(KafkaStreams.State.RUNNING);
+    }
+
+    @Test
+    public void portfolioVulnAnalysisNotTrackedTest() throws Exception {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.createProject(project, null, false);
+
+        final var component = new org.dependencytrack.model.Component();
+        component.setName("acme-lib-a");
+        component.setVersion("1.1.0");
+        component.setProject(project);
+        component.setPurl("pkg:maven/org.acme/acme-lib-a@1.1.0");
+        qm.persist(component);
+
+        final UUID scanToken = PortfolioVulnerabilityAnalysisEvent.CHAIN_IDENTIFIER;
+        final var scanKey = ScanKey.newBuilder()
+                .setScanToken(scanToken.toString())
+                .setComponentUuid(component.getUuid().toString())
+                .build();
+
+        // Create a VulnerabilityScan targeting a project, using the scan token dedicated to
+        // portfolio analysis. This will never actually happen, but we do it here to be able to verify
+        // that portfolio analysis results are indeed filtered out.
+        final VulnerabilityScan scan = qm.createVulnerabilityScan(TargetType.PROJECT, project.getUuid(), scanToken.toString(), 1);
+
+        kafka.send(SendKeyValues.to(KafkaTopics.VULN_ANALYSIS_RESULT.name(), List.of(
+                        new KeyValue<>(scanKey,
+                                ScanResult.newBuilder()
+                                        .setKey(scanKey)
+                                        .addScannerResults(ScannerResult.newBuilder()
+                                                .setScanner(SCANNER_SNYK)
+                                                .setStatus(SCAN_STATUS_SUCCESSFUL)
+                                                .setBom(Bom.newBuilder()
+                                                        .addVulnerabilities(org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                                                                .setId("SNYK-001")
+                                                                .setSource(Source.newBuilder().setName("SNYK").build()))
+                                                        .build())
+                                                .build())
+                                        .build())))
+                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class)
+                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
+
+        // Vulnerability results must still be processed...
+        await("Result processing")
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(250))
+                .untilAsserted(() -> assertThat(qm.getAllVulnerabilities(component)).hasSize(1));
+
+        // ... but scan completion must not be.
+        qm.getPersistenceManager().refresh(scan);
+        assertThat(scan.getReceivedResults()).isZero();
+        assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.IN_PROGRESS);
     }
 
     public static class NotificationDeserializer extends KafkaProtobufDeserializer<Notification> {
