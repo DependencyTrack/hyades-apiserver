@@ -488,6 +488,54 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         }
     }
 
+    @Test
+    public void informWithComponentsUnderMetadataBomTest() throws Exception {
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-components.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        assertThat(kafkaMockProducer.history())
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
+                })
+                .anySatisfy(record -> {
+                    assertThat(deserializeKey(KafkaTopics.NOTIFICATION_BOM, record)).isEqualTo(project.getUuid().toString());
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_PROCESSED);
+                })
+                .noneSatisfy(record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                });
+
+        final List<Bom> boms = qm.getAllBoms(project);
+        assertThat(boms).hasSize(1);
+        final Bom bom = boms.get(0);
+        assertThat(bom.getBomFormat()).isEqualTo("CycloneDX");
+        assertThat(bom.getSpecVersion()).isEqualTo("1.4");
+        assertThat(bom.getBomVersion()).isEqualTo(1);
+        assertThat(bom.getSerialNumber()).isEqualTo("d7cf8503-6d80-4219-ab4c-3bab8f250ee7");
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getGroup()).isNull(); // Not overridden by BOM import
+        assertThat(project.getName()).isEqualTo("Acme Example"); // Not overridden by BOM import
+        assertThat(project.getVersion()).isEqualTo("1.0"); // Not overridden by BOM import
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getPurl()).isNotNull();
+        assertThat(project.getPurl().canonicalize()).isEqualTo("pkg:maven/test/Test@latest?type=jar");
+        assertThat(project.getDirectDependencies()).isNotNull();
+
+        // Make sure we ingested all components of the BOM.
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(185);
+    }
+
     private static File createTempBomFile(final String testFileName) throws Exception {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.

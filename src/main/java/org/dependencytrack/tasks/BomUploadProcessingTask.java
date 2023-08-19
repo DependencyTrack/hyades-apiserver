@@ -205,12 +205,14 @@ public class BomUploadProcessingTask implements Subscriber {
         final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
 
         final Project metadataComponent;
+        List<Component> components = new ArrayList<>();
         if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
             metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
+            components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
         } else {
             metadataComponent = null;
         }
-        List<Component> components = convertComponents(cdxBom.getComponents());
+        components.addAll(convertComponents(cdxBom.getComponents()));
         components = flatten(components, Component::getChildren, Component::setChildren);
         final int numComponentsTotal = components.size();
         components = components.stream()
