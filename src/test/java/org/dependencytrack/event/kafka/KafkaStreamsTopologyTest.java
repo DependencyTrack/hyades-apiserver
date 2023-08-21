@@ -35,9 +35,9 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.hyades.proto.notification.v1.Notification;
 import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.hyades.proto.repointegrityanalysis.v1.HashMatchStatus;
+import org.hyades.proto.repointegrityanalysis.v1.IntegrityResult;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
-import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
-import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
@@ -178,13 +178,12 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098000))
                 .build();
 

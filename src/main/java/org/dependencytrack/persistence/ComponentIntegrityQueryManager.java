@@ -51,16 +51,15 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
         super(pm, request);
     }
 
-    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier) {
         ComponentIntegrityAnalysis persistentIntegrityResult;
         final Transaction trx = pm.currentTransaction();
         try {
             trx.begin();
             final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
-            query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
+            query.setFilter("repositoryIdentifier == :repository && component.uuid == :uuid");
             query.setParameters(
                     repositoryIdentifier,
-                    componentId,
                     uuid
             );
             persistentIntegrityResult = query.executeUnique();

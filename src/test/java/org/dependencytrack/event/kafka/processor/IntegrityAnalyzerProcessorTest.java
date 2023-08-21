@@ -13,8 +13,8 @@ import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.Project;
-import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
-import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
+import org.hyades.proto.repointegrityanalysis.v1.HashMatchStatus;
+import org.hyades.proto.repointegrityanalysis.v1.IntegrityResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,20 +68,19 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098000))
                 .build();
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
         pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
-        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo");
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -104,20 +103,19 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098000))
                 .build();
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
         pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
-        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo");
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -144,20 +142,19 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098000))
                 .build();
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
         pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
-        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo");
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -172,13 +169,12 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(UUID.randomUUID().toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(Instant.now().getEpochSecond()))
                 .build();
 
@@ -216,13 +212,12 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098001))
                 .build();
 
@@ -253,18 +248,17 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_FAIL)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_FAIL)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_FAIL)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(1639098000))
                 .build();
 
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
-        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
+        ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo");
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult.getRepositoryIdentifier()).isEqualTo("testRepo");
@@ -306,13 +300,12 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
-                        .setComponentId(1)
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepository("testRepo")
+                .setRepositoryUrl("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setPublished(Timestamp.newBuilder()
+                .setUpdated(Timestamp.newBuilder()
                         .setSeconds(published.getEpochSecond()))
                 .build();
 

@@ -10,8 +10,8 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.repometaanalysis.v1.HashMatchStatus;
-import org.hyades.proto.repometaanalysis.v1.IntegrityResult;
+import org.hyades.proto.repointegrityanalysis.v1.HashMatchStatus;
+import org.hyades.proto.repointegrityanalysis.v1.IntegrityResult;
 
 import javax.jdo.JDODataStoreException;
 import javax.jdo.PersistenceManager;
@@ -57,10 +57,9 @@ public class IntegrityAnalysisResultProcessor implements Processor<String, Integ
         try {
             trx.begin();
             final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
-            query.setFilter("repositoryIdentifier == :repository && component.id == :id && component.uuid == :uuid");
+            query.setFilter("repositoryIdentifier == :repository && component.uuid == :uuid");
             query.setParameters(
-                    record.value().getRepository(),
-                    record.value().getComponent().getComponentId(),
+                    record.value().getRepositoryUrl(),
                     UUID.fromString(record.value().getComponent().getUuid())
             );
             ComponentIntegrityAnalysis persistentIntegrityResult = query.executeUnique();
@@ -77,11 +76,11 @@ public class IntegrityAnalysisResultProcessor implements Processor<String, Integ
                 return;
             }
             final Query<Component> queryComponent = pm.newQuery(Component.class);
-            queryComponent.setFilter("id == :id");
-            queryComponent.setParameters(record.value().getComponent().getComponentId());
+            queryComponent.setFilter("uuid == :uuid");
+            queryComponent.setParameters(UUID.fromString(record.value().getComponent().getUuid()));
             Component component = queryComponent.executeUnique();
             if (component != null) {
-                persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepository());
+                persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepositoryUrl());
                 HashMatchStatus md5HashMatch = record.value().getMd5HashMatch();
                 HashMatchStatus sha1HashMatch = record.value().getSha1HashMatch();
                 HashMatchStatus sha256HashMatch = record.value().getSha256HashMatch();

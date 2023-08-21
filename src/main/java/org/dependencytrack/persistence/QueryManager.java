@@ -1654,8 +1654,8 @@ public class QueryManager extends AlpineQueryManager {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
 
-    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier, double componentId) {
-        return getComponentIntegrityQueryManager().getIntegrityAnalysisComponentResult(uuid, repositoryIdentifier, componentId);
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier) {
+        return getComponentIntegrityQueryManager().getIntegrityAnalysisComponentResult(uuid, repositoryIdentifier);
     }
 
     public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
