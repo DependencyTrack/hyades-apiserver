@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.ComponentIntegrityAnalysis;
 
@@ -28,6 +29,8 @@ import javax.jdo.Transaction;
 import java.util.UUID;
 
 public class ComponentIntegrityQueryManager extends QueryManager implements IQueryManager {
+
+    private static final Logger LOGGER = Logger.getLogger(ComponentIntegrityQueryManager.class);
 
     /**
      * Constructs a new QueryManager.
@@ -63,7 +66,8 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
             persistentIntegrityResult = query.executeUnique();
             trx.commit();
         } catch (JDODataStoreException ex) {
-            throw ex;
+            LOGGER.error("An unexpected error occurred while executing JDO query", ex);
+            return null;
         }
         return persistentIntegrityResult;
     }

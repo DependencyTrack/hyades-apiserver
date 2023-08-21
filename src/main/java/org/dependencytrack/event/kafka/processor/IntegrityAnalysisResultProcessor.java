@@ -22,8 +22,8 @@ import java.util.UUID;
 
 public class IntegrityAnalysisResultProcessor implements Processor<String, IntegrityResult, Void, Void> {
     private static final Logger LOGGER = Logger.getLogger(IntegrityAnalysisResultProcessor.class);
-    private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
-            .description("Time taken to process repository meta analysis results")
+    private static final Timer TIMER = Timer.builder("integrity_analysis_result_processing")
+            .description("Time taken to process integrity analysis results")
             .register(Metrics.getRegistry());
 
     @Override
@@ -80,32 +80,34 @@ public class IntegrityAnalysisResultProcessor implements Processor<String, Integ
             queryComponent.setFilter("id == :id");
             queryComponent.setParameters(record.value().getComponent().getComponentId());
             Component component = queryComponent.executeUnique();
-            persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepository());
-            HashMatchStatus md5HashMatch = record.value().getMd5HashMatch();
-            HashMatchStatus sha1HashMatch = record.value().getSha1HashMatch();
-            HashMatchStatus sha256HashMatch = record.value().getSha256HashMatch();
-            persistentIntegrityResult.setMd5HashMatched(md5HashMatch.name());
-            persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
-            persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
-            persistentIntegrityResult.setComponent(component);
-            persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
-            if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)) {
-                persistentIntegrityResult.setIntegrityCheckPassed(false);
-            } else {
-                boolean flag = (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
-                        && (sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
-                        && (sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN));
-                persistentIntegrityResult.setIntegrityCheckPassed(flag);
-            }
-            pm.makePersistent(persistentIntegrityResult);
+            if (component != null) {
+                persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepository());
+                HashMatchStatus md5HashMatch = record.value().getMd5HashMatch();
+                HashMatchStatus sha1HashMatch = record.value().getSha1HashMatch();
+                HashMatchStatus sha256HashMatch = record.value().getSha256HashMatch();
+                persistentIntegrityResult.setMd5HashMatched(md5HashMatch.name());
+                persistentIntegrityResult.setSha256HashMatched(sha256HashMatch.name());
+                persistentIntegrityResult.setSha1HashMatched(sha1HashMatch.name());
+                persistentIntegrityResult.setComponent(component);
+                persistentIntegrityResult.setLastCheck(new Date(record.timestamp()));
+                if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_FAIL)) {
+                    persistentIntegrityResult.setIntegrityCheckPassed(false);
+                } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN)) {
+                    persistentIntegrityResult.setIntegrityCheckPassed(false);
+                } else if (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH) && sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_COMPONENT_MISSING_HASH)) {
+                    persistentIntegrityResult.setIntegrityCheckPassed(false);
+                } else {
+                    boolean flag = (md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || md5HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
+                            && (sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha1HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN))
+                            && (sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_PASS) || sha256HashMatch.equals(HashMatchStatus.HASH_MATCH_STATUS_UNKNOWN));
+                    persistentIntegrityResult.setIntegrityCheckPassed(flag);
+                }
+                pm.makePersistent(persistentIntegrityResult);
 
-            trx.commit();
+                trx.commit();
+            }
         } catch (JDODataStoreException e) {
-            throw e;
+            LOGGER.error("An unexpected error occurred while executing JDO query %s".formatted(record), e);
         } finally {
             if (trx.isActive()) {
                 trx.rollback();

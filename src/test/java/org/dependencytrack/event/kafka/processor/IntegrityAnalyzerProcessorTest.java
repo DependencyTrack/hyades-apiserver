@@ -21,9 +21,7 @@ import org.junit.Test;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
 
@@ -83,7 +81,6 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
         pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
-        final Transaction trx = pm.currentTransaction();
         ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
@@ -103,7 +100,6 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         component.setName("testComponent");
         qm.createComponent(component, false);
         UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
-        final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
@@ -144,7 +140,6 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         component.setName("testComponent");
         qm.createComponent(component, false);
         UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
-        final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
@@ -162,7 +157,6 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         inputTopic.pipeInput("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2", result);
         PersistenceManager pm = qm.getPersistenceManager();
         pm.newQuery(pm.newQuery(ComponentIntegrityAnalysis.class));
-        final Transaction trx = pm.currentTransaction();
         ComponentIntegrityAnalysis persistentIntegrityResult = qm.getIntegrityAnalysisComponentResult(uuid, "testRepo", 1);
         assertThat(persistentIntegrityResult).isNotNull();
         assertThat(persistentIntegrityResult).isNotNull();
@@ -255,7 +249,6 @@ public class IntegrityAnalyzerProcessorTest extends PersistenceCapableTest {
         component.setName("testComponent");
         qm.createComponent(component, false);
         UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
-        final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
         final var result = IntegrityResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
