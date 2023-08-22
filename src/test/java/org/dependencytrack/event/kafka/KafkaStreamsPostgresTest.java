@@ -21,7 +21,7 @@ abstract class KafkaStreamsPostgresTest extends AbstractPostgresEnabledTest {
 
     @Rule
     public RedpandaContainer container = new RedpandaContainer(DockerImageName
-            .parse("docker.redpanda.com/vectorized/redpanda:v23.2.2"));
+            .parse("docker.redpanda.com/vectorized/redpanda:v23.2.6"));
 
     KafkaStreams kafkaStreams;
     ExternalKafkaCluster kafka;
