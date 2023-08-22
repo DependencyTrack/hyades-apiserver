@@ -6,6 +6,8 @@ import java.time.Duration;
 
 public enum ConfigKey implements Config.Key {
 
+    ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION("alpine.worker.pool.drain.timeout.duration", "PT30S"),
+
     SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
     APPLICATION_ID("application.id", "dependencytrack-apiserver"),
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
@@ -23,6 +25,7 @@ public enum ConfigKey implements Config.Key {
     KEY_STORE_PASSWORD("kafka.keystore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
     KAFKA_TOPIC_PREFIX("api.topic.prefix", ""),
+    KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION("kafka.producer.drain.timeout.duration", "PT30S"),
     KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_COUNT("kafka.streams.deserialization.exception.threshold.count", "5"),
     KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_INTERVAL("kafka.streams.deserialization.exception.threshold.interval", "PT30M"),
     KAFKA_STREAMS_METRICS_RECORDING_LEVEL("kafka.streams.metrics.recording.level", "INFO"),
@@ -30,6 +33,7 @@ public enum ConfigKey implements Config.Key {
     KAFKA_STREAMS_PRODUCTION_EXCEPTION_THRESHOLD_INTERVAL("kafka.streams.production.exception.threshold.interval", "PT30H"),
     KAFKA_STREAMS_TRANSIENT_PROCESSING_EXCEPTION_THRESHOLD_COUNT("kafka.streams.transient.processing.exception.threshold.count", "50"),
     KAFKA_STREAMS_TRANSIENT_PROCESSING_EXCEPTION_THRESHOLD_INTERVAL("kafka.streams.transient.processing.exception.threshold.interval", "PT30M"),
+    KAFKA_STREAMS_DRAIN_TIMEOUT_DURATION("kafka.streams.drain.timeout.duration", "PT30S"),
 
     CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK("task.cron.metrics.portfolio", "10 * * * *"),
     CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK("task.cron.metrics.vulnerability", "40 * * * *"),
