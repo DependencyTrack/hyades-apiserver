@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.event;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
-import alpine.event.framework.SingleThreadedEventService;
 import org.dependencytrack.RequirementsVerifier;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
@@ -49,6 +50,7 @@ import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import java.time.Duration;
 
 /**
  * Initializes the event subsystem and configures event subscribers.
@@ -62,9 +64,8 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
     // Starts the EventService
     private static final EventService EVENT_SERVICE = EventService.getInstance();
-
-    // Starts the SingleThreadedEventService
-    private static final SingleThreadedEventService EVENT_SERVICE_ST = SingleThreadedEventService.getInstance();
+    private static final Duration DRAIN_TIMEOUT_DURATION =
+            Duration.parse(Config.getInstance().getProperty(ConfigKey.ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION));
 
     /**
      * {@inheritDoc}
@@ -135,8 +136,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
         EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);
         EVENT_SERVICE.unsubscribe(WorkflowStateCleanupTask.class);
-        EVENT_SERVICE.shutdown();
-
-        EVENT_SERVICE_ST.shutdown();
+        EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
     }
 }
