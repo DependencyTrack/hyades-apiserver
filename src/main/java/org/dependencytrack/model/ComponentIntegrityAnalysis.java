@@ -42,18 +42,10 @@ public class ComponentIntegrityAnalysis {
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
     private long id;
+
     @Column(name = "COMPONENT_ID", allowsNull = "false")
     @NotNull
     private Component component;
-
-
-    public String getRepositoryIdentifier() {
-        return repositoryIdentifier;
-    }
-
-    public void setRepositoryIdentifier(String repositoryIdentifier) {
-        this.repositoryIdentifier = repositoryIdentifier;
-    }
 
     /**
      * This is a representation of the Package URL "name" field.
@@ -81,6 +73,18 @@ public class ComponentIntegrityAnalysis {
     @NotNull
     private String sha1HashMatched;
 
+    @Persistent
+    @Column(name = "INTEGRITY_CHECK_PASSED", allowsNull = "false")
+    @NotNull
+    private boolean integrityCheckPassed;
+
+    /**
+     * The date in which the last version check of the component was made.
+     */
+    @Persistent
+    @Column(name = "LAST_CHECK", allowsNull = "false")
+    @NotNull
+    private Date lastCheck;
 
     public String isMd5HashMatched() {
         return md5HashMatched;
@@ -114,28 +118,6 @@ public class ComponentIntegrityAnalysis {
         this.integrityCheckPassed = integrityCheckPassed;
     }
 
-    @Persistent
-    @Column(name = "INTEGRITY_CHECK_PASSED", allowsNull = "false")
-    @NotNull
-    private boolean integrityCheckPassed;
-
-    public Component getComponent() {
-        return component;
-    }
-
-    public void setComponent(Component component) {
-        this.component = component;
-    }
-
-    /**
-     * The date in which the last version check of the component was made.
-     */
-    @Persistent
-    @Column(name = "LAST_CHECK", allowsNull = "false")
-    @NotNull
-    private Date lastCheck;
-
-
     public long getId() {
         return id;
     }
@@ -150,5 +132,21 @@ public class ComponentIntegrityAnalysis {
 
     public void setLastCheck(Date lastCheck) {
         this.lastCheck = lastCheck;
+    }
+
+    public String getRepositoryIdentifier() {
+        return repositoryIdentifier;
+    }
+
+    public void setRepositoryIdentifier(String repositoryIdentifier) {
+        this.repositoryIdentifier = repositoryIdentifier;
+    }
+
+    public Component getComponent() {
+        return component;
+    }
+
+    public void setComponent(Component component) {
+        this.component = component;
     }
 }

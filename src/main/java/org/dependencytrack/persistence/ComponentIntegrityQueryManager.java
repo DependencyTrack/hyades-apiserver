@@ -51,6 +51,25 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
         super(pm, request);
     }
 
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid) {
+        ComponentIntegrityAnalysis persistentIntegrityResult;
+        final Transaction trx = pm.currentTransaction();
+        try {
+            trx.begin();
+            final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
+            query.setFilter("component.uuid == :uuid");
+            query.setParameters(
+                    uuid
+            );
+            persistentIntegrityResult = query.executeUnique();
+            trx.commit();
+        } catch (JDODataStoreException ex) {
+            LOGGER.error("An unexpected error occurred while executing JDO query", ex);
+            return null;
+        }
+        return persistentIntegrityResult;
+    }
+
     public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid, String repositoryIdentifier) {
         ComponentIntegrityAnalysis persistentIntegrityResult;
         final Transaction trx = pm.currentTransaction();
@@ -70,6 +89,4 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
         }
         return persistentIntegrityResult;
     }
-
-
 }

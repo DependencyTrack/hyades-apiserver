@@ -40,6 +40,7 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -494,6 +495,41 @@ public class ComponentResource extends AlpineResource {
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
+            }
+        }
+    }
+
+    @GET
+    @Path("/{uuid}/integrity")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Returns integrity analysis for specific component",
+            response = Component.class
+    )
+    @ApiResponses(value = {
+            @ApiResponse(code = 401, message = "Unauthorized"),
+            @ApiResponse(code = 403, message = "Access to the specified component is forbidden"),
+            @ApiResponse(code = 404, message = "The component could not be found")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getIntegrityAnalysisForComponent(
+            @ApiParam(value = "The UUID of the component", required = true)
+            @PathParam("uuid") String uuid) {
+        try (QueryManager qm = new QueryManager()) {
+            final Component component = qm.getObjectByUuid(Component.class, uuid);
+            if (component != null) {
+                final Project project = component.getProject();
+                if (qm.hasAccess(super.getPrincipal(), project)) {
+                    var componentIntegrityAnalysis = qm.getIntegrityAnalysisComponentResult(component.getUuid());
+                    if (componentIntegrityAnalysis != null) {
+                        return Response.ok(componentIntegrityAnalysis).build();
+                    }
+                    return Response.status(Response.Status.NOT_FOUND).entity("Integrity analysis for the component could not be found.").build();
+                } else {
+                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
+                }
+            } else {
+                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
         }
     }

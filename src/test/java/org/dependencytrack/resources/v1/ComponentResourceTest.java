@@ -22,9 +22,11 @@ import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.apache.http.HttpStatus;
+import org.apache.http.util.EntityUtils;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -33,14 +35,17 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.hyades.proto.repointegrityanalysis.v1.HashMatchStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.jdo.PersistenceManager;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
@@ -654,4 +659,56 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals(0, jsonWithoutComponent.size());
     }
 
+    @Test
+    public void getComponentIntegrityAnalysisTest() {
+        var project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("c1");
+        qm.createComponent(component, false);
+
+        UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
+        final var integrityAnalysisComponent = new ComponentIntegrityAnalysis();
+        integrityAnalysisComponent.setComponent(component);
+        integrityAnalysisComponent.setIntegrityCheckPassed(true);
+        integrityAnalysisComponent.setRepositoryIdentifier("npm-art");
+        integrityAnalysisComponent.setLastCheck(new Date(1639098001));
+        integrityAnalysisComponent.setId(2);
+        integrityAnalysisComponent.setMd5HashMatched(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        integrityAnalysisComponent.setSha1HashMatched(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        integrityAnalysisComponent.setSha256HashMatched(HashMatchStatus.HASH_MATCH_STATUS_PASS.toString());
+        integrityAnalysisComponent.setLastCheck(Date.from(Instant.now().minusSeconds(5)));
+        qm.persist(integrityAnalysisComponent);
+
+        Response response = target(V1_COMPONENT + "/" + uuid + "/integrity")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        var json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("npm-art", json.getString("repositoryIdentifier"));
+        Assert.assertEquals(true, json.getBoolean("integrityCheckPassed"));
+    }
+
+    @Test
+    public void getComponentIntegrityAnalysisComponentNotFoundTest() {
+        Response response = target(V1_COMPONENT + "/" + UUID.randomUUID() + "/integrity")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(404, response.getStatus(), 0);
+        Assert.assertEquals("The component could not be found.", getPlainTextBody(response));
+    }
+
+    @Test
+    public void getComponentIntegrityAnalysisResultNotFoundTest() {
+        var project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("c1");
+        qm.createComponent(component, false);
+        UUID uuid = qm.getObjectById(Component.class, 1).getUuid();
+        Response response = target(V1_COMPONENT + "/" + uuid + "/integrity")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(404, response.getStatus(), 0);
+        Assert.assertEquals("Integrity analysis for the component could not be found.", getPlainTextBody(response));
+    }
 }

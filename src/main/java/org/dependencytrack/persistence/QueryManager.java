@@ -1662,5 +1662,8 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().hasWorkflowStepWithStatus(token, step, status);
     }
 
+    public ComponentIntegrityAnalysis getIntegrityAnalysisComponentResult(UUID uuid) {
+        return getComponentIntegrityQueryManager().getIntegrityAnalysisComponentResult(uuid);
+    }
 }
 
