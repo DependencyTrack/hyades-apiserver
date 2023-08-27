@@ -7,7 +7,6 @@ import org.cyclonedx.proto.v1_4.Source;
 import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.cyclonedx.proto.v1_4.VulnerabilityReference;
 import org.dependencytrack.model.AnalyzerIdentity;
-import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
@@ -22,6 +21,14 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+
+import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_OWASP;
 
 public final class ModelConverterCdxToVuln {
 
@@ -40,25 +47,28 @@ public final class ModelConverterCdxToVuln {
         vuln.setVulnId(cycloneVuln.getId());
         if (cycloneVuln.getPropertiesCount() != 0) {
             var titleProperty = cycloneVuln.getProperties(0);
-            if (titleProperty != null
-                    && titleProperty.getName().equals(TITLE_PROPERTY_NAME)
-                    && titleProperty.hasValue()) {
+            if (titleProperty.getName().equals(TITLE_PROPERTY_NAME) && titleProperty.hasValue()) {
                 vuln.setTitle(StringUtils.abbreviate(titleProperty.getValue(), 255));
             }
         }
-        vuln.setDescription(cycloneVuln.getDescription());
-        vuln.setDetail(cycloneVuln.getDetail());
-        vuln.setRecommendation(cycloneVuln.getRecommendation());
-        if (cycloneVuln.getPublished().getSeconds() != 0) {
+        if (cycloneVuln.hasDescription()) {
+            vuln.setDescription(cycloneVuln.getDescription());
+        }
+        if (cycloneVuln.hasDetail()) {
+            vuln.setDetail(cycloneVuln.getDetail());
+        }
+        if (cycloneVuln.hasRecommendation()) {
+            vuln.setRecommendation(cycloneVuln.getRecommendation());
+        }
+        if (cycloneVuln.hasPublished()) {
             vuln.setPublished(Date.from(Instant.ofEpochSecond(cycloneVuln.getPublished().getSeconds())));
         }
-        if (cycloneVuln.getUpdated().getSeconds() != 0) {
+        if (cycloneVuln.hasUpdated()) {
             vuln.setUpdated(Date.from(Instant.ofEpochSecond(cycloneVuln.getUpdated().getSeconds())));
         }
-        if (cycloneVuln.getCreated().getSeconds() != 0) {
+        if (cycloneVuln.hasCreated()) {
             vuln.setCreated(Date.from(Instant.ofEpochSecond(cycloneVuln.getCreated().getSeconds())));
         }
-
         if (cycloneVuln.hasCredits()) {
             vuln.setCredits(String.join(", ", cycloneVuln.getCredits().toString()));
         }
@@ -78,60 +88,85 @@ public final class ModelConverterCdxToVuln {
             vuln.setReferences(sb.toString());
         }
 
+        cycloneVuln.getCwesList().stream()
+                .map(qm::getCweById)
+                .filter(Objects::nonNull)
+                .forEach(vuln::addCwe);
 
-        if (!cycloneVuln.getCwesList().isEmpty()) {
-            cycloneVuln.getCwesList().forEach(cweId -> {
-                final Cwe cwe = qm.getCweById(cweId);
-                if (cwe != null) {
-                    vuln.addCwe(cwe);
-                }
-            });
-        }
-        cycloneVuln.getRatingsList().stream()
+        final List<VulnerabilityRating> prioritizedRatings = cycloneVuln.getRatingsList().stream()
                 .sorted(compareRatings(cycloneVuln.getSource()))
-                .forEach(rating -> {
-                    if (rating.hasMethod()) {
-                        final Cvss cvss = Cvss.fromVector(rating.getVector());
-                        if (vuln.getCvssV3Vector() == null &&
-                                (rating.getMethod().equals(ScoreMethod.SCORE_METHOD_CVSSV3)
-                                        || rating.getMethod().equals(ScoreMethod.SCORE_METHOD_CVSSV31))) {
-                            vuln.setCvssV3Vector(rating.getVector());
-                            vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
-                            if (cvss != null) {
-                                final Score score = cvss.calculateScore();
-                                vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                                vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                                if (rating.getScore() == 0.0) {
-                                    vuln.setCvssV3BaseScore(BigDecimal.valueOf(score.getBaseScore()));
-                                }
-                            }
-                        }
-                        if (vuln.getCvssV2Vector() == null && rating.getMethod().equals(ScoreMethod.SCORE_METHOD_CVSSV2)) {
-                            vuln.setCvssV2Vector(rating.getVector());
-                            vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
-                            if (cvss != null) {
-                                final Score score = cvss.calculateScore();
-                                vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                                vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                                if (rating.getScore() == 0.0) {
-                                    vuln.setCvssV2BaseScore(BigDecimal.valueOf(score.getBaseScore()));
-                                }
-                            }
-                        }
-                        if (vuln.getOwaspRRVector() == null && rating.getMethod().equals(ScoreMethod.SCORE_METHOD_OWASP)) {
-                            try {
-                                final OwaspRiskRating orr = OwaspRiskRating.fromVector(rating.getVector());
-                                final us.springett.owasp.riskrating.Score orrScore = orr.calculateScore();
-                                vuln.setOwaspRRVector(rating.getVector());
-                                vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(orrScore.getLikelihoodScore()));
-                                vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(orrScore.getBusinessImpactScore()));
-                                vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(orrScore.getTechnicalImpactScore()));
-                            } catch (IllegalArgumentException | MissingFactorException e) {
-                                // Ignore
-                            }
-                        }
+                .toList();
+
+        // Apply ratings in their prioritized order, ensuring that only one rating per method is applied.
+        // Because DT does not track CVSSv3 and CVSSv3.1 separately, they are considered the same here.
+        final var appliedMethods = new HashSet<ScoreMethod>();
+        for (final VulnerabilityRating rating : prioritizedRatings) {
+            if (!rating.hasMethod()) {
+                // We'll not be able to populate Vulnerability fields correctly if
+                // we don't know what method was used to produce the rating.
+                continue;
+            }
+
+            final Cvss cvss = Cvss.fromVector(rating.getVector());
+            if (!appliedMethods.contains(SCORE_METHOD_CVSSV3)
+                    && (rating.getMethod().equals(SCORE_METHOD_CVSSV3) || rating.getMethod().equals(SCORE_METHOD_CVSSV31))) {
+                vuln.setCvssV3Vector(rating.getVector());
+                vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
+                if (cvss != null) {
+                    final Score score = cvss.calculateScore();
+                    vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
+                    vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
+                    if (rating.getScore() == 0.0) {
+                        vuln.setCvssV3BaseScore(BigDecimal.valueOf(score.getBaseScore()));
                     }
-                });
+                }
+                appliedMethods.add(SCORE_METHOD_CVSSV3);
+            }
+            if (!appliedMethods.contains(SCORE_METHOD_CVSSV2) && rating.getMethod().equals(SCORE_METHOD_CVSSV2)) {
+                vuln.setCvssV2Vector(rating.getVector());
+                vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
+                if (cvss != null) {
+                    final Score score = cvss.calculateScore();
+                    vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
+                    vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
+                    if (rating.getScore() == 0.0) {
+                        vuln.setCvssV2BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    }
+                }
+                appliedMethods.add(SCORE_METHOD_CVSSV2);
+            }
+            if (!appliedMethods.contains(SCORE_METHOD_OWASP) && rating.getMethod().equals(ScoreMethod.SCORE_METHOD_OWASP)) {
+                try {
+                    final OwaspRiskRating orr = OwaspRiskRating.fromVector(rating.getVector());
+                    final us.springett.owasp.riskrating.Score orrScore = orr.calculateScore();
+                    vuln.setOwaspRRVector(rating.getVector());
+                    vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(orrScore.getLikelihoodScore()));
+                    vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(orrScore.getBusinessImpactScore()));
+                    vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(orrScore.getTechnicalImpactScore()));
+                    appliedMethods.add(SCORE_METHOD_OWASP);
+                } catch (IllegalArgumentException | MissingFactorException e) {
+                    // Ignore
+                }
+            }
+        }
+
+        // There can be cases where ratings do not have a known method, and the source only assigned
+        // a severity. Such ratings are inferior to those with proper method and vector, but we'll use
+        // them if no better option is available.
+        if (appliedMethods.isEmpty() && vuln.getSeverity() == Severity.UNASSIGNED) {
+            // Pick the first rating that provides a severity, and apply that.
+            prioritizedRatings.stream()
+                    .filter(VulnerabilityRating::hasSeverity)
+                    .findFirst()
+                    .map(rating -> switch (rating.getSeverity()) {
+                        case SEVERITY_CRITICAL -> Severity.CRITICAL;
+                        case SEVERITY_HIGH -> Severity.HIGH;
+                        case SEVERITY_MEDIUM -> Severity.MEDIUM;
+                        case SEVERITY_LOW -> Severity.LOW;
+                        default -> Severity.UNASSIGNED;
+                    })
+                    .ifPresent(vuln::setSeverity);
+        }
 
         if (isAliasSyncEnabled && !cycloneVuln.getReferencesList().isEmpty()) {
             vuln.setAliases(cycloneVuln.getReferencesList().stream()
