@@ -62,7 +62,6 @@ public class ComponentIntegrityQueryManager extends QueryManager implements IQue
                     uuid
             );
             persistentIntegrityResult = query.executeUnique();
-            persistentIntegrityResult.setComponent(null);
             trx.commit();
         } catch (JDODataStoreException ex) {
             LOGGER.error("An unexpected error occurred while executing JDO query", ex);
