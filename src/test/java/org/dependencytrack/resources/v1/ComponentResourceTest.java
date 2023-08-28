@@ -22,7 +22,6 @@ import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.apache.http.HttpStatus;
-import org.apache.http.util.EntityUtils;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
@@ -39,7 +38,6 @@ import org.hyades.proto.repointegrityanalysis.v1.HashMatchStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.jdo.PersistenceManager;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
@@ -147,6 +145,38 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
         Assert.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
         Assert.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
+    }
+
+    @Test
+    public void getComponentsByProjectWithIntegrityAnalysisTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+
+        var integrityAnalysis = new ComponentIntegrityAnalysis();
+        Date lastCheck = new Date();
+        integrityAnalysis.setLastCheck(lastCheck);
+        integrityAnalysis.setIntegrityCheckPassed(true);
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setRepositoryIdentifier("testRepo");
+        integrityAnalysis.setId(2);
+        integrityAnalysis.setMd5HashMatched(HashMatchStatus.HASH_MATCH_STATUS_FAIL.toString());
+        integrityAnalysis.setSha1HashMatched(HashMatchStatus.HASH_MATCH_STATUS_FAIL.toString());
+        integrityAnalysis.setSha256HashMatched(HashMatchStatus.HASH_MATCH_STATUS_FAIL.toString());
+        qm.persist(integrityAnalysis);
+
+        Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        var json = parseJsonArray(response);
+        Assert.assertEquals(1, json.size());
+        var jsonObject = json.getJsonObject(0);
+        Assert.assertNotNull(jsonObject);
+        Assert.assertEquals("ABC", jsonObject.getString("name"));
+        Assert.assertEquals(true, jsonObject.getJsonObject("integrityAnalysis").getBoolean("integrityCheckPassed"));
+        Assert.assertEquals(lastCheck.getTime(), jsonObject.getJsonObject("integrityAnalysis").getJsonNumber("lastCheck").longValue());
     }
 
     @Test

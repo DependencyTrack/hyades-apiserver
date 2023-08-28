@@ -40,7 +40,6 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.ComponentIntegrityAnalysis;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
