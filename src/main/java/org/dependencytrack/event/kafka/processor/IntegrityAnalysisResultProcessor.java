@@ -59,7 +59,7 @@ public class IntegrityAnalysisResultProcessor implements Processor<String, Integ
             final Query<ComponentIntegrityAnalysis> query = pm.newQuery(ComponentIntegrityAnalysis.class);
             query.setFilter("repositoryIdentifier == :repository && component.uuid == :uuid");
             query.setParameters(
-                    record.value().getRepositoryUrl(),
+                    record.value().getRepositoryIdentifier(),
                     UUID.fromString(record.value().getComponent().getUuid())
             );
             ComponentIntegrityAnalysis persistentIntegrityResult = query.executeUnique();
@@ -80,7 +80,7 @@ public class IntegrityAnalysisResultProcessor implements Processor<String, Integ
             queryComponent.setParameters(UUID.fromString(record.value().getComponent().getUuid()));
             Component component = queryComponent.executeUnique();
             if (component != null) {
-                persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepositoryUrl());
+                persistentIntegrityResult.setRepositoryIdentifier(record.value().getRepositoryIdentifier());
                 HashMatchStatus md5HashMatch = record.value().getMd5HashMatch();
                 HashMatchStatus sha1HashMatch = record.value().getSha1HashMatch();
                 HashMatchStatus sha256HashMatch = record.value().getSha256HashMatch();

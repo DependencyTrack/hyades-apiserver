@@ -180,7 +180,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                         .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.2.2")
                         .setUuid(uuid.toString()))
                 .setSha1HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
-                .setRepositoryUrl("testRepo")
+                .setRepositoryIdentifier("testRepo")
                 .setMd5HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setSha256HashMatch(HashMatchStatus.HASH_MATCH_STATUS_PASS)
                 .setUpdated(Timestamp.newBuilder()
