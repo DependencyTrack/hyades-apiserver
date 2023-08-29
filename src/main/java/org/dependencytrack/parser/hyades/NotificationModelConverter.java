@@ -181,11 +181,12 @@ public final class NotificationModelConverter {
                 .setComponent(convert(subject.getComponent()))
                 .setProject(convert(subject.getComponent().getProject()))
                 .setVulnerability(convert(subject.getVulnerability()))
-                .setAffectedProjects(BackReference.newBuilder()
+                .setAffectedProjectsReference(BackReference.newBuilder()
                         .setApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects"
                                 .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId()))
                         .setFrontendUri("/vulnerabilities/%s/%s/affectedProjects"
-                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId())));
+                                .formatted(subject.getVulnerability().getSource(), subject.getVulnerability().getVulnId())))
+                .addAffectedProjects(convert(subject.getComponent().getProject()));
 
         Optional.ofNullable(subject.getVulnerabilityAnalysisLevel())
                 .map(Enum::name)
