@@ -228,11 +228,12 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertComponent(subject.getComponent());
         assertProject(subject.getProject());
         assertVulnerability(subject.getVulnerability());
-        assertThat(subject.getAffectedProjects().getApiUri())
+        assertThat(subject.getAffectedProjectsReference().getApiUri())
                 .isEqualTo("/api/v1/vulnerability/source/INTERNAL/vuln/INT-001/projects");
-        assertThat(subject.getAffectedProjects().getFrontendUri())
+        assertThat(subject.getAffectedProjectsReference().getFrontendUri())
                 .isEqualTo("/vulnerabilities/INTERNAL/INT-001/affectedProjects");
         assertThat(subject.getVulnerabilityAnalysisLevel()).isEqualTo("BOM_UPLOAD_ANALYSIS");
+        assertThat(subject.getAffectedProjectsList()).satisfiesExactly(this::assertProject);
     }
 
     @Test
