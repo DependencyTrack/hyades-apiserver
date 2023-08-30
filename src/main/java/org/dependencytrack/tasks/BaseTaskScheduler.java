@@ -4,7 +4,6 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
-import alpine.event.framework.SingleThreadedEventService;
 import com.asahaf.javacron.Schedule;
 import org.dependencytrack.common.ConfigKey;
 
@@ -50,7 +49,6 @@ public abstract class BaseTaskScheduler {
                 LOGGER.debug("Time in milliseconds to execute " + event + "is: " + timeToExecuteTask);
                 if (timeToExecuteTask <= pollingIntervalInMillis) {
                     EventService.getInstance().publish(event);
-                    SingleThreadedEventService.getInstance().publish(event);
                 }
             });
         }

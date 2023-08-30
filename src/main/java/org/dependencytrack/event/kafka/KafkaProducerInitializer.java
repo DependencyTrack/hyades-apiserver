@@ -18,12 +18,14 @@ import org.dependencytrack.common.ConfigKey;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Properties;
 
 public class KafkaProducerInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaProducerInitializer.class);
+    private static final Duration DRAIN_TIMEOUT_DURATION =
+            Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION));
+
     private static Producer<byte[], byte[]> PRODUCER;
     private static KafkaClientMetrics PRODUCER_METRICS;
 
@@ -49,9 +51,9 @@ public class KafkaProducerInitializer implements ServletContextListener {
         if (PRODUCER != null) {
             LOGGER.info("Closing Kafka producer");
 
-            // Close producer, but wait up to 5 seconds for it to send off
-            // all queued events. Not sure what an appropriate timeout is.
-            PRODUCER.close(Duration.of(5, ChronoUnit.SECONDS));
+            // Close producer, but wait for a configurable amount of time for it to
+            // send off all queued events.
+            PRODUCER.close(DRAIN_TIMEOUT_DURATION);
 
             if (PRODUCER_METRICS != null) {
                 PRODUCER_METRICS.close();

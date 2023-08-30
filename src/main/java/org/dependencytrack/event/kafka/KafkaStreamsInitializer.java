@@ -20,12 +20,13 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Properties;
 
 public class KafkaStreamsInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaStreamsInitializer.class);
+    private static final Duration DRAIN_TIMEOUT_DURATION =
+            Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_DRAIN_TIMEOUT_DURATION));
 
     private static KafkaStreams STREAMS;
     private static KafkaStreamsMetrics STREAMS_METRICS;
@@ -55,13 +56,13 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         if (STREAMS != null) {
             LOGGER.info("Closing Kafka streams");
 
+            // Close streams, but wait for a configurable amount of time
+            // for it to process any polled events.
+            STREAMS.close(DRAIN_TIMEOUT_DURATION);
+
             if (STREAMS_METRICS != null) {
                 STREAMS_METRICS.close();
             }
-
-            // Close streams, but wait up to 5 seconds for it to process
-            // any queued events. Not sure what an appropriate timeout is.
-            STREAMS.close(Duration.of(5, ChronoUnit.SECONDS));
         }
     }
 
