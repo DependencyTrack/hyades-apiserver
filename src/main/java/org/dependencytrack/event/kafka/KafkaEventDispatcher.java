@@ -25,10 +25,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static java.util.Objects.requireNonNullElseGet;
+
 /**
  * An {@link Event} dispatcher that wraps a Kafka {@link Producer}.
  */
 public class KafkaEventDispatcher {
+
     private static final Logger LOGGER = Logger.getLogger(KafkaEventDispatcher.class);
 
     private final Producer<byte[], byte[]> producer;
@@ -54,7 +57,8 @@ public class KafkaEventDispatcher {
      *
      * @param event    The {@link Event} to dispatch
      * @param callback A {@link Callback} to execute once the record has been acknowledged by the broker,
-     *                 or sending the record failed
+     *                 or sending the record failed; When {@code null}, {@link KafkaDefaultProducerCallback}
+     *                 will be used
      * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched event,
      * or {@code null} when the event was not dispatched
      * @throws IllegalArgumentException When dispatching the given {@link Event} to Kafka is not supported
@@ -153,7 +157,8 @@ public class KafkaEventDispatcher {
             }
         }
 
-        return producer.send(record, callback);
+        return producer.send(record, requireNonNullElseGet(callback,
+                () -> new KafkaDefaultProducerCallback(LOGGER, record.topic(), event.key())));
     }
 
 }
