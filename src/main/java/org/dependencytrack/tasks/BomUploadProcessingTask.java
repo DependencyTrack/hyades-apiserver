@@ -327,7 +327,14 @@ public class BomUploadProcessingTask implements Subscriber {
             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
             if (!vulnAnalysisEvents.isEmpty()) {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
-                vulnAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+
+                vulnAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
+                    if (exception != null) {
+                        // Include context in the log message to make log correlation easier.
+                        LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
+                    }
+                }));
+
                 // Initiate vuln-analysis workflow for the token
                 if (vulnAnalysisState != null) {
                     vulnAnalysisState.setStartedAt(Date.from(Instant.now()));
@@ -350,7 +357,12 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
-            repoMetaAnalysisEvents.forEach(kafkaEventDispatcher::dispatchAsync);
+            repoMetaAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
+                if (exception != null) {
+                    // Include context in the log message to make log correlation easier.
+                    LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
+                }
+            }));
 
             // TODO: Trigger index updates
         }
