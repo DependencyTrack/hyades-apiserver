@@ -310,7 +310,7 @@ public final class NotificationModelConverter {
         ComponentVulnAnalysisCompleteSubject.Builder builder = ComponentVulnAnalysisCompleteSubject.newBuilder();
         builder.setComponent(component);
         List<Vulnerability> vulnerabilities = componentVulnAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllVulnerability(vulnerabilities);
+        builder.addAllVulnerabilities(vulnerabilities);
         return builder.build();
     }
 
