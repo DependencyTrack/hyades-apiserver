@@ -15,6 +15,7 @@ import org.apache.kafka.streams.TopologyDescription;
 import org.assertj.core.api.SoftAssertions;
 import org.cyclonedx.proto.v1_4.Bom;
 import org.cyclonedx.proto.v1_4.Source;
+import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
@@ -54,6 +55,7 @@ import java.util.function.Supplier;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
 import static org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
@@ -182,6 +184,11 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         final var vulnComponentA = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SNYK-001")
                 .setSource(Source.newBuilder().setName("SNYK").build())
+                .addRatings(VulnerabilityRating.newBuilder()
+                        .setSource(Source.newBuilder().setName("SNYK").build())
+                        .setMethod(SCORE_METHOD_CVSSV3)
+                        .setScore(10.0)
+                        .setVector("CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"))
                 .build();
         final var vulnComponentB = org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
                 .setId("SONATYPE-001")
@@ -247,6 +254,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                                             assertThat(finding.getVulnerabilitiesCount()).isEqualTo(1);
                                             assertThat(finding.getVulnerabilities(0).getVulnId()).isEqualTo("SNYK-001");
                                             assertThat(finding.getVulnerabilities(0).getSource()).isEqualTo("SNYK");
+                                            assertThat(finding.getVulnerabilities(0).getSeverity()).isEqualTo("CRITICAL");
+                                            assertThat(finding.getVulnerabilities(0).getCvssV3()).isEqualTo(10.0);
                                         },
                                         finding -> {
                                             assertThat(finding.getComponent().getUuid()).isEqualTo(componentB.getUuid().toString());

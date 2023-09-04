@@ -374,17 +374,16 @@ public final class NotificationUtil {
                 vulnerability1.setId(vulnerability.getId());
                 vulnerability1.setVulnId(vulnerability.getVulnId());
                 vulnerability1.setSource(vulnerability.getSource());
-                vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
                 vulnerability1.setTitle(vulnerability.getTitle());
                 vulnerability1.setSubTitle(vulnerability.getSubTitle());
                 vulnerability1.setRecommendation(vulnerability.getRecommendation());
+                vulnerability1.setSeverity(vulnerability.getSeverity());
                 vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
                 vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
-                vulnerability1.setSeverity(vulnerability.getSeverity());
-                vulnerability1.setCwes(vulnerability.getCwes());
                 vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
                 vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
                 vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
+                vulnerability1.setCwes(vulnerability.getCwes());
                 vulnerability1.setUuid(vulnerability.getUuid());
                 vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
                 if (vulnerability.getAliases() != null && !vulnerability.getAliases().isEmpty()) {
