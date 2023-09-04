@@ -322,15 +322,15 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
                                 assertThat(subject.getFindingsList()).satisfiesExactlyInAnyOrder(
                                         finding -> {
                                             assertThat(finding.getComponent().getUuid()).isEqualTo(componentA.getUuid().toString());
-                                            assertThat(finding.getVulnerabilityCount()).isEqualTo(1);
-                                            assertThat(finding.getVulnerability(0).getVulnId()).isEqualTo("SNYK-001");
-                                            assertThat(finding.getVulnerability(0).getSource()).isEqualTo("SNYK");
+                                            assertThat(finding.getVulnerabilitiesCount()).isEqualTo(1);
+                                            assertThat(finding.getVulnerabilities(0).getVulnId()).isEqualTo("SNYK-001");
+                                            assertThat(finding.getVulnerabilities(0).getSource()).isEqualTo("SNYK");
                                         },
                                         finding -> {
                                             assertThat(finding.getComponent().getUuid()).isEqualTo(componentB.getUuid().toString());
-                                            assertThat(finding.getVulnerabilityCount()).isEqualTo(1);
-                                            assertThat(finding.getVulnerability(0).getVulnId()).isEqualTo("SONATYPE-001");
-                                            assertThat(finding.getVulnerability(0).getSource()).isEqualTo("OSSINDEX");
+                                            assertThat(finding.getVulnerabilitiesCount()).isEqualTo(1);
+                                            assertThat(finding.getVulnerabilities(0).getVulnId()).isEqualTo("SONATYPE-001");
+                                            assertThat(finding.getVulnerabilities(0).getSource()).isEqualTo("OSSINDEX");
                                         }
                                 );
                             }
