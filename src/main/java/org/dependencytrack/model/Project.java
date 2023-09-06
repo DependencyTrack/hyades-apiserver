@@ -100,6 +100,14 @@ import java.util.UUID;
                 @Persistent(name = "lastInheritedRiskScore"),
                 @Persistent(name = "uuid")
         }),
+        @FetchGroup(name = "NOTIFICATION", members = {
+                @Persistent(name = "uuid"),
+                @Persistent(name = "name"),
+                @Persistent(name = "version"),
+                @Persistent(name = "description"),
+                @Persistent(name = "purl"),
+                @Persistent(name = "tags")
+        }),
         @FetchGroup(name = "PARENT", members = {
                 @Persistent(name = "parent")
         })
@@ -116,6 +124,7 @@ public class Project implements Serializable {
         ALL,
         IDENTIFIERS,
         METRICS_UPDATE,
+        NOTIFICATION,
         PARENT
     }
 

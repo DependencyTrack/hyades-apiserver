@@ -1,5 +1,6 @@
 package org.dependencytrack.event.kafka;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
@@ -14,11 +15,13 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Repartitioned;
 import org.datanucleus.PropertyNames;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
+import org.dependencytrack.event.kafka.processor.DelayedBomProcessedNotificationProcessor;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
@@ -43,6 +46,16 @@ import static org.dependencytrack.util.NotificationUtil.createProjectVulnerabili
 class KafkaStreamsTopologyFactory {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaStreamsTopologyFactory.class);
+
+    private final boolean delayBomProcessedNotification;
+
+    public KafkaStreamsTopologyFactory() {
+        this(Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
+    }
+
+    KafkaStreamsTopologyFactory(final boolean delayBomProcessedNotification) {
+        this.delayBomProcessedNotification = delayBomProcessedNotification;
+    }
 
     Topology createTopology() {
         final var streamsBuilder = new StreamsBuilder();
@@ -113,6 +126,8 @@ class KafkaStreamsTopologyFactory {
                             qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_DETACH_ALL_ON_COMMIT, "true");
                             vulnScan = qm.updateVulnerabilityScanStatus(vulnScan.getToken(), VulnerabilityScan.Status.FAILED);
                             vulnScan.setFailureReason("Failure threshold of " + vulnScan.getFailureThreshold() + "% exceeded: " + failureRate + "% of scans failed");
+                            LOGGER.warn("Detected failure of vulnerability scan (token=%s, targetType=%s, targetIdentifier=%s): %s"
+                                    .formatted(vulnScan.getToken(), vulnScan.getTargetType(), vulnScan.getTargetIdentifier(), vulnScan.getFailureReason()));
                         }
                     }
 
@@ -143,9 +158,13 @@ class KafkaStreamsTopologyFactory {
                     }
                 }, Named.as("update_vuln_analysis_workflow_status"));
 
-        completedVulnScanStream
+        final KStream<String, VulnerabilityScan> completedVulnScanWithProjectTargetStream = completedVulnScanStream
                 .filter((scanToken, vulnScan) -> vulnScan.getTargetType() == VulnerabilityScan.TargetType.PROJECT,
-                        Named.as("filter_vuln_scans_with_project_target"))
+                        Named.as("filter_vuln_scans_with_project_target"));
+
+        // For each completed vulnerability scan that targeted a project (opposed to individual components),
+        // determine its overall status, gather all findings, and emit a PROJECT_VULN_ANALYSIS_COMPLETE notification.
+        completedVulnScanWithProjectTargetStream
                 .map((scanToken, vulnScan) -> {
                     final alpine.notification.Notification alpineNotification;
                     try {
@@ -170,6 +189,20 @@ class KafkaStreamsTopologyFactory {
                                 KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.valueSerde())
                         .withName("produce_to_%s_topic".formatted(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name())));
 
+        // When delaying of BOM_PROCESSED notifications is enabled, emit a BOM_PROCESSED notification
+        // for each completed vulnerability scan that targeted a project. But only do so when the scan is
+        // part of a workflow that includes a BOM_PROCESSING step with status COMPLETED.
+        if (delayBomProcessedNotification) {
+            completedVulnScanStream
+                    .process(DelayedBomProcessedNotificationProcessor::new,
+                            Named.as("tmp_delay_bom_processed_notification_process_completed_vuln_scan"))
+                    .to(KafkaTopics.NOTIFICATION_BOM.name(), Produced
+                            .with(KafkaTopics.NOTIFICATION_BOM.keySerde(), KafkaTopics.NOTIFICATION_BOM.valueSerde())
+                            .withName("tmp_delay_bom_processed_notification_produce_to_%s_topic".formatted(KafkaTopics.NOTIFICATION_BOM.name())));
+        }
+
+        // For each successfully completed vulnerability scan, trigger a policy evaluation and metrics update
+        // for the targeted entity (project or individual component).
         completedVulnScanStream
                 .filter((scanToken, vulnScan) -> vulnScan.getStatus() != VulnerabilityScan.Status.FAILED,
                         Named.as("filter_failed_vuln_scans"))
