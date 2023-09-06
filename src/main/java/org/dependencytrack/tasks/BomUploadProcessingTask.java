@@ -34,6 +34,7 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -106,13 +107,15 @@ public class BomUploadProcessingTask implements Subscriber {
     private static final int FLUSH_THRESHOLD = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD);
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
+    private final boolean delayBomProcessedNotification;
 
     public BomUploadProcessingTask() {
-        this(new KafkaEventDispatcher());
+        this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
     }
 
-    BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher) {
+    BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
         this.kafkaEventDispatcher = kafkaEventDispatcher;
+        this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
 
     /**
@@ -126,14 +129,14 @@ public class BomUploadProcessingTask implements Subscriber {
                 processBom(ctx, event.getFile());
                 LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
                 updateState(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.COMPLETED);
-                kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
-                        .scope(NotificationScope.PORTFOLIO)
-                        .group(NotificationGroup.BOM_PROCESSED)
-                        .level(NotificationLevel.INFORMATIONAL)
-                        .title(NotificationConstants.Title.BOM_PROCESSED)
-                        .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
-                        // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+                if (!delayBomProcessedNotification) {
+                    dispatchBomProcessedNotification(ctx);
+                } else {
+                    // The notification will be dispatched by the Kafka Streams topology,
+                    // when it detects that the vulnerability scan completed.
+                    LOGGER.warn("Not dispatching %s notification, because %s is enabled (%s)"
+                            .formatted(NotificationGroup.BOM_PROCESSED, ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION.getPropertyName(), ctx));
+                }
             } catch (BomConsumptionException ex) {
                 LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
@@ -341,6 +344,12 @@ public class BomUploadProcessingTask implements Subscriber {
                     qm.persist(vulnAnalysisState);
                 }
             } else {
+                // No components to be sent for vulnerability analysis.
+                // If the BOM_PROCESSED notification was delayed, dispatch it now.
+                if (delayBomProcessedNotification) {
+                    dispatchBomProcessedNotification(ctx);
+                }
+
                 if (vulnAnalysisState != null) {
                     vulnAnalysisState.setStatus(WorkflowStatus.NOT_APPLICABLE);
                     vulnAnalysisState.setUpdatedAt(Date.from(Instant.now()));
@@ -873,6 +882,17 @@ public class BomUploadProcessingTask implements Subscriber {
             bomRefsByIdentity.put(componentIdentity, service.getBomRef());
             return identitiesSeen.add(componentIdentity);
         };
+    }
+
+    private void dispatchBomProcessedNotification(final Context ctx) {
+        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.BOM_PROCESSED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .title(NotificationConstants.Title.BOM_PROCESSED)
+                .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
+                // FIXME: Add reference to BOM after we have dedicated BOM server
+                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
     }
 
     /**

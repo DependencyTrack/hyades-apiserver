@@ -19,7 +19,6 @@ import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
-import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -620,13 +619,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         qm.getPersistenceManager().refresh(scan);
         assertThat(scan.getReceivedResults()).isZero();
         assertThat(scan.getStatus()).isEqualTo(VulnerabilityScan.Status.IN_PROGRESS);
-    }
-
-    public static class NotificationDeserializer extends KafkaProtobufDeserializer<Notification> {
-
-        public NotificationDeserializer() {
-            super(Notification.parser());
-        }
     }
 
 }

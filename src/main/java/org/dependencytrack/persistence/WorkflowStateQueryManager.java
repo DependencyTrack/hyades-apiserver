@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class WorkflowStateQueryManager extends QueryManager implements IQueryManager {
@@ -311,4 +312,21 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             }
         }
     }
+
+    public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
+        final Query<WorkflowState> stateQuery = pm.newQuery(WorkflowState.class);
+        stateQuery.setFilter("token == :token && step == :step && status == :status");
+        stateQuery.setNamedParameters(Map.of(
+                "token", token,
+                "step", step,
+                "status", status
+        ));
+        stateQuery.setResult("count(this)");
+        try {
+            return stateQuery.executeResultUnique(Long.class) > 0;
+        } finally {
+            stateQuery.closeAll();
+        }
+    }
+
 }

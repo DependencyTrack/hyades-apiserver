@@ -1637,4 +1637,9 @@ public class QueryManager extends AlpineQueryManager {
     public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
+
+    public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
+        return getWorkflowStateQueryManager().hasWorkflowStepWithStatus(token, step, status);
+    }
+
 }
