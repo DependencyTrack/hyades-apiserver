@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -534,6 +535,52 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         // Make sure we ingested all components of the BOM.
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).hasSize(185);
+    }
+
+    @Test
+    public void informWithDelayedBomProcessedNotification() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 4, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> {
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
+                },
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
+                // BOM_PROCESSED notification should not have been sent.
+        );
+    }
+
+    @Test
+    public void informWithDelayedBomProcessedNotificationAndNoComponents() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 3, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> {
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
+                },
+                event -> {
+                    assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
+                    assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_PROCESSED);
+                }
+        );
     }
 
     private static File createTempBomFile(final String testFileName) throws Exception {
