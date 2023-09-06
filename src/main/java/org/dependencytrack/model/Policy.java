@@ -81,6 +81,10 @@ public class Policy implements Serializable {
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
+    @Persistent
+    @Column(name = "SCOPE", allowsNull = "true")
+    private PolicyScope scope = PolicyScope.COMPONENT; // TODO: Remove default, handle this for existing policies with DB migration.
+
     /**
      * The operator to use when evaluating conditions.
      */
@@ -98,8 +102,15 @@ public class Policy implements Serializable {
     @Column(name = "VIOLATIONSTATE", allowsNull = "false")
     @NotBlank
     @Size(min = 1, max = 255)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
-    private ViolationState violationState;
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
+    private ViolationState violationState; // TODO: New column, possibly needs migration.
+
+    @Persistent
+    @Column(name = "VIOLATIONTYPE", allowsNull = "true")
+    @NotBlank
+    @Size(min = 1, max = 255)
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation type may only contain printable characters")
+    private PolicyViolation.Type violationType;
 
     /**
      * A list of zero-to-n policy conditions.
@@ -158,6 +169,14 @@ public class Policy implements Serializable {
         this.name = name;
     }
 
+    public PolicyScope getScope() {
+        return scope;
+    }
+
+    public void setScope(final PolicyScope scope) {
+        this.scope = scope;
+    }
+
     public Operator getOperator() {
         return operator;
     }
@@ -172,6 +191,14 @@ public class Policy implements Serializable {
 
     public void setViolationState(ViolationState violationState) {
         this.violationState = violationState;
+    }
+
+    public PolicyViolation.Type getViolationType() {
+        return violationType;
+    }
+
+    public void setViolationType(final PolicyViolation.Type violationType) {
+        this.violationType = violationType;
     }
 
     public List<PolicyCondition> getPolicyConditions() {
