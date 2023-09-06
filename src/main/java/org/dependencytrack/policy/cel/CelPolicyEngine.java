@@ -31,8 +31,8 @@ import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuil
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
-import org.dependencytrack.proto.policy.v1.License;
-import org.dependencytrack.proto.policy.v1.Vulnerability;
+import org.hyades.proto.policy.v1.License;
+import org.hyades.proto.policy.v1.Vulnerability;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
 
@@ -81,7 +81,7 @@ public class CelPolicyEngine {
         this(CelPolicyScriptHost.getInstance());
     }
 
-    CelPolicyEngine(CelPolicyScriptHost scriptHost) {
+    CelPolicyEngine(final CelPolicyScriptHost scriptHost) {
         this.scriptHost = scriptHost;
     }
 
@@ -89,7 +89,25 @@ public class CelPolicyEngine {
         final Timer.Sample timerSample = Timer.start();
 
         try {
-            // TODO
+            // TODO: Temporary solution for demonstration purposes. Super inefficient.
+            //   When evaluating a project, policies can be pre-compiled, and input data pre-loaded
+            //   for all components.
+            final List<UUID> componentUuids;
+            try (final var qm = new QueryManager()) {
+                final Query<Component> query = qm.getPersistenceManager().newQuery(Component.class);
+                query.setFilter("project.uuid == :projectUuid");
+                query.setParameters(projectUuid);
+                query.setResult("uuid");
+                try {
+                    componentUuids = query.executeResultList(UUID.class);
+                } finally {
+                    query.closeAll();
+                }
+            }
+
+            for (final UUID componentUuid : componentUuids) {
+                evaluateComponent(componentUuid);
+            }
         } finally {
             timerSample.stop(Timer
                     .builder("dtrack_policy_eval")
@@ -339,11 +357,11 @@ public class CelPolicyEngine {
         return getParents(qm, parentUuid, parents);
     }
 
-    private static org.dependencytrack.proto.policy.v1.Component mapComponent(final QueryManager qm,
+    private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
                                                                               final Component component,
                                                                               final Set<Requirement> requirements) {
-        final org.dependencytrack.proto.policy.v1.Component.Builder builder =
-                org.dependencytrack.proto.policy.v1.Component.newBuilder()
+        final org.hyades.proto.policy.v1.Component.Builder builder =
+                org.hyades.proto.policy.v1.Component.newBuilder()
                         .setUuid(Optional.ofNullable(component.getUuid()).map(UUID::toString).orElse(""))
                         .setGroup(trimToEmpty(component.getGroup()))
                         .setName(trimToEmpty(component.getName()))
@@ -412,14 +430,14 @@ public class CelPolicyEngine {
         return builder.build();
     }
 
-    private static org.dependencytrack.proto.policy.v1.Project mapProject(final Project project,
+    private static org.hyades.proto.policy.v1.Project mapProject(final Project project,
                                                                           final Set<Requirement> requirements) {
         if (!requirements.contains(Requirement.PROJECT)) {
-            return org.dependencytrack.proto.policy.v1.Project.newBuilder().build();
+            return org.hyades.proto.policy.v1.Project.newBuilder().build();
         }
 
-        final org.dependencytrack.proto.policy.v1.Project.Builder builder =
-                org.dependencytrack.proto.policy.v1.Project.newBuilder()
+        final org.hyades.proto.policy.v1.Project.Builder builder =
+                org.hyades.proto.policy.v1.Project.newBuilder()
                         .setUuid(Optional.ofNullable(project.getUuid()).map(UUID::toString).orElse(""))
                         .setGroup(trimToEmpty(project.getGroup()))
                         .setName(trimToEmpty(project.getName()))

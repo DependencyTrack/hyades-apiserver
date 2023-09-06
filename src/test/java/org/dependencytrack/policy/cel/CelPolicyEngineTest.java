@@ -27,6 +27,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CelPolicyEngineTest extends PersistenceCapableTest {
 
+    // Raise a violation when the component is affected by a certain vulnerability,
+    // which is only exploitable when Apache Tomcat is present in the project as well.
+    //   vulns.exists(v, v.id == "CVE-123)
+    //     && project.depends_on(org.hyades.policy.v1.Component{"name": "tomcat-embed-core"})
+
+    // Raise a violation when the component is SnakeYAML, affected by CVE-2022-1471,
+    // and introduced to the project as a dependency of Spring Framework.
+    //   vulns.exists(v, v.id == "CVE-2022-1471")
+    //     && component.purl.startsWith("pkg:maven/org.snakeyaml/snakeyaml")
+    //     && component.is_dependency_of(org.hyades.policy.v1.Component{"group": "org.springframework"})
+
+    // Raise a violation when the component is affected by CVE-2022-229665,
+    // and the project was packaged as WAR:
+    //   vulns.exists(v, v.id == "CVE-2022-229665") && project.purl.contains("type=war")
+
     @Test
     public void test() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
@@ -241,6 +256,82 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         final var componentB = new Component();
         componentB.setProject(project);
         componentB.setName("baz");
+        qm.persist(componentB);
+
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+        qm.persist(project);
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+
+        policyEngine.evaluateComponent(componentA.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+
+        policyEngine.evaluateComponent(componentB.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
+    public void testProjectDependsOnComponent() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
+                        """);
+
+        final var project = new Project();
+        project.setName("foo");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("bar");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("baz");
+        qm.persist(componentB);
+
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+        qm.persist(project);
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+
+        policyEngine.evaluateComponent(componentA.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+
+        policyEngine.evaluateComponent(componentB.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
+
+    @Test
+    public void testMatchesRange() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        project.matches_range("vers:generic/<1")
+                            && component.matches_range("vers:golang/>0|<v2.0.0")
+                        """);
+
+        final var project = new Project();
+        project.setName("foo");
+        project.setVersion("0.1");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("bar");
+        componentA.setVersion("v1.9.3");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("baz");
+        componentB.setVersion("v2.0.0");
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));

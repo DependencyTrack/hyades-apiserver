@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package org.dependencytrack.policy.v1;
+package org.hyades.policy.v1;
 
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.policy.v1";
+option java_package = "org.hyades.proto.policy.v1";
 
 message Component {
 

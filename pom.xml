@@ -103,6 +103,7 @@
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
         <lib.snappy-java.version>1.1.10.1</lib.snappy-java.version>
+        <lib.versatile.version>0.2.0</lib.versatile.version>
         <lib.woodstox.version>6.4.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.9</lib.log4j-over-slf4j.version>
@@ -365,6 +366,11 @@
             <groupId>com.fasterxml.woodstox</groupId>
             <artifactId>woodstox-core</artifactId>
             <version>${lib.woodstox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.nscuro</groupId>
+            <artifactId>versatile</artifactId>
+            <version>${lib.versatile.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
