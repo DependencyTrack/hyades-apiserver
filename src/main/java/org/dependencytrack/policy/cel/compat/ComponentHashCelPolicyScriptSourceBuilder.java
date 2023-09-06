@@ -1,0 +1,43 @@
+package org.dependencytrack.policy.cel.compat;
+
+import alpine.common.logging.Logger;
+import org.cyclonedx.model.Hash;
+import org.dependencytrack.model.PolicyCondition;
+import org.json.JSONObject;
+
+import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+
+public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
+
+    private static final Logger LOGGER = Logger.getLogger(ComponentHashCelPolicyScriptSourceBuilder.class);
+
+    @Override
+    public String apply(final PolicyCondition policyCondition) {
+        final Hash hash = extractHashValues(policyCondition);
+        if (hash == null) {
+            return null;
+        }
+
+        final String fieldName = hash.getAlgorithm().toLowerCase().replaceAll("-", "_");
+        if (org.dependencytrack.proto.policy.v1.Component.getDescriptor().findFieldByName(fieldName) == null) {
+            LOGGER.warn("Component does not have a field named %s".formatted(fieldName));
+            return null;
+        }
+
+        return """
+                component.%s == "%s"
+                """.formatted(fieldName, escapeJson(hash.getValue()));
+    }
+
+    private static Hash extractHashValues(PolicyCondition condition) {
+        if (condition.getValue() == null) {
+            return null;
+        }
+        final JSONObject def = new JSONObject(condition.getValue());
+        return new Hash(
+                def.optString("algorithm", null),
+                def.optString("value", null)
+        );
+    }
+
+}

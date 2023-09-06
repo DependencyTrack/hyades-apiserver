@@ -213,6 +213,7 @@ public class PolicyEngine {
             case AGE, COORDINATES, PACKAGE_URL, CPE, SWID_TAGID, COMPONENT_HASH, VERSION ->
                     PolicyViolation.Type.OPERATIONAL;
             case LICENSE, LICENSE_GROUP -> PolicyViolation.Type.LICENSE;
+            case EXPRESSION -> null; // TODO: Just here to satisfy the switch exhaustiveness
         };
     }
 
