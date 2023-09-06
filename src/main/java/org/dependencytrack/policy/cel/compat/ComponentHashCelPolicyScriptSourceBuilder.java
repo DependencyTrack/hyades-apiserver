@@ -19,7 +19,7 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
         }
 
         final String fieldName = hash.getAlgorithm().toLowerCase().replaceAll("-", "_");
-        if (org.dependencytrack.proto.policy.v1.Component.getDescriptor().findFieldByName(fieldName) == null) {
+        if (org.hyades.proto.policy.v1.Component.getDescriptor().findFieldByName(fieldName) == null) {
             LOGGER.warn("Component does not have a field named %s".formatted(fieldName));
             return null;
         }
