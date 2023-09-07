@@ -32,6 +32,8 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.cel.CelPolicyScriptHost;
+import org.projectnessie.cel.tools.ScriptCreateException;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -79,8 +81,24 @@ public class PolicyConditionResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Policy policy = qm.getObjectByUuid(Policy.class, uuid);
             if (policy != null) {
+                if (jsonPolicyCondition.getSubject() == PolicyCondition.Subject.EXPRESSION) {
+                    try {
+                        CelPolicyScriptHost.getInstance().compile(jsonPolicyCondition.getValue());
+                    } catch (ScriptCreateException e) {
+                        // TODO: Bring this in a format that is digestible by the frontend.
+                        //   It'd be great if we could give visual hints to users as to *where*
+                        //   in their script the errors were found. The exception provides that info.
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The provided CEL expression is invalid: %s".formatted(e.getMessage())).build();
+                    }
+
+                    if (jsonPolicyCondition.getViolationType() == null) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Expression conditions must define a violation type").build();
+                    }
+                }
+
                 final PolicyCondition pc = qm.createPolicyCondition(policy, jsonPolicyCondition.getSubject(),
-                        jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()));
+                        jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()),
+                        jsonPolicyCondition.getViolationType());
                 return Response.status(Response.Status.CREATED).entity(pc).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
@@ -110,6 +128,21 @@ public class PolicyConditionResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, jsonPolicyCondition.getUuid());
             if (pc != null) {
+                if (jsonPolicyCondition.getSubject() == PolicyCondition.Subject.EXPRESSION) {
+                    try {
+                        CelPolicyScriptHost.getInstance().compile(jsonPolicyCondition.getValue());
+                    } catch (ScriptCreateException e) {
+                        // TODO: Bring this in a format that is digestible by the frontend.
+                        //   It'd be great if we could give visual hints to users as to *where*
+                        //   in their script the errors were found. The exception provides that info.
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The provided CEL expression is invalid: %s".formatted(e.getMessage())).build();
+                    }
+
+                    if (jsonPolicyCondition.getViolationType() == null) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Expression conditions must define a violation type").build();
+                    }
+                }
+
                 pc = qm.updatePolicyCondition(jsonPolicyCondition);
                 return Response.status(Response.Status.CREATED).entity(pc).build();
             } else {
