@@ -31,6 +31,7 @@ import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuil
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
+import org.dependencytrack.util.VulnerabilityUtil;
 import org.hyades.proto.policy.v1.License;
 import org.hyades.proto.policy.v1.Vulnerability;
 import org.projectnessie.cel.tools.ScriptCreateException;
@@ -534,13 +535,24 @@ public class CelPolicyEngine {
                     Optional.ofNullable(v.getCreated()).map(Timestamps::fromDate).ifPresent(builder::setCreated);
                     Optional.ofNullable(v.getPublished()).map(Timestamps::fromDate).ifPresent(builder::setPublished);
                     Optional.ofNullable(v.getUpdated()).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
+
+                    if (requirements.contains(Requirement.VULNERABILITY_ALIASES)) {
+                        // TODO: Dirty hack, create a proper solution. Likely needs caching, too.
+                        final var tmpVuln = new org.dependencytrack.model.Vulnerability();
+                        tmpVuln.setVulnId(builder.getId());
+                        tmpVuln.setSource(builder.getSource());
+                        tmpVuln.setAliases(qm.getVulnerabilityAliases(tmpVuln));
+                        VulnerabilityUtil.getUniqueAliases(tmpVuln).stream()
+                                .map(alias -> Vulnerability.Alias.newBuilder()
+                                        .setId(alias.getKey().name())
+                                        .setSource(alias.getValue())
+                                        .build())
+                                .forEach(builder::addAliases);
+                    }
+
                     return builder;
                 })
                 .toList();
-
-        if (requirements.contains(Requirement.VULNERABILITY_ALIASES)) {
-            // TODO: Fetch aliases
-        }
 
         return vulnBuilders.stream()
                 .map(Vulnerability.Builder::build)
