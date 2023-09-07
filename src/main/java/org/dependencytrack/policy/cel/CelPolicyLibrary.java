@@ -1,5 +1,6 @@
 package org.dependencytrack.policy.cel;
 
+import alpine.common.logging.Logger;
 import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
@@ -18,6 +19,10 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
 import javax.jdo.Query;
+import javax.jdo.datastore.JDOConnection;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +30,8 @@ import java.util.Map;
 import java.util.UUID;
 
 public class CelPolicyLibrary implements Library {
+
+    private static final Logger LOGGER = Logger.getLogger(CelPolicyLibrary.class);
 
     static final String VAR_COMPONENT = "component";
     static final String VAR_PROJECT = "project";
@@ -215,7 +222,99 @@ public class CelPolicyLibrary implements Library {
             return false;
         }
 
-        // TODO
+        final var filters = new ArrayList<String>();
+        final var params = new HashMap<Integer, Object>();
+        var paramPosition = 1;
+        if (!rootComponent.getUuid().isBlank()) {
+            filters.add("\"C\".\"UUID\" = ?");
+            params.put(paramPosition++, rootComponent.getUuid());
+        }
+        if (!rootComponent.getGroup().isBlank()) {
+            filters.add("\"C\".\"GROUP\" = ?");
+            params.put(paramPosition++, rootComponent.getGroup());
+        }
+        if (!rootComponent.getName().isBlank()) {
+            filters.add("\"C\".\"NAME\" = ?");
+            params.put(paramPosition++, rootComponent.getName());
+        }
+        if (!rootComponent.getVersion().isBlank()) {
+            filters.add("\"C\".\"VERSION\" = ?");
+            params.put(paramPosition++, rootComponent.getVersion());
+        }
+        if (!rootComponent.getPurl().isBlank()) {
+            filters.add("\"C\".\"PURL\" = ?");
+            params.put(paramPosition++, rootComponent.getPurl());
+        }
+
+        if (filters.isEmpty()) {
+            return false;
+        }
+
+        final String sqlFilter = String.join(" AND ", filters);
+
+        final var query = """
+                WITH RECURSIVE
+                "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "COMPONENTS_SEEN") AS (
+                  SELECT
+                    "C"."UUID",
+                    "C"."PROJECT_ID",
+                    CASE WHEN (%s) THEN TRUE ELSE FALSE END AS "FOUND",
+                    ARRAY []::BIGINT[] AS "COMPONENTS_SEEN"
+                  FROM
+                    "COMPONENT" AS "C"
+                    WHERE
+                      -- TODO: Need to get project ID from somewhere to speed up
+                      --   this initial query for the CTE.
+                      -- "PROJECT_ID" = ?
+                        "C"."DIRECT_DEPENDENCIES" IS NOT NULL
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ?
+                  UNION ALL
+                  SELECT
+                    "C"."UUID"       AS "UUID",
+                    "C"."PROJECT_ID" AS "PROJECT_ID",
+                    CASE WHEN (%s) THEN TRUE ELSE FALSE END AS "FOUND",
+                    ARRAY_APPEND("COMPONENTS_SEEN", "C"."ID")
+                  FROM
+                    "COMPONENT" AS "C"
+                  INNER JOIN
+                    "CTE_DEPENDENCIES"
+                      ON "C"."PROJECT_ID" = "CTE_DEPENDENCIES"."PROJECT_ID"
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%%"' || "CTE_DEPENDENCIES"."UUID" || '"%%')
+                  WHERE
+                    "C"."PROJECT_ID" = "CTE_DEPENDENCIES"."PROJECT_ID"
+                    AND (
+                      "FOUND" OR ("C"."DIRECT_DEPENDENCIES" IS NOT NULL AND "C"."ID" != ANY ("COMPONENTS_SEEN"))
+                    )
+                )
+                SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
+                """.formatted(sqlFilter, sqlFilter);
+
+        try (final var qm = new QueryManager()) {
+            final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
+            try {
+                final var connection = (Connection) jdoConnection.getNativeConnection();
+                final var preparedStatement = connection.prepareStatement(query);
+                // Params need to be set twice because the rootComponent filter
+                // appears twice in the query... This needs improvement.
+                for (final Map.Entry<Integer, Object> param : params.entrySet()) {
+                    preparedStatement.setObject(param.getKey(), param.getValue());
+                }
+                preparedStatement.setString(params.size() + 1, "%" + leafComponent.getUuid() + "%");
+                for (final Map.Entry<Integer, Object> param : params.entrySet()) {
+                    preparedStatement.setObject((params.size() + 1) + param.getKey(), param.getValue());
+                }
+
+                try (final ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getBoolean(1);
+                    }
+                }
+            } catch (SQLException e) {
+                LOGGER.warn("Failed to execute query", e);
+            } finally {
+                jdoConnection.close();
+            }
+        }
 
         return false;
     }
