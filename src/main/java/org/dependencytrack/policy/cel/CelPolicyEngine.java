@@ -52,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
@@ -99,7 +100,7 @@ public class CelPolicyEngine {
                 query.setParameters(projectUuid);
                 query.setResult("uuid");
                 try {
-                    componentUuids = query.executeResultList(UUID.class);
+                    componentUuids = List.copyOf(query.executeResultList(UUID.class));
                 } finally {
                     query.closeAll();
                 }
@@ -135,6 +136,7 @@ public class CelPolicyEngine {
             if (policies.isEmpty()) {
                 // With no applicable policies, there's no way to resolve violations.
                 // As a compensation, simply delete all violations associated with the component.
+                LOGGER.info("No applicable policies found for component %s".formatted(componentUuid));
                 reconcileViolations(qm, component, Collections.emptyList());
                 return;
             }
@@ -143,7 +145,7 @@ public class CelPolicyEngine {
             // Compiled scripts are cached in-memory by CelPolicyScriptHost, so if the same script
             // is encountered for multiple components (possibly concurrently), the compilation is
             // a one-time effort.
-            LOGGER.debug("Compiling policy scripts for component %s".formatted(componentUuid));
+            LOGGER.info("Compiling policy scripts for component %s".formatted(componentUuid));
             final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
                     .map(Policy::getPolicyConditions)
                     .flatMap(Collection::stream)
@@ -183,7 +185,7 @@ public class CelPolicyEngine {
             //
             // What we want to avoid is loading data we don't need, and loading it multiple times.
             // Instead, only load what's really needed, and only do so once.
-            LOGGER.debug("Determining evaluation requirements for component %s and %d policy conditions"
+            LOGGER.info("Determining evaluation requirements for component %s and %d policy conditions"
                     .formatted(componentUuid, conditionScriptPairs.size()));
             final Set<Requirement> requirements = conditionScriptPairs.stream()
                     .map(Pair::getRight)
@@ -192,7 +194,7 @@ public class CelPolicyEngine {
                     .collect(Collectors.toSet());
 
             // Prepare the script arguments according to the requirements gathered before.
-            LOGGER.debug("Building script arguments for component %s and requirements %s"
+            LOGGER.info("Building script arguments for component %s and requirements %s"
                     .formatted(componentUuid, requirements));
             final Map<String, Object> scriptArgs = Map.of(
                     VAR_COMPONENT, mapComponent(qm, component, requirements),
@@ -200,13 +202,13 @@ public class CelPolicyEngine {
                     VAR_VULNERABILITIES, loadVulnerabilities(qm, component, requirements)
             );
 
-            LOGGER.debug("Evaluating component %s against %d applicable policy conditions"
+            LOGGER.info("Evaluating component %s against %d applicable policy conditions"
                     .formatted(componentUuid, conditionScriptPairs.size()));
             final var conditionsViolated = new HashSet<PolicyCondition>();
             for (final Pair<PolicyCondition, CelPolicyScript> conditionScriptPair : conditionScriptPairs) {
                 final PolicyCondition condition = conditionScriptPair.getLeft();
                 final CelPolicyScript script = conditionScriptPair.getRight();
-                LOGGER.debug("Executing script for policy condition %s with arguments: %s"
+                LOGGER.info("Executing script for policy condition %s with arguments: %s"
                         .formatted(condition.getUuid(), scriptArgs));
 
                 try {
@@ -220,7 +222,7 @@ public class CelPolicyEngine {
 
             // Group the detected condition violations by policy. Necessary to be able to evaluate
             // each policy's operator (ANY, ALL).
-            LOGGER.debug("Detected violation of %d policy conditions for component %s; Evaluating policy operators"
+            LOGGER.info("Detected violation of %d policy conditions for component %s; Evaluating policy operators"
                     .formatted(conditionsViolated.size(), componentUuid));
             final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.stream()
                     .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
@@ -229,23 +231,30 @@ public class CelPolicyEngine {
             // match the configured policy operator. When the operator is ALL, and not all conditions
             // of the policy were violated, we don't want to create any violations.
             final List<PolicyViolation> violations = violatedConditionsByPolicy.entrySet().stream()
-                    .map(policyAndViolatedConditions -> {
+                    .flatMap(policyAndViolatedConditions -> {
                         final Policy policy = policyAndViolatedConditions.getKey();
                         final List<PolicyCondition> violatedConditions = policyAndViolatedConditions.getValue();
 
                         if ((policy.getOperator() == Policy.Operator.ANY && !violatedConditions.isEmpty())
                                 || (policy.getOperator() == Policy.Operator.ALL && violatedConditions.size() == policy.getPolicyConditions().size())) {
-                            final var violation = new PolicyViolation();
-                            violation.setProject(component.getProject());
-                            violation.setComponent(component);
-                            violation.setPolicy(policy);
-                            violation.setType(PolicyViolation.Type.OPERATIONAL); // TODO: We need violationType at policy level
-                            violation.setMatchedConditions(violatedConditions);
-                            violation.setTimestamp(new Date());
-                            return violation;
+                            // TODO: Only a single violation should be raised, and instead multiple matched conditions
+                            //   should be associated with it. Keeping the existing behavior in order to avoid having to
+                            //   touch too much persistence and REST API code.
+                            return violatedConditions.stream()
+                                    .map(condition -> {
+                                        final var violation = new PolicyViolation();
+                                        violation.setProject(component.getProject());
+                                        violation.setComponent(component);
+                                        violation.setPolicy(policy);
+                                        violation.setType(condition.getViolationType()); // TODO: We need violationType at policy level
+                                        violation.setPolicyCondition(condition);
+                                        // violation.setMatchedConditions(violatedConditions);
+                                        violation.setTimestamp(new Date());
+                                        return violation;
+                                    });
                         }
 
-                        return null;
+                        return Stream.empty();
                     })
                     .filter(Objects::nonNull)
                     .toList();
@@ -266,7 +275,7 @@ public class CelPolicyEngine {
                     .register(Metrics.getRegistry()));
         }
 
-        LOGGER.debug("Policy evaluation completed for component %s".formatted(componentUuid));
+        LOGGER.info("Policy evaluation completed for component %s".formatted(componentUuid));
     }
 
     // TODO: Move to PolicyQueryManager
@@ -358,8 +367,8 @@ public class CelPolicyEngine {
     }
 
     private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
-                                                                              final Component component,
-                                                                              final Set<Requirement> requirements) {
+                                                                     final Component component,
+                                                                     final Set<Requirement> requirements) {
         final org.hyades.proto.policy.v1.Component.Builder builder =
                 org.hyades.proto.policy.v1.Component.newBuilder()
                         .setUuid(Optional.ofNullable(component.getUuid()).map(UUID::toString).orElse(""))
@@ -431,7 +440,7 @@ public class CelPolicyEngine {
     }
 
     private static org.hyades.proto.policy.v1.Project mapProject(final Project project,
-                                                                          final Set<Requirement> requirements) {
+                                                                 final Set<Requirement> requirements) {
         if (!requirements.contains(Requirement.PROJECT)) {
             return org.hyades.proto.policy.v1.Project.newBuilder().build();
         }

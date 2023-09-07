@@ -185,11 +185,22 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
      */
     public PolicyCondition createPolicyCondition(final Policy policy, final PolicyCondition.Subject subject,
                                                  final PolicyCondition.Operator operator, final String value) {
+        return createPolicyCondition(policy, subject, operator, value, null);
+    }
+
+    /**
+     * Creates a policy condition for the specified Project.
+     * @return the created PolicyCondition object
+     */
+    public PolicyCondition createPolicyCondition(final Policy policy, final PolicyCondition.Subject subject,
+                                                 final PolicyCondition.Operator operator, final String value,
+                                                 final PolicyViolation.Type violationType) {
         final PolicyCondition pc = new PolicyCondition();
         pc.setPolicy(policy);
         pc.setSubject(subject);
         pc.setOperator(operator);
         pc.setValue(value);
+        pc.setViolationType(violationType);
         return persist(pc);
     }
 
@@ -202,6 +213,7 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         pc.setSubject(policyCondition.getSubject());
         pc.setOperator(policyCondition.getOperator());
         pc.setValue(policyCondition.getValue());
+        pc.setViolationType(policyCondition.getViolationType());
         return persist(pc);
     }
 
