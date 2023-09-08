@@ -211,7 +211,11 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
     public PolicyCondition updatePolicyCondition(final PolicyCondition policyCondition) {
         final PolicyCondition pc = getObjectByUuid(PolicyCondition.class, policyCondition.getUuid());
         pc.setSubject(policyCondition.getSubject());
-        pc.setOperator(policyCondition.getOperator());
+        if (policyCondition.getSubject() == PolicyCondition.Subject.EXPRESSION) {
+            pc.setOperator(PolicyCondition.Operator.MATCHES);
+        } else {
+            pc.setOperator(policyCondition.getOperator());
+        }
         pc.setValue(policyCondition.getValue());
         pc.setViolationType(policyCondition.getViolationType());
         return persist(pc);
