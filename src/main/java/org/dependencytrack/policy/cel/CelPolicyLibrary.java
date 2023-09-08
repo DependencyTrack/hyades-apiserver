@@ -283,7 +283,7 @@ public class CelPolicyLibrary implements Library {
                   WHERE
                     "C"."PROJECT_ID" = "CTE_DEPENDENCIES"."PROJECT_ID"
                     AND (
-                      "FOUND" OR ("C"."DIRECT_DEPENDENCIES" IS NOT NULL AND "C"."ID" != ANY ("COMPONENTS_SEEN"))
+                      "FOUND" OR "C"."DIRECT_DEPENDENCIES" IS NOT NULL
                     )
                 )
                 SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";

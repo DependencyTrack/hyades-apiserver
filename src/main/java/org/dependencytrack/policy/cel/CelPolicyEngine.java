@@ -23,6 +23,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScript.Requirement;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CpeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CweCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.LicenseCelPolicyScriptSourceBuilder;
@@ -64,18 +65,22 @@ public class CelPolicyEngine {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyEngine.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS = Map.of(
-            Subject.CPE, new CpeCelPolicyScriptSourceBuilder(),
-            Subject.COMPONENT_HASH, new ComponentHashCelPolicyScriptSourceBuilder(),
-            Subject.CWE, new CweCelPolicyScriptSourceBuilder(),
-            Subject.EXPRESSION, PolicyCondition::getValue,
-            Subject.LICENSE, new LicenseCelPolicyScriptSourceBuilder(),
-            Subject.LICENSE_GROUP, new LicenseGroupCelPolicyScriptSourceBuilder(),
-            Subject.PACKAGE_URL, new PackageUrlCelPolicyScriptSourceBuilder(),
-            Subject.SEVERITY, new SeverityCelPolicyScriptSourceBuilder(),
-            Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder(),
-            Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder()
-    );
+    private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS;
+
+    static {
+        SCRIPT_BUILDERS = new HashMap<>();
+        SCRIPT_BUILDERS.put(Subject.CPE, new CpeCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.COMPONENT_HASH, new ComponentHashCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.COORDINATES, new CoordinatesCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.CWE, new CweCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.EXPRESSION, PolicyCondition::getValue);
+        SCRIPT_BUILDERS.put(Subject.LICENSE, new LicenseCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.LICENSE_GROUP, new LicenseGroupCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.PACKAGE_URL, new PackageUrlCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.SEVERITY, new SeverityCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
+    }
 
     private final CelPolicyScriptHost scriptHost;
 
