@@ -703,7 +703,7 @@ public class BomUploadProcessingTask implements Subscriber {
         pm.makePersistent(bom);
 
         project.setLastBomImport(bomImportDate);
-        project.setLastBomImportFormat(ctx.bomFormat.getFormatShortName());
+        project.setLastBomImportFormat("%s %s".formatted(ctx.bomFormat.getFormatShortName(), ctx.bomSpecVersion));
     }
 
     private static String resolveDirectDependenciesJson(final Context ctx,
