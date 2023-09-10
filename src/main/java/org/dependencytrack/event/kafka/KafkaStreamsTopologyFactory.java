@@ -21,6 +21,7 @@ import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
+import org.dependencytrack.event.kafka.processor.BufferingVulnerabilityScanResultProcessorSupplier;
 import org.dependencytrack.event.kafka.processor.DelayedBomProcessedNotificationProcessor;
 import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
@@ -35,6 +36,7 @@ import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.hyades.proto.vulnanalysis.v1.ScanKey;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Properties;
@@ -97,9 +99,20 @@ class KafkaStreamsTopologyFactory {
                 .repartition(Repartitioned
                         .with(Serdes.String(), KafkaTopics.VULN_ANALYSIS_RESULT.valueSerde())
                         .withName("processed-vuln-scan-result-by-scan-token"))
-                .mapValues((scanToken, scanResult) -> {
+                // Avoid performing (too) many UPDATE transactions in the database by extracting the information
+                // we need from `ScanResult`s, and buffering that data in an in-memory state store before flushing
+                // it to the DB. When a project with 10'000 components was scanned, buffering results here
+                // can potentially reduce the number of database transaction from 10'000 to just a hand full.
+                // Both in-memory and RocksDB state stores are much better at handling lots of frequent writes
+                // than a RDBMS like PostgreSQL.
+                //
+                // This increases latency slightly, but offers much better throughput, while also putting less stress on the DB.
+                // TODO: Make flush interval configurable
+                .processValues(new BufferingVulnerabilityScanResultProcessorSupplier("processed-vuln-scan-results-buffer-store", Duration.ofSeconds(3)),
+                        Named.as("buffer_processed_vuln_scan_results"))
+                .mapValues((scanToken, bufferedScanResults) -> {
                     try (final var qm = new QueryManager()) {
-                        return qm.recordVulnerabilityScanResult(scanToken, scanResult);
+                        return qm.recordVulnerabilityScanResults(scanToken, bufferedScanResults);
                     }
                 }, Named.as("record_processed_vuln_scan_result"))
                 .filter((scanToken, vulnScan) -> vulnScan != null,

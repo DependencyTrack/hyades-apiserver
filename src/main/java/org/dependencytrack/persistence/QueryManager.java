@@ -80,9 +80,9 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.hyades.proto.vulnanalysis.internal.v1.BufferedScanResults;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
-import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -103,8 +103,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -1503,34 +1501,28 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Record the successful processing of a {@link ScanResult} event for a given {@link VulnerabilityScan}.
+     * Record the given {@link BufferedScanResults} for a {@link VulnerabilityScan}.
      *
-     * @param scanToken  The token that uniquely identifies the scan for clients
-     * @param scanResult The {@link ScanResult} to record
+     * @param scanToken           The token that uniquely identifies the scan for clients
+     * @param bufferedScanResults The {@link BufferedScanResults} to record
      * @return The {@link VulnerabilityScan} when its status transitioned to {@link VulnerabilityScan.Status#COMPLETED}
      * as a result of recording the given {@link ScanResult}, otherwise {@code null}
      */
-    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, final ScanResult scanResult) {
-        final int totalScannerResults = scanResult.getScannerResultsCount();
-        final int failedScannerResults = Math.toIntExact(scanResult.getScannerResultsList().stream()
-                .map(ScannerResult::getStatus)
-                .filter(SCAN_STATUS_FAILED::equals)
-                .count());
-
-        // Because this method will be called VERY frequently (once for each processed ScanResult),
-        // use raw SQL instead of any ORM abstractions. All we need to do is to increment some counters.
-        // Using a single SQL statement also removes the need for (optimistic) locking.
+    public VulnerabilityScan recordVulnerabilityScanResults(final String scanToken, final BufferedScanResults bufferedScanResults) {
+        // Because this method will be called VERY frequently, use raw SQL instead of any ORM abstractions.
+        // All we need to do is to increment some counters. Using a single SQL statement also removes the need
+        // for (optimistic) locking.
         final JDOConnection jdoConnection = pm.getDataStoreConnection();
         final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
         try (final PreparedStatement ps = nativeConnection.prepareStatement("""
                 WITH "RES" AS (
                   UPDATE "VULNERABILITYSCAN"
                   SET
-                    "RECEIVED_RESULTS" = "RECEIVED_RESULTS" + 1,
+                    "RECEIVED_RESULTS" = "RECEIVED_RESULTS" + ?,
                     "SCAN_TOTAL" = "SCAN_TOTAL" + ?,
                     "SCAN_FAILED" = "SCAN_FAILED" + ?,
                     "STATUS" = (
-                      CASE WHEN "EXPECTED_RESULTS" = ("RECEIVED_RESULTS" + 1)
+                      CASE WHEN "EXPECTED_RESULTS" = ("RECEIVED_RESULTS" + ?)
                       THEN 'COMPLETED'
                       ELSE 'IN_PROGRESS'
                       END
@@ -1552,9 +1544,11 @@ public class QueryManager extends AlpineQueryManager {
                   -- record is not in the desired final state yet.
                   "STATUS" = 'COMPLETED'
                 """)) {
-            ps.setInt(1, totalScannerResults);
-            ps.setInt(2, failedScannerResults);
-            ps.setString(3, scanToken);
+            ps.setInt(1, bufferedScanResults.getResultsTotal());
+            ps.setInt(2, bufferedScanResults.getScannerResultsTotal());
+            ps.setInt(3, bufferedScanResults.getScannerResultsFailed());
+            ps.setInt(4, bufferedScanResults.getResultsTotal());
+            ps.setString(5, scanToken);
 
             final ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -1571,8 +1565,11 @@ public class QueryManager extends AlpineQueryManager {
             }
         } catch (SQLException e) {
             throw new RuntimeException("""
-                    Failed to record successful processing of scan result (token=%s, component=%s)\
-                    """.formatted(scanToken, scanResult.getKey().getComponentUuid()), e);
+                    Failed to record buffered scan results (token=%s, resultsTotal=%d, scannerResultsTotal=%d,
+                    scannerResultsFailed=%d)"""
+                    .formatted(scanToken, bufferedScanResults.getResultsTotal(),
+                            bufferedScanResults.getScannerResultsTotal(),
+                            bufferedScanResults.getScannerResultsFailed()), e);
         } finally {
             jdoConnection.close();
         }

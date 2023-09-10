@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package org.hyades.vulnanalysis.internal.v1;
+
+option java_multiple_files = true;
+option java_package = "org.hyades.proto.vulnanalysis.internal.v1";
+
+message BufferedScanResults {
+  // Total number of ScanResults received since the last flush.
+  int32 results_total = 1;
+
+  // Total number of ScannerResults among all received ScanResults.
+  // Will be used to evaluate the failure threshold later.
+  int32 scanner_results_total = 2;
+
+  // Number of failed ScannerResults among all received ScanResults.
+  // Will be used to evaluate the failure threshold later.
+  int32 scanner_results_failed = 3;
+}
