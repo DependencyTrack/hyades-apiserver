@@ -16,14 +16,22 @@ import org.projectnessie.cel.Env;
 import org.projectnessie.cel.Env.AstIssuesTuple;
 import org.projectnessie.cel.Library;
 import org.projectnessie.cel.Program;
+import org.projectnessie.cel.common.CELError;
+import org.projectnessie.cel.common.Errors;
+import org.projectnessie.cel.common.Location;
+import org.projectnessie.cel.common.types.Err.ErrException;
 import org.projectnessie.cel.common.types.pb.ProtoTypeRegistry;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
+
+import static org.projectnessie.cel.Issues.newIssues;
+import static org.projectnessie.cel.common.Source.newTextSource;
 
 public class CelPolicyScriptHost {
 
@@ -75,7 +83,16 @@ public class CelPolicyScriptHost {
                 throw new ScriptCreateException("Failed to parse script", astIssuesTuple.getIssues());
             }
 
-            astIssuesTuple = environment.check(astIssuesTuple.getAst());
+            try {
+                astIssuesTuple = environment.check(astIssuesTuple.getAst());
+            } catch (ErrException e) {
+                // TODO: Bring error message in a more digestible form.
+                throw new ScriptCreateException("Failed to check script", newIssues(new Errors(newTextSource(scriptSrc))
+                        .append(Collections.singletonList(
+                                new CELError(e, Location.newLocation(1, 1), e.getMessage())
+                        ))
+                ));
+            }
             if (astIssuesTuple.hasIssues()) {
                 throw new ScriptCreateException("Failed to check script", astIssuesTuple.getIssues());
             }
