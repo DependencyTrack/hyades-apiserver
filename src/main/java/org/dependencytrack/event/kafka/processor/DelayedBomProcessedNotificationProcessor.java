@@ -65,7 +65,7 @@ public class DelayedBomProcessedNotificationProcessor extends ContextualProcesso
                 // BOM format and spec version are hardcoded because we don't have this information at this point.
                 // DT currently only accepts CycloneDX anyway.
                 .content("A %s BOM was processed".formatted(Bom.Format.CYCLONEDX.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(project, /* bom */ "(Omitted)", Bom.Format.CYCLONEDX, "Unknown"));
+                .subject(new BomConsumedOrProcessed(UUID.fromString(vulnScan.getToken()), project, /* bom */ "(Omitted)", Bom.Format.CYCLONEDX, "Unknown"));
 
         context().forward(record.withKey(project.getUuid().toString()).withValue(convert(alpineNotification)));
         LOGGER.info("Dispatched delayed %s notification (token=%s, project=%s)"

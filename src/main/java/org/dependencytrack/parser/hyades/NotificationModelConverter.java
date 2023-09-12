@@ -235,6 +235,7 @@ public final class NotificationModelConverter {
                 .build();
 
         return BomConsumedOrProcessedSubject.newBuilder()
+                .setToken(subject.getToken().toString())
                 .setProject(convert(subject.getProject()))
                 .setBom(bom)
                 .build();
@@ -248,6 +249,7 @@ public final class NotificationModelConverter {
         Optional.ofNullable(subject.getSpecVersion()).ifPresent(bomBuilder::setSpecVersion);
 
         final BomProcessingFailedSubject.Builder builder = BomProcessingFailedSubject.newBuilder()
+                .setToken(subject.getToken().toString())
                 .setProject(convert(subject.getProject()))
                 .setBom(bomBuilder.build());
 
@@ -316,6 +318,7 @@ public final class NotificationModelConverter {
 
     private static ProjectVulnAnalysisCompleteSubject convert(ProjectVulnAnalysisComplete notification) {
         ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
+        builder.setToken(notification.getToken().toString());
         builder.setProject(convert(notification.getProject()));
         List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
         builder.addAllFindings(componentAnalysisCompleteSubjects);

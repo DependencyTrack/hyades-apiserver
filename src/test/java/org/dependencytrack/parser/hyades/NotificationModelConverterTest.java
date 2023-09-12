@@ -335,14 +335,14 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
     @Test
     public void testConvertBomConsumedNotification() throws Exception {
         final org.dependencytrack.model.Project project = createProject();
-
+        final var token = UUID.randomUUID();
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
         alpineNotification.setLevel(NotificationLevel.INFORMATIONAL);
         alpineNotification.setGroup(NotificationGroup.BOM_CONSUMED.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new BomConsumedOrProcessed(project, "bom", Bom.Format.CYCLONEDX, "1.4"));
+        alpineNotification.setSubject(new BomConsumedOrProcessed(token, project, "bom", Bom.Format.CYCLONEDX, "1.4"));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -356,6 +356,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomConsumedOrProcessedSubject.class);
         assertProject(subject.getProject());
+        assertThat(subject.getToken()).isEqualTo(token.toString());
         assertThat(subject.getBom().getContent()).isEqualTo("bom");
         assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
         assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
@@ -364,14 +365,14 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
     @Test
     public void testConvertBomProcessedNotification() throws Exception {
         final org.dependencytrack.model.Project project = createProject();
-
+        final var token = UUID.randomUUID();
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
         alpineNotification.setLevel(NotificationLevel.INFORMATIONAL);
         alpineNotification.setGroup(NotificationGroup.BOM_PROCESSED.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new BomConsumedOrProcessed(project, "bom", Bom.Format.CYCLONEDX, "1.4"));
+        alpineNotification.setSubject(new BomConsumedOrProcessed(token, project, "bom", Bom.Format.CYCLONEDX, "1.4"));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -385,6 +386,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomConsumedOrProcessedSubject.class);
         assertProject(subject.getProject());
+        assertThat(subject.getToken()).isEqualTo(token.toString());
         assertThat(subject.getBom().getContent()).isEqualTo("bom");
         assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
         assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
@@ -393,14 +395,14 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
     @Test
     public void testConvertBomProcessingFailedNotification() throws Exception {
         final org.dependencytrack.model.Project project = createProject();
-
+        final var token = UUID.randomUUID();
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
         alpineNotification.setLevel(NotificationLevel.ERROR);
         alpineNotification.setGroup(NotificationGroup.BOM_PROCESSING_FAILED.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new BomProcessingFailed(project, "bom", "just because", Bom.Format.CYCLONEDX, "1.4"));
+        alpineNotification.setSubject(new BomProcessingFailed(token, project, "bom", "just because", Bom.Format.CYCLONEDX, "1.4"));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -414,6 +416,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
         assertProject(subject.getProject());
+        assertThat(subject.getToken()).isEqualTo(token.toString());
         assertThat(subject.getBom().getContent()).isEqualTo("bom");
         assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
         assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
@@ -719,6 +722,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
     @Test
     public void testConvertComponentVulnAnalysisCompleteSubject() throws Exception {
+        final var token = UUID.randomUUID();
         final org.dependencytrack.model.Project project = createProject();
         final org.dependencytrack.model.Component component = createComponent(project);
         final org.dependencytrack.model.Vulnerability vulnerability = createVulnerability();
@@ -729,7 +733,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         alpineNotification.setGroup(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
+        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(token, project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -743,6 +747,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
 
         final var subject = notification.getSubject().unpack(ProjectVulnAnalysisCompleteSubject.class);
         assertProject(subject.getProject());
+        assertThat(subject.getToken()).isEqualTo(token.toString());
         assertComponent(subject.getFindingsList().get(0).getComponent());
         assertVulnerability(subject.getFindingsList().get(0).getVulnerabilities(0));
         assertThat(subject.getStatus()).isEqualTo(ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
