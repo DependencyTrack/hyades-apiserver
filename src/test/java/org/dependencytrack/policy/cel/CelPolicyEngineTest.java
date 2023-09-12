@@ -45,19 +45,21 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     @Test
     public void test() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy,
+        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                         "critical" in project.tags
                             && component.name == "bar"
                             && vulns.exists(v, v.source == "SNYK")
                             && component.resolved_license.groups.exists(lg, lg.name == "Permissive")
                         """);
+        policyConditionA.setViolationType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(policyConditionA);
 
         final var policy2 = qm.createPolicy("policy2", Policy.Operator.ALL, Policy.ViolationState.WARN);
         qm.createPolicyCondition(policy2, PolicyCondition.Subject.VULNERABILITY_ID, PolicyCondition.Operator.IS, "CVE-123");
 
         final var policy3 = qm.createPolicy("policy3", Policy.Operator.ALL, Policy.ViolationState.INFO);
-        final PolicyCondition condition3 = qm.createPolicyCondition(policy3, PolicyCondition.Subject.SWID_TAGID, PolicyCondition.Operator.IS, "foo");
+        final PolicyCondition condition3 = qm.createPolicyCondition(policy3, PolicyCondition.Subject.SWID_TAGID, PolicyCondition.Operator.MATCHES, "foo");
 
         final var policy4 = qm.createPolicy("policy4", Policy.Operator.ALL, Policy.ViolationState.INFO);
         qm.createPolicyCondition(policy4, PolicyCondition.Subject.CWE, PolicyCondition.Operator.CONTAINS_ALL, "CWE-666, CWE-123, 555");

@@ -7,8 +7,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.github.packageurl.PackageURL;
+import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.LicenseGroup;
@@ -20,7 +23,6 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.policy.cel.CelPolicyScript.Requirement;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
@@ -57,6 +59,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE_GROUP;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY_ALIAS;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
@@ -193,11 +202,13 @@ public class CelPolicyEngine {
             // Instead, only load what's really needed, and only do so once.
             LOGGER.info("Determining evaluation requirements for component %s and %d policy conditions"
                     .formatted(componentUuid, conditionScriptPairs.size()));
-            final Set<Requirement> requirements = conditionScriptPairs.stream()
+            final MultiValuedMap<Type, String> requirements = conditionScriptPairs.stream()
                     .map(Pair::getRight)
                     .map(CelPolicyScript::getRequirements)
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
+                    .reduce(new HashSetValuedHashMap<>(), (a, b) -> {
+                        a.putAll(b);
+                        return a;
+                    });
 
             // Prepare the script arguments according to the requirements gathered before.
             LOGGER.info("Building script arguments for component %s and requirements %s"
@@ -374,7 +385,8 @@ public class CelPolicyEngine {
 
     private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
                                                                      final Component component,
-                                                                     final Set<Requirement> requirements) {
+                                                                     final MultiValuedMap<Type, String> requirements) {
+        // TODO: Load only required fields
         final org.hyades.proto.policy.v1.Component.Builder builder =
                 org.hyades.proto.policy.v1.Component.newBuilder()
                         .setUuid(Optional.ofNullable(component.getUuid()).map(UUID::toString).orElse(""))
@@ -399,7 +411,8 @@ public class CelPolicyEngine {
                         .setBlake2B512(trimToEmpty(component.getBlake2b_512()))
                         .setBlake3(trimToEmpty(component.getBlake3()));
 
-        if (component.getProject().getDirectDependencies() != null) {
+        if (requirements.get(TYPE_COMPONENT).contains("is_direct_dependency")
+                && component.getProject().getDirectDependencies() != null) {
             try {
                 final ArrayNode dependencyArray = OBJECT_MAPPER.readValue(component.getProject().getDirectDependencies(), ArrayNode.class);
                 for (final JsonNode dependencyNode : dependencyArray) {
@@ -413,7 +426,7 @@ public class CelPolicyEngine {
             }
         }
 
-        if (requirements.contains(Requirement.LICENSE) && component.getResolvedLicense() != null) {
+        if (requirements.containsKey(TYPE_LICENSE) && component.getResolvedLicense() != null) {
             final License.Builder licenseBuilder = License.newBuilder()
                     .setUuid(Optional.ofNullable(component.getResolvedLicense().getUuid()).map(UUID::toString).orElse(""))
                     .setId(trimToEmpty(component.getResolvedLicense().getLicenseId()))
@@ -423,7 +436,8 @@ public class CelPolicyEngine {
                     .setIsDeprecatedId(component.getResolvedLicense().isDeprecatedLicenseId())
                     .setIsCustom(component.getResolvedLicense().isCustomLicense());
 
-            if (requirements.contains(Requirement.LICENSE_GROUPS)) {
+            if (requirements.containsKey(TYPE_LICENSE_GROUP)
+                    || requirements.get(TYPE_LICENSE).contains("groups")) {
                 final Query<LicenseGroup> licenseGroupQuery = qm.getPersistenceManager().newQuery(LicenseGroup.class);
                 licenseGroupQuery.setFilter("licenses.contains(:license)");
                 licenseGroupQuery.setNamedParameters(Map.of("license", component.getResolvedLicense()));
@@ -446,11 +460,12 @@ public class CelPolicyEngine {
     }
 
     private static org.hyades.proto.policy.v1.Project mapProject(final Project project,
-                                                                 final Set<Requirement> requirements) {
-        if (!requirements.contains(Requirement.PROJECT)) {
-            return org.hyades.proto.policy.v1.Project.newBuilder().build();
+                                                                 final MultiValuedMap<Type, String> requirements) {
+        if (!requirements.containsKey(TYPE_PROJECT)) {
+            return org.hyades.proto.policy.v1.Project.getDefaultInstance();
         }
 
+        // TODO: Load only required fields
         final org.hyades.proto.policy.v1.Project.Builder builder =
                 org.hyades.proto.policy.v1.Project.newBuilder()
                         .setUuid(Optional.ofNullable(project.getUuid()).map(UUID::toString).orElse(""))
@@ -462,7 +477,8 @@ public class CelPolicyEngine {
                         .setPurl(Optional.ofNullable(project.getPurl()).map(PackageURL::canonicalize).orElse(""))
                         .setSwidTagId(trimToEmpty(project.getSwidTagId()));
 
-        if (requirements.contains(Requirement.PROJECT_PROPERTIES)) {
+        if (requirements.containsKey(TYPE_PROJECT_PROPERTY)
+                || requirements.get(TYPE_PROJECT).contains("properties")) {
             // TODO
         }
 
@@ -471,11 +487,12 @@ public class CelPolicyEngine {
 
     private static List<Vulnerability> loadVulnerabilities(final QueryManager qm,
                                                            final Component component,
-                                                           final Set<Requirement> requirements) {
-        if (!requirements.contains(Requirement.VULNERABILITIES)) {
+                                                           final MultiValuedMap<Type, String> requirements) {
+        if (!requirements.containsKey(TYPE_VULNERABILITY)) {
             return Collections.emptyList();
         }
 
+        // TODO: Load only required fields
         final Query<org.dependencytrack.model.Vulnerability> query =
                 qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
         query.getFetchPlan().clearGroups();
@@ -515,7 +532,8 @@ public class CelPolicyEngine {
                     Optional.ofNullable(v.getPublished()).map(Timestamps::fromDate).ifPresent(builder::setPublished);
                     Optional.ofNullable(v.getUpdated()).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
 
-                    if (requirements.contains(Requirement.VULNERABILITY_ALIASES)) {
+                    if (requirements.containsKey(TYPE_VULNERABILITY_ALIAS)
+                            || requirements.get(TYPE_VULNERABILITY).contains("aliases")) {
                         // TODO: Dirty hack, create a proper solution. Likely needs caching, too.
                         final var tmpVuln = new org.dependencytrack.model.Vulnerability();
                         tmpVuln.setVulnId(builder.getId());

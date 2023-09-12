@@ -6,10 +6,7 @@ import com.google.api.expr.v1alpha1.CheckedExpr;
 import com.google.api.expr.v1alpha1.Type;
 import com.google.common.util.concurrent.Striped;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.dependencytrack.policy.cel.CelPolicyScript.Requirement;
-import org.hyades.proto.policy.v1.License;
-import org.hyades.proto.policy.v1.Project;
-import org.hyades.proto.policy.v1.Vulnerability;
+import org.apache.commons.collections4.MultiValuedMap;
 import org.projectnessie.cel.Ast;
 import org.projectnessie.cel.CEL;
 import org.projectnessie.cel.Env;
@@ -24,11 +21,8 @@ import org.projectnessie.cel.common.types.pb.ProtoTypeRegistry;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.locks.Lock;
-import java.util.stream.Collectors;
 
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
@@ -99,7 +93,7 @@ public class CelPolicyScriptHost {
 
             final Ast ast = astIssuesTuple.getAst();
             final Program program = environment.program(ast);
-            final Set<Requirement> requirements = analyzeRequirements(CEL.astToCheckedExpr(ast));
+            final MultiValuedMap<Type, String> requirements = analyzeRequirements(CEL.astToCheckedExpr(ast));
 
             script = new CelPolicyScript(program, requirements);
             cacheManager.put(scriptDigest, script);
@@ -109,51 +103,10 @@ public class CelPolicyScriptHost {
         }
     }
 
-    private static Set<Requirement> analyzeRequirements(final CheckedExpr expr) {
-        final var requirements = new HashSet<Requirement>();
-
-        final Set<String> typeNames = expr.getTypeMapMap().values().stream()
-                .map(Type::getMessageType)
-                .collect(Collectors.toSet());
-
-        // For the majority of cases, it is sufficient to check whether a given type
-        // is present in the type map constructed by the type checker. This works as long
-        // as a field of the respective type is accessed in the script, e.g.
-        //
-        //   component.license.name
-        //
-        // will result in the License type being present in the type map. However, it does NOT
-        // work when only the presence of a field is checked in the script, e.g.
-        //
-        //   has(component.license)
-        //
-        // will result in the License type NOT being present in the type map.
-        //
-        // To cover this limitation, we could implement a visitor that traverses the AST
-        // and keeps track of which fields are accessed for which type.
-        if (typeNames.contains(Project.getDescriptor().getFullName())) {
-            requirements.add(Requirement.PROJECT);
-
-            if (typeNames.contains(Project.Property.getDescriptor().getFullName())) {
-                requirements.add(Requirement.PROJECT_PROPERTIES);
-            }
-        }
-        if (typeNames.contains(License.getDescriptor().getFullName())) {
-            requirements.add(Requirement.LICENSE);
-
-            if (typeNames.contains(License.Group.getDescriptor().getFullName())) {
-                requirements.add(Requirement.LICENSE_GROUPS);
-            }
-        }
-        if (typeNames.contains(Vulnerability.getDescriptor().getFullName())) {
-            requirements.add(Requirement.VULNERABILITIES);
-
-            if (typeNames.contains(Vulnerability.Alias.getDescriptor().getFullName())) {
-                requirements.add(Requirement.VULNERABILITY_ALIASES);
-            }
-        }
-
-        return requirements;
+    private static MultiValuedMap<Type, String> analyzeRequirements(final CheckedExpr expr) {
+        final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
+        visitor.visit(expr.getExpr());
+        return visitor.getAccessedFieldsByType();
     }
 
 }

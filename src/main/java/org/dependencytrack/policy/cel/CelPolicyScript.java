@@ -1,33 +1,25 @@
 package org.dependencytrack.policy.cel;
 
+import com.google.api.expr.v1alpha1.Type;
+import org.apache.commons.collections4.MultiValuedMap;
 import org.projectnessie.cel.Program;
 import org.projectnessie.cel.common.types.Err;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.tools.ScriptExecutionException;
 
 import java.util.Map;
-import java.util.Set;
 
 public class CelPolicyScript {
 
-    public enum Requirement {
-        LICENSE,
-        LICENSE_GROUPS,
-        PROJECT,
-        PROJECT_PROPERTIES,
-        VULNERABILITIES,
-        VULNERABILITY_ALIASES
-    }
-
     private final Program program;
-    private final Set<Requirement> requirements;
+    private final MultiValuedMap<Type, String> requirements;
 
-    public CelPolicyScript(final Program program, final Set<Requirement> requirements) {
+    public CelPolicyScript(final Program program, final MultiValuedMap<Type, String> requirements) {
         this.program = program;
         this.requirements = requirements;
     }
 
-    public Set<Requirement> getRequirements() {
+    public MultiValuedMap<Type, String> getRequirements() {
         return requirements;
     }
 

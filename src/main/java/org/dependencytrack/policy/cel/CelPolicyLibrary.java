@@ -37,10 +37,14 @@ public class CelPolicyLibrary implements Library {
     static final String VAR_PROJECT = "project";
     static final String VAR_VULNERABILITIES = "vulns";
 
-    private static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
-    private static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
-    private static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
-    private static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
+    public static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
+    public static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
+    public static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
+    public static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
+    public static final Type TYPE_PROJECT_PROPERTY = Decls.newObjectType(Project.Property.getDescriptor().getFullName());
+    public static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
+    public static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
+    public static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 
     private static final String FUNC_DEPENDS_ON = "depends_on";
     private static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
@@ -105,7 +109,9 @@ public class CelPolicyLibrary implements Library {
                 EnvOption.types(
                         Component.getDefaultInstance(),
                         License.getDefaultInstance(),
+                        License.Group.getDefaultInstance(),
                         Project.getDefaultInstance(),
+                        Project.Property.getDefaultInstance(),
                         Vulnerability.getDefaultInstance(),
                         Vulnerability.Alias.getDefaultInstance()
                 )
