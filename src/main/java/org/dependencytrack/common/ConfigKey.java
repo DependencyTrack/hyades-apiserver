@@ -38,6 +38,8 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC("task.cron.defectdojo.sync", "* 0/8 * * *"),
     CRON_EXPRESSION_FOR_KENNA_SYNC("task.cron.kenna.sync", "* 0/8 * * *"),
     CRON_EXPRESSION_FOR_INDEX_CONSISTENCY_CHECK("task.cron.index.consistency.check", "* 0/8 * * *"),
+    TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
+    TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
     TASK_PORTFOLIO_LOCK_AT_MOST_FOR("task.metrics.portfolio.lockAtMostForInMillis", "900000"),
     TASK_PORTFOLIO_LOCK_AT_LEAST_FOR("task.metrics.portfolio.lockAtLeastForInMillis", "3000"),
     TASK_METRICS_VULNERABILITY_LOCK_AT_MOST_FOR("task.metrics.vulnerability.lockAtMostForInMillis", "900000"),
