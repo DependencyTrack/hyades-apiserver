@@ -52,7 +52,7 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purlCoordinates() == null) {
+        if (event == null || event.purlCoordinates()== null) {
             return null;
         }
 

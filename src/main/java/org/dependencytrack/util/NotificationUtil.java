@@ -311,7 +311,7 @@ public final class NotificationUtil {
         new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 
-    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, ProjectVulnAnalysisStatus status) {
+    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, UUID token, ProjectVulnAnalysisStatus status) {
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, vulnScan.getTargetIdentifier());
             if (project == null) {
@@ -360,7 +360,7 @@ public final class NotificationUtil {
                     .level(NotificationLevel.INFORMATIONAL)
                     .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
                     .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
-                    .subject(new ProjectVulnAnalysisComplete(project, componentAnalysisCompleteList, status));
+                    .subject(new ProjectVulnAnalysisComplete(token, project, componentAnalysisCompleteList, status));
         }
     }
 

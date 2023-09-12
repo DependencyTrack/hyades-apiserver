@@ -171,9 +171,12 @@ class KafkaStreamsTopologyFactory {
                     try {
                         alpineNotification = vulnScan.getStatus() == VulnerabilityScan.Status.FAILED
                                 ? createProjectVulnerabilityAnalysisCompleteNotification(vulnScan,
+                                UUID.fromString(scanToken),
                                 ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED)
                                 : createProjectVulnerabilityAnalysisCompleteNotification(
-                                vulnScan, ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
+                                vulnScan,
+                                UUID.fromString(scanToken),
+                                ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
                     } catch (RuntimeException e) {
                         LOGGER.warn("Failed to generate a %s notification (project: %s; token: %s)"
                                 .formatted(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE,

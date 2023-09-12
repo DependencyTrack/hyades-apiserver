@@ -64,7 +64,6 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED;
 
 /**
  * @author Steve Springett
