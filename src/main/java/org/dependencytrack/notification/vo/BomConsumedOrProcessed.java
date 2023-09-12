@@ -21,18 +21,26 @@ package org.dependencytrack.notification.vo;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Project;
 
+import java.util.UUID;
+
 public class BomConsumedOrProcessed {
 
+    private UUID token;
     private Project project;
     private String bom;
     private Bom.Format format;
     private String specVersion;
 
-    public BomConsumedOrProcessed(final Project project, final String bom, final Bom.Format format, final String specVersion) {
+    public BomConsumedOrProcessed(final UUID token, final Project project, final String bom, final Bom.Format format, final String specVersion) {
+        this.token = token;
         this.project = project;
         this.bom = bom;
         this.format = format;
         this.specVersion = specVersion;
+    }
+
+    public UUID getToken() {
+        return token;
     }
 
     public Project getProject() {

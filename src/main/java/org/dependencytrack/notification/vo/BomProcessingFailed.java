@@ -21,20 +21,28 @@ package org.dependencytrack.notification.vo;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Project;
 
+import java.util.UUID;
+
 public class BomProcessingFailed {
 
+    private UUID token;
     private Project project;
     private String bom;
     private String cause;
     private Bom.Format format;
     private String specVersion;
 
-    public BomProcessingFailed(final Project project, final String bom, final String cause, final Bom.Format format, final String specVersion) {
+    public BomProcessingFailed(final UUID token, final Project project, final String bom, final String cause, final Bom.Format format, final String specVersion) {
+        this.token = token;
         this.project = project;
         this.bom = bom;
         this.cause = cause;
         this.format = format;
         this.specVersion = specVersion;
+    }
+
+    public UUID getToken() {
+        return token;
     }
 
     public Project getProject() {

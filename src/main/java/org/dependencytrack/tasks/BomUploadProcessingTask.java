@@ -148,7 +148,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .content("An error occurred while processing a BOM")
                         // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
                         // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (BomProcessingException ex) {
                 LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
@@ -161,7 +161,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
                         //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
                         // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
@@ -172,7 +172,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
                         .content("An error occurred while processing a BOM")
                         // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ctx.bomFormat /* (may be null) */, ctx.bomSpecVersion /* (may be null) */)));
+                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ctx.bomFormat /* (may be null) */, ctx.bomSpecVersion /* (may be null) */)));
             } finally {
                 timerSample.stop(TIMER);
             }
@@ -251,7 +251,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 .level(NotificationLevel.INFORMATIONAL)
                 .title(NotificationConstants.Title.BOM_CONSUMED)
                 .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+                .subject(new BomConsumedOrProcessed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
 
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
@@ -892,7 +892,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 .title(NotificationConstants.Title.BOM_PROCESSED)
                 .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
                 // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomConsumedOrProcessed(ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+                .subject(new BomConsumedOrProcessed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
     }
 
     /**
