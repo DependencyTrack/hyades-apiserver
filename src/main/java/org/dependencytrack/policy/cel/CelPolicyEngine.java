@@ -478,39 +478,13 @@ public class CelPolicyEngine {
 
         final Query<org.dependencytrack.model.Vulnerability> query =
                 qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
+        query.getFetchPlan().clearGroups();
+        query.getFetchPlan().setGroup(org.dependencytrack.model.Vulnerability.FetchGroup.POLICY.name());
         query.setFilter("components.contains(:component)");
         query.setParameters(component);
-        // Avoid some ORM overhead by explicitly specifying the fields we want
-        // to fetch, and load them into a result class, rather than a candidate
-        // class. The returned Vulnerability objects are thus just dumb POJOs and
-        // not attached to the persistence context.
-        query.setResult("""
-                uuid,
-                vulnId,
-                source,
-                cwes,
-                created,
-                published,
-                updated,
-                cvssV2BaseScore,
-                cvssV2ImpactSubScore,
-                cvssV2ExploitabilitySubScore,
-                cvssV2Vector,
-                cvssV3BaseScore,
-                cvssV3ImpactSubScore,
-                cvssV3ExploitabilitySubScore,
-                cvssV3Vector,
-                owaspRRLikelihoodScore,
-                owaspRRTechnicalImpactScore,
-                owaspRRBusinessImpactScore,
-                owaspRRVector,
-                severity,
-                epssScore,
-                epssPercentile
-                """);
         final List<org.dependencytrack.model.Vulnerability> vulns;
         try {
-            vulns = List.copyOf(query.executeResultList(org.dependencytrack.model.Vulnerability.class));
+            vulns = (List<org.dependencytrack.model.Vulnerability>) qm.getPersistenceManager().detachCopyAll(query.executeList());
         } finally {
             query.closeAll();
         }
