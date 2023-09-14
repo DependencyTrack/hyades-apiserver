@@ -16,6 +16,7 @@ import org.projectnessie.cel.ProgramOption;
 import org.projectnessie.cel.checker.Decls;
 import org.projectnessie.cel.common.types.Err;
 import org.projectnessie.cel.common.types.Types;
+import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
 import javax.jdo.Query;
@@ -68,13 +69,13 @@ public class CelPolicyLibrary implements Library {
                         ),
                         Decls.newFunction(
                                 FUNC_DEPENDS_ON,
-                                // component.depends_on(org.hyades.policy.v1.Component{"name": "foo"})
+                                // component.depends_on(org.hyades.policy.v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "component_depends_on_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
                                         Decls.Bool
                                 ),
-                                // project.depends_on(org.hyades.policy.v1.Component{"name": "foo"})
+                                // project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "project_depends_on_component_bool",
                                         List.of(TYPE_PROJECT, TYPE_COMPONENT),
@@ -83,7 +84,7 @@ public class CelPolicyLibrary implements Library {
                         ),
                         Decls.newFunction(
                                 FUNC_IS_DEPENDENCY_OF,
-                                // component.is_dependency_of(org.hyades.policy.v1.Component{"name": "foo"})
+                                // component.is_dependency_of(org.hyades.policy.v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "component_is_dependency_of_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
@@ -124,66 +125,71 @@ public class CelPolicyLibrary implements Library {
                 ProgramOption.functions(
                         Overload.binary(
                                 FUNC_DEPENDS_ON,
-                                (lhs, rhs) -> {
-                                    final Component leafComponent;
-                                    if (rhs.value() instanceof final Component rhsValue) {
-                                        leafComponent = rhsValue;
-                                    } else {
-                                        return Err.maybeNoSuchOverloadErr(rhs);
-                                    }
-
-                                    if (lhs.value() instanceof final Project project) {
-                                        return Types.boolOf(dependsOn(project, leafComponent));
-                                    } else if (lhs.value() instanceof final Component rootComponent) {
-                                        // TODO: Traverse dep graph from rootComponent downwards and look for leafComponent
-                                        return Types.boolOf(dependsOn(rootComponent, leafComponent));
-                                    }
-
-                                    return Err.maybeNoSuchOverloadErr(lhs);
-                                }
+                                CelPolicyLibrary::dependsOnFunc
                         ),
                         Overload.binary(
                                 FUNC_IS_DEPENDENCY_OF,
-                                (lhs, rhs) -> {
-                                    final Component leafComponent;
-                                    if (lhs.value() instanceof final Component lhsValue) {
-                                        leafComponent = lhsValue;
-                                    } else {
-                                        return Err.maybeNoSuchOverloadErr(lhs);
-                                    }
-
-                                    if (rhs.value() instanceof final Component rootComponent) {
-                                        // TODO: traverse dep graph from lhsComponent upwards and look for rhsComponent
-                                        return Types.boolOf(isDependencyOf(leafComponent, rootComponent));
-                                    }
-
-                                    return Err.maybeNoSuchOverloadErr(rhs);
-                                }
+                                CelPolicyLibrary::isDependencyOfFunc
                         ),
                         Overload.binary(
                                 FUNC_MATCHES_RANGE,
-                                (lhs, rhs) -> {
-                                    final String version;
-                                    if (lhs.value() instanceof final Component lhsValue) {
-                                        version = lhsValue.getVersion();
-                                    } else if (lhs.value() instanceof final Project lhsValue) {
-                                        version = lhsValue.getVersion();
-                                    } else {
-                                        return Err.maybeNoSuchOverloadErr(lhs);
-                                    }
-
-                                    final String versStr;
-                                    if (rhs.value() instanceof final String rhsValue) {
-                                        versStr = rhsValue;
-                                    } else {
-                                        return Err.maybeNoSuchOverloadErr(rhs);
-                                    }
-
-                                    return Types.boolOf(matchesRange(version, versStr));
-                                }
+                                CelPolicyLibrary::matchesRangeFunc
                         )
                 )
         );
+    }
+
+    private static Val dependsOnFunc(final Val lhs, final Val rhs) {
+        final Component leafComponent;
+        if (rhs.value() instanceof final Component rhsValue) {
+            leafComponent = rhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        if (lhs.value() instanceof final Project project) {
+            return Types.boolOf(dependsOn(project, leafComponent));
+        } else if (lhs.value() instanceof final Component rootComponent) {
+            // TODO: Traverse dep graph from rootComponent downwards and look for leafComponent
+            return Types.boolOf(dependsOn(rootComponent, leafComponent));
+        }
+
+        return Err.maybeNoSuchOverloadErr(lhs);
+    }
+
+    private static Val isDependencyOfFunc(final Val lhs, final Val rhs) {
+        final Component leafComponent;
+        if (lhs.value() instanceof final Component lhsValue) {
+            leafComponent = lhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        if (rhs.value() instanceof final Component rootComponent) {
+            return Types.boolOf(isDependencyOf(leafComponent, rootComponent));
+        }
+
+        return Err.maybeNoSuchOverloadErr(rhs);
+    }
+
+    private static Val matchesRangeFunc(final Val lhs, final Val rhs) {
+        final String version;
+        if (lhs.value() instanceof final Component lhsValue) {
+            version = lhsValue.getVersion();
+        } else if (lhs.value() instanceof final Project lhsValue) {
+            version = lhsValue.getVersion();
+        } else {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        final String versStr;
+        if (rhs.value() instanceof final String rhsValue) {
+            versStr = rhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        return Types.boolOf(matchesRange(version, versStr));
     }
 
     private static boolean dependsOn(final Project project, final Component component) {
