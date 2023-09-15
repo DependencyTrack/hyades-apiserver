@@ -12,7 +12,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
 
 import javax.servlet.ServletContextEvent;
@@ -32,10 +31,6 @@ public class KafkaProducerInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing Kafka producer");
-        if (RequirementsVerifier.failedValidation()) {
-            LOGGER.warn("System requirements not satisfied, skipping");
-            return;
-        }
 
         PRODUCER = createProducer();
 

@@ -10,7 +10,6 @@ import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
-import org.dependencytrack.RequirementsVerifier;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.exception.KafkaStreamsDeserializationExceptionHandler;
 import org.dependencytrack.event.kafka.exception.KafkaStreamsProductionExceptionHandler;
@@ -34,10 +33,6 @@ public class KafkaStreamsInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing Kafka streams");
-        if (RequirementsVerifier.failedValidation()) {
-            LOGGER.warn("System requirements not satisfied, skipping");
-            return;
-        }
 
         STREAMS = new KafkaStreams(new KafkaStreamsTopologyFactory().createTopology(), new StreamsConfig(getDefaultProperties()));
         STREAMS.setUncaughtExceptionHandler(new KafkaStreamsUncaughtExceptionHandler());

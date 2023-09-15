@@ -8,7 +8,6 @@ public enum ConfigKey implements Config.Key {
 
     ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION("alpine.worker.pool.drain.timeout.duration", "PT30S"),
 
-    SYSTEM_REQUIREMENT_CHECK_ENABLED("system.requirement.check.enabled", true),
     APPLICATION_ID("application.id", "dependencytrack-apiserver"),
     KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
