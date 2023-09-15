@@ -24,12 +24,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
-import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -39,7 +35,6 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -74,25 +69,13 @@ public class PolicyViolation implements Serializable {
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "COMPONENT_ID", allowsNull = "true")
+    @Column(name = "COMPONENT_ID", allowsNull = "false")
     @Index(name = "POLICYVIOLATION_COMPONENT_IDX")
     private Component component;
 
-    @Persistent
-    @Column(name = "POLICY_ID", allowsNull = "true")
-    private Policy policy;
-
-    // TODO: Remove
-    @Deprecated(forRemoval = true)
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "POLICYCONDITION_ID", allowsNull = "true")
+    @Column(name = "POLICYCONDITION_ID", allowsNull = "false")
     private PolicyCondition policyCondition;
-
-    @Persistent(table = "POLICYVIOLATIONS_MATCHED_POLICYCONDITIONS")
-    @Join(column = "POLICYVIOLATION_ID")
-    @Element(column = "POLICYCONDITION_ID")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
-    private List<PolicyCondition> matchedConditions;
 
     @Persistent
     @Column(name = "TIMESTAMP", allowsNull = "false")
@@ -104,8 +87,8 @@ public class PolicyViolation implements Serializable {
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The text may only contain printable characters")
     private String text;
 
-    @Persistent(mappedBy="policyViolation", defaultFetchGroup = "true")
-    private ViolationAnalysis analysis;
+    @Persistent(mappedBy = "policyViolation", defaultFetchGroup = "true")
+    private  ViolationAnalysis analysis;
 
     /**
      * The unique identifier of the object.
@@ -138,42 +121,19 @@ public class PolicyViolation implements Serializable {
 
     public void setComponent(Component component) {
         this.component = component;
+        this.project = component.getProject();
     }
 
     public Project getProject() {
         return project;
     }
 
-    public void setProject(final Project project) {
-        this.project = project;
-    }
-
-    public Policy getPolicy() {
-        return policy;
-    }
-
-    public void setPolicy(final Policy policy) {
-        this.policy = policy;
-    }
-
-    // TODO: Remove
-    @Deprecated(forRemoval = true)
     public PolicyCondition getPolicyCondition() {
         return policyCondition;
     }
 
-    // TODO: Remove
-    @Deprecated(forRemoval = true)
     public void setPolicyCondition(PolicyCondition policyCondition) {
         this.policyCondition = policyCondition;
-    }
-
-    public List<PolicyCondition> getMatchedConditions() {
-        return matchedConditions;
-    }
-
-    public void setMatchedConditions(final List<PolicyCondition> matchedConditions) {
-        this.matchedConditions = matchedConditions;
     }
 
     public Date getTimestamp() {

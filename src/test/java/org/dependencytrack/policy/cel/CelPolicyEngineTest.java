@@ -27,21 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CelPolicyEngineTest extends PersistenceCapableTest {
 
-    // Raise a violation when the component is affected by a certain vulnerability,
-    // which is only exploitable when Apache Tomcat is present in the project as well.
-    //   vulns.exists(v, v.id == "CVE-123)
-    //     && project.depends_on(org.hyades.policy.v1.Component{"name": "tomcat-embed-core"})
-
-    // Raise a violation when the component is SnakeYAML, affected by CVE-2022-1471,
-    // and introduced to the project as a dependency of Spring Framework.
-    //   vulns.exists(v, v.id == "CVE-2022-1471")
-    //     && component.purl.startsWith("pkg:maven/org.snakeyaml/snakeyaml")
-    //     && component.is_dependency_of(org.hyades.policy.v1.Component{"group": "org.springframework"})
-
-    // Raise a violation when the component is affected by CVE-2022-229665,
-    // and the project was packaged as WAR:
-    //   vulns.exists(v, v.id == "CVE-2022-229665") && project.purl.contains("type=war")
-
     @Test
     public void test() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
@@ -104,7 +89,6 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.SNYK_ANALYZER);
 
         final var existingViolation = new PolicyViolation();
-        existingViolation.setProject(project);
         existingViolation.setComponent(component);
         existingViolation.setPolicyCondition(condition3);
         existingViolation.setType(PolicyViolation.Type.OPERATIONAL);
@@ -119,132 +103,14 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testPolicyOperatorAnyWithOneConditionMatching() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name == "foo"
-                        """);
-        final PolicyCondition policyConditionB = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name == "bar"
-                        """);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("foo");
-        qm.persist(component);
-
-        final var policyEngine = new CelPolicyEngine();
-        policyEngine.evaluateComponent(component.getUuid());
-
-        assertThat(qm.getAllPolicyViolations(component)).satisfiesExactly(violation -> {
-            assertThat(violation.getPolicy().getUuid()).isEqualTo(policy.getUuid());
-            assertThat(violation.getMatchedConditions()).hasSize(1);
-            assertThat(violation.getMatchedConditions().get(0).getUuid()).isEqualTo(policyConditionA.getUuid());
-        });
-    }
-
-    @Test
-    public void testPolicyOperatorAnyWithAllConditionsMatching() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name == "foo"
-                        """);
-        final PolicyCondition policyConditionB = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name != "bar"
-                        """);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("foo");
-        qm.persist(component);
-
-        final var policyEngine = new CelPolicyEngine();
-        policyEngine.evaluateComponent(component.getUuid());
-
-        assertThat(qm.getAllPolicyViolations(component)).satisfiesExactly(violation -> {
-            assertThat(violation.getPolicy().getUuid()).isEqualTo(policy.getUuid());
-            assertThat(violation.getMatchedConditions()).hasSize(2);
-            assertThat(violation.getMatchedConditions().get(0).getUuid()).isEqualTo(policyConditionA.getUuid());
-            assertThat(violation.getMatchedConditions().get(1).getUuid()).isEqualTo(policyConditionB.getUuid());
-        });
-    }
-
-    @Test
-    public void testPolicyOperatorAllWithOneConditionMatching() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.name == "foo"
-                """);
-        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.name == "bar"
-                """);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("foo");
-        qm.persist(component);
-
-        final var policyEngine = new CelPolicyEngine();
-        policyEngine.evaluateComponent(component.getUuid());
-
-        assertThat(qm.getAllPolicyViolations(component)).isEmpty();
-    }
-
-    @Test
-    public void testPolicyOperatorAllWithAllConditionsMatching() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name == "foo"
-                        """);
-        final PolicyCondition policyConditionB = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.name != "bar"
-                        """);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("foo");
-        qm.persist(component);
-
-        final var policyEngine = new CelPolicyEngine();
-        policyEngine.evaluateComponent(component.getUuid());
-
-        assertThat(qm.getAllPolicyViolations(component)).satisfiesExactly(violation -> {
-            assertThat(violation.getPolicy().getUuid()).isEqualTo(policy.getUuid());
-            assertThat(violation.getMatchedConditions()).hasSize(2);
-            assertThat(violation.getMatchedConditions().get(0).getUuid()).isEqualTo(policyConditionA.getUuid());
-            assertThat(violation.getMatchedConditions().get(1).getUuid()).isEqualTo(policyConditionB.getUuid());
-        });
-    }
-
-    @Test
     public void testIsDirectDependency() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final PolicyCondition policyCondition = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                         component.is_direct_dependency
                         """);
+        policyCondition.setViolationType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(policyCondition);
 
         final var project = new Project();
         project.setName("foo");
@@ -277,10 +143,12 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     @Test
     public void testProjectDependsOnComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy,
+        final PolicyCondition policyCondition = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                         project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
                         """);
+        policyCondition.setViolationType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(policyCondition);
 
         final var project = new Project();
         project.setName("foo");
@@ -313,11 +181,13 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     @Test
     public void testMatchesRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy,
+        final PolicyCondition policyCondition = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                         project.matches_range("vers:generic/<1")
                             && component.matches_range("vers:golang/>0|<v2.0.0")
                         """);
+        policyCondition.setViolationType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(policyCondition);
 
         final var project = new Project();
         project.setName("foo");
