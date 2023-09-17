@@ -1,6 +1,6 @@
 package org.dependencytrack.policy.cel;
 
-import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CelPolicyEngineTest extends PersistenceCapableTest {
+public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void test() {
@@ -96,7 +96,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.persist(existingViolation);
 
         final var policyEngine = new CelPolicyEngine();
-        policyEngine.evaluateComponent(component.getUuid());
+        policyEngine.evaluateProject(project.getUuid());
 
         final List<PolicyViolation> violations = qm.getAllPolicyViolations(component);
         assertThat(violations).isNotEmpty();

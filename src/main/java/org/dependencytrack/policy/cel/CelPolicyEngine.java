@@ -11,6 +11,7 @@ import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
@@ -66,6 +67,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
+import static java.util.function.Predicate.not;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
@@ -114,6 +116,10 @@ public class CelPolicyEngine {
         final Timer.Sample timerSample = Timer.start();
 
         try (final var qm = new QueryManager()) {
+            // TODO: Should this entire procedure run in a single DB transaction?
+            //   Would be better for atomicity, but could block DB connections for prolonged
+            //   period of time for larger projects with many violations.
+
             final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.IDENTIFIERS.name()));
             if (project == null) {
                 LOGGER.warn("Project with UUID %s does not exist".formatted(uuid));
@@ -133,32 +139,9 @@ public class CelPolicyEngine {
             final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
                     .map(Policy::getPolicyConditions)
                     .flatMap(Collection::stream)
-                    .map(policyCondition -> {
-                        final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
-                        if (scriptBuilder == null) {
-                            LOGGER.warn("No script builder found that is capable of handling subjects of type %s".formatted(policyCondition.getSubject()));
-                            return null;
-                        }
-
-                        final String scriptSrc = scriptBuilder.apply(policyCondition);
-                        if (scriptSrc == null) {
-                            LOGGER.warn("Script builder was unable to create a script for condition %s".formatted(policyCondition.getUuid()));
-                            return null;
-                        }
-
-                        return Pair.of(policyCondition, scriptSrc);
-                    })
+                    .map(this::buildConditionScriptSrc)
                     .filter(Objects::nonNull)
-                    .map(conditionScriptSrcPair -> {
-                        final CelPolicyScript script;
-                        try {
-                            script = scriptHost.compile(conditionScriptSrcPair.getRight());
-                        } catch (ScriptCreateException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                        return Pair.of(conditionScriptSrcPair.getLeft(), script);
-                    })
+                    .map(this::compileConditionScript)
                     .toList();
 
             LOGGER.info("Determining evaluation requirements for project %s and %d policy conditions"
@@ -187,8 +170,10 @@ public class CelPolicyEngine {
             final Map<Long, License> licenseById;
             if (requirements.containsKey(TYPE_LICENSE)) {
                 licenseById = fetchLicenses(qm, project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
-                        .map(projection -> Pair.of(projection.id, mapLicense(projection)))
-                        .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+                        .collect(Collectors.toMap(
+                                projection -> projection.id,
+                                CelPolicyEngine::mapLicense
+                        ));
             } else {
                 licenseById = Collections.emptyMap();
             }
@@ -198,8 +183,10 @@ public class CelPolicyEngine {
             final Map<Long, List<Long>> vulnIdsByComponentId;
             if (requirements.containsKey(TYPE_VULNERABILITY)) {
                 protoVulnById = fetchVulnerabilities(qm, project.getId(), requirements.get(TYPE_VULNERABILITY)).stream()
-                        .map(vulnProjection -> Pair.of(vulnProjection.id, Vulnerability.getDefaultInstance()))
-                        .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+                        .collect(Collectors.toMap(
+                                projection -> projection.id,
+                                CelPolicyEngine::mapVulnerability
+                        ));
 
                 vulnIdsByComponentId = fetchComponentsVulnerabilities(qm, project.getId()).stream()
                         .collect(Collectors.groupingBy(
@@ -214,8 +201,7 @@ public class CelPolicyEngine {
             final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
             for (final ComponentProjection component : components) {
                 final org.hyades.proto.policy.v1.Component protoComponent = mapComponent(component, licenseById);
-
-                final List<Vulnerability> vulns = vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
+                final List<Vulnerability> protoVulns = vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
                         .map(protoVulnById::get)
                         .toList();
 
@@ -225,7 +211,7 @@ public class CelPolicyEngine {
                     final Map<String, Object> scriptArgs = Map.of(
                             VAR_COMPONENT, protoComponent,
                             VAR_PROJECT, protoProject,
-                            VAR_VULNERABILITIES, vulns
+                            VAR_VULNERABILITIES, protoVulns
                     );
 
                     try {
@@ -236,28 +222,13 @@ public class CelPolicyEngine {
                         throw new RuntimeException("Failed to evaluate script", e);
                     }
                 }
-
-                if (!conditionsViolated.containsKey(component.id)) {
-                    conditionsViolated.putAll(component.id, Collections.emptySet());
-                }
             }
 
-            // In order to create policy violations, we need Component objects that are attached to the
-            // persistence context.
-            final Query<Component> componentQuery = qm.getPersistenceManager().newQuery(Component.class);
-            componentQuery.getFetchPlan().setGroup(Component.FetchGroup.IDENTITY.name());
-            componentQuery.setFilter(":ids.contains(id)");
-            componentQuery.setParameters(conditionsViolated.keySet());
-            final Map<Long, Component> persistentComponentById;
-            try {
-                persistentComponentById = componentQuery.executeList().stream()
-                        .collect(Collectors.toMap(Component::getId, Function.identity()));
-            } finally {
-                componentQuery.closeAll();
-            }
-
-            // TODO: Short-circuit for components for which no violations were detected.
-
+            // Evaluate policy operators.
+            // Determines whether violations must be reported in the first place.
+            // i.e. if not all conditions matched for a policy with ALL operator,
+            // then no violations are to be raised.
+            final var violationsByComponentId = new ArrayListValuedHashMap<Long, PolicyViolation>();
             for (final long componentId : conditionsViolated.keySet()) {
                 final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.get(componentId).stream()
                         .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
@@ -275,8 +246,10 @@ public class CelPolicyEngine {
                                 return violatedConditions.stream()
                                         .map(condition -> {
                                             final var violation = new PolicyViolation();
-                                            violation.setComponent(persistentComponentById.get(componentId));
                                             violation.setType(condition.getViolationType());
+                                            // Note: violation.setComponent is intentionally omitted here,
+                                            // because the component must be an object attached to the persistence
+                                            // context. We don't have that at this point, we'll add it later.
                                             violation.setPolicyCondition(condition);
                                             violation.setTimestamp(new Date());
                                             return violation;
@@ -288,7 +261,40 @@ public class CelPolicyEngine {
                         .filter(Objects::nonNull)
                         .toList();
 
-                final List<PolicyViolation> newViolations = reconcileViolations(qm, persistentComponentById.get(componentId), violations);
+                violationsByComponentId.putAll(componentId, violations);
+            }
+
+            final List<Long> componentIdsWithoutViolations = components.stream()
+                    .map(projection -> projection.id)
+                    .filter(not(violationsByComponentId.keySet()::contains))
+                    .toList();
+            // TODO: Delete all existing violations for all elements of componentIdsWithoutViolations.
+
+            // In order to create policy violations, we unfortunately need Component objects that
+            // are attached to the persistence context. We don't need any other fields beside their
+            // identity (i.e. ID) though.
+            // And because they are only required for CREATING violations, it's sufficient to only
+            // fetch them for components that violate at least one policy.
+            final Query<Component> componentQuery = qm.getPersistenceManager().newQuery(Component.class);
+            componentQuery.getFetchPlan().setGroup(Component.FetchGroup.IDENTITY.name());
+            componentQuery.setFilter(":ids.contains(id)");
+            componentQuery.setParameters(violationsByComponentId.keySet());
+            final Map<Long, Component> persistentComponentById;
+            try {
+                persistentComponentById = componentQuery.executeList().stream()
+                        .collect(Collectors.toMap(Component::getId, Function.identity()));
+            } finally {
+                componentQuery.closeAll();
+            }
+
+            final var newViolations = new ArrayList<PolicyViolation>();
+            for (final Long componentId : violationsByComponentId.keySet()) {
+                final Component persistentComponent = persistentComponentById.get(componentId);
+                newViolations.addAll(reconcileViolations(qm, persistentComponent, violationsByComponentId.get(componentId)));
+            }
+
+            for (final PolicyViolation newViolation : newViolations) {
+                NotificationUtil.analyzeNotificationCriteria(qm, newViolation);
             }
         } finally {
             final long durationNs = timerSample.stop(Timer
@@ -332,32 +338,9 @@ public class CelPolicyEngine {
             final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
                     .map(Policy::getPolicyConditions)
                     .flatMap(Collection::stream)
-                    .map(policyCondition -> {
-                        final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
-                        if (scriptBuilder == null) {
-                            LOGGER.warn("No script builder found that is capable of handling subjects of type %s".formatted(policyCondition.getSubject()));
-                            return null;
-                        }
-
-                        final String scriptSrc = scriptBuilder.apply(policyCondition);
-                        if (scriptSrc == null) {
-                            LOGGER.warn("Script builder was unable to create a script for condition %s".formatted(policyCondition.getUuid()));
-                            return null;
-                        }
-
-                        return Pair.of(policyCondition, scriptSrc);
-                    })
+                    .map(this::buildConditionScriptSrc)
                     .filter(Objects::nonNull)
-                    .map(conditionScriptSrcPair -> {
-                        final CelPolicyScript script;
-                        try {
-                            script = scriptHost.compile(conditionScriptSrcPair.getRight());
-                        } catch (ScriptCreateException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                        return Pair.of(conditionScriptSrcPair.getLeft(), script);
-                    })
+                    .map(this::compileConditionScript)
                     .toList();
 
             // Check what kind of data we need to evaluate all policy conditions.
@@ -542,6 +525,33 @@ public class CelPolicyEngine {
 
         parents.add(parentUuid);
         return getParents(qm, parentUuid, parents);
+    }
+
+    private Pair<PolicyCondition, String> buildConditionScriptSrc(final PolicyCondition policyCondition) {
+        final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
+        if (scriptBuilder == null) {
+            LOGGER.warn("No script builder found that is capable of handling subjects of type %s".formatted(policyCondition.getSubject()));
+            return null;
+        }
+
+        final String scriptSrc = scriptBuilder.apply(policyCondition);
+        if (scriptSrc == null) {
+            LOGGER.warn("Script builder was unable to create a script for condition %s".formatted(policyCondition.getUuid()));
+            return null;
+        }
+
+        return Pair.of(policyCondition, scriptSrc);
+    }
+
+    private Pair<PolicyCondition, CelPolicyScript> compileConditionScript(final Pair<PolicyCondition, String> conditionScriptSrcPair) {
+        final CelPolicyScript script;
+        try {
+            script = scriptHost.compile(conditionScriptSrcPair.getRight());
+        } catch (ScriptCreateException e) {
+            throw new RuntimeException(e);
+        }
+
+        return Pair.of(conditionScriptSrcPair.getLeft(), script);
     }
 
     private static ProjectProjection fetchProject(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
@@ -802,6 +812,33 @@ public class CelPolicyEngine {
         }
     }
 
+    private static Vulnerability mapVulnerability(final VulnerabilityProjection projection) {
+        final Vulnerability.Builder builder = Vulnerability.newBuilder()
+                .setUuid(trimToEmpty(projection.uuid))
+                .setId(trimToEmpty(projection.vulnId))
+                .setSource(trimToEmpty(projection.source))
+                .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
+                .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
+                .setOwaspRrVector(trimToEmpty(projection.owaspRrVector))
+                .setSeverity(trimToEmpty(projection.severity));
+        // Optional.ofNullable(v.getCwes()).ifPresent(builder::addAllCwes);
+        Optional.ofNullable(projection.cvssV2BaseScore).ifPresent(builder::setCvssv2BaseScore);
+        Optional.ofNullable(projection.cvssV2ImpactSubScore).ifPresent(builder::setCvssv2ImpactSubscore);
+        Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).ifPresent(builder::setCvssv2ExploitabilitySubscore);
+        Optional.ofNullable(projection.cvssV3BaseScore).ifPresent(builder::setCvssv3BaseScore);
+        Optional.ofNullable(projection.cvssV3ImpactSubScore).ifPresent(builder::setCvssv3ImpactSubscore);
+        Optional.ofNullable(projection.cvssV3ExploitabilitySubScore).ifPresent(builder::setCvssv3ExploitabilitySubscore);
+        Optional.ofNullable(projection.owaspRrLikelihoodScore).ifPresent(builder::setOwaspRrLikelihoodScore);
+        Optional.ofNullable(projection.owaspRrTechnicalImpactScore).ifPresent(builder::setOwaspRrTechnicalImpactScore);
+        Optional.ofNullable(projection.owaspRrBusinessImpactScore).ifPresent(builder::setOwaspRrBusinessImpactScore);
+        Optional.ofNullable(projection.epssScore).ifPresent(builder::setEpssScore);
+        Optional.ofNullable(projection.epssPercentile).ifPresent(builder::setEpssPercentile);
+        Optional.ofNullable(projection.created).map(Timestamps::fromDate).ifPresent(builder::setCreated);
+        Optional.ofNullable(projection.published).map(Timestamps::fromDate).ifPresent(builder::setPublished);
+        Optional.ofNullable(projection.updated).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
+        return builder.build();
+    }
+
     private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
                                                                      final Component component,
                                                                      final MultiValuedMap<Type, String> requirements) {
@@ -986,6 +1023,8 @@ public class CelPolicyEngine {
             final var violationIdsToKeep = new HashSet<Long>();
 
             for (final PolicyViolation violation : violations) {
+                violation.setComponent(component);
+
                 final Query<PolicyViolation> query = qm.getPersistenceManager().newQuery(PolicyViolation.class);
                 query.setFilter("component == :component && policyCondition == :policyCondition && type == :type");
                 query.setNamedParameters(Map.of(
