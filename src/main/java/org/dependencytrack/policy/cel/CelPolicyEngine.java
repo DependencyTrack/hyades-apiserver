@@ -33,6 +33,12 @@ import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuil
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.persistence.ComponentProjection;
+import org.dependencytrack.policy.cel.persistence.ComponentsVulnerabilitiesProjection;
+import org.dependencytrack.policy.cel.persistence.LicenseGroupProjection;
+import org.dependencytrack.policy.cel.persistence.LicenseProjection;
+import org.dependencytrack.policy.cel.persistence.ProjectProjection;
+import org.dependencytrack.policy.cel.persistence.VulnerabilityProjection;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.hyades.proto.policy.v1.License;
@@ -43,6 +49,7 @@ import org.projectnessie.cel.tools.ScriptException;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -54,9 +61,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
@@ -68,6 +77,7 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
+import static org.dependencytrack.policy.cel.persistence.FieldMappingUtil.getFieldMappings;
 
 public class CelPolicyEngine {
 
@@ -100,34 +110,193 @@ public class CelPolicyEngine {
         this.scriptHost = scriptHost;
     }
 
-    public void evaluateProject(final UUID projectUuid) {
+    public void evaluateProject(final UUID uuid) {
         final Timer.Sample timerSample = Timer.start();
 
-        try {
-            // TODO: Temporary solution for demonstration purposes. Super inefficient.
-            //   When evaluating a project, policies can be pre-compiled, and input data pre-loaded
-            //   for all components.
-            final List<UUID> componentUuids;
-            try (final var qm = new QueryManager()) {
-                final Query<Component> query = qm.getPersistenceManager().newQuery(Component.class);
-                query.setFilter("project.uuid == :projectUuid");
-                query.setParameters(projectUuid);
-                query.setResult("uuid");
-                try {
-                    componentUuids = List.copyOf(query.executeResultList(UUID.class));
-                } finally {
-                    query.closeAll();
+        try (final var qm = new QueryManager()) {
+            final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.IDENTIFIERS.name()));
+            if (project == null) {
+                LOGGER.warn("Project with UUID %s does not exist".formatted(uuid));
+                return;
+            }
+
+            final List<Policy> policies = getApplicablePolicies(qm, project);
+            if (policies.isEmpty()) {
+                // With no applicable policies, there's no way to resolve violations.
+                // As a compensation, simply delete all violations associated with the component.
+                LOGGER.info("No applicable policies found for component %s".formatted(uuid));
+                // reconcileViolations(qm, component, Collections.emptyList());
+                return;
+            }
+
+            LOGGER.info("Compiling policy scripts for project %s".formatted(uuid));
+            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
+                    .map(Policy::getPolicyConditions)
+                    .flatMap(Collection::stream)
+                    .map(policyCondition -> {
+                        final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
+                        if (scriptBuilder == null) {
+                            LOGGER.warn("No script builder found that is capable of handling subjects of type %s".formatted(policyCondition.getSubject()));
+                            return null;
+                        }
+
+                        final String scriptSrc = scriptBuilder.apply(policyCondition);
+                        if (scriptSrc == null) {
+                            LOGGER.warn("Script builder was unable to create a script for condition %s".formatted(policyCondition.getUuid()));
+                            return null;
+                        }
+
+                        return Pair.of(policyCondition, scriptSrc);
+                    })
+                    .filter(Objects::nonNull)
+                    .map(conditionScriptSrcPair -> {
+                        final CelPolicyScript script;
+                        try {
+                            script = scriptHost.compile(conditionScriptSrcPair.getRight());
+                        } catch (ScriptCreateException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        return Pair.of(conditionScriptSrcPair.getLeft(), script);
+                    })
+                    .toList();
+
+            LOGGER.info("Determining evaluation requirements for project %s and %d policy conditions"
+                    .formatted(uuid, conditionScriptPairs.size()));
+            final MultiValuedMap<Type, String> requirements = conditionScriptPairs.stream()
+                    .map(Pair::getRight)
+                    .map(CelPolicyScript::getRequirements)
+                    .reduce(new HashSetValuedHashMap<>(), (a, b) -> {
+                        a.putAll(b);
+                        return a;
+                    });
+            LOGGER.info("Requirements for project %s and %d policy conditions: %s"
+                    .formatted(uuid, conditionScriptPairs.size(), requirements));
+
+            final org.hyades.proto.policy.v1.Project protoProject;
+            if (requirements.containsKey(TYPE_PROJECT)) {
+                protoProject = mapProject(fetchProject(qm, project.getId(), requirements.get(TYPE_PROJECT)));
+            } else {
+                protoProject = org.hyades.proto.policy.v1.Project.getDefaultInstance();
+            }
+
+            // Preload components for the entire project, to avoid excessive queries.
+            final List<ComponentProjection> components = fetchComponents(qm, project.getId(), requirements.get(TYPE_COMPONENT));
+
+            // Preload licenses for the entire project, as chances are high that they will be used by multiple components.
+            final Map<Long, License> licenseById;
+            if (requirements.containsKey(TYPE_LICENSE)) {
+                licenseById = fetchLicenses(qm, project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
+                        .map(projection -> Pair.of(projection.id, mapLicense(projection)))
+                        .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+            } else {
+                licenseById = Collections.emptyMap();
+            }
+
+            // Preload vulnerabilities for the entire project, as chances are high that they will be used by multiple components.
+            final Map<Long, Vulnerability> protoVulnById;
+            final Map<Long, List<Long>> vulnIdsByComponentId;
+            if (requirements.containsKey(TYPE_VULNERABILITY)) {
+                protoVulnById = fetchVulnerabilities(qm, project.getId(), requirements.get(TYPE_VULNERABILITY)).stream()
+                        .map(vulnProjection -> Pair.of(vulnProjection.id, Vulnerability.getDefaultInstance()))
+                        .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+
+                vulnIdsByComponentId = fetchComponentsVulnerabilities(qm, project.getId()).stream()
+                        .collect(Collectors.groupingBy(
+                                projection -> projection.componentId,
+                                Collectors.mapping(projection -> projection.vulnerabilityId, Collectors.toList())
+                        ));
+            } else {
+                protoVulnById = Collections.emptyMap();
+                vulnIdsByComponentId = Collections.emptyMap();
+            }
+
+            final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
+            for (final ComponentProjection component : components) {
+                final org.hyades.proto.policy.v1.Component protoComponent = mapComponent(component, licenseById);
+
+                final List<Vulnerability> vulns = vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
+                        .map(protoVulnById::get)
+                        .toList();
+
+                for (final Pair<PolicyCondition, CelPolicyScript> conditionScriptPair : conditionScriptPairs) {
+                    final PolicyCondition condition = conditionScriptPair.getLeft();
+                    final CelPolicyScript script = conditionScriptPair.getRight();
+                    final Map<String, Object> scriptArgs = Map.of(
+                            VAR_COMPONENT, protoComponent,
+                            VAR_PROJECT, protoProject,
+                            VAR_VULNERABILITIES, vulns
+                    );
+
+                    try {
+                        if (script.execute(scriptArgs)) {
+                            conditionsViolated.put(component.id, condition);
+                        }
+                    } catch (ScriptException e) {
+                        throw new RuntimeException("Failed to evaluate script", e);
+                    }
+                }
+
+                if (!conditionsViolated.containsKey(component.id)) {
+                    conditionsViolated.putAll(component.id, Collections.emptySet());
                 }
             }
 
-            for (final UUID componentUuid : componentUuids) {
-                evaluateComponent(componentUuid);
+            // In order to create policy violations, we need Component objects that are attached to the
+            // persistence context.
+            final Query<Component> componentQuery = qm.getPersistenceManager().newQuery(Component.class);
+            componentQuery.getFetchPlan().setGroup(Component.FetchGroup.IDENTITY.name());
+            componentQuery.setFilter(":ids.contains(id)");
+            componentQuery.setParameters(conditionsViolated.keySet());
+            final Map<Long, Component> persistentComponentById;
+            try {
+                persistentComponentById = componentQuery.executeList().stream()
+                        .collect(Collectors.toMap(Component::getId, Function.identity()));
+            } finally {
+                componentQuery.closeAll();
+            }
+
+            // TODO: Short-circuit for components for which no violations were detected.
+
+            for (final long componentId : conditionsViolated.keySet()) {
+                final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.get(componentId).stream()
+                        .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
+
+                final List<PolicyViolation> violations = violatedConditionsByPolicy.entrySet().stream()
+                        .flatMap(policyAndViolatedConditions -> {
+                            final Policy policy = policyAndViolatedConditions.getKey();
+                            final List<PolicyCondition> violatedConditions = policyAndViolatedConditions.getValue();
+
+                            if ((policy.getOperator() == Policy.Operator.ANY && !violatedConditions.isEmpty())
+                                    || (policy.getOperator() == Policy.Operator.ALL && violatedConditions.size() == policy.getPolicyConditions().size())) {
+                                // TODO: Only a single violation should be raised, and instead multiple matched conditions
+                                //   should be associated with it. Keeping the existing behavior in order to avoid having to
+                                //   touch too much persistence and REST API code.
+                                return violatedConditions.stream()
+                                        .map(condition -> {
+                                            final var violation = new PolicyViolation();
+                                            violation.setComponent(persistentComponentById.get(componentId));
+                                            violation.setType(condition.getViolationType());
+                                            violation.setPolicyCondition(condition);
+                                            violation.setTimestamp(new Date());
+                                            return violation;
+                                        });
+                            }
+
+                            return Stream.empty();
+                        })
+                        .filter(Objects::nonNull)
+                        .toList();
+
+                final List<PolicyViolation> newViolations = reconcileViolations(qm, persistentComponentById.get(componentId), violations);
             }
         } finally {
-            timerSample.stop(Timer
+            final long durationNs = timerSample.stop(Timer
                     .builder("dtrack_policy_eval")
                     .tag("target", "project")
                     .register(Metrics.getRegistry()));
+            LOGGER.info("Evaluation of project %s completed in %s"
+                    .formatted(uuid, Duration.ofNanos(durationNs)));
         }
     }
 
@@ -151,7 +320,7 @@ public class CelPolicyEngine {
                 // With no applicable policies, there's no way to resolve violations.
                 // As a compensation, simply delete all violations associated with the component.
                 LOGGER.info("No applicable policies found for component %s".formatted(componentUuid));
-                reconcileViolations(qm, component, Collections.emptyList());
+                reconcileViolations(qm, component, emptyList());
                 return;
             }
 
@@ -375,6 +544,264 @@ public class CelPolicyEngine {
         return getParents(qm, parentUuid, parents);
     }
 
+    private static ProjectProjection fetchProject(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
+        final String sqlSelectColumns = getFieldMappings(ProjectProjection.class).stream()
+                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
+                .map(mapping -> "\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
+                .collect(Collectors.joining(", "));
+
+        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                SELECT %s FROM "PROJECT" WHERE "ID" = ?
+                """.formatted(sqlSelectColumns));
+        query.setParameters(projectId);
+        try {
+            return query.executeResultUnique(ProjectProjection.class);
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    private static org.hyades.proto.policy.v1.Project mapProject(final ProjectProjection projection) {
+        return org.hyades.proto.policy.v1.Project.newBuilder()
+                .setUuid(trimToEmpty(projection.uuid))
+                .setGroup(trimToEmpty(projection.group))
+                .setName(trimToEmpty(projection.name))
+                .setVersion(trimToEmpty(projection.version))
+                // .addAllTags(project.getTags().stream().map(Tag::getName).toList())
+                .setCpe(trimToEmpty(projection.cpe))
+                .setPurl(trimToEmpty(projection.purl))
+                .setSwidTagId(trimToEmpty(projection.swidTagId))
+                .build();
+    }
+
+    private static List<ComponentProjection> fetchComponents(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
+        final String sqlSelectColumns = Stream.concat(
+                        Stream.of(ComponentProjection.ID_FIELD_MAPPING),
+                        getFieldMappings(ComponentProjection.class).stream()
+                                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
+                )
+                .map(mapping -> "\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
+                .collect(Collectors.joining(", "));
+
+        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                SELECT %s FROM "COMPONENT" WHERE "PROJECT_ID" = ?
+                """.formatted(sqlSelectColumns));
+        query.setParameters(projectId);
+        try {
+            return List.copyOf(query.executeResultList(ComponentProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    private static org.hyades.proto.policy.v1.Component mapComponent(final ComponentProjection projection,
+                                                                     final Map<Long, License> licensesById) {
+        final org.hyades.proto.policy.v1.Component.Builder componentBuilder =
+                org.hyades.proto.policy.v1.Component.newBuilder()
+                        .setUuid(trimToEmpty(projection.uuid))
+                        .setGroup(trimToEmpty(projection.group))
+                        .setName(trimToEmpty(projection.name))
+                        .setVersion(trimToEmpty(projection.name))
+                        .setClassifier(trimToEmpty(projection.classifier))
+                        .setCpe(trimToEmpty(projection.cpe))
+                        .setPurl(trimToEmpty(projection.purl))
+                        .setSwidTagId(trimToEmpty(projection.swidTagId))
+                        .setIsInternal(Optional.ofNullable(projection.internal).orElse(false))
+                        .setMd5(trimToEmpty(projection.md5))
+                        .setSha1(trimToEmpty(projection.sha1))
+                        .setSha256(trimToEmpty(projection.sha256))
+                        .setSha384(trimToEmpty(projection.sha384))
+                        .setSha512(trimToEmpty(projection.sha512))
+                        .setSha3256(trimToEmpty(projection.sha3_256))
+                        .setSha3384(trimToEmpty(projection.sha3_384))
+                        .setSha3512(trimToEmpty(projection.sha3_512))
+                        .setBlake2B256(trimToEmpty(projection.blake2b_256))
+                        .setBlake2B384(trimToEmpty(projection.blake2b_384))
+                        .setBlake2B512(trimToEmpty(projection.blake2b_512))
+                        .setBlake3(trimToEmpty(projection.blake3));
+
+        if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
+            componentBuilder.setResolvedLicense(licensesById.get(projection.resolvedLicenseId));
+        }
+
+        return componentBuilder.build();
+    }
+
+    private static List<ComponentsVulnerabilitiesProjection> fetchComponentsVulnerabilities(final QueryManager qm, final long projectId) {
+        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                SELECT
+                  "CV"."COMPONENT_ID" AS "componentId",
+                  "CV"."VULNERABILITY_ID" AS "vulnerabilityId"
+                FROM
+                  "COMPONENTS_VULNERABILITIES" AS "CV"
+                INNER JOIN
+                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
+                WHERE
+                  "C"."PROJECT_ID" = ?
+                """);
+        query.setParameters(projectId);
+        try {
+            return List.copyOf(query.executeResultList(ComponentsVulnerabilitiesProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    private static List<LicenseProjection> fetchLicenses(final QueryManager qm, final long projectId,
+                                                         final Collection<String> licenseProtoFieldNames,
+                                                         final Collection<String> licenseGroupProtoFieldNames) {
+        final String licenseSqlSelectColumns = Stream.concat(
+                        Stream.of(LicenseProjection.ID_FIELD_MAPPING),
+                        getFieldMappings(LicenseProjection.class).stream()
+                                .filter(mapping -> licenseProtoFieldNames.contains(mapping.protoFieldName()))
+                )
+                .map(mapping -> "\"L\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
+                .collect(Collectors.joining(", "));
+
+        if (!licenseProtoFieldNames.contains("groups")) {
+            final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                    SELECT DISTINCT
+                      %s
+                    FROM
+                      "LICENSE" AS "L"
+                    INNER JOIN
+                      "COMPONENT" AS "C" ON "C"."LICENSE_ID" = "L"."ID"
+                    WHERE
+                      "C"."PROJECT_ID" = ?
+                    """.formatted(licenseSqlSelectColumns));
+            query.setParameters(projectId);
+            try {
+                return List.copyOf(query.executeResultList(LicenseProjection.class));
+            } finally {
+                query.closeAll();
+            }
+        }
+
+        final String licenseSqlGroupByColumns = Stream.concat(
+                        Stream.of(LicenseProjection.ID_FIELD_MAPPING),
+                        getFieldMappings(LicenseProjection.class).stream()
+                                .filter(mapping -> licenseProtoFieldNames.contains(mapping.protoFieldName()))
+                )
+                .map(mapping -> "\"L\".\"%s\"".formatted(mapping.sqlColumnName()))
+                .collect(Collectors.joining(", "));
+
+        final String licenseGroupSqlSelectColumns = getFieldMappings(LicenseGroupProjection.class).stream()
+                .filter(mapping -> licenseGroupProtoFieldNames.contains(mapping.protoFieldName()))
+                .map(mapping -> "'%s', \"LG\".\"%s\"".formatted(mapping.javaFieldName(), mapping.sqlColumnName()))
+                .collect(Collectors.joining(", "));
+
+        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                SELECT DISTINCT
+                  "L"."ID" AS "id",
+                  %s,
+                  CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(%s)) AS TEXT) AS "licenseGroupsJson"
+                FROM
+                  "LICENSE" AS "L"
+                INNER JOIN
+                  "COMPONENT" AS "C" ON "C"."LICENSE_ID" = "L"."ID"
+                LEFT JOIN
+                  "LICENSEGROUP_LICENSE" AS "LGL" ON "LGL"."LICENSE_ID" = "L"."ID"
+                LEFT JOIN
+                  "LICENSEGROUP" AS "LG" ON "LG"."ID" = "LGL"."LICENSEGROUP_ID"
+                WHERE
+                  "C"."PROJECT_ID" = ?
+                GROUP BY
+                  %s
+                """.formatted(licenseSqlSelectColumns, licenseGroupSqlSelectColumns, licenseSqlGroupByColumns));
+        query.setParameters(projectId);
+        try {
+            return List.copyOf(query.executeResultList(LicenseProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    private static License mapLicense(final LicenseProjection licenseProjection) {
+        final License.Builder licenseBuilder = License.newBuilder()
+                .setUuid(trimToEmpty(licenseProjection.uuid))
+                .setId(trimToEmpty(licenseProjection.licenseId))
+                .setName(trimToEmpty(licenseProjection.name));
+        Optional.ofNullable(licenseProjection.isOsiApproved).ifPresent(licenseBuilder::setIsOsiApproved);
+        Optional.ofNullable(licenseProjection.isFsfLibre).ifPresent(licenseBuilder::setIsFsfLibre);
+        Optional.ofNullable(licenseProjection.isDeprecatedId).ifPresent(licenseBuilder::setIsDeprecatedId);
+        Optional.ofNullable(licenseProjection.isCustomLicense).ifPresent(licenseBuilder::setIsCustom);
+
+        if (licenseProjection.licenseGroupsJson != null) {
+            try {
+                final ArrayNode groupsArray = OBJECT_MAPPER.readValue(licenseProjection.licenseGroupsJson, ArrayNode.class);
+                for (final JsonNode groupNode : groupsArray) {
+                    licenseBuilder.addGroups(License.Group.newBuilder()
+                            .setUuid(Optional.ofNullable(groupNode.get("uuid")).map(JsonNode::asText).orElse(""))
+                            .setName(Optional.ofNullable(groupNode.get("name")).map(JsonNode::asText).orElse(""))
+                            .build());
+                }
+            } catch (JacksonException e) {
+                LOGGER.warn("Failed to parse license groups JSON", e);
+            }
+        }
+
+        return licenseBuilder.build();
+    }
+
+    private static List<VulnerabilityProjection> fetchVulnerabilities(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
+        final String sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
+                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
+                .map(mapping -> "\"V\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
+                .collect(Collectors.joining(", "));
+
+        // TODO: Aliases could be fetched in the same query, using a JSONB aggregate.
+        // SELECT DISTINCT
+        //   "V"."ID" AS "id",
+        //   "V"."VULNID" AS "vulnId",
+        //   "V"."SOURCE" AS "source",
+        //   (SELECT
+        //      JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
+        //        'cveId', "VA"."CVE_ID",
+        //        'ghsaId', "VA"."GHSA_ID",
+        //        'gsdId', "VA"."GSD_ID",
+        //        'internalId', "VA"."INTERNAL_ID",
+        //        'osvId', "VA"."OSV_ID",
+        //        'sonatypeId', "VA"."SONATYPE_ID",
+        //        'snykId', "VA"."SNYK_ID",
+        //        'vulnDbId', "VA"."VULNDB_ID"
+        //      )))::TEXT
+        //    FROM
+        //      "VULNERABILITYALIAS" AS "VA"
+        //    WHERE
+        //      ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
+        //      OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
+        //      -- OR ...
+        //   ) AS "aliasesJson"
+        // FROM
+        //   "VULNERABILITY" AS "V"
+        // INNER JOIN
+        //   "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
+        // INNER JOIN
+        //   "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
+        // WHERE
+        //   "C"."PROJECT_ID" = ?;
+
+        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
+                SELECT DISTINCT
+                  "V"."ID" AS "id",
+                  %s
+                FROM
+                  "VULNERABILITY" AS "V"
+                INNER JOIN
+                  "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
+                INNER JOIN
+                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
+                WHERE
+                  "C"."PROJECT_ID" = ?
+                """.formatted(sqlSelectColumns));
+        query.setParameters(projectId);
+        try {
+            return List.copyOf(query.executeResultList(VulnerabilityProjection.class));
+        } finally {
+            query.closeAll();
+        }
+    }
+
     private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
                                                                      final Component component,
                                                                      final MultiValuedMap<Type, String> requirements) {
@@ -481,7 +908,7 @@ public class CelPolicyEngine {
                                                            final Component component,
                                                            final MultiValuedMap<Type, String> requirements) {
         if (!requirements.containsKey(TYPE_VULNERABILITY)) {
-            return Collections.emptyList();
+            return emptyList();
         }
 
         // TODO: Load only required fields
