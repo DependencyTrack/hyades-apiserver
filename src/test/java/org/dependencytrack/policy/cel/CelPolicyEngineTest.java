@@ -1,9 +1,11 @@
 package org.dependencytrack.policy.cel;
 
 import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
@@ -12,9 +14,17 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Date;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -23,9 +33,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
+
+    @Before
+    public void setUp() throws Exception {
+        super.setUp();
+
+        // Enable processing of CycloneDX BOMs
+        qm.createConfigProperty(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getGroupName(),
+                ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
+                ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyType(),
+                ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getDescription());
+    }
 
     @Test
     public void test() {
@@ -336,6 +358,40 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         policyViolation = violations.get(1);
         Assert.assertEquals("Log4J", policyViolation.getComponent().getName());
         Assert.assertEquals(PolicyCondition.Subject.LICENSE_GROUP, policyViolation.getPolicyCondition().getSubject());
+    }
+
+    @Test
+    public void testWithBloatedBom() throws Exception {
+        // Import all default objects (includes licenses and license groups).
+        new DefaultObjectGenerator().contextInitialized(null);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.2.3");
+        qm.persist(project);
+
+        // Create a policy that will be violated by the vast majority (>8000) components.
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.resolved_license.groups.exists(lg, lg.name == "Permissive")
+                        """);
+        policyConditionA.setViolationType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(policyConditionA);
+
+        // Import the bloated BOM.
+        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json")));
+
+        // Evaluate policies on the project.
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+    }
+
+    private static File createTempBomFile(final String testFileName) throws Exception {
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        return bomFilePath.toFile();
     }
 
 }
