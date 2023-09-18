@@ -37,12 +37,12 @@ import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuil
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
-import org.dependencytrack.policy.cel.persistence.ComponentProjection;
-import org.dependencytrack.policy.cel.persistence.ComponentsVulnerabilitiesProjection;
-import org.dependencytrack.policy.cel.persistence.LicenseGroupProjection;
-import org.dependencytrack.policy.cel.persistence.LicenseProjection;
-import org.dependencytrack.policy.cel.persistence.ProjectProjection;
-import org.dependencytrack.policy.cel.persistence.VulnerabilityProjection;
+import org.dependencytrack.policy.cel.mapping.ComponentProjection;
+import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjection;
+import org.dependencytrack.policy.cel.mapping.LicenseGroupProjection;
+import org.dependencytrack.policy.cel.mapping.LicenseProjection;
+import org.dependencytrack.policy.cel.mapping.ProjectProjection;
+import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.hyades.proto.policy.v1.License;
@@ -82,7 +82,7 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
-import static org.dependencytrack.policy.cel.persistence.FieldMappingUtil.getFieldMappings;
+import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
 
 public class CelPolicyEngine {
 
@@ -207,6 +207,7 @@ public class CelPolicyEngine {
                 vulnIdsByComponentId = Collections.emptyMap();
             }
 
+            // Evaluate all policy conditions against all components.
             final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
             for (final ComponentProjection component : components) {
                 final org.hyades.proto.policy.v1.Component protoComponent = mapComponent(component, licenseById);
