@@ -8,27 +8,35 @@ import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public class CelPolicyScriptVisitor {
+class CelPolicyScriptVisitor {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptVisitor.class);
 
+    record FunctionSignature(String function, Type targetType, List<Type> argumentTypes) {
+    }
+
     private final Map<Long, Type> types;
     private final MultiValuedMap<Type, String> accessedFieldsByType;
+    private final Set<FunctionSignature> usedFunctionSignatures;
     private final Deque<String> callFunctionStack;
     private final Deque<String> selectFieldStack;
     private final Deque<Type> selectOperandTypeStack;
 
-    public CelPolicyScriptVisitor(final Map<Long, Type> types) {
+    CelPolicyScriptVisitor(final Map<Long, Type> types) {
         this.types = types;
         this.accessedFieldsByType = new HashSetValuedHashMap<>();
+        this.usedFunctionSignatures = new HashSet<>();
         this.callFunctionStack = new ArrayDeque<>();
         this.selectFieldStack = new ArrayDeque<>();
         this.selectOperandTypeStack = new ArrayDeque<>();
     }
 
-    public void visit(final Expr expr) {
+    void visit(final Expr expr) {
         switch (expr.getExprKindCase()) {
             case CALL_EXPR -> visitCall(expr);
             case COMPREHENSION_EXPR -> visitComprehension(expr);
@@ -44,6 +52,13 @@ public class CelPolicyScriptVisitor {
     private void visitCall(final Expr expr) {
         logExpr(expr);
         final Expr.Call callExpr = expr.getCallExpr();
+
+        final Type targetType = types.get(callExpr.getTarget().getId());
+        final List<Type> argumentTypes = callExpr.getArgsList().stream()
+                .map(Expr::getId)
+                .map(types::get)
+                .toList();
+        usedFunctionSignatures.add(new FunctionSignature(callExpr.getFunction(), targetType, argumentTypes));
 
         callFunctionStack.push(callExpr.getFunction());
         visit(callExpr.getTarget());
@@ -96,8 +111,12 @@ public class CelPolicyScriptVisitor {
                 .formatted(expr.getExprKindCase(), expr.getId(), selectFieldStack, selectOperandTypeStack, callFunctionStack));
     }
 
-    public MultiValuedMap<Type, String> getAccessedFieldsByType() {
+    MultiValuedMap<Type, String> getAccessedFieldsByType() {
         return this.accessedFieldsByType;
+    }
+
+    Set<FunctionSignature> getUsedFunctionSignatures() {
+        return this.usedFunctionSignatures;
     }
 
 }

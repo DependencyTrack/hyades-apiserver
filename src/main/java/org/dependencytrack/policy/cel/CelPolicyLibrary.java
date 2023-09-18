@@ -47,9 +47,9 @@ public class CelPolicyLibrary implements Library {
     public static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
     public static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 
-    private static final String FUNC_DEPENDS_ON = "depends_on";
-    private static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
-    private static final String FUNC_MATCHES_RANGE = "matches_range";
+    public static final String FUNC_DEPENDS_ON = "depends_on";
+    public static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
+    public static final String FUNC_MATCHES_RANGE = "matches_range";
 
     @Override
     public List<EnvOption> getCompileOptions() {
