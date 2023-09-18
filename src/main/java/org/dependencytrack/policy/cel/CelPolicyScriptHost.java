@@ -7,6 +7,7 @@ import com.google.api.expr.v1alpha1.Type;
 import com.google.common.util.concurrent.Striped;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.dependencytrack.policy.cel.CelPolicyScriptVisitor.FunctionSignature;
 import org.projectnessie.cel.Ast;
 import org.projectnessie.cel.CEL;
 import org.projectnessie.cel.Env;
@@ -24,6 +25,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
 
@@ -106,6 +112,32 @@ public class CelPolicyScriptHost {
     private static MultiValuedMap<Type, String> analyzeRequirements(final CheckedExpr expr) {
         final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
         visitor.visit(expr.getExpr());
+
+        // Fields that are accessed directly are always a requirement.
+        final MultiValuedMap<Type, String> requirements = visitor.getAccessedFieldsByType();
+
+        // Custom functions may access certain fields implicitly, in a way that is not visible
+        // to the AST visitor. To compensate, we hardcode the functions' requirements here.
+        // TODO: This should be restructured to be more generic.
+        for (final FunctionSignature functionSignature : visitor.getUsedFunctionSignatures()) {
+            switch (functionSignature.function()) {
+                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF -> {
+                    if (TYPE_PROJECT.equals(functionSignature.targetType())) {
+                        requirements.put(TYPE_PROJECT, "uuid");
+                    } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
+                        requirements.put(TYPE_COMPONENT, "uuid");
+                    }
+                }
+                case FUNC_MATCHES_RANGE -> {
+                    if (TYPE_PROJECT.equals(functionSignature.targetType())) {
+                        requirements.put(TYPE_PROJECT, "version");
+                    } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
+                        requirements.put(TYPE_COMPONENT, "version");
+                    }
+                }
+            }
+        }
+
         return visitor.getAccessedFieldsByType();
     }
 
