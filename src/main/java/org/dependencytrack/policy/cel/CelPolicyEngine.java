@@ -14,6 +14,7 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.tuple.Pair;
+import org.datanucleus.PropertyNames;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
@@ -116,6 +117,12 @@ public class CelPolicyEngine {
         final Timer.Sample timerSample = Timer.start();
 
         try (final var qm = new QueryManager()) {
+            // Disable L1 cache. We don't need the results of INSERT or UPDATE operations to be present in the cache.
+            // We do potentially perform lots of INSERTS during violation reconciliation, maintenance of L1 cache
+            // will have a huge overhead we'd rather not have to deal with.
+            qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_CACHE_L1_TYPE, "none");
+            qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
+
             // TODO: Should this entire procedure run in a single DB transaction?
             //   Would be better for atomicity, but could block DB connections for prolonged
             //   period of time for larger projects with many violations.
