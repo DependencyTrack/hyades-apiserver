@@ -13,6 +13,7 @@ import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.datanucleus.PropertyNames;
 import org.dependencytrack.model.Component;
@@ -23,6 +24,7 @@ import org.dependencytrack.model.PolicyCondition.Subject;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
@@ -226,6 +228,8 @@ public class CelPolicyEngine {
                             conditionsViolated.put(component.id, condition);
                         }
                     } catch (ScriptException e) {
+                        // TODO: Should we really fail the entire run for ALL components,
+                        //   if only one condition failed to evaluate?
                         throw new RuntimeException("Failed to evaluate script", e);
                     }
                 }
@@ -579,7 +583,7 @@ public class CelPolicyEngine {
     }
 
     private static org.hyades.proto.policy.v1.Project mapProject(final ProjectProjection projection) {
-        return org.hyades.proto.policy.v1.Project.newBuilder()
+        final org.hyades.proto.policy.v1.Project.Builder builder = org.hyades.proto.policy.v1.Project.newBuilder()
                 .setUuid(trimToEmpty(projection.uuid))
                 .setGroup(trimToEmpty(projection.group))
                 .setName(trimToEmpty(projection.name))
@@ -587,8 +591,9 @@ public class CelPolicyEngine {
                 // .addAllTags(project.getTags().stream().map(Tag::getName).toList())
                 .setCpe(trimToEmpty(projection.cpe))
                 .setPurl(trimToEmpty(projection.purl))
-                .setSwidTagId(trimToEmpty(projection.swidTagId))
-                .build();
+                .setSwidTagId(trimToEmpty(projection.swidTagId));
+        Optional.ofNullable(projection.lastBomImport).map(Timestamps::fromDate).ifPresent(builder::setLastBomImport);
+        return builder.build();
     }
 
     private static List<ComponentProjection> fetchComponents(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
@@ -612,7 +617,7 @@ public class CelPolicyEngine {
     }
 
     private static org.hyades.proto.policy.v1.Component mapComponent(final ComponentProjection projection,
-                                                                     final Map<Long, License> licensesById) {
+                                                                     final Map<Long, License> protoLicenseById) {
         final org.hyades.proto.policy.v1.Component.Builder componentBuilder =
                 org.hyades.proto.policy.v1.Component.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
@@ -638,7 +643,13 @@ public class CelPolicyEngine {
                         .setBlake3(trimToEmpty(projection.blake3));
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
-            componentBuilder.setResolvedLicense(licensesById.get(projection.resolvedLicenseId));
+            final License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
+            if (protoLicense != null) {
+                componentBuilder.setResolvedLicense(protoLicenseById.get(projection.resolvedLicenseId));
+            } else {
+                LOGGER.warn("Component with ID %d refers to license %d, but no license with that ID was found"
+                        .formatted(projection.id, projection.resolvedLicenseId));
+            }
         }
 
         return componentBuilder.build();
@@ -675,6 +686,7 @@ public class CelPolicyEngine {
                 .map(mapping -> "\"L\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
 
+        // If fetching license groups is not necessary, we can just query for licenses and be done with it.
         if (!licenseProtoFieldNames.contains("groups")) {
             final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
                     SELECT DISTINCT
@@ -693,6 +705,26 @@ public class CelPolicyEngine {
                 query.closeAll();
             }
         }
+
+        // If groups are required, include them in the license query in order to avoid the 1+N problem.
+        // Licenses may or may not be assigned to a group. Licenses can be in multiple groups.
+        //
+        // Using a simple LEFT JOIN would result in duplicate license data being fetched, e.g.:
+        //
+        // | "L"."ID" | "L"."NAME" | "LG"."NAME" |
+        // | :------- | :--------- | :---------- |
+        // | 1        | foo        | groupA      |
+        // | 1        | foo        | groupB      |
+        // | 1        | foo        | groupC      |
+        // | 2        | bar        | NULL        |
+        //
+        // To avoid this, we instead aggregate license group fields for each license, and return them as JSON.
+        // The reason for choosing JSON over native arrays, is that DataNucleus can't deal with arrays cleanly.
+        //
+        // | "L"."ID" | "L"."NAME" | "licenseGroupsJson"                                     |
+        // | :------- | :--------- | :------------------------------------------------------ |
+        // | 1        | foo        | [{"name":"groupA"},{"name":"groupB"},{"name":"groupC"}] |
+        // | 2        | bar        | []                                                      |
 
         final String licenseSqlGroupByColumns = Stream.concat(
                         Stream.of(LicenseProjection.ID_FIELD_MAPPING),
@@ -733,19 +765,19 @@ public class CelPolicyEngine {
         }
     }
 
-    private static License mapLicense(final LicenseProjection licenseProjection) {
+    private static License mapLicense(final LicenseProjection projection) {
         final License.Builder licenseBuilder = License.newBuilder()
-                .setUuid(trimToEmpty(licenseProjection.uuid))
-                .setId(trimToEmpty(licenseProjection.licenseId))
-                .setName(trimToEmpty(licenseProjection.name));
-        Optional.ofNullable(licenseProjection.isOsiApproved).ifPresent(licenseBuilder::setIsOsiApproved);
-        Optional.ofNullable(licenseProjection.isFsfLibre).ifPresent(licenseBuilder::setIsFsfLibre);
-        Optional.ofNullable(licenseProjection.isDeprecatedId).ifPresent(licenseBuilder::setIsDeprecatedId);
-        Optional.ofNullable(licenseProjection.isCustomLicense).ifPresent(licenseBuilder::setIsCustom);
+                .setUuid(trimToEmpty(projection.uuid))
+                .setId(trimToEmpty(projection.licenseId))
+                .setName(trimToEmpty(projection.name));
+        Optional.ofNullable(projection.isOsiApproved).ifPresent(licenseBuilder::setIsOsiApproved);
+        Optional.ofNullable(projection.isFsfLibre).ifPresent(licenseBuilder::setIsFsfLibre);
+        Optional.ofNullable(projection.isDeprecatedId).ifPresent(licenseBuilder::setIsDeprecatedId);
+        Optional.ofNullable(projection.isCustomLicense).ifPresent(licenseBuilder::setIsCustom);
 
-        if (licenseProjection.licenseGroupsJson != null) {
+        if (projection.licenseGroupsJson != null) {
             try {
-                final ArrayNode groupsArray = OBJECT_MAPPER.readValue(licenseProjection.licenseGroupsJson, ArrayNode.class);
+                final ArrayNode groupsArray = OBJECT_MAPPER.readValue(projection.licenseGroupsJson, ArrayNode.class);
                 for (final JsonNode groupNode : groupsArray) {
                     licenseBuilder.addGroups(License.Group.newBuilder()
                             .setUuid(Optional.ofNullable(groupNode.get("uuid")).map(JsonNode::asText).orElse(""))
@@ -753,7 +785,7 @@ public class CelPolicyEngine {
                             .build());
                 }
             } catch (JacksonException e) {
-                LOGGER.warn("Failed to parse license groups JSON", e);
+                LOGGER.warn("Failed to parse license groups JSON for license %s".formatted(projection.id), e);
             }
         }
 
@@ -828,7 +860,6 @@ public class CelPolicyEngine {
                 .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
                 .setOwaspRrVector(trimToEmpty(projection.owaspRrVector))
                 .setSeverity(trimToEmpty(projection.severity));
-        // Optional.ofNullable(v.getCwes()).ifPresent(builder::addAllCwes);
         Optional.ofNullable(projection.cvssV2BaseScore).ifPresent(builder::setCvssv2BaseScore);
         Optional.ofNullable(projection.cvssV2ImpactSubScore).ifPresent(builder::setCvssv2ImpactSubscore);
         Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).ifPresent(builder::setCvssv2ExploitabilitySubscore);
@@ -843,6 +874,11 @@ public class CelPolicyEngine {
         Optional.ofNullable(projection.created).map(Timestamps::fromDate).ifPresent(builder::setCreated);
         Optional.ofNullable(projection.published).map(Timestamps::fromDate).ifPresent(builder::setPublished);
         Optional.ofNullable(projection.updated).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
+        Optional.ofNullable(projection.cwes)
+                .map(StringUtils::trimToNull)
+                .filter(Objects::nonNull)
+                .map(new CollectionIntegerConverter()::convertToAttribute)
+                .ifPresent(builder::addAllCwes);
         return builder.build();
     }
 
