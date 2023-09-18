@@ -1,4 +1,4 @@
-package org.dependencytrack.policy.cel.persistence;
+package org.dependencytrack.policy.cel.mapping;
 
 import com.google.protobuf.Descriptors.Descriptor;
 import org.dependencytrack.PersistenceCapableTest;

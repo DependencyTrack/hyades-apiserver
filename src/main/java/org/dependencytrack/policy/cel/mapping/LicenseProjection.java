@@ -1,8 +1,8 @@
-package org.dependencytrack.policy.cel.persistence;
+package org.dependencytrack.policy.cel.mapping;
 
 public class LicenseProjection {
 
-    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", null, "ID");
+    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
 
     public long id;
 

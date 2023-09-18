@@ -138,7 +138,7 @@ public class CelPolicyScriptHost {
             }
         }
 
-        return visitor.getAccessedFieldsByType();
+        return requirements;
     }
 
 }

@@ -1,4 +1,4 @@
-package org.dependencytrack.policy.cel.persistence;
+package org.dependencytrack.policy.cel.mapping;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -12,6 +12,9 @@ import static org.apache.commons.lang3.StringUtils.trimToNull;
 public final class FieldMappingUtil {
 
     private static final Map<Class<?>, List<FieldMapping>> FIELD_MAPPINGS_BY_CLASS = new ConcurrentHashMap<>();
+
+    private FieldMappingUtil() {
+    }
 
     public static List<FieldMapping> getFieldMappings(final Class<?> clazz) {
         return FIELD_MAPPINGS_BY_CLASS.computeIfAbsent(clazz, FieldMappingUtil::createFieldMappings);
