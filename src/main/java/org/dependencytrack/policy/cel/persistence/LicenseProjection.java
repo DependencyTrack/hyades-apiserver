@@ -15,7 +15,7 @@ public class LicenseProjection {
     @MappedField(sqlColumnName = "NAME")
     public String name;
 
-    @MappedField(protoFieldName = "is_osi_approved", sqlColumnName = "OSIAPPROVED")
+    @MappedField(protoFieldName = "is_osi_approved", sqlColumnName = "ISOSIAPPROVED")
     public Boolean isOsiApproved;
 
     @MappedField(protoFieldName = "is_fsf_libre", sqlColumnName = "FSFLIBRE")

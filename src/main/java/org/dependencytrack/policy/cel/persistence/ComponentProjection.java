@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.persistence;
 
 public class ComponentProjection {
 
-    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", null, "ID");
+    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
 
     public long id;
 
@@ -75,7 +75,8 @@ public class ComponentProjection {
     @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
     public String licenseName;
 
-    @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
-    public String licenseExpression;
+    // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.
+    // @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
+    // public String licenseExpression;
 
 }

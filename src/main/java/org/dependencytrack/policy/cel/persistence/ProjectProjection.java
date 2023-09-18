@@ -33,7 +33,7 @@ public class ProjectProjection {
     @MappedField(protoFieldName = "swid_tag_id", sqlColumnName = "SWIDTAGID")
     public String swidTagId;
 
-    @MappedField(protoFieldName = "last_bom_import", sqlColumnName = "LAST_BOM_IMPORT")
+    @MappedField(protoFieldName = "last_bom_import", sqlColumnName = "LAST_BOM_IMPORTED")
     public Date lastBomImport;
 
 }
