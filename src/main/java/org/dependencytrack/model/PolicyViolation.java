@@ -46,6 +46,10 @@ import java.util.UUID;
 @PersistenceCapable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Unique(name = "foo", members = {
+        "component",
+        "policyCondition",
+})
 public class PolicyViolation implements Serializable {
 
     public enum Type {

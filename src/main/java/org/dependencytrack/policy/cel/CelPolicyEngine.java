@@ -41,6 +41,7 @@ import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseGroupProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
+import org.dependencytrack.policy.cel.mapping.PolicyViolationProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.util.NotificationUtil;
@@ -52,7 +53,14 @@ import org.projectnessie.cel.tools.ScriptException;
 
 import javax.jdo.Query;
 import javax.jdo.Transaction;
+import javax.jdo.datastore.JDOConnection;
 import java.math.BigDecimal;
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,13 +72,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.sql.Connection.TRANSACTION_READ_COMMITTED;
 import static java.util.Collections.emptyList;
-import static java.util.function.Predicate.not;
+import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
@@ -137,10 +146,8 @@ public class CelPolicyEngine {
 
             final List<Policy> policies = getApplicablePolicies(qm, project);
             if (policies.isEmpty()) {
-                // With no applicable policies, there's no way to resolve violations.
-                // As a compensation, simply delete all violations associated with the component.
-                LOGGER.info("No applicable policies found for component %s".formatted(uuid));
-                // reconcileViolations(qm, component, Collections.emptyList());
+                LOGGER.info("No applicable policies found for project %s".formatted(uuid));
+                reconcileViolations(qm, project.getId(), emptyMultiValuedMap());
                 return;
             }
 
@@ -276,37 +283,11 @@ public class CelPolicyEngine {
                 violationsByComponentId.putAll(componentId, violations);
             }
 
-            final List<Long> componentIdsWithoutViolations = components.stream()
-                    .map(projection -> projection.id)
-                    .filter(not(violationsByComponentId.keySet()::contains))
-                    .toList();
-            // TODO: Delete all existing violations for all elements of componentIdsWithoutViolations.
+            final List<Long> newViolationIds = reconcileViolations(qm, project.getId(), violationsByComponentId);
+            LOGGER.info("Identified %d new violations for project %s".formatted(newViolationIds.size(), uuid));
 
-            // In order to create policy violations, we unfortunately need Component objects that
-            // are attached to the persistence context. We don't need any other fields beside their
-            // identity (i.e. ID) though.
-            // And because they are only required for CREATING violations, it's sufficient to only
-            // fetch them for components that violate at least one policy.
-            final Query<Component> componentQuery = qm.getPersistenceManager().newQuery(Component.class);
-            componentQuery.getFetchPlan().setGroup(Component.FetchGroup.IDENTITY.name());
-            componentQuery.setFilter(":ids.contains(id)");
-            componentQuery.setParameters(violationsByComponentId.keySet());
-            final Map<Long, Component> persistentComponentById;
-            try {
-                persistentComponentById = componentQuery.executeList().stream()
-                        .collect(Collectors.toMap(Component::getId, Function.identity()));
-            } finally {
-                componentQuery.closeAll();
-            }
-
-            final var newViolations = new ArrayList<PolicyViolation>();
-            for (final Long componentId : violationsByComponentId.keySet()) {
-                final Component persistentComponent = persistentComponentById.get(componentId);
-                newViolations.addAll(reconcileViolations(qm, persistentComponent, violationsByComponentId.get(componentId)));
-            }
-
-            for (final PolicyViolation newViolation : newViolations) {
-                NotificationUtil.analyzeNotificationCriteria(qm, newViolation);
+            for (final Long newViolationId : newViolationIds) {
+                NotificationUtil.analyzeNotificationCriteria(qm, newViolationId);
             }
         } finally {
             final long durationNs = timerSample.stop(Timer
@@ -1111,6 +1092,151 @@ public class CelPolicyEngine {
         }
 
         return newViolations;
+    }
+
+    private static List<Long> reconcileViolations(final QueryManager qm, final long projectId,
+                                                  final MultiValuedMap<Long, PolicyViolation> reportedViolationsByComponentId) {
+        // We want to send notifications for newly identified policy violations,
+        // so need to keep track of which violations we created.
+        final var newViolationIds = new ArrayList<Long>();
+
+        // DataNucleus does not support batch inserts, which is something we need to create
+        // new violations efficiently. Falling back to "raw" JDBC for the sake of efficiency.
+        final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+
+        try {
+            // JDBC connections default to autocommit.
+            // We'll do multiple write operations here, and want to commit them all in a single transaction.
+            nativeConnection.setAutoCommit(false);
+            nativeConnection.setTransactionIsolation(TRANSACTION_READ_COMMITTED);
+
+            // First, query for all existing policy violations of the project, grouping them by component ID.
+            final var existingViolationsByComponentId = new HashSetValuedHashMap<Long, PolicyViolationProjection>();
+            try (final PreparedStatement ps = nativeConnection.prepareStatement("""
+                    SELECT
+                      "ID"                 AS "id",
+                      "COMPONENT_ID"       AS "componentId",
+                      "POLICYCONDITION_ID" AS "policyConditionId"
+                    FROM
+                      "POLICYVIOLATION"
+                    WHERE
+                      "PROJECT_ID" = ?
+                    """)) {
+                ps.setLong(1, projectId);
+
+                final ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    existingViolationsByComponentId.put(
+                            rs.getLong("componentId"),
+                            new PolicyViolationProjection(
+                                    rs.getLong("id"),
+                                    rs.getLong("policyConditionId")
+                            ));
+                }
+            }
+
+            // For each component that has existing and / or reported violations...
+            final Set<Long> componentIds = new HashSet<>(reportedViolationsByComponentId.keySet().size() + existingViolationsByComponentId.keySet().size());
+            componentIds.addAll(reportedViolationsByComponentId.keySet());
+            componentIds.addAll(existingViolationsByComponentId.keySet());
+
+            // ... determine which existing violations should be deleted (because they're no longer reported),
+            // and which reported violations should be created (because they have not been reported before).
+            //
+            // Violations not belonging to either of those buckets are reported, but already exist,
+            // meaning no action needs to be taken for them.
+            final var violationIdsToDelete = new ArrayList<Long>();
+            final var violationsToCreate = new HashSetValuedHashMap<Long, PolicyViolation>();
+            for (final Long componentId : componentIds) {
+                final Collection<PolicyViolationProjection> existingViolations = existingViolationsByComponentId.get(componentId);
+                final Collection<PolicyViolation> reportedViolations = reportedViolationsByComponentId.get(componentId);
+
+                if (reportedViolations == null || reportedViolations.isEmpty()) {
+                    // Component has been removed, or does not have any violations anymore.
+                    // All of its existing violations can be deleted.
+                    violationIdsToDelete.addAll(existingViolations.stream().map(PolicyViolationProjection::id).toList());
+                    continue;
+                }
+
+                if (existingViolations == null || existingViolations.isEmpty()) {
+                    // Component did not have any violations before, but has some now.
+                    // All reported violations must be newly created.
+                    violationsToCreate.putAll(componentId, reportedViolations);
+                    continue;
+                }
+
+                // To determine which violations shall be deleted, find occurrences of violations appearing
+                // in the collection of existing violations, but not in the collection of reported violations.
+                existingViolations.stream()
+                        .filter(existingViolation -> reportedViolations.stream().noneMatch(newViolation ->
+                                newViolation.getPolicyCondition().getId() == existingViolation.policyConditionId()))
+                        .map(PolicyViolationProjection::id)
+                        .forEach(violationIdsToDelete::add);
+
+                // To determine which violations shall be created, find occurrences of violations appearing
+                // in the collection of reported violations, but not in the collection of existing violations.
+                reportedViolations.stream()
+                        .filter(reportedViolation -> existingViolations.stream().noneMatch(existingViolation ->
+                                existingViolation.policyConditionId() == reportedViolation.getPolicyCondition().getId()))
+                        .forEach(reportedViolation -> violationsToCreate.put(componentId, reportedViolation));
+            }
+
+            if (!violationsToCreate.isEmpty()) {
+                try (final PreparedStatement ps = nativeConnection.prepareStatement("""
+                        INSERT INTO "POLICYVIOLATION"
+                          ("UUID", "TIMESTAMP", "COMPONENT_ID", "PROJECT_ID", "POLICYCONDITION_ID", "TYPE")
+                        VALUES
+                          (?, NOW(), ?, ?, ?, ?)
+                        ON CONFLICT DO NOTHING
+                        RETURNING "ID"
+                        """, Statement.RETURN_GENERATED_KEYS)) {
+                    for (final Map.Entry<Long, PolicyViolation> entry : violationsToCreate.entries()) {
+                        ps.setString(1, UUID.randomUUID().toString());
+                        ps.setLong(2, entry.getKey());
+                        ps.setLong(3, projectId);
+                        ps.setLong(4, entry.getValue().getPolicyCondition().getId());
+                        ps.setString(5, entry.getValue().getType().name());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+
+                    final ResultSet rs = ps.getGeneratedKeys();
+                    while (rs.next()) {
+                        newViolationIds.add(rs.getLong(1));
+                    }
+                }
+            }
+
+            if (!violationIdsToDelete.isEmpty()) {
+                final Array violationIdsToDeleteArray =
+                        nativeConnection.createArrayOf("BIGINT", violationIdsToDelete.toArray(new Long[0]));
+
+                try (final PreparedStatement ps = nativeConnection.prepareStatement("""
+                        DELETE FROM
+                          "POLICYVIOLATION"
+                        WHERE
+                          "ID" = ANY(?)
+                        """)) {
+                    ps.setArray(1, violationIdsToDeleteArray);
+                    ps.execute();
+                }
+            }
+
+            nativeConnection.commit();
+        } catch (Exception e) {
+            try {
+                nativeConnection.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+
+            throw new RuntimeException(e);
+        } finally {
+            jdoConnection.close();
+        }
+
+        return newViolationIds;
     }
 
 }
