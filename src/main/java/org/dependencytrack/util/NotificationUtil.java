@@ -102,6 +102,8 @@ public final class NotificationUtil {
 
     public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
+        // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
+        //   See #analyzeNotificationCriteria(QueryManager, PolicyViolation) for an example.
         if (analysisStateChange || suppressionChange) {
             final NotificationGroup notificationGroup;
             notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
@@ -159,6 +161,8 @@ public final class NotificationUtil {
 
     public static void analyzeNotificationCriteria(final QueryManager qm, ViolationAnalysis violationAnalysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
+        // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
+        //   See #analyzeNotificationCriteria(QueryManager, PolicyViolation) for an example.
         if (analysisStateChange || suppressionChange) {
             final NotificationGroup notificationGroup;
             notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
@@ -220,6 +224,10 @@ public final class NotificationUtil {
     }
 
     public static void analyzeNotificationCriteria(final QueryManager qm, final PolicyViolation policyViolation) {
+        analyzeNotificationCriteria(qm, policyViolation.getId());
+    }
+
+    public static void analyzeNotificationCriteria(final QueryManager qm, final Long violationId) {
         final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
                 SELECT
                   "PV"."UUID"          AS "violationUuid",
@@ -272,7 +280,7 @@ public final class NotificationUtil {
                 WHERE
                   "PV"."ID" = ?
                 """);
-        query.setParameters(policyViolation.getId());
+        query.setParameters(violationId);
         final PolicyViolationNotificationProjection projection;
         try {
             projection = query.executeResultUnique(PolicyViolationNotificationProjection.class);
@@ -428,6 +436,8 @@ public final class NotificationUtil {
     }
 
     public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, UUID token, ProjectVulnAnalysisStatus status) {
+        // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
+        //   See #analyzeNotificationCriteria(QueryManager, PolicyViolation) for an example.
         try (QueryManager qm = new QueryManager()) {
             Project project = qm.getObjectByUuid(Project.class, vulnScan.getTargetIdentifier());
             if (project == null) {
