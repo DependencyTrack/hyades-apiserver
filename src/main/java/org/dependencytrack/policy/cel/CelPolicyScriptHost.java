@@ -19,6 +19,7 @@ import org.projectnessie.cel.common.Errors;
 import org.projectnessie.cel.common.Location;
 import org.projectnessie.cel.common.types.Err.ErrException;
 import org.projectnessie.cel.common.types.pb.ProtoTypeRegistry;
+import org.projectnessie.cel.extension.StringsLib;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collections;
@@ -49,6 +50,7 @@ public class CelPolicyScriptHost {
                 ProtoTypeRegistry.newRegistry(),
                 List.of(
                         Library.StdLib(),
+                        Library.Lib(new StringsLib()),
                         Library.Lib(new CelPolicyLibrary())
                 )
         );
