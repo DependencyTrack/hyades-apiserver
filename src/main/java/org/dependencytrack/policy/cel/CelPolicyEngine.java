@@ -3,10 +3,10 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.github.packageurl.PackageURL;
 import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
@@ -15,15 +15,13 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.datanucleus.PropertyNames;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyCondition.Subject;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
@@ -38,46 +36,29 @@ import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilde
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
-import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjection;
-import org.dependencytrack.policy.cel.mapping.LicenseGroupProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
-import org.dependencytrack.policy.cel.mapping.PolicyViolationProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
+import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.util.NotificationUtil;
-import org.dependencytrack.util.VulnerabilityUtil;
-import org.hyades.proto.policy.v1.License;
 import org.hyades.proto.policy.v1.Vulnerability;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
 
-import javax.jdo.Query;
-import javax.jdo.Transaction;
-import javax.jdo.datastore.JDOConnection;
-import java.math.BigDecimal;
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.sql.Connection.TRANSACTION_READ_COMMITTED;
 import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
@@ -87,12 +68,15 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE_GROUP
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY_ALIAS;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
-import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
 
+/**
+ * A policy engine powered by the Common Expression Language (CEL).
+ *
+ * @since 5.1.0
+ */
 public class CelPolicyEngine {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyEngine.class);
@@ -124,87 +108,71 @@ public class CelPolicyEngine {
         this.scriptHost = scriptHost;
     }
 
+    /**
+     * Evaluate {@link Policy}s for a {@link Project}.
+     *
+     * @param uuid The {@link UUID} of the {@link Project}
+     */
     public void evaluateProject(final UUID uuid) {
         final Timer.Sample timerSample = Timer.start();
 
-        try (final var qm = new QueryManager()) {
-            // Disable L1 cache. We don't need the results of INSERT or UPDATE operations to be present in the cache.
-            // We do potentially perform lots of INSERTS during violation reconciliation, maintenance of L1 cache
-            // will have a huge overhead we'd rather not have to deal with.
-            qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_CACHE_L1_TYPE, "none");
-            qm.getPersistenceManager().setProperty(PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
-
+        try (final var qm = new QueryManager();
+             final var celQm = new CelPolicyQueryManager(qm)) {
             // TODO: Should this entire procedure run in a single DB transaction?
             //   Would be better for atomicity, but could block DB connections for prolonged
             //   period of time for larger projects with many violations.
 
             final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.IDENTIFIERS.name()));
             if (project == null) {
-                LOGGER.warn("Project with UUID %s does not exist".formatted(uuid));
+                LOGGER.warn("Project with UUID %s does not exist; Skipping".formatted(uuid));
                 return;
             }
 
-            final List<Policy> policies = getApplicablePolicies(qm, project);
-            if (policies.isEmpty()) {
+            LOGGER.debug("Compiling policy scripts for project %s".formatted(uuid));
+            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = getApplicableConditionScriptPairs(celQm, project);
+            if (conditionScriptPairs.isEmpty()) {
                 LOGGER.info("No applicable policies found for project %s".formatted(uuid));
-                reconcileViolations(qm, project.getId(), emptyMultiValuedMap());
+                celQm.reconcileViolations(project.getId(), emptyMultiValuedMap());
                 return;
             }
 
-            LOGGER.info("Compiling policy scripts for project %s".formatted(uuid));
-            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
-                    .map(Policy::getPolicyConditions)
-                    .flatMap(Collection::stream)
-                    .map(this::buildConditionScriptSrc)
-                    .filter(Objects::nonNull)
-                    .map(this::compileConditionScript)
-                    .toList();
-
-            LOGGER.info("Determining evaluation requirements for project %s and %d policy conditions"
-                    .formatted(uuid, conditionScriptPairs.size()));
-            final MultiValuedMap<Type, String> requirements = conditionScriptPairs.stream()
-                    .map(Pair::getRight)
-                    .map(CelPolicyScript::getRequirements)
-                    .reduce(new HashSetValuedHashMap<>(), (a, b) -> {
-                        a.putAll(b);
-                        return a;
-                    });
-            LOGGER.info("Requirements for project %s and %d policy conditions: %s"
+            final MultiValuedMap<Type, String> requirements = determineScriptRequirements(conditionScriptPairs);
+            LOGGER.debug("Requirements for project %s and %d policy conditions: %s"
                     .formatted(uuid, conditionScriptPairs.size(), requirements));
 
             final org.hyades.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
-                protoProject = mapProject(fetchProject(qm, project.getId(), requirements.get(TYPE_PROJECT)));
+                protoProject = mapToProto(celQm.fetchProject(project.getId(), requirements.get(TYPE_PROJECT), requirements.get(TYPE_PROJECT_PROPERTY)));
             } else {
                 protoProject = org.hyades.proto.policy.v1.Project.getDefaultInstance();
             }
 
             // Preload components for the entire project, to avoid excessive queries.
-            final List<ComponentProjection> components = fetchComponents(qm, project.getId(), requirements.get(TYPE_COMPONENT));
+            final List<ComponentProjection> components = celQm.fetchAllComponents(project.getId(), requirements.get(TYPE_COMPONENT));
 
             // Preload licenses for the entire project, as chances are high that they will be used by multiple components.
-            final Map<Long, License> licenseById;
+            final Map<Long, org.hyades.proto.policy.v1.License> licenseById;
             if (requirements.containsKey(TYPE_LICENSE)) {
-                licenseById = fetchLicenses(qm, project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
+                licenseById = celQm.fetchAllLicenses(project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
                         .collect(Collectors.toMap(
                                 projection -> projection.id,
-                                CelPolicyEngine::mapLicense
+                                CelPolicyEngine::mapToProto
                         ));
             } else {
                 licenseById = Collections.emptyMap();
             }
 
             // Preload vulnerabilities for the entire project, as chances are high that they will be used by multiple components.
-            final Map<Long, Vulnerability> protoVulnById;
+            final Map<Long, org.hyades.proto.policy.v1.Vulnerability> protoVulnById;
             final Map<Long, List<Long>> vulnIdsByComponentId;
             if (requirements.containsKey(TYPE_VULNERABILITY)) {
-                protoVulnById = fetchVulnerabilities(qm, project.getId(), requirements.get(TYPE_VULNERABILITY)).stream()
+                protoVulnById = celQm.fetchAllVulnerabilities(project.getId(), requirements.get(TYPE_VULNERABILITY)).stream()
                         .collect(Collectors.toMap(
                                 projection -> projection.id,
-                                CelPolicyEngine::mapVulnerability
+                                CelPolicyEngine::mapToProto
                         ));
 
-                vulnIdsByComponentId = fetchComponentsVulnerabilities(qm, project.getId()).stream()
+                vulnIdsByComponentId = celQm.fetchAllComponentsVulnerabilities(project.getId()).stream()
                         .collect(Collectors.groupingBy(
                                 projection -> projection.componentId,
                                 Collectors.mapping(projection -> projection.vulnerabilityId, Collectors.toList())
@@ -217,73 +185,25 @@ public class CelPolicyEngine {
             // Evaluate all policy conditions against all components.
             final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
             for (final ComponentProjection component : components) {
-                final org.hyades.proto.policy.v1.Component protoComponent = mapComponent(component, licenseById);
-                final List<Vulnerability> protoVulns = vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
-                        .map(protoVulnById::get)
-                        .toList();
+                final org.hyades.proto.policy.v1.Component protoComponent = mapToProto(component, licenseById);
+                final List<org.hyades.proto.policy.v1.Vulnerability> protoVulns =
+                        vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
+                                .map(protoVulnById::get)
+                                .toList();
 
-                for (final Pair<PolicyCondition, CelPolicyScript> conditionScriptPair : conditionScriptPairs) {
-                    final PolicyCondition condition = conditionScriptPair.getLeft();
-                    final CelPolicyScript script = conditionScriptPair.getRight();
-                    final Map<String, Object> scriptArgs = Map.of(
-                            VAR_COMPONENT, protoComponent,
-                            VAR_PROJECT, protoProject,
-                            VAR_VULNERABILITIES, protoVulns
-                    );
-
-                    try {
-                        if (script.execute(scriptArgs)) {
-                            conditionsViolated.put(component.id, condition);
-                        }
-                    } catch (ScriptException e) {
-                        // TODO: Should we really fail the entire run for ALL components,
-                        //   if only one condition failed to evaluate?
-                        throw new RuntimeException("Failed to evaluate script", e);
-                    }
-                }
+                conditionsViolated.putAll(component.id, evaluateConditions(conditionScriptPairs, Map.of(
+                        VAR_COMPONENT, protoComponent,
+                        VAR_PROJECT, protoProject,
+                        VAR_VULNERABILITIES, protoVulns
+                )));
             }
 
-            // Evaluate policy operators.
-            // Determines whether violations must be reported in the first place.
-            // i.e. if not all conditions matched for a policy with ALL operator,
-            // then no violations are to be raised.
             final var violationsByComponentId = new ArrayListValuedHashMap<Long, PolicyViolation>();
             for (final long componentId : conditionsViolated.keySet()) {
-                final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.get(componentId).stream()
-                        .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
-
-                final List<PolicyViolation> violations = violatedConditionsByPolicy.entrySet().stream()
-                        .flatMap(policyAndViolatedConditions -> {
-                            final Policy policy = policyAndViolatedConditions.getKey();
-                            final List<PolicyCondition> violatedConditions = policyAndViolatedConditions.getValue();
-
-                            if ((policy.getOperator() == Policy.Operator.ANY && !violatedConditions.isEmpty())
-                                    || (policy.getOperator() == Policy.Operator.ALL && violatedConditions.size() == policy.getPolicyConditions().size())) {
-                                // TODO: Only a single violation should be raised, and instead multiple matched conditions
-                                //   should be associated with it. Keeping the existing behavior in order to avoid having to
-                                //   touch too much persistence and REST API code.
-                                return violatedConditions.stream()
-                                        .map(condition -> {
-                                            final var violation = new PolicyViolation();
-                                            violation.setType(condition.getViolationType());
-                                            // Note: violation.setComponent is intentionally omitted here,
-                                            // because the component must be an object attached to the persistence
-                                            // context. We don't have that at this point, we'll add it later.
-                                            violation.setPolicyCondition(condition);
-                                            violation.setTimestamp(new Date());
-                                            return violation;
-                                        });
-                            }
-
-                            return Stream.empty();
-                        })
-                        .filter(Objects::nonNull)
-                        .toList();
-
-                violationsByComponentId.putAll(componentId, violations);
+                violationsByComponentId.putAll(componentId, evaluatePolicyOperators(conditionsViolated.get(componentId)));
             }
 
-            final List<Long> newViolationIds = reconcileViolations(qm, project.getId(), violationsByComponentId);
+            final List<Long> newViolationIds = celQm.reconcileViolations(project.getId(), violationsByComponentId);
             LOGGER.info("Identified %d new violations for project %s".formatted(newViolationIds.size(), uuid));
 
             for (final Long newViolationId : newViolationIds) {
@@ -299,225 +219,108 @@ public class CelPolicyEngine {
         }
     }
 
-    // TODO: Just here to satisfy contract with legacy PolicyEngine; Remove after testing
-    public void evaluate(final List<Component> components) {
-        components.stream().map(Component::getUuid).forEach(this::evaluateComponent);
-    }
-
-    public void evaluateComponent(final UUID componentUuid) {
+    public void evaluateComponent(final UUID uuid) {
         final Timer.Sample timerSample = Timer.start();
 
-        try (final var qm = new QueryManager()) {
-            final Component component = qm.getObjectByUuid(Component.class, componentUuid);
+        try (final var qm = new QueryManager();
+             final var celQm = new CelPolicyQueryManager(qm)) {
+            final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component == null) {
-                LOGGER.warn("Component with UUID %s does not exist".formatted(componentUuid));
+                LOGGER.warn("Component with UUID %s does not exist".formatted(uuid));
                 return;
             }
 
-            final List<Policy> policies = getApplicablePolicies(qm, component.getProject());
-            if (policies.isEmpty()) {
-                // With no applicable policies, there's no way to resolve violations.
-                // As a compensation, simply delete all violations associated with the component.
-                LOGGER.info("No applicable policies found for component %s".formatted(componentUuid));
-                reconcileViolations(qm, component, emptyList());
+            LOGGER.debug("Compiling policy scripts for project %s".formatted(uuid));
+            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = getApplicableConditionScriptPairs(celQm, component.getProject());
+            if (conditionScriptPairs.isEmpty()) {
+                LOGGER.info("No applicable policies found for project %s".formatted(uuid));
+                // reconcileViolations(qm, project.getId(), emptyMultiValuedMap());
                 return;
             }
 
-            // Pre-compile the CEL scripts for all conditions of all applicable policies.
-            // Compiled scripts are cached in-memory by CelPolicyScriptHost, so if the same script
-            // is encountered for multiple components (possibly concurrently), the compilation is
-            // a one-time effort.
-            LOGGER.info("Compiling policy scripts for component %s".formatted(componentUuid));
-            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = policies.stream()
-                    .map(Policy::getPolicyConditions)
-                    .flatMap(Collection::stream)
-                    .map(this::buildConditionScriptSrc)
-                    .filter(Objects::nonNull)
-                    .map(this::compileConditionScript)
-                    .toList();
-
-            // Check what kind of data we need to evaluate all policy conditions.
-            //
-            // Some conditions will be very simple and won't require us to load additional data (e.g. "component PURL matches 'XYZ'"),
-            // whereas other conditions can span across multiple models, forcing us to load more data
-            // (e.g. "project has tag 'public-facing' and component has a vulnerability with severity 'critical'").
-            //
-            // What we want to avoid is loading data we don't need, and loading it multiple times.
-            // Instead, only load what's really needed, and only do so once.
             LOGGER.info("Determining evaluation requirements for component %s and %d policy conditions"
-                    .formatted(componentUuid, conditionScriptPairs.size()));
-            final MultiValuedMap<Type, String> requirements = conditionScriptPairs.stream()
-                    .map(Pair::getRight)
-                    .map(CelPolicyScript::getRequirements)
-                    .reduce(new HashSetValuedHashMap<>(), (a, b) -> {
-                        a.putAll(b);
-                        return a;
-                    });
-
-            // Prepare the script arguments according to the requirements gathered before.
-            LOGGER.info("Building script arguments for component %s and requirements %s"
-                    .formatted(componentUuid, requirements));
-            final Map<String, Object> scriptArgs = Map.of(
-                    VAR_COMPONENT, mapComponent(qm, component, requirements),
-                    VAR_PROJECT, mapProject(component.getProject(), requirements),
-                    VAR_VULNERABILITIES, loadVulnerabilities(qm, component, requirements)
-            );
+                    .formatted(uuid, conditionScriptPairs.size()));
+            final MultiValuedMap<Type, String> requirements = determineScriptRequirements(conditionScriptPairs);
 
             LOGGER.info("Evaluating component %s against %d applicable policy conditions"
-                    .formatted(componentUuid, conditionScriptPairs.size()));
-            final var conditionsViolated = new HashSet<PolicyCondition>();
-            for (final Pair<PolicyCondition, CelPolicyScript> conditionScriptPair : conditionScriptPairs) {
-                final PolicyCondition condition = conditionScriptPair.getLeft();
-                final CelPolicyScript script = conditionScriptPair.getRight();
-                LOGGER.info("Executing script for policy condition %s with arguments: %s"
-                        .formatted(condition.getUuid(), scriptArgs));
-
-                try {
-                    if (script.execute(scriptArgs)) {
-                        conditionsViolated.add(condition);
-                    }
-                } catch (ScriptException e) {
-                    throw new RuntimeException("Failed to evaluate script", e);
-                }
-            }
+                    .formatted(uuid, conditionScriptPairs.size()));
+            final List<PolicyCondition> conditionsViolated = evaluateConditions(conditionScriptPairs, Map.of(
+                    // VAR_COMPONENT, mapComponent(qm, component, requirements),
+                    // VAR_PROJECT, mapProject(component.getProject(), requirements),
+                    // VAR_VULNERABILITIES, loadVulnerabilities(qm, component, requirements)
+            ));
 
             // Group the detected condition violations by policy. Necessary to be able to evaluate
             // each policy's operator (ANY, ALL).
             LOGGER.info("Detected violation of %d policy conditions for component %s; Evaluating policy operators"
-                    .formatted(conditionsViolated.size(), componentUuid));
-            final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.stream()
-                    .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
-
-            // Create policy violations, but only do so when the detected condition violations
-            // match the configured policy operator. When the operator is ALL, and not all conditions
-            // of the policy were violated, we don't want to create any violations.
-            final List<PolicyViolation> violations = violatedConditionsByPolicy.entrySet().stream()
-                    .flatMap(policyAndViolatedConditions -> {
-                        final Policy policy = policyAndViolatedConditions.getKey();
-                        final List<PolicyCondition> violatedConditions = policyAndViolatedConditions.getValue();
-
-                        if ((policy.getOperator() == Policy.Operator.ANY && !violatedConditions.isEmpty())
-                                || (policy.getOperator() == Policy.Operator.ALL && violatedConditions.size() == policy.getPolicyConditions().size())) {
-                            // TODO: Only a single violation should be raised, and instead multiple matched conditions
-                            //   should be associated with it. Keeping the existing behavior in order to avoid having to
-                            //   touch too much persistence and REST API code.
-                            return violatedConditions.stream()
-                                    .map(condition -> {
-                                        final var violation = new PolicyViolation();
-                                        violation.setComponent(component);
-                                        violation.setType(condition.getViolationType());
-                                        violation.setPolicyCondition(condition);
-                                        violation.setTimestamp(new Date());
-                                        return violation;
-                                    });
-                        }
-
-                        return Stream.empty();
-                    })
-                    .filter(Objects::nonNull)
-                    .toList();
+                    .formatted(conditionsViolated.size(), uuid));
+            final List<PolicyViolation> violations = evaluatePolicyOperators(conditionsViolated);
 
             // Reconcile the violations created above with what's already in the database.
             // Create new records if necessary, and delete records that are no longer current.
-            final List<PolicyViolation> newViolations = reconcileViolations(qm, component, violations);
+            // final List<PolicyViolation> newViolations = reconcileViolations(qm, component, violations);
 
             // Notify users about any new violations.
-            for (final PolicyViolation newViolation : newViolations) {
-                NotificationUtil.analyzeNotificationCriteria(qm, newViolation);
-            }
+            // for (final PolicyViolation newViolation : newViolations) {
+            //    NotificationUtil.analyzeNotificationCriteria(qm, newViolation);
+            // }
         } finally {
-            timerSample.stop(Timer
+            final long durationNs = timerSample.stop(Timer
                     .builder("dtrack_policy_eval")
                     .tag("target", "component")
                     .register(Metrics.getRegistry()));
+            LOGGER.info("Evaluation of component %s completed in %s"
+                    .formatted(uuid, Duration.ofNanos(durationNs)));
         }
-
-        LOGGER.info("Policy evaluation completed for component %s".formatted(componentUuid));
     }
 
-    // TODO: Move to PolicyQueryManager
-    private static List<Policy> getApplicablePolicies(final QueryManager qm, final Project project) {
-        var filter = """
-                (this.projects.isEmpty() && this.tags.isEmpty())
-                    || (this.projects.contains(:project)
-                """;
-        var params = new HashMap<String, Object>();
-        params.put("project", project);
 
-        // To compensate for missing support for recursion of Common Table Expressions (CTEs)
-        // in JDO, we have to fetch the UUIDs of all parent projects upfront. Otherwise, we'll
-        // not be able to evaluate whether the policy is inherited from parent projects.
-        var variables = "";
-        final List<UUID> parentUuids = getParents(qm, project);
-        if (!parentUuids.isEmpty()) {
-            filter += """
-                    || (this.includeChildren
-                        && this.projects.contains(parentVar)
-                        && :parentUuids.contains(parentVar.uuid))
-                    """;
-            variables += "org.dependencytrack.model.Project parentVar";
-            params.put("parentUuids", parentUuids);
-        }
-        filter += ")";
-
-        // DataNucleus generates an invalid SQL query when using the idiomatic solution.
-        // The following works, but it's ugly and likely doesn't perform well if the project
-        // has many tags. Worth trying the idiomatic way again once DN has been updated to > 6.0.4.
-        //
-        // filter += " || (this.tags.contains(commonTag) && :project.tags.contains(commonTag))";
-        // variables += "org.dependencytrack.model.Tag commonTag";
-        if (project.getTags() != null && !project.getTags().isEmpty()) {
-            filter += " || (";
-            for (int i = 0; i < project.getTags().size(); i++) {
-                filter += "this.tags.contains(:tag" + i + ")";
-                params.put("tag" + i, project.getTags().get(i));
-                if (i < (project.getTags().size() - 1)) {
-                    filter += " || ";
-                }
-            }
-            filter += ")";
+    /**
+     * Pre-compile the CEL scripts for all conditions of all applicable policies.
+     * Compiled scripts are cached in-memory by CelPolicyScriptHost, so if the same script
+     * is encountered for multiple components (possibly concurrently), the compilation is
+     * a one-time effort.
+     *
+     * @param celQm   The {@link CelPolicyQueryManager} instance to use
+     * @param project The {@link Project} to get applicable conditions for
+     * @return {@link Pair}s of {@link PolicyCondition}s and {@link CelPolicyScript}s
+     */
+    private List<Pair<PolicyCondition, CelPolicyScript>> getApplicableConditionScriptPairs(final CelPolicyQueryManager celQm, final Project project) {
+        final List<Policy> policies = celQm.getApplicablePolicies(project);
+        if (policies.isEmpty()) {
+            return emptyList();
         }
 
-        final List<Policy> policies;
-        final Query<Policy> query = qm.getPersistenceManager().newQuery(Policy.class);
-        try {
-            query.setFilter(filter);
-            query.setNamedParameters(params);
-            if (!variables.isEmpty()) {
-                query.declareVariables(variables);
-            }
-            policies = List.copyOf(query.executeList());
-        } finally {
-            query.closeAll();
-        }
-
-        return policies;
+        return policies.stream()
+                .map(Policy::getPolicyConditions)
+                .flatMap(Collection::stream)
+                .map(this::buildConditionScriptSrc)
+                .filter(Objects::nonNull)
+                .map(this::compileConditionScript)
+                .toList();
     }
 
-    // TODO: Move to ProjectQueryManager
-    private static List<UUID> getParents(final QueryManager qm, final Project project) {
-        return getParents(qm, project.getUuid(), new ArrayList<>());
-    }
-
-    // TODO: Move to ProjectQueryManager
-    private static List<UUID> getParents(final QueryManager qm, final UUID uuid, final List<UUID> parents) {
-        final UUID parentUuid;
-        final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
-        try {
-            query.setFilter("uuid == :uuid && parent != null");
-            query.setParameters(uuid);
-            query.setResult("parent.uuid");
-            parentUuid = query.executeResultUnique(UUID.class);
-        } finally {
-            query.closeAll();
-        }
-
-        if (parentUuid == null) {
-            return parents;
-        }
-
-        parents.add(parentUuid);
-        return getParents(qm, parentUuid, parents);
+    /**
+     * Check what kind of data we need to evaluate all policy conditions.
+     * <p>
+     * Some conditions will be very simple and won't require us to load additional data (e.g. "component PURL matches 'XYZ'"),
+     * whereas other conditions can span across multiple models, forcing us to load more data
+     * (e.g. "project has tag 'public-facing' and component has a vulnerability with severity 'critical'").
+     * <p>
+     * What we want to avoid is loading data we don't need, and loading it multiple times.
+     * Instead, only load what's really needed, and only do so once.
+     *
+     * @param conditionScriptPairs {@link Pair}s of {@link PolicyCondition}s and corresponding {@link CelPolicyScript}s
+     * @return A {@link MultiValuedMap} containing all fields accessed on any {@link Type}, across all {@link CelPolicyScript}s
+     */
+    private static MultiValuedMap<Type, String> determineScriptRequirements(final Collection<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs) {
+        return conditionScriptPairs.stream()
+                .map(Pair::getRight)
+                .map(CelPolicyScript::getRequirements)
+                .reduce(new HashSetValuedHashMap<>(), (lhs, rhs) -> {
+                    lhs.putAll(rhs);
+                    return lhs;
+                });
     }
 
     private Pair<PolicyCondition, String> buildConditionScriptSrc(final PolicyCondition policyCondition) {
@@ -547,70 +350,119 @@ public class CelPolicyEngine {
         return Pair.of(conditionScriptSrcPair.getLeft(), script);
     }
 
-    private static ProjectProjection fetchProject(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
-        final String sqlSelectColumns = getFieldMappings(ProjectProjection.class).stream()
-                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
-                .map(mapping -> "\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
-                .collect(Collectors.joining(", "));
+    private static List<PolicyCondition> evaluateConditions(final Collection<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs,
+                                                            final Map<String, Object> scriptArguments) {
+        final var conditionsViolated = new ArrayList<PolicyCondition>();
 
-        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                SELECT %s FROM "PROJECT" WHERE "ID" = ?
-                """.formatted(sqlSelectColumns));
-        query.setParameters(projectId);
-        try {
-            return query.executeResultUnique(ProjectProjection.class);
-        } finally {
-            query.closeAll();
+        for (final Pair<PolicyCondition, CelPolicyScript> conditionScriptPair : conditionScriptPairs) {
+            final PolicyCondition condition = conditionScriptPair.getLeft();
+            final CelPolicyScript script = conditionScriptPair.getRight();
+
+            try {
+                if (script.execute(scriptArguments)) {
+                    conditionsViolated.add(condition);
+                }
+            } catch (ScriptException e) {
+                // TODO: Should we really fail the entire run for ALL components,
+                //   if only one condition failed to evaluate?
+                throw new RuntimeException("Failed to evaluate script", e);
+            }
         }
+
+        return conditionsViolated;
     }
 
-    private static org.hyades.proto.policy.v1.Project mapProject(final ProjectProjection projection) {
+    private static List<PolicyViolation> evaluatePolicyOperators(final Collection<PolicyCondition> conditionsViolated) {
+        final Map<Policy, List<PolicyCondition>> violatedConditionsByPolicy = conditionsViolated.stream()
+                .collect(Collectors.groupingBy(PolicyCondition::getPolicy));
+
+        return violatedConditionsByPolicy.entrySet().stream()
+                .flatMap(policyAndViolatedConditions -> {
+                    final Policy policy = policyAndViolatedConditions.getKey();
+                    final List<PolicyCondition> violatedConditions = policyAndViolatedConditions.getValue();
+
+                    if ((policy.getOperator() == Policy.Operator.ANY && !violatedConditions.isEmpty())
+                            || (policy.getOperator() == Policy.Operator.ALL && violatedConditions.size() == policy.getPolicyConditions().size())) {
+                        // TODO: Only a single violation should be raised, and instead multiple matched conditions
+                        //   should be associated with it. Keeping the existing behavior in order to avoid having to
+                        //   touch too much persistence and REST API code.
+                        return violatedConditions.stream()
+                                .map(condition -> {
+                                    final var violation = new PolicyViolation();
+                                    violation.setType(condition.getViolationType());
+                                    // Note: violation.setComponent is intentionally omitted here,
+                                    // because the component must be an object attached to the persistence
+                                    // context. We don't have that at this point, we'll add it later.
+                                    violation.setPolicyCondition(condition);
+                                    violation.setTimestamp(new Date());
+                                    return violation;
+                                });
+                    }
+
+                    return Stream.empty();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private static org.hyades.proto.policy.v1.Project mapToProto(final ProjectProjection projection) {
         final org.hyades.proto.policy.v1.Project.Builder builder = org.hyades.proto.policy.v1.Project.newBuilder()
                 .setUuid(trimToEmpty(projection.uuid))
                 .setGroup(trimToEmpty(projection.group))
                 .setName(trimToEmpty(projection.name))
                 .setVersion(trimToEmpty(projection.version))
-                // .addAllTags(project.getTags().stream().map(Tag::getName).toList())
                 .setCpe(trimToEmpty(projection.cpe))
                 .setPurl(trimToEmpty(projection.purl))
                 .setSwidTagId(trimToEmpty(projection.swidTagId));
         Optional.ofNullable(projection.lastBomImport).map(Timestamps::fromDate).ifPresent(builder::setLastBomImport);
+
+        if (projection.propertiesJson != null) {
+            try {
+                final List<ProjectPropertyProjection> properties =
+                        OBJECT_MAPPER.readValue(projection.propertiesJson, new TypeReference<>() {
+                        });
+                for (final ProjectPropertyProjection property : properties) {
+                    builder.addProperties(org.hyades.proto.policy.v1.Project.Property.newBuilder()
+                            .setGroup(trimToEmpty(property.group))
+                            .setName(trimToEmpty(property.name))
+                            .setValue(trimToEmpty(property.value))
+                            .setType(trimToEmpty(property.type))
+                            .build());
+                }
+            } catch (JacksonException e) {
+                LOGGER.warn("Failed to parse properties from %s for project %s"
+                        .formatted(projection.propertiesJson, projection.id), e);
+            }
+        }
+
+        if (projection.tagsJson != null) {
+            try {
+                final List<String> tags = OBJECT_MAPPER.readValue(projection.tagsJson, new TypeReference<>() {
+                });
+                builder.addAllTags(tags);
+            } catch (JacksonException e) {
+                LOGGER.warn("Failed to parse tags from %s for project %s"
+                        .formatted(projection.tagsJson, projection.id), e);
+            }
+        }
+
         return builder.build();
     }
 
-    private static List<ComponentProjection> fetchComponents(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
-        final String sqlSelectColumns = Stream.concat(
-                        Stream.of(ComponentProjection.ID_FIELD_MAPPING),
-                        getFieldMappings(ComponentProjection.class).stream()
-                                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
-                )
-                .map(mapping -> "\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
-                .collect(Collectors.joining(", "));
-
-        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                SELECT %s FROM "COMPONENT" WHERE "PROJECT_ID" = ?
-                """.formatted(sqlSelectColumns));
-        query.setParameters(projectId);
-        try {
-            return List.copyOf(query.executeResultList(ComponentProjection.class));
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    private static org.hyades.proto.policy.v1.Component mapComponent(final ComponentProjection projection,
-                                                                     final Map<Long, License> protoLicenseById) {
+    private static org.hyades.proto.policy.v1.Component mapToProto(final ComponentProjection projection,
+                                                                   final Map<Long, org.hyades.proto.policy.v1.License> protoLicenseById) {
         final org.hyades.proto.policy.v1.Component.Builder componentBuilder =
                 org.hyades.proto.policy.v1.Component.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
                         .setGroup(trimToEmpty(projection.group))
                         .setName(trimToEmpty(projection.name))
-                        .setVersion(trimToEmpty(projection.name))
+                        .setVersion(trimToEmpty(projection.version))
                         .setClassifier(trimToEmpty(projection.classifier))
                         .setCpe(trimToEmpty(projection.cpe))
                         .setPurl(trimToEmpty(projection.purl))
                         .setSwidTagId(trimToEmpty(projection.swidTagId))
                         .setIsInternal(Optional.ofNullable(projection.internal).orElse(false))
+                        .setLicenseName(trimToEmpty(projection.licenseName))
                         .setMd5(trimToEmpty(projection.md5))
                         .setSha1(trimToEmpty(projection.sha1))
                         .setSha256(trimToEmpty(projection.sha256))
@@ -625,7 +477,7 @@ public class CelPolicyEngine {
                         .setBlake3(trimToEmpty(projection.blake3));
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
-            final License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
+            final org.hyades.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
             if (protoLicense != null) {
                 componentBuilder.setResolvedLicense(protoLicenseById.get(projection.resolvedLicenseId));
             } else {
@@ -637,121 +489,12 @@ public class CelPolicyEngine {
         return componentBuilder.build();
     }
 
-    private static List<ComponentsVulnerabilitiesProjection> fetchComponentsVulnerabilities(final QueryManager qm, final long projectId) {
-        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                SELECT
-                  "CV"."COMPONENT_ID" AS "componentId",
-                  "CV"."VULNERABILITY_ID" AS "vulnerabilityId"
-                FROM
-                  "COMPONENTS_VULNERABILITIES" AS "CV"
-                INNER JOIN
-                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-                WHERE
-                  "C"."PROJECT_ID" = ?
-                """);
-        query.setParameters(projectId);
-        try {
-            return List.copyOf(query.executeResultList(ComponentsVulnerabilitiesProjection.class));
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    private static List<LicenseProjection> fetchLicenses(final QueryManager qm, final long projectId,
-                                                         final Collection<String> licenseProtoFieldNames,
-                                                         final Collection<String> licenseGroupProtoFieldNames) {
-        final String licenseSqlSelectColumns = Stream.concat(
-                        Stream.of(LicenseProjection.ID_FIELD_MAPPING),
-                        getFieldMappings(LicenseProjection.class).stream()
-                                .filter(mapping -> licenseProtoFieldNames.contains(mapping.protoFieldName()))
-                )
-                .map(mapping -> "\"L\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
-                .collect(Collectors.joining(", "));
-
-        // If fetching license groups is not necessary, we can just query for licenses and be done with it.
-        if (!licenseProtoFieldNames.contains("groups")) {
-            final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                    SELECT DISTINCT
-                      %s
-                    FROM
-                      "LICENSE" AS "L"
-                    INNER JOIN
-                      "COMPONENT" AS "C" ON "C"."LICENSE_ID" = "L"."ID"
-                    WHERE
-                      "C"."PROJECT_ID" = ?
-                    """.formatted(licenseSqlSelectColumns));
-            query.setParameters(projectId);
-            try {
-                return List.copyOf(query.executeResultList(LicenseProjection.class));
-            } finally {
-                query.closeAll();
-            }
-        }
-
-        // If groups are required, include them in the license query in order to avoid the 1+N problem.
-        // Licenses may or may not be assigned to a group. Licenses can be in multiple groups.
-        //
-        // Using a simple LEFT JOIN would result in duplicate license data being fetched, e.g.:
-        //
-        // | "L"."ID" | "L"."NAME" | "LG"."NAME" |
-        // | :------- | :--------- | :---------- |
-        // | 1        | foo        | groupA      |
-        // | 1        | foo        | groupB      |
-        // | 1        | foo        | groupC      |
-        // | 2        | bar        | NULL        |
-        //
-        // To avoid this, we instead aggregate license group fields for each license, and return them as JSON.
-        // The reason for choosing JSON over native arrays, is that DataNucleus can't deal with arrays cleanly.
-        //
-        // | "L"."ID" | "L"."NAME" | "licenseGroupsJson"                                     |
-        // | :------- | :--------- | :------------------------------------------------------ |
-        // | 1        | foo        | [{"name":"groupA"},{"name":"groupB"},{"name":"groupC"}] |
-        // | 2        | bar        | []                                                      |
-
-        final String licenseSqlGroupByColumns = Stream.concat(
-                        Stream.of(LicenseProjection.ID_FIELD_MAPPING),
-                        getFieldMappings(LicenseProjection.class).stream()
-                                .filter(mapping -> licenseProtoFieldNames.contains(mapping.protoFieldName()))
-                )
-                .map(mapping -> "\"L\".\"%s\"".formatted(mapping.sqlColumnName()))
-                .collect(Collectors.joining(", "));
-
-        final String licenseGroupSqlSelectColumns = getFieldMappings(LicenseGroupProjection.class).stream()
-                .filter(mapping -> licenseGroupProtoFieldNames.contains(mapping.protoFieldName()))
-                .map(mapping -> "'%s', \"LG\".\"%s\"".formatted(mapping.javaFieldName(), mapping.sqlColumnName()))
-                .collect(Collectors.joining(", "));
-
-        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                SELECT DISTINCT
-                  "L"."ID" AS "id",
-                  %s,
-                  CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(%s)) AS TEXT) AS "licenseGroupsJson"
-                FROM
-                  "LICENSE" AS "L"
-                INNER JOIN
-                  "COMPONENT" AS "C" ON "C"."LICENSE_ID" = "L"."ID"
-                LEFT JOIN
-                  "LICENSEGROUP_LICENSE" AS "LGL" ON "LGL"."LICENSE_ID" = "L"."ID"
-                LEFT JOIN
-                  "LICENSEGROUP" AS "LG" ON "LG"."ID" = "LGL"."LICENSEGROUP_ID"
-                WHERE
-                  "C"."PROJECT_ID" = ?
-                GROUP BY
-                  %s
-                """.formatted(licenseSqlSelectColumns, licenseGroupSqlSelectColumns, licenseSqlGroupByColumns));
-        query.setParameters(projectId);
-        try {
-            return List.copyOf(query.executeResultList(LicenseProjection.class));
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    private static License mapLicense(final LicenseProjection projection) {
-        final License.Builder licenseBuilder = License.newBuilder()
-                .setUuid(trimToEmpty(projection.uuid))
-                .setId(trimToEmpty(projection.licenseId))
-                .setName(trimToEmpty(projection.name));
+    private static org.hyades.proto.policy.v1.License mapToProto(final LicenseProjection projection) {
+        final org.hyades.proto.policy.v1.License.Builder licenseBuilder =
+                org.hyades.proto.policy.v1.License.newBuilder()
+                        .setUuid(trimToEmpty(projection.uuid))
+                        .setId(trimToEmpty(projection.licenseId))
+                        .setName(trimToEmpty(projection.name));
         Optional.ofNullable(projection.isOsiApproved).ifPresent(licenseBuilder::setIsOsiApproved);
         Optional.ofNullable(projection.isFsfLibre).ifPresent(licenseBuilder::setIsFsfLibre);
         Optional.ofNullable(projection.isDeprecatedId).ifPresent(licenseBuilder::setIsDeprecatedId);
@@ -761,7 +504,7 @@ public class CelPolicyEngine {
             try {
                 final ArrayNode groupsArray = OBJECT_MAPPER.readValue(projection.licenseGroupsJson, ArrayNode.class);
                 for (final JsonNode groupNode : groupsArray) {
-                    licenseBuilder.addGroups(License.Group.newBuilder()
+                    licenseBuilder.addGroups(org.hyades.proto.policy.v1.License.Group.newBuilder()
                             .setUuid(Optional.ofNullable(groupNode.get("uuid")).map(JsonNode::asText).orElse(""))
                             .setName(Optional.ofNullable(groupNode.get("name")).map(JsonNode::asText).orElse(""))
                             .build());
@@ -774,74 +517,19 @@ public class CelPolicyEngine {
         return licenseBuilder.build();
     }
 
-    private static List<VulnerabilityProjection> fetchVulnerabilities(final QueryManager qm, final long projectId, final Collection<String> protoFieldNames) {
-        final String sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
-                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
-                .map(mapping -> "\"V\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
-                .collect(Collectors.joining(", "));
+    private static final TypeReference<List<VulnerabilityAlias>> VULNERABILITY_ALIASES_TYPE_REF = new TypeReference<>() {
+    };
 
-        // TODO: Aliases could be fetched in the same query, using a JSONB aggregate.
-        // SELECT DISTINCT
-        //   "V"."ID" AS "id",
-        //   "V"."VULNID" AS "vulnId",
-        //   "V"."SOURCE" AS "source",
-        //   (SELECT
-        //      JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-        //        'cveId', "VA"."CVE_ID",
-        //        'ghsaId', "VA"."GHSA_ID",
-        //        'gsdId', "VA"."GSD_ID",
-        //        'internalId', "VA"."INTERNAL_ID",
-        //        'osvId', "VA"."OSV_ID",
-        //        'sonatypeId', "VA"."SONATYPE_ID",
-        //        'snykId', "VA"."SNYK_ID",
-        //        'vulnDbId', "VA"."VULNDB_ID"
-        //      )))::TEXT
-        //    FROM
-        //      "VULNERABILITYALIAS" AS "VA"
-        //    WHERE
-        //      ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-        //      OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-        //      -- OR ...
-        //   ) AS "aliasesJson"
-        // FROM
-        //   "VULNERABILITY" AS "V"
-        // INNER JOIN
-        //   "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
-        // INNER JOIN
-        //   "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-        // WHERE
-        //   "C"."PROJECT_ID" = ?;
-
-        final Query<?> query = qm.getPersistenceManager().newQuery(Query.SQL, """
-                SELECT DISTINCT
-                  "V"."ID" AS "id",
-                  %s
-                FROM
-                  "VULNERABILITY" AS "V"
-                INNER JOIN
-                  "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
-                INNER JOIN
-                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-                WHERE
-                  "C"."PROJECT_ID" = ?
-                """.formatted(sqlSelectColumns));
-        query.setParameters(projectId);
-        try {
-            return List.copyOf(query.executeResultList(VulnerabilityProjection.class));
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    private static Vulnerability mapVulnerability(final VulnerabilityProjection projection) {
-        final Vulnerability.Builder builder = Vulnerability.newBuilder()
-                .setUuid(trimToEmpty(projection.uuid))
-                .setId(trimToEmpty(projection.vulnId))
-                .setSource(trimToEmpty(projection.source))
-                .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
-                .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
-                .setOwaspRrVector(trimToEmpty(projection.owaspRrVector))
-                .setSeverity(trimToEmpty(projection.severity));
+    private static org.hyades.proto.policy.v1.Vulnerability mapToProto(final VulnerabilityProjection projection) {
+        final org.hyades.proto.policy.v1.Vulnerability.Builder builder =
+                org.hyades.proto.policy.v1.Vulnerability.newBuilder()
+                        .setUuid(trimToEmpty(projection.uuid))
+                        .setId(trimToEmpty(projection.vulnId))
+                        .setSource(trimToEmpty(projection.source))
+                        .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
+                        .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
+                        .setOwaspRrVector(trimToEmpty(projection.owaspRrVector))
+                        .setSeverity(trimToEmpty(projection.severity));
         Optional.ofNullable(projection.cvssV2BaseScore).ifPresent(builder::setCvssv2BaseScore);
         Optional.ofNullable(projection.cvssV2ImpactSubScore).ifPresent(builder::setCvssv2ImpactSubscore);
         Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).ifPresent(builder::setCvssv2ExploitabilitySubscore);
@@ -861,382 +549,28 @@ public class CelPolicyEngine {
                 .filter(Objects::nonNull)
                 .map(new CollectionIntegerConverter()::convertToAttribute)
                 .ifPresent(builder::addAllCwes);
-        return builder.build();
-    }
 
-    private static org.hyades.proto.policy.v1.Component mapComponent(final QueryManager qm,
-                                                                     final Component component,
-                                                                     final MultiValuedMap<Type, String> requirements) {
-        // TODO: Load only required fields
-        final org.hyades.proto.policy.v1.Component.Builder builder =
-                org.hyades.proto.policy.v1.Component.newBuilder()
-                        .setUuid(Optional.ofNullable(component.getUuid()).map(UUID::toString).orElse(""))
-                        .setGroup(trimToEmpty(component.getGroup()))
-                        .setName(trimToEmpty(component.getName()))
-                        .setVersion(trimToEmpty(component.getVersion()))
-                        .setClassifier(Optional.ofNullable(component.getClassifier()).map(Enum::name).orElse(""))
-                        .setCpe(trimToEmpty(component.getCpe()))
-                        .setPurl(Optional.ofNullable(component.getPurl()).map(PackageURL::canonicalize).orElse(""))
-                        .setSwidTagId(trimToEmpty(component.getSwidTagId()))
-                        .setIsInternal(component.isInternal())
-                        .setMd5(trimToEmpty(component.getMd5()))
-                        .setSha1(trimToEmpty(component.getSha1()))
-                        .setSha256(trimToEmpty(component.getSha256()))
-                        .setSha384(trimToEmpty(component.getSha384()))
-                        .setSha512(trimToEmpty(component.getSha512()))
-                        .setSha3256(trimToEmpty(component.getSha3_256()))
-                        .setSha3384(trimToEmpty(component.getSha3_384()))
-                        .setSha3512(trimToEmpty(component.getSha3_512()))
-                        .setBlake2B256(trimToEmpty(component.getBlake2b_256()))
-                        .setBlake2B384(trimToEmpty(component.getBlake2b_384()))
-                        .setBlake2B512(trimToEmpty(component.getBlake2b_512()))
-                        .setBlake3(trimToEmpty(component.getBlake3()));
-
-        if (requirements.get(TYPE_COMPONENT).contains("is_direct_dependency")
-                && component.getProject().getDirectDependencies() != null) {
+        if (projection.aliasesJson != null) {
             try {
-                final ArrayNode dependencyArray = OBJECT_MAPPER.readValue(component.getProject().getDirectDependencies(), ArrayNode.class);
-                for (final JsonNode dependencyNode : dependencyArray) {
-                    if (dependencyNode.get("uuid") != null && dependencyNode.get("uuid").asText().equals(component.getUuid().toString())) {
-                        builder.setIsDirectDependency(true);
-                        break;
-                    }
-                }
-            } catch (JacksonException | RuntimeException e) {
-                LOGGER.warn("Failed to parse direct dependencies of project %s".formatted(component.getProject().getUuid()), e);
+                OBJECT_MAPPER.readValue(projection.aliasesJson, VULNERABILITY_ALIASES_TYPE_REF).stream()
+                        .flatMap(CelPolicyEngine::mapToProto)
+                        .distinct()
+                        .forEach(builder::addAliases);
+            } catch (JacksonException e) {
+                LOGGER.warn("Failed to parse aliases from %s for vulnerability %d"
+                        .formatted(projection.aliasesJson, projection.id), e);
             }
-        }
-
-        if (requirements.containsKey(TYPE_LICENSE) && component.getResolvedLicense() != null) {
-            final License.Builder licenseBuilder = License.newBuilder()
-                    .setUuid(Optional.ofNullable(component.getResolvedLicense().getUuid()).map(UUID::toString).orElse(""))
-                    .setId(trimToEmpty(component.getResolvedLicense().getLicenseId()))
-                    .setName(trimToEmpty(component.getResolvedLicense().getName()))
-                    .setIsOsiApproved(component.getResolvedLicense().isOsiApproved())
-                    .setIsFsfLibre(component.getResolvedLicense().isFsfLibre())
-                    .setIsDeprecatedId(component.getResolvedLicense().isDeprecatedLicenseId())
-                    .setIsCustom(component.getResolvedLicense().isCustomLicense());
-
-            if (requirements.containsKey(TYPE_LICENSE_GROUP)
-                    || requirements.get(TYPE_LICENSE).contains("groups")) {
-                final Query<LicenseGroup> licenseGroupQuery = qm.getPersistenceManager().newQuery(LicenseGroup.class);
-                licenseGroupQuery.setFilter("licenses.contains(:license)");
-                licenseGroupQuery.setNamedParameters(Map.of("license", component.getResolvedLicense()));
-                licenseGroupQuery.setResult("uuid, name");
-                try {
-                    licenseGroupQuery.executeResultList(LicenseGroup.class).stream()
-                            .map(licenseGroup -> License.Group.newBuilder()
-                                    .setUuid(Optional.ofNullable(licenseGroup.getUuid()).map(UUID::toString).orElse(""))
-                                    .setName(trimToEmpty(licenseGroup.getName())))
-                            .forEach(licenseBuilder::addGroups);
-                } finally {
-                    licenseGroupQuery.closeAll();
-                }
-            }
-
-            builder.setResolvedLicense(licenseBuilder);
         }
 
         return builder.build();
     }
 
-    private static org.hyades.proto.policy.v1.Project mapProject(final Project project,
-                                                                 final MultiValuedMap<Type, String> requirements) {
-        if (!requirements.containsKey(TYPE_PROJECT)) {
-            return org.hyades.proto.policy.v1.Project.getDefaultInstance();
-        }
-
-        // TODO: Load only required fields
-        final org.hyades.proto.policy.v1.Project.Builder builder =
-                org.hyades.proto.policy.v1.Project.newBuilder()
-                        .setUuid(Optional.ofNullable(project.getUuid()).map(UUID::toString).orElse(""))
-                        .setGroup(trimToEmpty(project.getGroup()))
-                        .setName(trimToEmpty(project.getName()))
-                        .setVersion(trimToEmpty(project.getVersion()))
-                        .addAllTags(project.getTags().stream().map(Tag::getName).toList())
-                        .setCpe(trimToEmpty(project.getCpe()))
-                        .setPurl(Optional.ofNullable(project.getPurl()).map(PackageURL::canonicalize).orElse(""))
-                        .setSwidTagId(trimToEmpty(project.getSwidTagId()));
-
-        if (requirements.containsKey(TYPE_PROJECT_PROPERTY)
-                || requirements.get(TYPE_PROJECT).contains("properties")) {
-            // TODO
-        }
-
-        return builder.build();
-    }
-
-    private static List<Vulnerability> loadVulnerabilities(final QueryManager qm,
-                                                           final Component component,
-                                                           final MultiValuedMap<Type, String> requirements) {
-        if (!requirements.containsKey(TYPE_VULNERABILITY)) {
-            return emptyList();
-        }
-
-        // TODO: Load only required fields
-        final Query<org.dependencytrack.model.Vulnerability> query =
-                qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
-        query.getFetchPlan().clearGroups();
-        query.getFetchPlan().setGroup(org.dependencytrack.model.Vulnerability.FetchGroup.POLICY.name());
-        query.setFilter("components.contains(:component)");
-        query.setParameters(component);
-        final List<org.dependencytrack.model.Vulnerability> vulns;
-        try {
-            vulns = (List<org.dependencytrack.model.Vulnerability>) qm.getPersistenceManager().detachCopyAll(query.executeList());
-        } finally {
-            query.closeAll();
-        }
-
-        final List<Vulnerability.Builder> vulnBuilders = vulns.stream()
-                .map(v -> {
-                    final Vulnerability.Builder builder = Vulnerability.newBuilder()
-                            .setUuid(v.getUuid().toString())
-                            .setId(trimToEmpty(v.getVulnId()))
-                            .setSource(trimToEmpty(v.getSource()))
-                            .setCvssv2Vector(trimToEmpty(v.getCvssV2Vector()))
-                            .setCvssv3Vector(trimToEmpty(v.getCvssV3Vector()))
-                            .setOwaspRrVector(trimToEmpty(v.getOwaspRRVector()))
-                            .setSeverity(v.getSeverity().name());
-                    Optional.ofNullable(v.getCwes()).ifPresent(builder::addAllCwes);
-                    Optional.ofNullable(v.getCvssV2BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2BaseScore);
-                    Optional.ofNullable(v.getCvssV2ImpactSubScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2ImpactSubscore);
-                    Optional.ofNullable(v.getCvssV2ExploitabilitySubScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2ExploitabilitySubscore);
-                    Optional.ofNullable(v.getCvssV3BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3BaseScore);
-                    Optional.ofNullable(v.getCvssV3ImpactSubScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ImpactSubscore);
-                    Optional.ofNullable(v.getCvssV3ExploitabilitySubScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ExploitabilitySubscore);
-                    Optional.ofNullable(v.getOwaspRRLikelihoodScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihoodScore);
-                    Optional.ofNullable(v.getOwaspRRTechnicalImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpactScore);
-                    Optional.ofNullable(v.getOwaspRRBusinessImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpactScore);
-                    Optional.ofNullable(v.getEpssScore()).map(BigDecimal::doubleValue).ifPresent(builder::setEpssScore);
-                    Optional.ofNullable(v.getEpssPercentile()).map(BigDecimal::doubleValue).ifPresent(builder::setEpssPercentile);
-                    Optional.ofNullable(v.getCreated()).map(Timestamps::fromDate).ifPresent(builder::setCreated);
-                    Optional.ofNullable(v.getPublished()).map(Timestamps::fromDate).ifPresent(builder::setPublished);
-                    Optional.ofNullable(v.getUpdated()).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
-
-                    if (requirements.containsKey(TYPE_VULNERABILITY_ALIAS)
-                            || requirements.get(TYPE_VULNERABILITY).contains("aliases")) {
-                        // TODO: Dirty hack, create a proper solution. Likely needs caching, too.
-                        final var tmpVuln = new org.dependencytrack.model.Vulnerability();
-                        tmpVuln.setVulnId(builder.getId());
-                        tmpVuln.setSource(builder.getSource());
-                        tmpVuln.setAliases(qm.getVulnerabilityAliases(tmpVuln));
-                        VulnerabilityUtil.getUniqueAliases(tmpVuln).stream()
-                                .map(alias -> Vulnerability.Alias.newBuilder()
-                                        .setId(alias.getKey().name())
-                                        .setSource(alias.getValue())
-                                        .build())
-                                .forEach(builder::addAliases);
-                    }
-
-                    return builder;
-                })
-                .toList();
-
-        return vulnBuilders.stream()
-                .map(Vulnerability.Builder::build)
-                .toList();
-    }
-
-    // TODO: Move to PolicyQueryManager
-    private static List<PolicyViolation> reconcileViolations(final QueryManager qm, final Component component, final List<PolicyViolation> violations) {
-        final var newViolations = new ArrayList<PolicyViolation>();
-
-        final Transaction trx = qm.getPersistenceManager().currentTransaction();
-        try {
-            trx.begin();
-
-            final var violationIdsToKeep = new HashSet<Long>();
-
-            for (final PolicyViolation violation : violations) {
-                violation.setComponent(component);
-
-                final Query<PolicyViolation> query = qm.getPersistenceManager().newQuery(PolicyViolation.class);
-                query.setFilter("component == :component && policyCondition == :policyCondition && type == :type");
-                query.setNamedParameters(Map.of(
-                        "component", violation.getComponent(),
-                        "policyCondition", violation.getPolicyCondition(),
-                        "type", violation.getType()
-                ));
-                query.setResult("id");
-
-                final Long existingViolationId;
-                try {
-                    existingViolationId = query.executeResultUnique(Long.class);
-                } finally {
-                    query.closeAll();
-                }
-
-                if (existingViolationId != null) {
-                    violationIdsToKeep.add(existingViolationId);
-                } else {
-                    qm.getPersistenceManager().makePersistent(violation);
-                    violationIdsToKeep.add(violation.getId());
-                    newViolations.add(violation);
-                }
-            }
-
-            final Query<PolicyViolation> deleteQuery = qm.getPersistenceManager().newQuery(PolicyViolation.class);
-            deleteQuery.setFilter("component == :component && !:ids.contains(id)");
-            try {
-                final long violationsDeleted = deleteQuery.deletePersistentAll(component, violationIdsToKeep);
-                LOGGER.debug("Deleted %s outdated violations".formatted(violationsDeleted)); // TODO: Add component UUID
-            } finally {
-                deleteQuery.closeAll();
-            }
-
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-
-        return newViolations;
-    }
-
-    private static List<Long> reconcileViolations(final QueryManager qm, final long projectId,
-                                                  final MultiValuedMap<Long, PolicyViolation> reportedViolationsByComponentId) {
-        // We want to send notifications for newly identified policy violations,
-        // so need to keep track of which violations we created.
-        final var newViolationIds = new ArrayList<Long>();
-
-        // DataNucleus does not support batch inserts, which is something we need to create
-        // new violations efficiently. Falling back to "raw" JDBC for the sake of efficiency.
-        final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
-        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
-
-        try {
-            // JDBC connections default to autocommit.
-            // We'll do multiple write operations here, and want to commit them all in a single transaction.
-            nativeConnection.setAutoCommit(false);
-            nativeConnection.setTransactionIsolation(TRANSACTION_READ_COMMITTED);
-
-            // First, query for all existing policy violations of the project, grouping them by component ID.
-            final var existingViolationsByComponentId = new HashSetValuedHashMap<Long, PolicyViolationProjection>();
-            try (final PreparedStatement ps = nativeConnection.prepareStatement("""
-                    SELECT
-                      "ID"                 AS "id",
-                      "COMPONENT_ID"       AS "componentId",
-                      "POLICYCONDITION_ID" AS "policyConditionId"
-                    FROM
-                      "POLICYVIOLATION"
-                    WHERE
-                      "PROJECT_ID" = ?
-                    """)) {
-                ps.setLong(1, projectId);
-
-                final ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    existingViolationsByComponentId.put(
-                            rs.getLong("componentId"),
-                            new PolicyViolationProjection(
-                                    rs.getLong("id"),
-                                    rs.getLong("policyConditionId")
-                            ));
-                }
-            }
-
-            // For each component that has existing and / or reported violations...
-            final Set<Long> componentIds = new HashSet<>(reportedViolationsByComponentId.keySet().size() + existingViolationsByComponentId.keySet().size());
-            componentIds.addAll(reportedViolationsByComponentId.keySet());
-            componentIds.addAll(existingViolationsByComponentId.keySet());
-
-            // ... determine which existing violations should be deleted (because they're no longer reported),
-            // and which reported violations should be created (because they have not been reported before).
-            //
-            // Violations not belonging to either of those buckets are reported, but already exist,
-            // meaning no action needs to be taken for them.
-            final var violationIdsToDelete = new ArrayList<Long>();
-            final var violationsToCreate = new HashSetValuedHashMap<Long, PolicyViolation>();
-            for (final Long componentId : componentIds) {
-                final Collection<PolicyViolationProjection> existingViolations = existingViolationsByComponentId.get(componentId);
-                final Collection<PolicyViolation> reportedViolations = reportedViolationsByComponentId.get(componentId);
-
-                if (reportedViolations == null || reportedViolations.isEmpty()) {
-                    // Component has been removed, or does not have any violations anymore.
-                    // All of its existing violations can be deleted.
-                    violationIdsToDelete.addAll(existingViolations.stream().map(PolicyViolationProjection::id).toList());
-                    continue;
-                }
-
-                if (existingViolations == null || existingViolations.isEmpty()) {
-                    // Component did not have any violations before, but has some now.
-                    // All reported violations must be newly created.
-                    violationsToCreate.putAll(componentId, reportedViolations);
-                    continue;
-                }
-
-                // To determine which violations shall be deleted, find occurrences of violations appearing
-                // in the collection of existing violations, but not in the collection of reported violations.
-                existingViolations.stream()
-                        .filter(existingViolation -> reportedViolations.stream().noneMatch(newViolation ->
-                                newViolation.getPolicyCondition().getId() == existingViolation.policyConditionId()))
-                        .map(PolicyViolationProjection::id)
-                        .forEach(violationIdsToDelete::add);
-
-                // To determine which violations shall be created, find occurrences of violations appearing
-                // in the collection of reported violations, but not in the collection of existing violations.
-                reportedViolations.stream()
-                        .filter(reportedViolation -> existingViolations.stream().noneMatch(existingViolation ->
-                                existingViolation.policyConditionId() == reportedViolation.getPolicyCondition().getId()))
-                        .forEach(reportedViolation -> violationsToCreate.put(componentId, reportedViolation));
-            }
-
-            if (!violationsToCreate.isEmpty()) {
-                try (final PreparedStatement ps = nativeConnection.prepareStatement("""
-                        INSERT INTO "POLICYVIOLATION"
-                          ("UUID", "TIMESTAMP", "COMPONENT_ID", "PROJECT_ID", "POLICYCONDITION_ID", "TYPE")
-                        VALUES
-                          (?, NOW(), ?, ?, ?, ?)
-                        ON CONFLICT DO NOTHING
-                        RETURNING "ID"
-                        """, Statement.RETURN_GENERATED_KEYS)) {
-                    for (final Map.Entry<Long, PolicyViolation> entry : violationsToCreate.entries()) {
-                        ps.setString(1, UUID.randomUUID().toString());
-                        ps.setLong(2, entry.getKey());
-                        ps.setLong(3, projectId);
-                        ps.setLong(4, entry.getValue().getPolicyCondition().getId());
-                        ps.setString(5, entry.getValue().getType().name());
-                        ps.addBatch();
-                    }
-                    ps.executeBatch();
-
-                    final ResultSet rs = ps.getGeneratedKeys();
-                    while (rs.next()) {
-                        newViolationIds.add(rs.getLong(1));
-                    }
-                }
-            }
-
-            if (!violationIdsToDelete.isEmpty()) {
-                final Array violationIdsToDeleteArray =
-                        nativeConnection.createArrayOf("BIGINT", violationIdsToDelete.toArray(new Long[0]));
-
-                try (final PreparedStatement ps = nativeConnection.prepareStatement("""
-                        DELETE FROM
-                          "POLICYVIOLATION"
-                        WHERE
-                          "ID" = ANY(?)
-                        """)) {
-                    ps.setArray(1, violationIdsToDeleteArray);
-                    ps.execute();
-                }
-            }
-
-            nativeConnection.commit();
-        } catch (Exception e) {
-            try {
-                nativeConnection.rollback();
-            } catch (SQLException ex) {
-                throw new RuntimeException(ex);
-            }
-
-            throw new RuntimeException(e);
-        } finally {
-            jdoConnection.close();
-        }
-
-        return newViolationIds;
+    private static Stream<Vulnerability.Alias> mapToProto(final VulnerabilityAlias alias) {
+        return alias.getAllBySource().entrySet().stream()
+                .map(aliasEntry -> Vulnerability.Alias.newBuilder()
+                        .setSource(aliasEntry.getKey().name())
+                        .setId(aliasEntry.getValue())
+                        .build());
     }
 
 }

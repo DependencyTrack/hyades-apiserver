@@ -4,6 +4,8 @@ import java.util.Date;
 
 public class ProjectProjection {
 
+    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
+
     public long id;
 
     @MappedField(sqlColumnName = "UUID")
@@ -35,5 +37,8 @@ public class ProjectProjection {
 
     @MappedField(protoFieldName = "last_bom_import", sqlColumnName = "LAST_BOM_IMPORTED")
     public Date lastBomImport;
+
+    public String propertiesJson;
+    public String tagsJson;
 
 }
