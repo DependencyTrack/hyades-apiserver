@@ -111,9 +111,9 @@ public class PolicyCondition implements Serializable {
     private Subject subject;
 
     @Persistent
-    @Column(name = "VALUE", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
+    @Column(name = "VALUE", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 1024)
+    @Size(min = 1)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The value may only contain printable characters")
     private String value;
 

@@ -282,14 +282,14 @@ class CelPolicyQueryManager implements AutoCloseable {
                 LEFT JOIN LATERAL (
                   SELECT
                     CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                      'cveId', "VA"."CVE_ID",
-                      'ghsaId', "VA"."GHSA_ID",
-                      'gsdId', "VA"."GSD_ID",
+                      'cveId',      "VA"."CVE_ID",
+                      'ghsaId',     "VA"."GHSA_ID",
+                      'gsdId',      "VA"."GSD_ID",
                       'internalId', "VA"."INTERNAL_ID",
-                      'osvId', "VA"."OSV_ID",
+                      'osvId',      "VA"."OSV_ID",
                       'sonatypeId', "VA"."SONATYPE_ID",
-                      'snykId', "VA"."SNYK_ID",
-                      'vulnDbId', "VA"."VULNDB_ID"
+                      'snykId',     "VA"."SNYK_ID",
+                      'vulnDbId',   "VA"."VULNDB_ID"
                     ))) AS TEXT) AS "aliasesJson"
                   FROM
                     "VULNERABILITYALIAS" AS "VA"

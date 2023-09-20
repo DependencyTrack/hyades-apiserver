@@ -411,9 +411,11 @@ public class CelPolicyEngine {
                 .setGroup(trimToEmpty(projection.group))
                 .setName(trimToEmpty(projection.name))
                 .setVersion(trimToEmpty(projection.version))
+                .setClassifier(trimToEmpty(projection.classifier))
                 .setCpe(trimToEmpty(projection.cpe))
                 .setPurl(trimToEmpty(projection.purl))
                 .setSwidTagId(trimToEmpty(projection.swidTagId));
+        Optional.ofNullable(projection.isActive).ifPresent(builder::setIsActive);
         Optional.ofNullable(projection.lastBomImport).map(Timestamps::fromDate).ifPresent(builder::setLastBomImport);
 
         if (projection.propertiesJson != null) {
