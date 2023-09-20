@@ -1,8 +1,10 @@
 package org.dependencytrack.policy.cel;
 
+import alpine.model.IConfigProperty;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -14,6 +16,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
@@ -122,6 +125,179 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         final List<PolicyViolation> violations = qm.getAllPolicyViolations(component);
         assertThat(violations).isNotEmpty();
+    }
+
+    @Test
+    public void testWithAllFields() {
+        final var project = new Project();
+        project.setUuid(UUID.fromString("d7173786-60aa-4a4f-a950-c92fe6422307"));
+        project.setGroup("projectGroup");
+        project.setName("projectName");
+        project.setVersion("projectVersion");
+        project.setClassifier(Classifier.APPLICATION);
+        project.setActive(true);
+        project.setCpe("projectCpe");
+        project.setPurl("projectPurl");
+        project.setSwidTagId("projectSwidTagId");
+        project.setLastBomImport(new java.util.Date());
+        qm.persist(project);
+
+        qm.createProjectProperty(project, "propertyGroup", "propertyName", "propertyValue", IConfigProperty.PropertyType.STRING, null);
+
+        qm.bind(project, List.of(
+                qm.createTag("projectTagA"),
+                qm.createTag("projectTagB")
+        ));
+
+        final var licenseGroup = new LicenseGroup();
+        licenseGroup.setUuid(UUID.fromString("bbdb62f8-d854-4e43-a9ed-36481545c201"));
+        licenseGroup.setName("licenseGroupName");
+        qm.persist(licenseGroup);
+
+        final var license = new License();
+        license.setUuid(UUID.fromString("dc9876c2-0adc-422b-9f71-3ca78285f138"));
+        license.setLicenseId("resolvedLicenseId");
+        license.setName("resolvedLicenseName");
+        license.setOsiApproved(true);
+        license.setFsfLibre(true);
+        license.setDeprecatedLicenseId(true);
+        license.setCustomLicense(true);
+        license.setLicenseGroups(List.of(licenseGroup));
+        qm.persist(license);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setUuid(UUID.fromString("7e5f6465-d2f2-424f-b1a4-68d186fa2b46"));
+        component.setGroup("componentGroup");
+        component.setName("componentName");
+        component.setVersion("componentVersion");
+        component.setClassifier(Classifier.LIBRARY);
+        component.setCpe("componentCpe");
+        component.setPurl("componentPurl");
+        component.setSwidTagId("componentSwidTagId");
+        component.setInternal(true);
+        component.setMd5("componentMd5");
+        component.setSha1("componentSha1");
+        component.setSha256("componentSha256");
+        component.setSha384("componentSha384");
+        component.setSha512("componentSha512");
+        component.setSha3_256("componentSha3_256");
+        component.setSha3_384("componentSha3_384");
+        component.setSha3_512("componentSha3_512");
+        component.setBlake2b_256("componentBlake2b_256");
+        component.setBlake2b_384("componentBlake2b_384");
+        component.setBlake2b_512("componentBlake2b_512");
+        component.setBlake3("componentBlake3");
+        component.setLicense("componentLicenseName");
+        component.setResolvedLicense(license);
+        qm.persist(component);
+
+        final var vuln = new Vulnerability();
+        vuln.setUuid(UUID.fromString("ffe9743f-b916-431e-8a68-9b3ac56db72c"));
+        vuln.setVulnId("CVE-001");
+        vuln.setSource(Vulnerability.Source.NVD);
+        vuln.setCwes(List.of(666, 777));
+        vuln.setCreated(new java.util.Date(666));
+        vuln.setPublished(new java.util.Date(777));
+        vuln.setUpdated(new java.util.Date(888));
+        qm.persist(vuln);
+
+        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+
+        final var vulnAlias = new VulnerabilityAlias();
+        vulnAlias.setCveId("CVE-001");
+        vulnAlias.setGhsaId("GHSA-001");
+        vulnAlias.setGsdId("GSD-001");
+        vulnAlias.setInternalId("INT-001");
+        vulnAlias.setOsvId("OSV-001");
+        vulnAlias.setSnykId("SNYK-001");
+        vulnAlias.setSonatypeId("SONATYPE-001");
+        vulnAlias.setVulnDbId("VULNDB-001");
+        qm.synchronizeVulnerabilityAlias(vulnAlias);
+
+        final Policy policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.INFO);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.uuid == "__COMPONENT_UUID__"
+                  && component.group == "componentGroup"
+                  && component.name == "componentName"
+                  && component.version == "componentVersion"
+                  && component.classifier == "LIBRARY"
+                  && component.cpe == "componentCpe"
+                  && component.purl == "componentPurl"
+                  && component.swid_tag_id == "componentSwidTagId"
+                  && component.is_internal
+                  && component.md5 == "componentmd5"
+                  && component.sha1 == "componentsha1"
+                  && component.sha256 == "componentsha256"
+                  && component.sha384 == "componentsha384"
+                  && component.sha512 == "componentsha512"
+                  && component.sha3_256 == "componentsha3_256"
+                  && component.sha3_384 == "componentsha3_384"
+                  && component.sha3_512 == "componentsha3_512"
+                  && component.blake2b_256 == "componentBlake2b_256"
+                  && component.blake2b_384 == "componentBlake2b_384"
+                  && component.blake2b_512 == "componentBlake2b_512"
+                  && component.blake3 == "componentBlake3"
+                  && component.license_name == "componentLicenseName"
+                  && !has(component.license_expression)
+                  && component.resolved_license.uuid == "__RESOLVED_LICENSE_UUID__"
+                  && component.resolved_license.id == "resolvedLicenseId"
+                  && component.resolved_license.name == "resolvedLicenseName"
+                  && component.resolved_license.is_osi_approved
+                  && component.resolved_license.is_fsf_libre
+                  && component.resolved_license.is_deprecated_id
+                  && component.resolved_license.is_custom
+                  && component.resolved_license.groups.all(licenseGroup,
+                       licenseGroup.uuid == "__LICENSE_GROUP_UUID__"
+                         && licenseGroup.name == "licenseGroupName"
+                     )
+                  && project.uuid == "__PROJECT_UUID__"
+                  && project.group == "projectGroup"
+                  && project.name == "projectName"
+                  && project.version == "projectVersion"
+                  && project.classifier == "APPLICATION"
+                  && project.is_active
+                  && project.cpe == "projectCpe"
+                  && project.purl == "projectPurl"
+                  && project.swid_tag_id == "projectSwidTagId"
+                  && has(project.last_bom_import)
+                  && "projecttaga" in project.tags
+                  && project.properties.all(property,
+                       property.group == "propertyGroup"
+                         && property.name == "propertyName"
+                         && property.value == "propertyValue"
+                         && property.type == "STRING"
+                     )
+                  && vulns.all(vuln,
+                       vuln.uuid == "__VULN_UUID__"
+                         && vuln.id == "CVE-001"
+                         && vuln.source == "NVD"
+                         && 666 in vuln.cwes
+                         && vuln.aliases
+                              .map(alias, alias.source + ":" + alias.id)
+                              .all(alias, alias in [
+                                "NVD:CVE-001",
+                                "GITHUB:GHSA-001",
+                                "GSD:GSD-001",
+                                "INTERNAL:INT-001",
+                                "OSV:OSV-001",
+                                "SNYK:SNYK-001",
+                                "OSSINDEX:SONATYPE-001",
+                                "VULNDB:VULNDB-001"
+                              ])
+                         && vuln.created == timestamp("1970-01-01T00:00:00.666Z")
+                         && vuln.published == timestamp("1970-01-01T00:00:00.777Z")
+                         && vuln.updated == timestamp("1970-01-01T00:00:00.888Z")
+                     )
+                """
+                .replace("__COMPONENT_UUID__", component.getUuid().toString())
+                .replace("__PROJECT_UUID__", project.getUuid().toString())
+                .replace("__RESOLVED_LICENSE_UUID__", license.getUuid().toString())
+                .replace("__LICENSE_GROUP_UUID__", licenseGroup.getUuid().toString())
+                .replace("__VULN_UUID__", vuln.getUuid().toString()), PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(project)).hasSize(1);
     }
 
     @Test

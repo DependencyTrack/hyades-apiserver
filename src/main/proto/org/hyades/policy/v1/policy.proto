@@ -48,9 +48,6 @@ message Component {
   // Whether the component is internal to the organization.
   optional bool is_internal = 9;
 
-  // Whether the component is a direct dependency of the project.
-  optional bool is_direct_dependency = 10;
-
   optional string md5 = 20;
   optional string sha1 = 21;
   optional string sha256 = 22;
