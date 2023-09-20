@@ -155,10 +155,8 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         final var policyEngine = new CelPolicyEngine();
 
-        policyEngine.evaluateComponent(componentA.getUuid());
+        policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
-
-        policyEngine.evaluateComponent(componentB.getUuid());
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
     }
 
@@ -193,10 +191,8 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         final var policyEngine = new CelPolicyEngine();
 
-        policyEngine.evaluateComponent(componentA.getUuid());
+        policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
-
-        policyEngine.evaluateComponent(componentB.getUuid());
         assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
     }
 
@@ -235,10 +231,8 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         final var policyEngine = new CelPolicyEngine();
 
-        policyEngine.evaluateComponent(componentA.getUuid());
+        policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
-
-        policyEngine.evaluateComponent(componentB.getUuid());
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
     }
 
@@ -289,7 +283,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(vulnerability);
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         CelPolicyEngine policyEngine = new CelPolicyEngine();
-        policyEngine.evaluate(components);
+        policyEngine.evaluateProject(project.getUuid());
         final List<PolicyViolation> violations = qm.getAllPolicyViolations();
         Assert.assertEquals(3, violations.size());
         PolicyViolation policyViolation = violations.get(0);
@@ -349,7 +343,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(component);
 
         CelPolicyEngine policyEngine = new CelPolicyEngine();
-        policyEngine.evaluate(components);
+        policyEngine.evaluateProject(project.getUuid());
         final List<PolicyViolation> violations = qm.getAllPolicyViolations();
         Assert.assertEquals(2, violations.size());
         PolicyViolation policyViolation = violations.get(0);

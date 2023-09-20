@@ -38,6 +38,11 @@ public class FieldMappingUtilTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testGetFieldMappingsForProjectPropertyProjection() {
+        assertValidProtoFieldsAndColumns(ProjectPropertyProjection.class, Project.Property.getDescriptor(), org.dependencytrack.model.ProjectProperty.class);
+    }
+
+    @Test
     public void testGetFieldMappingsForVulnerabilityProjection() {
         assertValidProtoFieldsAndColumns(VulnerabilityProjection.class, Vulnerability.getDescriptor(), org.dependencytrack.model.Vulnerability.class);
     }
