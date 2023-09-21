@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
@@ -342,27 +343,76 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testProjectDependsOnComponent() {
+    public void testWithInvalidScript() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyCondition = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
-                        """);
-        policyCondition.setViolationType(PolicyViolation.Type.OPERATIONAL);
-        qm.persist(policyCondition);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.doesNotExist == "foo"
+                """, PolicyViolation.Type.OPERATIONAL);
+        final PolicyCondition validCondition = qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION,
+                PolicyCondition.Operator.MATCHES, """
+                        project.name == "acme-app"
+                        """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
-        project.setName("foo");
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
+        assertThat(qm.getAllPolicyViolations(component)).satisfiesExactly(violation ->
+                assertThat(violation.getPolicyCondition()).isEqualTo(validCondition)
+        );
+    }
+
+    @Test
+    public void testWithScriptExecutionException() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.last_bom_import == timestamp("invalid")
+                """, PolicyViolation.Type.OPERATIONAL);
+        final PolicyCondition validCondition = qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION,
+                PolicyCondition.Operator.MATCHES, """
+                        project.name == "acme-app"
+                        """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
+        assertThat(qm.getAllPolicyViolations(component)).satisfiesExactly(violation ->
+                assertThat(violation.getPolicyCondition()).isEqualTo(validCondition)
+        );
+    }
+
+    @Test
+    public void testProjectDependsOnComponent() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
         qm.persist(project);
 
         final var componentA = new Component();
         componentA.setProject(project);
-        componentA.setName("bar");
+        componentA.setName("acme-lib-a");
         qm.persist(componentA);
 
         final var componentB = new Component();
         componentB.setProject(project);
-        componentB.setName("baz");
+        componentB.setName("acme-lib-b");
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
@@ -374,6 +424,38 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
+
+    @Test
+    public void testComponentIsDependencyOfComponent() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.is_dependency_of(org.hyades.policy.v1.Component{name: "acme-lib-a"})
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+        qm.persist(project);
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(componentA);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
     }
 
@@ -429,33 +511,60 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     @Test
     public void testMatchesRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyCondition = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        project.matches_range("vers:generic/<1")
-                            && component.matches_range("vers:golang/>0|<v2.0.0")
-                        """);
-        policyCondition.setViolationType(PolicyViolation.Type.OPERATIONAL);
-        qm.persist(policyCondition);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.matches_range("vers:generic/<1")
+                    && component.matches_range("vers:golang/>0|<v2.0.0")
+                """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
-        project.setName("foo");
+        project.setName("acme-app");
         project.setVersion("0.1");
         qm.persist(project);
 
         final var componentA = new Component();
         componentA.setProject(project);
-        componentA.setName("bar");
+        componentA.setName("acme-lib-a");
         componentA.setVersion("v1.9.3");
         qm.persist(componentA);
 
         final var componentB = new Component();
         componentB.setProject(project);
-        componentB.setName("baz");
+        componentB.setName("acme-lib-b");
         componentB.setVersion("v2.0.0");
         qm.persist(componentB);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
+    public void testMatchesRangeWithInvalidRange() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.matches_range("foo")
+                    && component.matches_range("bar")
+                """);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("0.1");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("v1.9.3");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        componentB.setVersion("v2.0.0");
+        qm.persist(componentB);
+
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
     }
 
