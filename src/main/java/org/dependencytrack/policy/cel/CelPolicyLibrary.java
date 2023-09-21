@@ -69,12 +69,6 @@ public class CelPolicyLibrary implements Library {
                         ),
                         Decls.newFunction(
                                 FUNC_DEPENDS_ON,
-                                // component.depends_on(org.hyades.policy.v1.Component{name: "foo"})
-                                Decls.newInstanceOverload(
-                                        "component_depends_on_component_bool",
-                                        List.of(TYPE_COMPONENT, TYPE_COMPONENT),
-                                        Decls.Bool
-                                ),
                                 // project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "project_depends_on_component_bool",
@@ -148,10 +142,8 @@ public class CelPolicyLibrary implements Library {
         }
 
         if (lhs.value() instanceof final Project project) {
+            // project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
             return Types.boolOf(dependsOn(project, leafComponent));
-        } else if (lhs.value() instanceof final Component rootComponent) {
-            // TODO: Traverse dep graph from rootComponent downwards and look for leafComponent
-            return Types.boolOf(dependsOn(rootComponent, leafComponent));
         }
 
         return Err.maybeNoSuchOverloadErr(lhs);
@@ -175,8 +167,10 @@ public class CelPolicyLibrary implements Library {
     private static Val matchesRangeFunc(final Val lhs, final Val rhs) {
         final String version;
         if (lhs.value() instanceof final Component lhsValue) {
+            // component.matches_range("vers:golang/>0|!=v3.2.1")
             version = lhsValue.getVersion();
         } else if (lhs.value() instanceof final Project lhsValue) {
+            // project.matches_range("vers:golang/>0|!=v3.2.1")
             version = lhsValue.getVersion();
         } else {
             return Err.maybeNoSuchOverloadErr(lhs);
@@ -195,11 +189,16 @@ public class CelPolicyLibrary implements Library {
     private static boolean dependsOn(final Project project, final Component component) {
         if (project.getUuid().isBlank()) {
             // Need a UUID for our starting point.
+            LOGGER.warn("%s: project does not have a UUID; Unable to evaluate, returning false"
+                    .formatted(FUNC_DEPENDS_ON));
             return false;
         }
 
         final Pair<String, Map<String, Object>> filterAndParams = toFilterAndParams(component);
         if (filterAndParams == null) {
+            LOGGER.warn("""
+                    %s: Unable to construct filter expression from component %s; \
+                    Unable to evaluate, returning false""".formatted(FUNC_DEPENDS_ON, component));
             return false;
         }
 
@@ -231,6 +230,8 @@ public class CelPolicyLibrary implements Library {
     private static boolean isDependencyOf(final Component leafComponent, final Component rootComponent) {
         if (leafComponent.getUuid().isBlank()) {
             // Need a UUID for our starting point.
+            LOGGER.warn("%s: leaf component does not have a UUID; Unable to evaluate, returning false"
+                    .formatted(FUNC_IS_DEPENDENCY_OF));
             return false;
         }
 
@@ -259,6 +260,9 @@ public class CelPolicyLibrary implements Library {
         }
 
         if (filters.isEmpty()) {
+            LOGGER.warn("""
+                    %s: Unable to construct filter expression from root component %s; \
+                    Unable to evaluate, returning false""".formatted(FUNC_IS_DEPENDENCY_OF, rootComponent));
             return false;
         }
 
@@ -322,7 +326,7 @@ public class CelPolicyLibrary implements Library {
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.warn("Failed to execute query", e);
+                LOGGER.warn("%s: Failed to execute query: %s".formatted(FUNC_IS_DEPENDENCY_OF, query), e);
             } finally {
                 jdoConnection.close();
             }
@@ -335,6 +339,8 @@ public class CelPolicyLibrary implements Library {
         try {
             return Vers.parse(versStr).contains(version);
         } catch (VersException e) {
+            LOGGER.warn("%s: Failed to check if version %s matches range %s"
+                    .formatted(FUNC_MATCHES_RANGE, version, versStr), e);
             return false;
         }
     }
