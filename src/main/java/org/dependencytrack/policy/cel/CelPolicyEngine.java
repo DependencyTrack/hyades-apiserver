@@ -300,6 +300,7 @@ public class CelPolicyEngine {
                 .map(this::buildConditionScriptSrc)
                 .filter(Objects::nonNull)
                 .map(this::compileConditionScript)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -329,13 +330,15 @@ public class CelPolicyEngine {
     private Pair<PolicyCondition, String> buildConditionScriptSrc(final PolicyCondition policyCondition) {
         final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
         if (scriptBuilder == null) {
-            LOGGER.warn("No script builder found that is capable of handling subjects of type %s".formatted(policyCondition.getSubject()));
+            LOGGER.warn("""
+                    No script builder found that is capable of handling subjects of type %s;\
+                    Condition will be skipped""".formatted(policyCondition.getSubject()));
             return null;
         }
 
         final String scriptSrc = scriptBuilder.apply(policyCondition);
         if (scriptSrc == null) {
-            LOGGER.warn("Script builder was unable to create a script for condition %s".formatted(policyCondition.getUuid()));
+            LOGGER.warn("Unable to create CEL script for condition %s; Condition will be skipped".formatted(policyCondition.getUuid()));
             return null;
         }
 
@@ -347,7 +350,9 @@ public class CelPolicyEngine {
         try {
             script = scriptHost.compile(conditionScriptSrcPair.getRight());
         } catch (ScriptCreateException e) {
-            throw new RuntimeException(e);
+            LOGGER.warn("Failed to compile script for condition %s; Condition will be skipped"
+                    .formatted(conditionScriptSrcPair.getLeft().getUuid()), e);
+            return null;
         }
 
         return Pair.of(conditionScriptSrcPair.getLeft(), script);
@@ -366,9 +371,8 @@ public class CelPolicyEngine {
                     conditionsViolated.add(condition);
                 }
             } catch (ScriptException e) {
-                // TODO: Should we really fail the entire run for ALL components,
-                //   if only one condition failed to evaluate?
-                throw new RuntimeException("Failed to evaluate script", e);
+                LOGGER.warn("Failed to execute script for condition %s with arguments %s"
+                        .formatted(condition.getUuid(), scriptArguments));
             }
         }
 
@@ -486,7 +490,7 @@ public class CelPolicyEngine {
             if (protoLicense != null) {
                 componentBuilder.setResolvedLicense(protoLicenseById.get(projection.resolvedLicenseId));
             } else {
-                LOGGER.warn("Component with ID %d refers to license %d, but no license with that ID was found"
+                LOGGER.warn("Component with ID %d refers to license with ID %d, but no license with that ID was found"
                         .formatted(projection.id, projection.resolvedLicenseId));
             }
         }
@@ -515,7 +519,8 @@ public class CelPolicyEngine {
                             .build());
                 }
             } catch (JacksonException e) {
-                LOGGER.warn("Failed to parse license groups JSON for license %s".formatted(projection.id), e);
+                LOGGER.warn("Failed to parse license groups from %s for license %s"
+                        .formatted(projection.licenseGroupsJson, projection.id), e);
             }
         }
 
