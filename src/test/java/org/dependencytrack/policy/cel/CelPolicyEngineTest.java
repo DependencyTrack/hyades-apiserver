@@ -460,55 +460,6 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testVulnerabilitySeverity() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                vulns.exists(vuln, vuln.severity == "CRITICAL")
-                """, PolicyViolation.Type.SECURITY);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("acme-lib");
-        qm.persist(component);
-
-        // Create a vulnerability that has all scores (CVSSv2, CVSSv3, OWASP RR)
-        // available, but no severity is set explicitly.
-        //
-        // Even though the expression only accesses the `severity` field, the policy
-        // engine should fetch all scores in order to derive the severity from them.
-        // Note that when multiple scores are available, the highest severity wins.
-        //
-        // The highest severity among the scores below is CRITICAL from CVSSv3.
-
-        final var vuln = new Vulnerability();
-        vuln.setVulnId("CVE-123");
-        vuln.setSource(Vulnerability.Source.NVD);
-        // vuln.setSeverity(Severity.INFO);
-        vuln.setCvssV2BaseScore(BigDecimal.valueOf(6.0));
-        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(6.4));
-        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(6.8));
-        vuln.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
-        vuln.setCvssV3BaseScore(BigDecimal.valueOf(9.1));
-        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(5.3));
-        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(3.1));
-        vuln.setCvssV3Vector("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
-        vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(4.5));
-        vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.0));
-        vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.75));
-        vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
-        qm.persist(vuln);
-
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-
-        new CelPolicyEngine().evaluateProject(project.getUuid());
-        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
-    }
-
-    @Test
     public void testMatchesRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """

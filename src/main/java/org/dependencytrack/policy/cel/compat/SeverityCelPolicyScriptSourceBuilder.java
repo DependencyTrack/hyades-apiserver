@@ -2,22 +2,20 @@ package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.model.PolicyCondition;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class SeverityCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
     @Override
     public String apply(final PolicyCondition policyCondition) {
-        final String escapedPolicyValue = escapeJson(policyCondition.getValue());
-
         if (policyCondition.getOperator() == PolicyCondition.Operator.IS) {
             return """
                     vulns.exists(vuln, vuln.severity == "%s")
-                    """.formatted(escapedPolicyValue);
+                    """.formatted(escapeQuotes(policyCondition.getValue()));
         } else if (policyCondition.getOperator() == PolicyCondition.Operator.IS_NOT) {
             return """
                     vulns.exists(vuln, vuln.severity != "%s")
-                    """.formatted(escapedPolicyValue);
+                    """.formatted(escapeQuotes(policyCondition.getValue()));
         }
 
         return null;
