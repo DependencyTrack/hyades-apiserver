@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.model.PolicyCondition;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class SwidTagIdCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
@@ -10,7 +10,7 @@ public class SwidTagIdCelPolicyScriptSourceBuilder implements CelPolicyScriptSou
     public String apply(final PolicyCondition policyCondition) {
         final String scriptSrc = """
                 component.swid_tag_id.matches("%s")
-                """.formatted(escapeJson(policyCondition.getValue()));
+                """.formatted(escapeQuotes(policyCondition.getValue()));
 
         if (policyCondition.getOperator() == PolicyCondition.Operator.MATCHES) {
             return scriptSrc;
