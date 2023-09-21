@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -200,6 +201,21 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         vuln.setCreated(new java.util.Date(666));
         vuln.setPublished(new java.util.Date(777));
         vuln.setUpdated(new java.util.Date(888));
+        vuln.setSeverity(Severity.INFO);
+        vuln.setCvssV2BaseScore(BigDecimal.valueOf(6.0));
+        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(6.4));
+        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(6.8));
+        vuln.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
+        vuln.setCvssV3BaseScore(BigDecimal.valueOf(9.1));
+        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(5.3));
+        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(3.1));
+        vuln.setCvssV3Vector("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
+        vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(4.5));
+        vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.0));
+        vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.75));
+        vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
+        vuln.setEpssScore(BigDecimal.valueOf(0.6));
+        vuln.setEpssPercentile(BigDecimal.valueOf(0.2));
         qm.persist(vuln);
 
         qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
@@ -288,6 +304,21 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
                          && vuln.created == timestamp("1970-01-01T00:00:00.666Z")
                          && vuln.published == timestamp("1970-01-01T00:00:00.777Z")
                          && vuln.updated == timestamp("1970-01-01T00:00:00.888Z")
+                         && vuln.severity == "INFO"
+                         && vuln.cvssv2_base_score == 6.0
+                         && vuln.cvssv2_impact_subscore == 6.4
+                         && vuln.cvssv2_exploitability_subscore == 6.8
+                         && vuln.cvssv2_vector == "(AV:N/AC:M/Au:S/C:P/I:P/A:P)"
+                         && vuln.cvssv3_base_score == 9.1
+                         && vuln.cvssv3_impact_subscore == 5.3
+                         && vuln.cvssv3_exploitability_subscore == 3.1
+                         && vuln.cvssv3_vector == "CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L"
+                         && vuln.owasp_rr_likelihood_score == 4.5
+                         && vuln.owasp_rr_technical_impact_score == 5.0
+                         && vuln.owasp_rr_business_impact_score == 3.75
+                         && vuln.owasp_rr_vector == "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)"
+                         && vuln.epss_score == 0.6
+                         && vuln.epss_percentile == 0.2
                      )
                 """
                 .replace("__COMPONENT_UUID__", component.getUuid().toString())

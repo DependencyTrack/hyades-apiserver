@@ -21,6 +21,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyCondition.Subject;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
@@ -41,10 +42,12 @@ import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.util.NotificationUtil;
+import org.dependencytrack.util.VulnerabilityUtil;
 import org.hyades.proto.policy.v1.Vulnerability;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -530,8 +533,7 @@ public class CelPolicyEngine {
                         .setSource(trimToEmpty(projection.source))
                         .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
                         .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
-                        .setOwaspRrVector(trimToEmpty(projection.owaspRrVector))
-                        .setSeverity(trimToEmpty(projection.severity));
+                        .setOwaspRrVector(trimToEmpty(projection.owaspRrVector));
         Optional.ofNullable(projection.cvssV2BaseScore).ifPresent(builder::setCvssv2BaseScore);
         Optional.ofNullable(projection.cvssV2ImpactSubScore).ifPresent(builder::setCvssv2ImpactSubscore);
         Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).ifPresent(builder::setCvssv2ExploitabilitySubscore);
@@ -551,6 +553,15 @@ public class CelPolicyEngine {
                 .filter(Objects::nonNull)
                 .map(new CollectionIntegerConverter()::convertToAttribute)
                 .ifPresent(builder::addAllCwes);
+
+        // Workaround for https://github.com/DependencyTrack/dependency-track/issues/2474.
+        final Severity severity = VulnerabilityUtil.getSeverity(projection.severity,
+                Optional.ofNullable(projection.cvssV2BaseScore).map(BigDecimal::valueOf).orElse(null),
+                Optional.ofNullable(projection.cvssV3BaseScore).map(BigDecimal::valueOf).orElse(null),
+                Optional.ofNullable(projection.owaspRrLikelihoodScore).map(BigDecimal::valueOf).orElse(null),
+                Optional.ofNullable(projection.owaspRrTechnicalImpactScore).map(BigDecimal::valueOf).orElse(null),
+                Optional.ofNullable(projection.owaspRrBusinessImpactScore).map(BigDecimal::valueOf).orElse(null));
+        builder.setSeverity(severity.name());
 
         if (projection.aliasesJson != null) {
             try {
