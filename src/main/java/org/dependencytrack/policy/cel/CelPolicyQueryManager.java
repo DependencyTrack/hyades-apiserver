@@ -278,7 +278,8 @@ class CelPolicyQueryManager implements AutoCloseable {
                   "VULNERABILITY" AS "V"
                 INNER JOIN
                   "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
-                  INNER JOIN "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
+                INNER JOIN
+                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
                 LEFT JOIN LATERAL (
                   SELECT
                     CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(

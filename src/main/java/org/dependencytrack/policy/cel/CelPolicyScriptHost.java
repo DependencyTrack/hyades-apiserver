@@ -1,6 +1,7 @@
 package org.dependencytrack.policy.cel;
 
 import alpine.common.logging.Logger;
+import alpine.server.cache.AbstractCacheManager;
 import alpine.server.cache.CacheManager;
 import com.google.api.expr.v1alpha1.CheckedExpr;
 import com.google.api.expr.v1alpha1.Type;
@@ -37,14 +38,19 @@ import static org.projectnessie.cel.common.Source.newTextSource;
 
 public class CelPolicyScriptHost {
 
+    public enum CacheMode {
+        CACHE,
+        NO_CACHE
+    }
+
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptHost.class);
     private static CelPolicyScriptHost INSTANCE;
 
     private final Striped<Lock> locks;
-    private final CacheManager cacheManager;
+    private final AbstractCacheManager cacheManager;
     private final Env environment;
 
-    CelPolicyScriptHost(final CacheManager cacheManager) {
+    CelPolicyScriptHost(final AbstractCacheManager cacheManager) {
         this.locks = Striped.lock(128);
         this.cacheManager = cacheManager;
         this.environment = Env.newCustomEnv(
@@ -65,7 +71,15 @@ public class CelPolicyScriptHost {
         return INSTANCE;
     }
 
-    public CelPolicyScript compile(final String scriptSrc) throws ScriptCreateException {
+    /**
+     * Compile, type-check, ana analyze a given CEL script.
+     *
+     * @param scriptSrc Source of the script to compile
+     * @param cacheMode Whether the {@link CelPolicyScript} shall be cached upon successful compilation
+     * @return The compiled {@link CelPolicyScript}
+     * @throws ScriptCreateException When compilation, type checking, or analysis failed
+     */
+    public CelPolicyScript compile(final String scriptSrc, final CacheMode cacheMode) throws ScriptCreateException {
         final String scriptDigest = DigestUtils.sha256Hex(scriptSrc);
 
         // Acquire a lock for the SHA256 digest of the script source.
@@ -105,7 +119,9 @@ public class CelPolicyScriptHost {
             final MultiValuedMap<Type, String> requirements = analyzeRequirements(CEL.astToCheckedExpr(ast));
 
             script = new CelPolicyScript(program, requirements);
-            cacheManager.put(scriptDigest, script);
+            if (cacheMode == CacheMode.CACHE) {
+                cacheManager.put(scriptDigest, script);
+            }
             return script;
         } finally {
             lock.unlock();
