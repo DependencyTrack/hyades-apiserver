@@ -28,6 +28,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentIntegrityMeta;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -718,5 +719,69 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
         }
         dependencyGraph.putAll(addToDependencyGraph);
+    }
+
+    /**
+     * Returns a ComponentIntegrityMeta object from the specified purl.
+     *
+     * @param purl           the Package URL string of the component
+     * @return a ComponentIntegrityMeta object, or null if not found
+     */
+    public ComponentIntegrityMeta getComponentIntegrityMeta(String purl) {
+        final Query<ComponentIntegrityMeta> query = pm.newQuery(ComponentIntegrityMeta.class);
+        query.setFilter("purl == :purl");
+        query.setRange(0, 1);
+        return singleResult(query.execute(purl));
+    }
+
+    /**
+     * Updates a ComponentIntegrityMeta record.
+     *
+     * @param transientComponentIntegrityMeta the ComponentIntegrityMeta object to synchronize
+     * @return a synchronized ComponentIntegrityMeta object
+     */
+    public synchronized ComponentIntegrityMeta updateComponentIntegrityMeta(final ComponentIntegrityMeta transientComponentIntegrityMeta) {
+        final ComponentIntegrityMeta integrityMeta = getComponentIntegrityMeta(transientComponentIntegrityMeta.getPurl());
+        if (integrityMeta != null) {
+            integrityMeta.setMd5(transientComponentIntegrityMeta.getMd5());
+            integrityMeta.setSha1(transientComponentIntegrityMeta.getSha1());
+            integrityMeta.setSha256(transientComponentIntegrityMeta.getSha256());
+            integrityMeta.setPublishedAt(transientComponentIntegrityMeta.getPublishedAt());
+            integrityMeta.setStatus(transientComponentIntegrityMeta.getStatus());
+            integrityMeta.setLastFetch(transientComponentIntegrityMeta.getLastFetch());
+            return persist(integrityMeta);
+        } else {
+            LOGGER.debug("No record found in ComponentIntegrityMeta for purl " + transientComponentIntegrityMeta.getPurl());
+            return null;
+        }
+    }
+
+    /**
+     * Synchronizes ComponentIntegrityMeta with purls from COMPONENT. This is part of initializer.
+     */
+    public synchronized void synchronizeComponentIntegrityMeta() {
+        var paginatedDistinctPurls = getDistinctComponentPurls();
+        for (var purl : paginatedDistinctPurls.getObjects()) {
+            var componentIntegrityMetaRecord = new ComponentIntegrityMeta();
+            componentIntegrityMetaRecord.setPurl(purl.toString());
+            persist(componentIntegrityMetaRecord);
+        }
+    }
+
+    /**
+     * Returns distinct component Purls.
+     * @return a list of purls
+     */
+    public PaginatedResult getDistinctComponentPurls() {
+        var queryStr = """
+                SELECT DISTINCT this.purl
+                FROM org.dependencytrack.model.Component
+                """;
+        final var query = pm.newQuery(Component.class, queryStr);
+        final var queryParams = new HashMap<String, Object>();
+        final PaginatedResult result;
+        preprocessACLs(query, null, queryParams, false);
+        result = execute(query, queryParams);
+        return result;
     }
 }

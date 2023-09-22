@@ -7,7 +7,9 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIntegrityMeta;
 import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
@@ -106,4 +108,69 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
     }
 
+    @Test
+    public void testGetComponentIntegrityMeta() {
+        var integrityMeta = new ComponentIntegrityMeta();
+        integrityMeta.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
+        integrityMeta.setStatus(FetchStatus.TIMED_OUT);
+
+        var result = qm.getComponentIntegrityMeta("pkg:maven/acme/example@1.0.0?type=jar");
+        assertThat(result).isNull();
+
+        result = qm.persist(integrityMeta);
+        assertThat(qm.getComponentIntegrityMeta(result.getPurl())).satisfies(
+                meta -> {
+                    assertThat(meta.getStatus()).isEqualTo(FetchStatus.TIMED_OUT);
+                    assertThat(meta.getId()).isEqualTo(1L);
+                    assertThat(meta.getMd5()).isNull();
+                    assertThat(meta.getSha1()).isNull();
+                    assertThat(meta.getSha256()).isNull();
+                    assertThat(meta.getLastFetch()).isNull();
+                    assertThat(meta.getPublishedAt()).isNull();
+                }
+        );
+    }
+
+    @Test
+    public void testUpdateComponentIntegrityMeta() {
+        var integrityMeta = new ComponentIntegrityMeta();
+        integrityMeta.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
+        integrityMeta.setStatus(FetchStatus.TIMED_OUT);
+
+        var result  = qm.updateComponentIntegrityMeta(integrityMeta);
+        assertThat(result).isNull();
+
+        var persisted = qm.persist(integrityMeta);
+        persisted.setStatus(FetchStatus.PROCESSED);
+        result  = qm.updateComponentIntegrityMeta(persisted);
+        assertThat(result.getStatus()).isEqualTo(FetchStatus.PROCESSED);
+    }
+
+    @Test
+    public void testSynchronizeComponentIntegrityMeta() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
+        component.setName("acme-lib");
+        qm.persist(component);
+        qm.synchronizeComponentIntegrityMeta();
+
+        assertThat(qm.getComponentIntegrityMeta(component.getPurl().toString())).satisfies(
+                meta -> {
+                    assertThat(meta.getStatus()).isNull();
+                    assertThat(meta.getPurl()).isEqualTo("pkg:maven/acme/example@1.0.0?type=jar");
+                    assertThat(meta.getId()).isEqualTo(1L);
+                    assertThat(meta.getMd5()).isNull();
+                    assertThat(meta.getSha1()).isNull();
+                    assertThat(meta.getSha256()).isNull();
+                    assertThat(meta.getLastFetch()).isNull();
+                    assertThat(meta.getPublishedAt()).isNull();
+                }
+        );
+    }
 }
