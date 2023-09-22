@@ -25,6 +25,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
@@ -348,7 +349,7 @@ public class CelPolicyEngine {
     private Pair<PolicyCondition, CelPolicyScript> compileConditionScript(final Pair<PolicyCondition, String> conditionScriptSrcPair) {
         final CelPolicyScript script;
         try {
-            script = scriptHost.compile(conditionScriptSrcPair.getRight());
+            script = scriptHost.compile(conditionScriptSrcPair.getRight(), CacheMode.CACHE);
         } catch (ScriptCreateException e) {
             LOGGER.warn("Failed to compile script for condition %s; Condition will be skipped"
                     .formatted(conditionScriptSrcPair.getLeft().getUuid()), e);
