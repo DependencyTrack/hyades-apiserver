@@ -552,12 +552,10 @@ class CelPolicyQueryManager implements AutoCloseable {
         return policies;
     }
 
-    // TODO: Move to ProjectQueryManager
     List<UUID> getParents(final Project project) {
         return getParents(project.getUuid(), new ArrayList<>());
     }
 
-    // TODO: Move to ProjectQueryManager
     List<UUID> getParents(final UUID uuid, final List<UUID> parents) {
         final UUID parentUuid;
         final Query<Project> query = pm.newQuery(Project.class);
