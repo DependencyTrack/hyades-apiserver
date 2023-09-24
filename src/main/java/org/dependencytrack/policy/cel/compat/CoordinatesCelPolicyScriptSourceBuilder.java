@@ -50,7 +50,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
                     .build();
             return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
-                """.formatted(escapeJson(group), escapeJson(name), escapeJson(conditionVers.toString()));
+                """.formatted(escapeJson(group), escapeJson(name), conditionVers.toString());
         }
 
         io.github.nscuro.versatile.Comparator versionComparator = switch (versionOperatorMatcher.group(1)) {
@@ -74,6 +74,6 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
 
         return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
-                """.formatted(escapeJson(group), escapeJson(name), escapeJson(conditionVers.toString()));
+                """.formatted(escapeJson(group), escapeJson(name), conditionVers.toString());
     }
 }
