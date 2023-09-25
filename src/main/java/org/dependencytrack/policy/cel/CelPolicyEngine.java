@@ -15,7 +15,6 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyCondition.Subject;
@@ -217,7 +216,7 @@ public class CelPolicyEngine {
             }
         } finally {
             final long durationNs = timerSample.stop(Timer
-                    .builder("dtrack_policy_eval")
+                    .builder("policy_evaluation")
                     .tag("target", "project")
                     .register(Metrics.getRegistry()));
             LOGGER.info("Evaluation of project %s completed in %s"
@@ -226,58 +225,23 @@ public class CelPolicyEngine {
     }
 
     public void evaluateComponent(final UUID uuid) {
-        final Timer.Sample timerSample = Timer.start();
+        // Evaluation of individual components is only triggered when they are added or modified
+        // manually. As this happens very rarely, in low frequencies (due to being manual actions),
+        // and because CEL policy evaluation is so efficient, it's not worth it to maintain extra
+        // logic to handle component evaluation. Instead, re-purpose to project evaluation.
 
+        final UUID projectUuid;
         try (final var qm = new QueryManager();
              final var celQm = new CelPolicyQueryManager(qm)) {
-            final Component component = qm.getObjectByUuid(Component.class, uuid);
-            if (component == null) {
-                LOGGER.warn("Component with UUID %s does not exist".formatted(uuid));
-                return;
-            }
-
-            LOGGER.debug("Compiling policy scripts for project %s".formatted(uuid));
-            final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = getApplicableConditionScriptPairs(celQm, component.getProject());
-            if (conditionScriptPairs.isEmpty()) {
-                LOGGER.info("No applicable policies found for project %s".formatted(uuid));
-                // reconcileViolations(qm, project.getId(), emptyMultiValuedMap());
-                return;
-            }
-
-            LOGGER.info("Determining evaluation requirements for component %s and %d policy conditions"
-                    .formatted(uuid, conditionScriptPairs.size()));
-            final MultiValuedMap<Type, String> requirements = determineScriptRequirements(conditionScriptPairs);
-
-            LOGGER.info("Evaluating component %s against %d applicable policy conditions"
-                    .formatted(uuid, conditionScriptPairs.size()));
-            final List<PolicyCondition> conditionsViolated = evaluateConditions(conditionScriptPairs, Map.of(
-                    // VAR_COMPONENT, mapComponent(qm, component, requirements),
-                    // VAR_PROJECT, mapProject(component.getProject(), requirements),
-                    // VAR_VULNERABILITIES, loadVulnerabilities(qm, component, requirements)
-            ));
-
-            // Group the detected condition violations by policy. Necessary to be able to evaluate
-            // each policy's operator (ANY, ALL).
-            LOGGER.info("Detected violation of %d policy conditions for component %s; Evaluating policy operators"
-                    .formatted(conditionsViolated.size(), uuid));
-            final List<PolicyViolation> violations = evaluatePolicyOperators(conditionsViolated);
-
-            // Reconcile the violations created above with what's already in the database.
-            // Create new records if necessary, and delete records that are no longer current.
-            // final List<PolicyViolation> newViolations = reconcileViolations(qm, component, violations);
-
-            // Notify users about any new violations.
-            // for (final PolicyViolation newViolation : newViolations) {
-            //    NotificationUtil.analyzeNotificationCriteria(qm, newViolation);
-            // }
-        } finally {
-            final long durationNs = timerSample.stop(Timer
-                    .builder("dtrack_policy_eval")
-                    .tag("target", "component")
-                    .register(Metrics.getRegistry()));
-            LOGGER.info("Evaluation of component %s completed in %s"
-                    .formatted(uuid, Duration.ofNanos(durationNs)));
+            projectUuid = celQm.getProjectUuidForComponentUuid(uuid);
         }
+
+        if (projectUuid == null) {
+            LOGGER.warn("Component with UUID %s does not exist; Skipping".formatted(uuid));
+            return;
+        }
+
+        evaluateProject(projectUuid);
     }
 
 

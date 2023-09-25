@@ -14,16 +14,16 @@ public class CelPolicyScript {
     private final Program program;
     private final MultiValuedMap<Type, String> requirements;
 
-    public CelPolicyScript(final Program program, final MultiValuedMap<Type, String> requirements) {
+    CelPolicyScript(final Program program, final MultiValuedMap<Type, String> requirements) {
         this.program = program;
         this.requirements = requirements;
     }
 
-    public MultiValuedMap<Type, String> getRequirements() {
+    MultiValuedMap<Type, String> getRequirements() {
         return requirements;
     }
 
-    public boolean execute(final Map<String, Object> arguments) throws ScriptExecutionException {
+    boolean execute(final Map<String, Object> arguments) throws ScriptExecutionException {
         final Val result = program.eval(arguments).getVal();
 
         if (Err.isError(result)) {
