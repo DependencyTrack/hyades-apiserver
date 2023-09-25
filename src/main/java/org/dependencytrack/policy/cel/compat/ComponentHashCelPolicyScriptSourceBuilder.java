@@ -27,10 +27,6 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
             return """
                     component.%s == "%s"
                     """.formatted(fieldName, escapeJson(hash.getValue()));
-        } else if (policyCondition.getOperator().equals(PolicyCondition.Operator.IS_NOT)) {
-            return """
-                    component.%s != "%s"
-                    """.formatted(fieldName, escapeJson(hash.getValue()));
         } else {
             LOGGER.warn("Policy operator %s is not allowed with this policy".formatted(policyCondition.getOperator().toString()));
             return null;
