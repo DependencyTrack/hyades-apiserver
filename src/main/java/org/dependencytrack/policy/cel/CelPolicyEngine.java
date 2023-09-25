@@ -36,6 +36,7 @@ import org.dependencytrack.policy.cel.compat.LicenseGroupCelPolicyScriptSourceBu
 import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.VersionCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
@@ -100,6 +101,7 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.SEVERITY, new SeverityCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
     }
 
     private final CelPolicyScriptHost scriptHost;
