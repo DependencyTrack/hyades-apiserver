@@ -5,6 +5,7 @@ import org.dependencytrack.parser.common.resolver.CweResolver;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class CweCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
@@ -14,6 +15,7 @@ public class CweCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBui
         final List<Integer> conditionCwes = Arrays.stream(policyCondition.getValue().split(","))
                 .map(String::trim)
                 .map(CweResolver.getInstance()::parseCweString)
+                .filter(Objects::nonNull)
                 .sorted()
                 .toList();
         if (conditionCwes.isEmpty()) {
