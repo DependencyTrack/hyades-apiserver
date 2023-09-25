@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public class CelPolicyLibrary implements Library {
+class CelPolicyLibrary implements Library {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyLibrary.class);
 

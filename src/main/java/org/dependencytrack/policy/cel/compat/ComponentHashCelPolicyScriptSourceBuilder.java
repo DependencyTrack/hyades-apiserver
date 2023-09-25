@@ -14,7 +14,7 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
     @Override
     public String apply(final PolicyCondition policyCondition) {
         final Hash hash = extractHashValues(policyCondition);
-        if (hash == null) {
+        if (hash.getAlgorithm() == null || hash.getValue() == null || hash.getAlgorithm().isEmpty() || hash.getValue().isEmpty()) {
             return null;
         }
 
@@ -23,16 +23,18 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
             LOGGER.warn("Component does not have a field named %s".formatted(fieldName));
             return null;
         }
-
-        return """
-                component.%s == "%s"
-                """.formatted(fieldName, escapeJson(hash.getValue()));
+        if (policyCondition.getOperator().equals(PolicyCondition.Operator.IS)) {
+            return """
+                    component.%s == "%s"
+                    """.formatted(fieldName, escapeJson(hash.getValue()));
+        } else {
+            LOGGER.warn("Policy operator %s is not allowed with this policy".formatted(policyCondition.getOperator().toString()));
+            return null;
+        }
     }
 
     private static Hash extractHashValues(PolicyCondition condition) {
-        if (condition.getValue() == null) {
-            return null;
-        }
+        //Policy condition received here will never be null
         final JSONObject def = new JSONObject(condition.getValue());
         return new Hash(
                 def.optString("algorithm", null),

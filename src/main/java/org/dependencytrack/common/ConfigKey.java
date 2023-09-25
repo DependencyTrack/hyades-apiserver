@@ -70,7 +70,8 @@ public enum ConfigKey implements Config.Key {
     BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
     WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3D"),
     WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H"),
-    TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false");
+    TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
+    CEL_POLICY_ENGINE_ENABLED("cel.policy.engine.enabled", "false");
 
     private final String propertyName;
     private final Object defaultValue;

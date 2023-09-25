@@ -19,6 +19,7 @@
 package org.dependencytrack.upgrade;
 
 import alpine.server.upgrade.UpgradeItem;
+import org.dependencytrack.upgrade.v510.v510Updater;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,10 @@ import java.util.List;
 class UpgradeItems {
 
     private static final List<Class<? extends UpgradeItem>> UPGRADE_ITEMS = new ArrayList<>();
+
+    static {
+        UPGRADE_ITEMS.add(v510Updater.class);
+    }
 
     static List<Class<? extends UpgradeItem>> getUpgradeItems() {
         return UPGRADE_ITEMS;
