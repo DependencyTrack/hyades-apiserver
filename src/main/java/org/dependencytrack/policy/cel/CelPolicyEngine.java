@@ -157,7 +157,7 @@ public class CelPolicyEngine {
 
             // Preload licenses for the entire project, as chances are high that they will be used by multiple components.
             final Map<Long, org.hyades.proto.policy.v1.License> licenseById;
-            if (requirements.containsKey(TYPE_LICENSE)) {
+            if (requirements.containsKey(TYPE_LICENSE) || requirements.containsKey(TYPE_COMPONENT)) {
                 licenseById = celQm.fetchAllLicenses(project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
                         .collect(Collectors.toMap(
                                 projection -> projection.id,
