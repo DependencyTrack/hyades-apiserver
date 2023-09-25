@@ -7,7 +7,7 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIntegrityMeta;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.Policy;
@@ -109,16 +109,16 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetComponentIntegrityMeta() {
-        var integrityMeta = new ComponentIntegrityMeta();
+    public void testGetIntegrityMetaComponent() {
+        var integrityMeta = new IntegrityMetaComponent();
         integrityMeta.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
         integrityMeta.setStatus(FetchStatus.TIMED_OUT);
 
-        var result = qm.getComponentIntegrityMeta("pkg:maven/acme/example@1.0.0?type=jar");
+        var result = qm.getIntegrityMetaComponent("pkg:maven/acme/example@1.0.0?type=jar");
         assertThat(result).isNull();
 
         result = qm.persist(integrityMeta);
-        assertThat(qm.getComponentIntegrityMeta(result.getPurl())).satisfies(
+        assertThat(qm.getIntegrityMetaComponent(result.getPurl())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isEqualTo(FetchStatus.TIMED_OUT);
                     assertThat(meta.getId()).isEqualTo(1L);
@@ -132,22 +132,22 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUpdateComponentIntegrityMeta() {
-        var integrityMeta = new ComponentIntegrityMeta();
+    public void testUpdateIntegrityMetaComponent() {
+        var integrityMeta = new IntegrityMetaComponent();
         integrityMeta.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
         integrityMeta.setStatus(FetchStatus.TIMED_OUT);
 
-        var result  = qm.updateComponentIntegrityMeta(integrityMeta);
+        var result  = qm.updateIntegrityMetaComponent(integrityMeta);
         assertThat(result).isNull();
 
         var persisted = qm.persist(integrityMeta);
         persisted.setStatus(FetchStatus.PROCESSED);
-        result  = qm.updateComponentIntegrityMeta(persisted);
+        result  = qm.updateIntegrityMetaComponent(persisted);
         assertThat(result.getStatus()).isEqualTo(FetchStatus.PROCESSED);
     }
 
     @Test
-    public void testSynchronizeComponentIntegrityMeta() {
+    public void testSynchronizeIntegrityMetaComponent() {
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -158,9 +158,9 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         component.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
         component.setName("acme-lib");
         qm.persist(component);
-        qm.synchronizeComponentIntegrityMeta();
+        qm.synchronizeIntegrityMetaComponent();
 
-        assertThat(qm.getComponentIntegrityMeta(component.getPurl().toString())).satisfies(
+        assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isNull();
                     assertThat(meta.getPurl()).isEqualTo("pkg:maven/acme/example@1.0.0?type=jar");

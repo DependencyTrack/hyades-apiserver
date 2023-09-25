@@ -32,9 +32,9 @@ import javax.validation.constraints.Pattern;
 import java.io.Serializable;
 import java.util.Date;
 
-@PersistenceCapable(table = "COMPONENT_INTEGRITY_META")
+@PersistenceCapable(table = "INTEGRITY_META_COMPONENT")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ComponentIntegrityMeta implements Serializable {
+public class IntegrityMetaComponent implements Serializable {
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
@@ -62,6 +62,9 @@ public class ComponentIntegrityMeta implements Serializable {
     @NotNull
     private String purl;
 
+    /*
+     * Published date of current version of component
+     */
     @Persistent
     @Column(name = "PUBLISHED_AT")
     private Date publishedAt;

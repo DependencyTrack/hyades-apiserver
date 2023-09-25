@@ -28,7 +28,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.ComponentIntegrityMeta;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -722,49 +722,49 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Returns a ComponentIntegrityMeta object from the specified purl.
+     * Returns a IntegrityMetaComponent object from the specified purl.
      *
      * @param purl           the Package URL string of the component
-     * @return a ComponentIntegrityMeta object, or null if not found
+     * @return a IntegrityMetaComponent object, or null if not found
      */
-    public ComponentIntegrityMeta getComponentIntegrityMeta(String purl) {
-        final Query<ComponentIntegrityMeta> query = pm.newQuery(ComponentIntegrityMeta.class);
+    public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
+        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
         query.setFilter("purl == :purl");
         query.setRange(0, 1);
         return singleResult(query.execute(purl));
     }
 
     /**
-     * Updates a ComponentIntegrityMeta record.
+     * Updates a IntegrityMetaComponent record.
      *
-     * @param transientComponentIntegrityMeta the ComponentIntegrityMeta object to synchronize
-     * @return a synchronized ComponentIntegrityMeta object
+     * @param transientIntegrityMetaComponent the IntegrityMetaComponent object to synchronize
+     * @return a synchronized IntegrityMetaComponent object
      */
-    public synchronized ComponentIntegrityMeta updateComponentIntegrityMeta(final ComponentIntegrityMeta transientComponentIntegrityMeta) {
-        final ComponentIntegrityMeta integrityMeta = getComponentIntegrityMeta(transientComponentIntegrityMeta.getPurl());
+    public synchronized IntegrityMetaComponent updateIntegrityMetaComponent(final IntegrityMetaComponent transientIntegrityMetaComponent) {
+        final IntegrityMetaComponent integrityMeta = getIntegrityMetaComponent(transientIntegrityMetaComponent.getPurl());
         if (integrityMeta != null) {
-            integrityMeta.setMd5(transientComponentIntegrityMeta.getMd5());
-            integrityMeta.setSha1(transientComponentIntegrityMeta.getSha1());
-            integrityMeta.setSha256(transientComponentIntegrityMeta.getSha256());
-            integrityMeta.setPublishedAt(transientComponentIntegrityMeta.getPublishedAt());
-            integrityMeta.setStatus(transientComponentIntegrityMeta.getStatus());
-            integrityMeta.setLastFetch(transientComponentIntegrityMeta.getLastFetch());
+            integrityMeta.setMd5(transientIntegrityMetaComponent.getMd5());
+            integrityMeta.setSha1(transientIntegrityMetaComponent.getSha1());
+            integrityMeta.setSha256(transientIntegrityMetaComponent.getSha256());
+            integrityMeta.setPublishedAt(transientIntegrityMetaComponent.getPublishedAt());
+            integrityMeta.setStatus(transientIntegrityMetaComponent.getStatus());
+            integrityMeta.setLastFetch(transientIntegrityMetaComponent.getLastFetch());
             return persist(integrityMeta);
         } else {
-            LOGGER.debug("No record found in ComponentIntegrityMeta for purl " + transientComponentIntegrityMeta.getPurl());
+            LOGGER.debug("No record found in IntegrityMetaComponent for purl " + transientIntegrityMetaComponent.getPurl());
             return null;
         }
     }
 
     /**
-     * Synchronizes ComponentIntegrityMeta with purls from COMPONENT. This is part of initializer.
+     * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
      */
-    public synchronized void synchronizeComponentIntegrityMeta() {
+    public synchronized void synchronizeIntegrityMetaComponent() {
         var paginatedDistinctPurls = getDistinctComponentPurls();
         for (var purl : paginatedDistinctPurls.getObjects()) {
-            var componentIntegrityMetaRecord = new ComponentIntegrityMeta();
-            componentIntegrityMetaRecord.setPurl(purl.toString());
-            persist(componentIntegrityMetaRecord);
+            var IntegrityMetaComponentRecord = new IntegrityMetaComponent();
+            IntegrityMetaComponentRecord.setPurl(purl.toString());
+            persist(IntegrityMetaComponentRecord);
         }
     }
 

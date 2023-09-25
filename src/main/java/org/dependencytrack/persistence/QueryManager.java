@@ -44,7 +44,7 @@ import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.ComponentIntegrityMeta;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
@@ -1680,15 +1680,15 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().hasWorkflowStepWithStatus(token, step, status);
     }
 
-    public ComponentIntegrityMeta getComponentIntegrityMeta(String purl) {
-        return getComponentQueryManager().getComponentIntegrityMeta(purl);
+    public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
+        return getComponentQueryManager().getIntegrityMetaComponent(purl);
     }
 
-    public ComponentIntegrityMeta updateComponentIntegrityMeta(ComponentIntegrityMeta componentIntegrityMeta) {
-        return getComponentQueryManager().updateComponentIntegrityMeta(componentIntegrityMeta);
+    public IntegrityMetaComponent updateIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return getComponentQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
     }
 
-    public void synchronizeComponentIntegrityMeta() {
-        getComponentQueryManager().synchronizeComponentIntegrityMeta();
+    public void synchronizeIntegrityMetaComponent() {
+        getComponentQueryManager().synchronizeIntegrityMetaComponent();
     }
 }
