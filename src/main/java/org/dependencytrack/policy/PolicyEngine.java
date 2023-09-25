@@ -213,7 +213,9 @@ public class PolicyEngine {
             case AGE, COORDINATES, PACKAGE_URL, CPE, SWID_TAGID, COMPONENT_HASH, VERSION ->
                     PolicyViolation.Type.OPERATIONAL;
             case LICENSE, LICENSE_GROUP -> PolicyViolation.Type.LICENSE;
-            case EXPRESSION -> null; // TODO: Just here to satisfy the switch exhaustiveness
+            // Just here to satisfy the switch exhaustiveness. Conditions with subject EXPRESSION
+            // will never yield any violations, because there's no evaluator supporting it.
+            case EXPRESSION -> null;
         };
     }
 
