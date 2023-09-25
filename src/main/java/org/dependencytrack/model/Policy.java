@@ -99,14 +99,7 @@ public class Policy implements Serializable {
     @NotBlank
     @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
-    private ViolationState violationState; // TODO: New column, possibly needs migration.
-
-    @Persistent
-    @Column(name = "VIOLATIONTYPE", allowsNull = "true")
-    @NotBlank
-    @Size(min = 1, max = 255)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation type may only contain printable characters")
-    private PolicyViolation.Type violationType;
+    private ViolationState violationState;
 
     /**
      * A list of zero-to-n policy conditions.
@@ -179,14 +172,6 @@ public class Policy implements Serializable {
 
     public void setViolationState(ViolationState violationState) {
         this.violationState = violationState;
-    }
-
-    public PolicyViolation.Type getViolationType() {
-        return violationType;
-    }
-
-    public void setViolationType(final PolicyViolation.Type violationType) {
-        this.violationType = violationType;
     }
 
     public List<PolicyCondition> getPolicyConditions() {
