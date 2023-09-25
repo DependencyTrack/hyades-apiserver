@@ -278,7 +278,8 @@ class CelPolicyQueryManager implements AutoCloseable {
                   "VULNERABILITY" AS "V"
                 INNER JOIN
                   "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
-                  INNER JOIN "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
+                INNER JOIN
+                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
                 LEFT JOIN LATERAL (
                   SELECT
                     CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
@@ -552,12 +553,10 @@ class CelPolicyQueryManager implements AutoCloseable {
         return policies;
     }
 
-    // TODO: Move to ProjectQueryManager
     List<UUID> getParents(final Project project) {
         return getParents(project.getUuid(), new ArrayList<>());
     }
 
-    // TODO: Move to ProjectQueryManager
     List<UUID> getParents(final UUID uuid, final List<UUID> parents) {
         final UUID parentUuid;
         final Query<Project> query = pm.newQuery(Project.class);

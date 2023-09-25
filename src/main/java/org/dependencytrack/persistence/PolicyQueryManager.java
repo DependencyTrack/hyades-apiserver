@@ -198,7 +198,11 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         final PolicyCondition pc = new PolicyCondition();
         pc.setPolicy(policy);
         pc.setSubject(subject);
-        pc.setOperator(operator);
+        if (subject == PolicyCondition.Subject.EXPRESSION) {
+            pc.setOperator(PolicyCondition.Operator.MATCHES);
+        } else {
+            pc.setOperator(operator);
+        }
         pc.setValue(value);
         pc.setViolationType(violationType);
         return persist(pc);
