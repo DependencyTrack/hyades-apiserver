@@ -64,7 +64,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
      * </ul>
      */
     @Test
-    public void testWithAllFields() {
+    public void testEvaluateProjectWithAllFields() {
         final var project = new Project();
         project.setUuid(UUID.fromString("d7173786-60aa-4a4f-a950-c92fe6422307"));
         project.setGroup("projectGroup");
@@ -267,7 +267,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAnyAndAllConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAnyAndAllConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "acme-app"
@@ -290,7 +290,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAnyAndNotAllConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAnyAndNotAllConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "acme-app"
@@ -313,7 +313,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAnyAndNoConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAnyAndNoConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "someOtherProjectThatIsNotAcmeApp"
@@ -336,7 +336,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAllAndAllConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAllAndAllConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "acme-app"
@@ -359,7 +359,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAllAndNotAllConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAllAndNotAllConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "acme-app"
@@ -382,7 +382,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyOperatorAllAndNoConditionsMatching() {
+    public void testEvaluateProjectWithPolicyOperatorAllAndNoConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.name == "someOtherProjectThatIsNotAcmeApp"
@@ -405,7 +405,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyAssignedToProject() {
+    public void testEvaluateProjectWithPolicyAssignedToProject() {
         final var policyA = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policyA, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.name.startsWith("acme-lib")
@@ -442,7 +442,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyAssignedToProjectParent() {
+    public void testEvaluateProjectWithPolicyAssignedToProjectParent() {
         final var policyA = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policyA, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.name.startsWith("acme-lib")
@@ -485,7 +485,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithPolicyAssignedToTag() {
+    public void testEvaluateProjectWithPolicyAssignedToTag() {
         final Tag tag = qm.createTag("foo");
 
         final var policyA = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
@@ -525,7 +525,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithInvalidScript() {
+    public void testEvaluateProjectWithInvalidScript() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.doesNotExist == "foo"
@@ -551,7 +551,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testWithScriptExecutionException() {
+    public void testEvaluateProjectWithScriptExecutionException() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.last_bom_import == timestamp("invalid")
@@ -577,7 +577,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testProjectDependsOnComponent() {
+    public void testEvaluateProjectWithFuncProjectDependsOnComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.depends_on(org.hyades.policy.v1.Component{name: "acme-lib-a"})
@@ -610,7 +610,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testComponentIsDependencyOfComponent() {
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.is_dependency_of(org.hyades.policy.v1.Component{name: "acme-lib-a"})
@@ -642,7 +642,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testMatchesRange() {
+    public void testEvaluateProjectWithFuncMatchesRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.matches_range("vers:generic/<1")
@@ -672,7 +672,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testMatchesRangeWithInvalidRange() {
+    public void testEvaluateProjectWithFuncMatchesRangeWithInvalidRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.matches_range("foo")
@@ -699,6 +699,36 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
         assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWhenProjectDoesNotExist() {
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(UUID.randomUUID()));
+    }
+
+    @Test
+    public void testEvaluateComponent() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.name == "acme-lib"
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        new CelPolicyEngine().evaluateComponent(component.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateComponentWhenComponentDoesNotExist() {
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateComponent(UUID.randomUUID()));
     }
 
     @Test

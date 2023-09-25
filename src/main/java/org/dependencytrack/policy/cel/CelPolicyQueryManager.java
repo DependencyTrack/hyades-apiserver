@@ -3,6 +3,7 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
@@ -48,6 +49,20 @@ class CelPolicyQueryManager implements AutoCloseable {
 
     CelPolicyQueryManager(final QueryManager qm) {
         this.pm = qm.getPersistenceManager();
+    }
+
+    UUID getProjectUuidForComponentUuid(final UUID componentUuid) {
+        try (final var qm = new QueryManager()) {
+            final Query<Component> query = qm.getPersistenceManager().newQuery(Component.class);
+            query.setFilter("uuid == :uuid");
+            query.setParameters(componentUuid);
+            query.setResult("project.uuid");
+            try {
+                return query.executeResultUnique(UUID.class);
+            } finally {
+                query.closeAll();
+            }
+        }
     }
 
     ProjectProjection fetchProject(final long projectId,
