@@ -339,7 +339,7 @@ public class CelPolicyEngine {
                 }
             } catch (ScriptException e) {
                 LOGGER.warn("Failed to execute script for condition %s with arguments %s"
-                        .formatted(condition.getUuid(), scriptArguments));
+                        .formatted(condition.getUuid(), scriptArguments), e);
             }
         }
 
@@ -506,17 +506,17 @@ public class CelPolicyEngine {
                         .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
                         .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
                         .setOwaspRrVector(trimToEmpty(projection.owaspRrVector));
-        Optional.ofNullable(projection.cvssV2BaseScore).ifPresent(builder::setCvssv2BaseScore);
-        Optional.ofNullable(projection.cvssV2ImpactSubScore).ifPresent(builder::setCvssv2ImpactSubscore);
-        Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).ifPresent(builder::setCvssv2ExploitabilitySubscore);
-        Optional.ofNullable(projection.cvssV3BaseScore).ifPresent(builder::setCvssv3BaseScore);
-        Optional.ofNullable(projection.cvssV3ImpactSubScore).ifPresent(builder::setCvssv3ImpactSubscore);
-        Optional.ofNullable(projection.cvssV3ExploitabilitySubScore).ifPresent(builder::setCvssv3ExploitabilitySubscore);
-        Optional.ofNullable(projection.owaspRrLikelihoodScore).ifPresent(builder::setOwaspRrLikelihoodScore);
-        Optional.ofNullable(projection.owaspRrTechnicalImpactScore).ifPresent(builder::setOwaspRrTechnicalImpactScore);
-        Optional.ofNullable(projection.owaspRrBusinessImpactScore).ifPresent(builder::setOwaspRrBusinessImpactScore);
-        Optional.ofNullable(projection.epssScore).ifPresent(builder::setEpssScore);
-        Optional.ofNullable(projection.epssPercentile).ifPresent(builder::setEpssPercentile);
+        Optional.ofNullable(projection.cvssV2BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2BaseScore);
+        Optional.ofNullable(projection.cvssV2ImpactSubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2ImpactSubscore);
+        Optional.ofNullable(projection.cvssV2ExploitabilitySubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2ExploitabilitySubscore);
+        Optional.ofNullable(projection.cvssV3BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3BaseScore);
+        Optional.ofNullable(projection.cvssV3ImpactSubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ImpactSubscore);
+        Optional.ofNullable(projection.cvssV3ExploitabilitySubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ExploitabilitySubscore);
+        Optional.ofNullable(projection.owaspRrLikelihoodScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihoodScore);
+        Optional.ofNullable(projection.owaspRrTechnicalImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpactScore);
+        Optional.ofNullable(projection.owaspRrBusinessImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpactScore);
+        Optional.ofNullable(projection.epssScore).map(BigDecimal::doubleValue).ifPresent(builder::setEpssScore);
+        Optional.ofNullable(projection.epssPercentile).map(BigDecimal::doubleValue).ifPresent(builder::setEpssPercentile);
         Optional.ofNullable(projection.created).map(Timestamps::fromDate).ifPresent(builder::setCreated);
         Optional.ofNullable(projection.published).map(Timestamps::fromDate).ifPresent(builder::setPublished);
         Optional.ofNullable(projection.updated).map(Timestamps::fromDate).ifPresent(builder::setUpdated);
@@ -528,11 +528,11 @@ public class CelPolicyEngine {
 
         // Workaround for https://github.com/DependencyTrack/dependency-track/issues/2474.
         final Severity severity = VulnerabilityUtil.getSeverity(projection.severity,
-                Optional.ofNullable(projection.cvssV2BaseScore).map(BigDecimal::valueOf).orElse(null),
-                Optional.ofNullable(projection.cvssV3BaseScore).map(BigDecimal::valueOf).orElse(null),
-                Optional.ofNullable(projection.owaspRrLikelihoodScore).map(BigDecimal::valueOf).orElse(null),
-                Optional.ofNullable(projection.owaspRrTechnicalImpactScore).map(BigDecimal::valueOf).orElse(null),
-                Optional.ofNullable(projection.owaspRrBusinessImpactScore).map(BigDecimal::valueOf).orElse(null));
+                projection.cvssV2BaseScore,
+                projection.cvssV3BaseScore,
+                projection.owaspRrLikelihoodScore,
+                projection.owaspRrTechnicalImpactScore,
+                projection.owaspRrBusinessImpactScore);
         builder.setSeverity(severity.name());
 
         if (projection.aliasesJson != null) {
