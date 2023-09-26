@@ -785,4 +785,14 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             DbUtil.close(connection);
         }
     }
+
+    /**
+     * Returns the count of records in IntegrityMetaComponent.
+     *
+     * @return the count of records
+     */
+    public int getIntegrityMetaComponentCount() {
+        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
+        return query.executeList().size();
+    }
 }

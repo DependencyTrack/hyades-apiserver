@@ -1691,4 +1691,8 @@ public class QueryManager extends AlpineQueryManager {
     public void synchronizeIntegrityMetaComponent() {
         getComponentQueryManager().synchronizeIntegrityMetaComponent();
     }
+
+    public int getIntegrityMetaComponentCount() {
+        return getComponentQueryManager().getIntegrityMetaComponentCount();
+    }
 }

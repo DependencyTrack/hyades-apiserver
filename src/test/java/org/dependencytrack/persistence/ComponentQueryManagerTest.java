@@ -118,6 +118,7 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         assertThat(result).isNull();
 
         result = qm.persist(integrityMeta);
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(qm.getIntegrityMetaComponent(result.getPurl())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isEqualTo(FetchStatus.TIMED_OUT);
@@ -160,12 +161,13 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
 
         // without any component in database
         qm.synchronizeIntegrityMetaComponent();
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(0);
         assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).isNull();
 
         // with existing component in database
         qm.persist(component);
         qm.synchronizeIntegrityMetaComponent();
-
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isNull();
