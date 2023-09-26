@@ -36,9 +36,13 @@ public class CoordinatesConditionTest extends AbstractPostgresEnabledTest {
                 new Object[]{PolicyCondition.Operator.NO_MATCH, "{'group': 'acme-app','name': '*acme-lib*','version': '>=v2.2.2'}", "{'group': 'acme-app','name': 'acme-lib','version': 'v1.2.3'}", true},
                 //Matches without group
                 new Object[]{PolicyCondition.Operator.MATCHES, "{'name': 'Test Component','version': '1.0.0'}", "{'name': 'Test Component','version': '1.0.0'}", true},
-                //Matches on wild card - uncomment after fixing script builder
-                //new Object[]{PolicyCondition.Operator.MATCHES, "{ 'group': '*', 'name': 'Test Component', 'version': '1.0.0' }", "{ 'group': 'Anything', 'name': 'Test Component', 'version': '1.0.0' }", false},
-                //Matches on empty policy - uncomment after fixing script builder
+                //Matches on wild card group - uncomment after fixing script builder
+                new Object[]{PolicyCondition.Operator.MATCHES, "{ 'group': '*', 'name': 'Test Component', 'version': '1.0.0' }", "{ 'group': 'Anything', 'name': 'Test Component', 'version': '1.0.0' }", true},
+                //Matches on wild card name
+                new Object[]{PolicyCondition.Operator.MATCHES, "{ 'group': 'acme-app', 'name': '*', 'version': '1.0.0' }", "{ 'group': 'acme-app', 'name': 'Anything', 'version': '1.0.0' }", true},
+                //Matches on wild card version
+                new Object[]{PolicyCondition.Operator.MATCHES, "{ 'group': 'acme-app', 'name': 'Test Component', 'version': '>=*' }", "{ 'group': 'acme-app', 'name': 'Test Component', 'version': '4.4.4' }", true},
+                  //Matches on empty policy - uncomment after fixing script builder
                 //new Object[]{PolicyCondition.Operator.MATCHES, "{}", "{}", true},
                 //Does not match on lower version
                 new Object[]{PolicyCondition.Operator.NO_MATCH, "{ 'version': '== 1.1.1' }", "{'version': '0.1.1'}", true},
