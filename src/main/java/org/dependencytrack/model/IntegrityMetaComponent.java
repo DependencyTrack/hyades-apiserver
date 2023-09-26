@@ -61,7 +61,7 @@ public class IntegrityMetaComponent implements Serializable {
     @Persistent
     @Column(name = "PURL", allowsNull = "false")
     @Index(name = "PURL_IDX")
-    @Unique(name = "PURL_IDX")
+    @Unique
     @NotNull
     private String purl;
 
