@@ -39,14 +39,16 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
         return null;
     }
 
-    private static String evaluateScript(final String group, final String name, final String version) {
+    private static String evaluateScript(final String conditionGroupPart, final String conditionNamePart, final String conditionVersionPart) {
+        final String group = replace(conditionGroupPart);
+        final String name = replace(conditionNamePart);
 
-        final Matcher versionOperatorMatcher = VERSION_OPERATOR_PATTERN.matcher(version);
+        final Matcher versionOperatorMatcher = VERSION_OPERATOR_PATTERN.matcher(conditionVersionPart);
         //Do an exact match if no operator found
         if (!versionOperatorMatcher.find()) {
 
             Vers conditionVers = Vers.builder(VersioningScheme.GENERIC)
-                    .withConstraint(Comparator.EQUAL, version)
+                    .withConstraint(Comparator.EQUAL, conditionVersionPart)
                     .build();
             return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
@@ -67,7 +69,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
             LOGGER.error("Failed to infer version operator from " + versionOperatorMatcher.group(1));
             return null;
         }
-        String condition = VERSION_OPERATOR_PATTERN.split(version)[1];
+        String condition = VERSION_OPERATOR_PATTERN.split(conditionVersionPart)[1];
         Vers conditionVers = Vers.builder(VersioningScheme.GENERIC)
                 .withConstraint(versionComparator, condition)
                 .build();
@@ -75,5 +77,16 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
         return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
                 """.formatted(escapeJson(group), escapeJson(name), conditionVers.toString());
+    }
+
+    private static String replace(String conditionString) {
+        conditionString = conditionString.replace("*", ".*").replace("..*", ".*");
+        if (!conditionString.startsWith("^") && !conditionString.startsWith(".*")) {
+            conditionString = ".*" + conditionString;
+        }
+        if (!conditionString.endsWith("$") && !conditionString.endsWith(".*")) {
+            conditionString += ".*";
+        }
+        return conditionString;
     }
 }
