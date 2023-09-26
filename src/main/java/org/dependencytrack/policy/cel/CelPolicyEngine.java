@@ -42,9 +42,9 @@ import org.dependencytrack.policy.cel.mapping.LicenseProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
+import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
-import org.hyades.proto.policy.v1.Vulnerability;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
 
@@ -145,18 +145,18 @@ public class CelPolicyEngine {
             LOGGER.debug("Requirements for project %s and %d policy conditions: %s"
                     .formatted(uuid, conditionScriptPairs.size(), requirements));
 
-            final org.hyades.proto.policy.v1.Project protoProject;
+            final org.dependencytrack.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
                 protoProject = mapToProto(celQm.fetchProject(project.getId(), requirements.get(TYPE_PROJECT), requirements.get(TYPE_PROJECT_PROPERTY)));
             } else {
-                protoProject = org.hyades.proto.policy.v1.Project.getDefaultInstance();
+                protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }
 
             // Preload components for the entire project, to avoid excessive queries.
             final List<ComponentProjection> components = celQm.fetchAllComponents(project.getId(), requirements.get(TYPE_COMPONENT));
 
             // Preload licenses for the entire project, as chances are high that they will be used by multiple components.
-            final Map<Long, org.hyades.proto.policy.v1.License> licenseById;
+            final Map<Long, org.dependencytrack.proto.policy.v1.License> licenseById;
             if (requirements.containsKey(TYPE_LICENSE) || (requirements.containsKey(TYPE_COMPONENT) && requirements.get(TYPE_COMPONENT).contains("resolved_license"))) {
                 licenseById = celQm.fetchAllLicenses(project.getId(), requirements.get(TYPE_LICENSE), requirements.get(TYPE_LICENSE_GROUP)).stream()
                         .collect(Collectors.toMap(
@@ -168,7 +168,7 @@ public class CelPolicyEngine {
             }
 
             // Preload vulnerabilities for the entire project, as chances are high that they will be used by multiple components.
-            final Map<Long, org.hyades.proto.policy.v1.Vulnerability> protoVulnById;
+            final Map<Long, org.dependencytrack.proto.policy.v1.Vulnerability> protoVulnById;
             final Map<Long, List<Long>> vulnIdsByComponentId;
             if (requirements.containsKey(TYPE_VULNERABILITY)) {
                 protoVulnById = celQm.fetchAllVulnerabilities(project.getId(), requirements.get(TYPE_VULNERABILITY)).stream()
@@ -190,8 +190,8 @@ public class CelPolicyEngine {
             // Evaluate all policy conditions against all components.
             final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
             for (final ComponentProjection component : components) {
-                final org.hyades.proto.policy.v1.Component protoComponent = mapToProto(component, licenseById);
-                final List<org.hyades.proto.policy.v1.Vulnerability> protoVulns =
+                final org.dependencytrack.proto.policy.v1.Component protoComponent = mapToProto(component, licenseById);
+                final List<org.dependencytrack.proto.policy.v1.Vulnerability> protoVulns =
                         vulnIdsByComponentId.getOrDefault(component.id, emptyList()).stream()
                                 .map(protoVulnById::get)
                                 .toList();
@@ -379,8 +379,8 @@ public class CelPolicyEngine {
                 .toList();
     }
 
-    private static org.hyades.proto.policy.v1.Project mapToProto(final ProjectProjection projection) {
-        final org.hyades.proto.policy.v1.Project.Builder builder = org.hyades.proto.policy.v1.Project.newBuilder()
+    private static org.dependencytrack.proto.policy.v1.Project mapToProto(final ProjectProjection projection) {
+        final org.dependencytrack.proto.policy.v1.Project.Builder builder = org.dependencytrack.proto.policy.v1.Project.newBuilder()
                 .setUuid(trimToEmpty(projection.uuid))
                 .setGroup(trimToEmpty(projection.group))
                 .setName(trimToEmpty(projection.name))
@@ -398,7 +398,7 @@ public class CelPolicyEngine {
                         OBJECT_MAPPER.readValue(projection.propertiesJson, new TypeReference<>() {
                         });
                 for (final ProjectPropertyProjection property : properties) {
-                    builder.addProperties(org.hyades.proto.policy.v1.Project.Property.newBuilder()
+                    builder.addProperties(org.dependencytrack.proto.policy.v1.Project.Property.newBuilder()
                             .setGroup(trimToEmpty(property.group))
                             .setName(trimToEmpty(property.name))
                             .setValue(trimToEmpty(property.value))
@@ -425,10 +425,10 @@ public class CelPolicyEngine {
         return builder.build();
     }
 
-    private static org.hyades.proto.policy.v1.Component mapToProto(final ComponentProjection projection,
-                                                                   final Map<Long, org.hyades.proto.policy.v1.License> protoLicenseById) {
-        final org.hyades.proto.policy.v1.Component.Builder componentBuilder =
-                org.hyades.proto.policy.v1.Component.newBuilder()
+    private static org.dependencytrack.proto.policy.v1.Component mapToProto(final ComponentProjection projection,
+                                                                   final Map<Long, org.dependencytrack.proto.policy.v1.License> protoLicenseById) {
+        final org.dependencytrack.proto.policy.v1.Component.Builder componentBuilder =
+                org.dependencytrack.proto.policy.v1.Component.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
                         .setGroup(trimToEmpty(projection.group))
                         .setName(trimToEmpty(projection.name))
@@ -453,7 +453,7 @@ public class CelPolicyEngine {
                         .setBlake3(trimToEmpty(projection.blake3));
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
-            final org.hyades.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
+            final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
             if (protoLicense != null) {
                 componentBuilder.setResolvedLicense(protoLicenseById.get(projection.resolvedLicenseId));
             } else {
@@ -465,9 +465,9 @@ public class CelPolicyEngine {
         return componentBuilder.build();
     }
 
-    private static org.hyades.proto.policy.v1.License mapToProto(final LicenseProjection projection) {
-        final org.hyades.proto.policy.v1.License.Builder licenseBuilder =
-                org.hyades.proto.policy.v1.License.newBuilder()
+    private static org.dependencytrack.proto.policy.v1.License mapToProto(final LicenseProjection projection) {
+        final org.dependencytrack.proto.policy.v1.License.Builder licenseBuilder =
+                org.dependencytrack.proto.policy.v1.License.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
                         .setId(trimToEmpty(projection.licenseId))
                         .setName(trimToEmpty(projection.name));
@@ -480,7 +480,7 @@ public class CelPolicyEngine {
             try {
                 final ArrayNode groupsArray = OBJECT_MAPPER.readValue(projection.licenseGroupsJson, ArrayNode.class);
                 for (final JsonNode groupNode : groupsArray) {
-                    licenseBuilder.addGroups(org.hyades.proto.policy.v1.License.Group.newBuilder()
+                    licenseBuilder.addGroups(org.dependencytrack.proto.policy.v1.License.Group.newBuilder()
                             .setUuid(Optional.ofNullable(groupNode.get("uuid")).map(JsonNode::asText).orElse(""))
                             .setName(Optional.ofNullable(groupNode.get("name")).map(JsonNode::asText).orElse(""))
                             .build());
@@ -497,9 +497,9 @@ public class CelPolicyEngine {
     private static final TypeReference<List<VulnerabilityAlias>> VULNERABILITY_ALIASES_TYPE_REF = new TypeReference<>() {
     };
 
-    private static org.hyades.proto.policy.v1.Vulnerability mapToProto(final VulnerabilityProjection projection) {
-        final org.hyades.proto.policy.v1.Vulnerability.Builder builder =
-                org.hyades.proto.policy.v1.Vulnerability.newBuilder()
+    private static org.dependencytrack.proto.policy.v1.Vulnerability mapToProto(final VulnerabilityProjection projection) {
+        final org.dependencytrack.proto.policy.v1.Vulnerability.Builder builder =
+                org.dependencytrack.proto.policy.v1.Vulnerability.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
                         .setId(trimToEmpty(projection.vulnId))
                         .setSource(trimToEmpty(projection.source))

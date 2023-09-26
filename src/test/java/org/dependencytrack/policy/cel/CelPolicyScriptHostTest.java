@@ -60,7 +60,7 @@ public class CelPolicyScriptHostTest {
         final CelPolicyScript compiledScript = CelPolicyScriptHost.getInstance().compile("""
                 component.resolved_license.groups.exists(licenseGroup, licenseGroup.name == "Permissive")
                   && vulns.exists(vuln, vuln.severity in ["HIGH", "CRITICAL"] && has(vuln.aliases))
-                  && project.depends_on(org.hyades.policy.v1.Component{name: "foo"})
+                  && project.depends_on(org.dependencytrack.policy.v1.Component{name: "foo"})
                 """, CacheMode.NO_CACHE);
 
         final Map<Type, Collection<String>> requirements = compiledScript.getRequirements().asMap();

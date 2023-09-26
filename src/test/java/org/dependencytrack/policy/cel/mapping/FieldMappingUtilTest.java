@@ -2,10 +2,10 @@ package org.dependencytrack.policy.cel.mapping;
 
 import com.google.protobuf.Descriptors.Descriptor;
 import org.dependencytrack.PersistenceCapableTest;
-import org.hyades.proto.policy.v1.Component;
-import org.hyades.proto.policy.v1.License;
-import org.hyades.proto.policy.v1.Project;
-import org.hyades.proto.policy.v1.Vulnerability;
+import org.dependencytrack.proto.policy.v1.Component;
+import org.dependencytrack.proto.policy.v1.License;
+import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.junit.Test;
 
 import javax.jdo.PersistenceManagerFactory;
