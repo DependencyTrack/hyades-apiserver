@@ -44,7 +44,6 @@ import javax.json.JsonValue;
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -773,18 +772,15 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                 """;
         Connection connection = null;
         PreparedStatement preparedStatement = null;
-        ResultSet rs = null;
         try {
             connection = (Connection) pm.getDataStoreConnection();
             preparedStatement = connection.prepareStatement(PURL_SYNC_QUERY);
-            preparedStatement.execute();
-//            rs = preparedStatement.getResultSet().;
-            LOGGER.info("preparedStatement" + preparedStatement.getFetchSize());
+            var purlCount = preparedStatement.executeUpdate();
+            LOGGER.info("Number of component purls synchronized for integrity check : " + purlCount);
         } catch (Exception ex) {
-            LOGGER.error("error in executing workflow state cte query", ex);
+            LOGGER.error("Error in synchronizing component purls for integrity meta.", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(rs);
             DbUtil.close(preparedStatement);
             DbUtil.close(connection);
         }
