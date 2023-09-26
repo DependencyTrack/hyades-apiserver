@@ -24,6 +24,7 @@ import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
+import alpine.server.util.DbUtil;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Component;
@@ -41,6 +42,9 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import java.io.StringReader;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -761,29 +765,28 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
      */
     public synchronized void synchronizeIntegrityMetaComponent() {
-        for (var purl : getDistinctComponentPurls()) {
-            var IntegrityMetaComponentRecord = new IntegrityMetaComponent();
-            IntegrityMetaComponentRecord.setPurl(purl.toString());
-            persist(IntegrityMetaComponentRecord);
-        }
-    }
-
-    /**
-     * Returns distinct component Purls.
-     * @return a list of purls
-     */
-    public List<String> getDistinctComponentPurls() {
-        final List<String> distinctPurls;
-        var queryStr = """
-                SELECT DISTINCT this.purl
-                FROM org.dependencytrack.model.Component
+        final String PURL_SYNC_QUERY = """
+                    INSERT INTO "INTEGRITY_META_COMPONENT" ("PURL")
+                    SELECT DISTINCT "PURL"
+                    FROM "COMPONENT"
+                    WHERE "PURL" IS NOT NULL
                 """;
-        final Query<?> query = pm.newQuery(Query.JDOQL, queryStr);
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet rs = null;
         try {
-            distinctPurls = List.copyOf(query.executeResultList(String.class));
+            connection = (Connection) pm.getDataStoreConnection();
+            preparedStatement = connection.prepareStatement(PURL_SYNC_QUERY);
+            preparedStatement.execute();
+//            rs = preparedStatement.getResultSet().;
+            LOGGER.info("preparedStatement" + preparedStatement.getFetchSize());
+        } catch (Exception ex) {
+            LOGGER.error("error in executing workflow state cte query", ex);
+            throw new RuntimeException(ex);
         } finally {
-            query.closeAll();
+            DbUtil.close(rs);
+            DbUtil.close(preparedStatement);
+            DbUtil.close(connection);
         }
-        return distinctPurls;
     }
 }
