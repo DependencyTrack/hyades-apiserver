@@ -22,11 +22,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
+import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -59,6 +61,7 @@ public class IntegrityMetaComponent implements Serializable {
     @Persistent
     @Column(name = "PURL", allowsNull = "false")
     @Index(name = "PURL_IDX")
+    @Unique(name = "PURL_IDX")
     @NotNull
     private String purl;
 
@@ -75,7 +78,8 @@ public class IntegrityMetaComponent implements Serializable {
     private Date lastFetch;
 
     @Persistent
-    @Column(name = "STATUS", jdbcType = "VARCHAR")
+    @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64)
+    @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
 
 

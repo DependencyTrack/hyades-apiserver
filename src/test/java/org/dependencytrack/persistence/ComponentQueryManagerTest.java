@@ -7,9 +7,9 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
@@ -157,6 +157,12 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         component.setProject(project);
         component.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
         component.setName("acme-lib");
+
+        // without any component in database
+        qm.synchronizeIntegrityMetaComponent();
+        assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).isNull();
+
+        // with existing component in database
         qm.persist(component);
         qm.synchronizeIntegrityMetaComponent();
 

@@ -28,8 +28,8 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -729,9 +729,10 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
         final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
-        query.setFilter("purl == :purl");
-        query.setRange(0, 1);
-        return singleResult(query.execute(purl));
+        final var params = new HashMap<String, Object>();
+        params.put("purl", purl);
+        query.setParameters(params);
+        return query.executeUnique();
     }
 
     /**
@@ -760,8 +761,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
      */
     public synchronized void synchronizeIntegrityMetaComponent() {
-        var paginatedDistinctPurls = getDistinctComponentPurls();
-        for (var purl : paginatedDistinctPurls.getObjects()) {
+        for (var purl : getDistinctComponentPurls()) {
             var IntegrityMetaComponentRecord = new IntegrityMetaComponent();
             IntegrityMetaComponentRecord.setPurl(purl.toString());
             persist(IntegrityMetaComponentRecord);
@@ -772,16 +772,18 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * Returns distinct component Purls.
      * @return a list of purls
      */
-    public PaginatedResult getDistinctComponentPurls() {
+    public List<String> getDistinctComponentPurls() {
+        final List<String> distinctPurls;
         var queryStr = """
                 SELECT DISTINCT this.purl
                 FROM org.dependencytrack.model.Component
                 """;
-        final var query = pm.newQuery(Component.class, queryStr);
-        final var queryParams = new HashMap<String, Object>();
-        final PaginatedResult result;
-        preprocessACLs(query, null, queryParams, false);
-        result = execute(query, queryParams);
-        return result;
+        final Query<?> query = pm.newQuery(Query.JDOQL, queryStr);
+        try {
+            distinctPurls = List.copyOf(query.executeResultList(String.class));
+        } finally {
+            query.closeAll();
+        }
+        return distinctPurls;
     }
 }
