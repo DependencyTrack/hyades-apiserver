@@ -191,7 +191,6 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         integrityMeta.setStatus(FetchStatus.PROCESSED);
         qm.persist(integrityMeta);
 
-        qm.getIntegrityMetaComponent("pkg:npm/acme/example@2.0.0");
         qm.getIntegrityMetaComponent(integrityMeta.getPurl());
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(2);
     }
