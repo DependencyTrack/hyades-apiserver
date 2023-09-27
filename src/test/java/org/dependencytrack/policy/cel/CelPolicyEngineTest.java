@@ -22,6 +22,7 @@ import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -580,7 +581,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithFuncProjectDependsOnComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                project.depends_on(org.hyades.policy.v1.Component{name: "acme-lib-a"})
+                project.depends_on(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -613,7 +614,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithFuncComponentIsDependencyOfComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.is_dependency_of(org.hyades.policy.v1.Component{name: "acme-lib-a"})
+                component.is_dependency_of(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -863,6 +864,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
+    @Ignore  // Un-ignore for manual profiling purposes.
     public void testWithBloatedBom() throws Exception {
         // Import all default objects (includes licenses and license groups).
         new DefaultObjectGenerator().contextInitialized(null);
