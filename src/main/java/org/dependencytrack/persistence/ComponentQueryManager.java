@@ -731,11 +731,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return a IntegrityMetaComponent object, or null if not found
      */
     public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
-        final var params = new HashMap<String, Object>();
-        params.put("purl", purl);
-        query.setParameters(params);
-        query.setRange(0, 1);
+        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class, "purl == :purl");
+        query.setParameters(purl);
         return query.executeUnique();
     }
 
