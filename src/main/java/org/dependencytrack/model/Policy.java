@@ -98,7 +98,7 @@ public class Policy implements Serializable {
     @Column(name = "VIOLATIONSTATE", allowsNull = "false")
     @NotBlank
     @Size(min = 1, max = 255)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
     private ViolationState violationState;
 
     /**
