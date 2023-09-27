@@ -21,13 +21,16 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import com.github.packageurl.MalformedPackageURLException;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
+import org.dependencytrack.event.kafka.componentmeta.Handler;
+import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -73,7 +76,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
         } else if (e instanceof PortfolioRepositoryMetaAnalysisEvent) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task)() -> processPortfolio());
+                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task) () -> processPortfolio());
             } catch (Throwable ex) {
                 LOGGER.error("An unexpected error occurred while submitting components for repository meta analysis", ex);
             }
@@ -95,7 +98,8 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             long offset = 0;
             List<ComponentProjection> components = fetchNextComponentsPage(pm, project, offset);
             while (!components.isEmpty()) {
-                dispatchComponents(components);
+                //latest version information needs to be fetched for project as either triggered because of fresh bom upload or individual project reanalysis
+                dispatchComponents(components, qm);
 
                 offset += components.size();
                 components = fetchNextComponentsPage(qm.getPersistenceManager(), project, offset);
@@ -118,10 +122,11 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             List<ComponentProjection> components = fetchNextComponentsPage(pm, null, offset);
             while (!components.isEmpty()) {
                 long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
-                if(isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
+                if (isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
                     LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
                 }
-                dispatchComponents(components);
+                //latest version information does not need to be fetched for project as triggered for portfolio means it is a scheduled event happening
+                dispatchComponents(components, qm);
 
                 offset += components.size();
                 components = fetchNextComponentsPage(qm.getPersistenceManager(), null, offset);
@@ -131,9 +136,14 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
         LOGGER.info("All components in portfolio submitted for repository meta analysis");
     }
 
-    private void dispatchComponents(final List<ComponentProjection> components) {
+    private void dispatchComponents(final List<ComponentProjection> components, QueryManager queryManager) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal()));
+            try {
+                Handler repoMetaHandler = HandlerFactory.createHandler(new ComponentProjection(component.purlCoordinates(), component.internal(), component.purl()), queryManager, kafkaEventDispatcher, true);
+                repoMetaHandler.handle();
+            } catch (MalformedPackageURLException ex) {
+                LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.purl()), ex);
+            }
         }
     }
 
@@ -153,9 +163,6 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             query.setResult("DISTINCT purlCoordinates, internal");
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
-    }
-
-    public record ComponentProjection(String purlCoordinates, Boolean internal) {
     }
 
 }

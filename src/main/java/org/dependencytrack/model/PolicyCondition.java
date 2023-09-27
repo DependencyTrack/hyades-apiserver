@@ -63,21 +63,28 @@ public class PolicyCondition implements Serializable {
     }
 
     public enum Subject {
-        AGE,
+        AGE(PolicyViolation.Type.OPERATIONAL),
         //ANALYZER,
         //BOM,
-        COORDINATES,
-        CPE,
+        COORDINATES(PolicyViolation.Type.OPERATIONAL),
+        CPE(PolicyViolation.Type.OPERATIONAL),
         //INHERITED_RISK_SCORE,
-        LICENSE,
-        LICENSE_GROUP,
-        PACKAGE_URL,
-        SEVERITY,
-        SWID_TAGID,
-        VERSION,
-        COMPONENT_HASH,
-        CWE,
-        VULNERABILITY_ID
+        EXPRESSION(null),
+        LICENSE(PolicyViolation.Type.LICENSE),
+        LICENSE_GROUP(PolicyViolation.Type.LICENSE),
+        PACKAGE_URL(PolicyViolation.Type.OPERATIONAL),
+        SEVERITY(PolicyViolation.Type.SECURITY),
+        SWID_TAGID(PolicyViolation.Type.OPERATIONAL),
+        VERSION(PolicyViolation.Type.OPERATIONAL),
+        COMPONENT_HASH(PolicyViolation.Type.OPERATIONAL),
+        CWE(PolicyViolation.Type.SECURITY),
+        VULNERABILITY_ID(PolicyViolation.Type.SECURITY);
+
+        private final PolicyViolation.Type violationType;
+
+        Subject(final PolicyViolation.Type violationType) {
+            this.violationType = violationType;
+        }
     }
 
     @PrimaryKey
@@ -104,11 +111,17 @@ public class PolicyCondition implements Serializable {
     private Subject subject;
 
     @Persistent
-    @Column(name = "VALUE", allowsNull = "false")
+    @Column(name = "VALUE", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
+    @Size(min = 1)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The value may only contain printable characters")
     private String value;
+
+    @Persistent
+    @Column(name = "VIOLATIONTYPE", allowsNull = "true")
+    @Size(min = 1, max = 255)
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation type may only contain printable characters")
+    private PolicyViolation.Type violationType;
 
     /**
      * The unique identifier of the object.
@@ -157,6 +170,18 @@ public class PolicyCondition implements Serializable {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public PolicyViolation.Type getViolationType() {
+        if (subject != null && subject.violationType != null) {
+            return subject.violationType;
+        }
+
+        return violationType;
+    }
+
+    public void setViolationType(PolicyViolation.Type violationType) {
+        this.violationType = violationType;
     }
 
     public UUID getUuid() {

@@ -44,13 +44,13 @@ import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -653,6 +653,12 @@ public class QueryManager extends AlpineQueryManager {
     public PolicyCondition createPolicyCondition(final Policy policy, final PolicyCondition.Subject subject,
                                                  final PolicyCondition.Operator operator, final String value) {
         return getPolicyQueryManager().createPolicyCondition(policy, subject, operator, value);
+    }
+
+    public PolicyCondition createPolicyCondition(final Policy policy, final PolicyCondition.Subject subject,
+                                                 final PolicyCondition.Operator operator, final String value,
+                                                 final PolicyViolation.Type violationType) {
+        return getPolicyQueryManager().createPolicyCondition(policy, subject, operator, value, violationType);
     }
 
     public PolicyCondition updatePolicyCondition(final PolicyCondition policyCondition) {
@@ -1690,5 +1696,9 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeIntegrityMetaComponent() {
         getComponentQueryManager().synchronizeIntegrityMetaComponent();
+    }
+
+    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return getComponentQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
     }
 }

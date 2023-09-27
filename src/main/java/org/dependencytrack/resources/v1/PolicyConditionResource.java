@@ -32,8 +32,14 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.cel.CelPolicyScriptHost;
+import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
+import org.dependencytrack.resources.v1.vo.CelExpressionError;
+import org.projectnessie.cel.common.CELError;
+import org.projectnessie.cel.tools.ScriptCreateException;
 
 import javax.validation.Validator;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
@@ -43,6 +49,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * JAX-RS resources for processing policies.
@@ -79,8 +87,10 @@ public class PolicyConditionResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Policy policy = qm.getObjectByUuid(Policy.class, uuid);
             if (policy != null) {
+                maybeValidateExpression(jsonPolicyCondition);
                 final PolicyCondition pc = qm.createPolicyCondition(policy, jsonPolicyCondition.getSubject(),
-                        jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()));
+                        jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()),
+                        jsonPolicyCondition.getViolationType());
                 return Response.status(Response.Status.CREATED).entity(pc).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
@@ -110,6 +120,7 @@ public class PolicyConditionResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, jsonPolicyCondition.getUuid());
             if (pc != null) {
+                maybeValidateExpression(jsonPolicyCondition);
                 pc = qm.updatePolicyCondition(jsonPolicyCondition);
                 return Response.status(Response.Status.CREATED).entity(pc).build();
             } else {
@@ -144,4 +155,26 @@ public class PolicyConditionResource extends AlpineResource {
             }
         }
     }
+
+    private void maybeValidateExpression(final PolicyCondition policyCondition) {
+        if (policyCondition.getSubject() != PolicyCondition.Subject.EXPRESSION) {
+            return;
+        }
+
+        if (policyCondition.getViolationType() == null) {
+            throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity("Expression conditions must define a violation type").build());
+        }
+
+        try {
+            CelPolicyScriptHost.getInstance().compile(policyCondition.getValue(), CacheMode.NO_CACHE);
+        } catch (ScriptCreateException e) {
+            final var celErrors = new ArrayList<CelExpressionError>();
+            for (final CELError error : e.getIssues().getErrors()) {
+                celErrors.add(new CelExpressionError(error.getLocation().line(), error.getLocation().column(), error.getMessage()));
+            }
+
+            throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(Map.of("celErrors", celErrors)).build());
+        }
+    }
+
 }

@@ -44,7 +44,9 @@ import javax.json.JsonValue;
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -752,7 +754,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             integrityMeta.setSha256(transientIntegrityMetaComponent.getSha256());
             integrityMeta.setPublishedAt(transientIntegrityMetaComponent.getPublishedAt());
             integrityMeta.setStatus(transientIntegrityMetaComponent.getStatus());
-            integrityMeta.setLastFetch(transientIntegrityMetaComponent.getLastFetch());
+            integrityMeta.setLastFetch(Date.from(Instant.now()));
             return persist(integrityMeta);
         } else {
             LOGGER.debug("No record found in IntegrityMetaComponent for purl " + transientIntegrityMetaComponent.getPurl());
@@ -785,4 +787,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             DbUtil.close(connection);
         }
     }
+
+    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return persist(integrityMetaComponent);
+    }
+
 }

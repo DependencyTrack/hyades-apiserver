@@ -84,6 +84,7 @@
         <frontend.version>4.7.1</frontend.version>
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
+        <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
         <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.1</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -102,6 +103,7 @@
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
         <lib.snappy-java.version>1.1.10.1</lib.snappy-java.version>
+        <lib.versatile.version>0.3.0</lib.versatile.version>
         <lib.woodstox.version>6.4.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.9</lib.log4j-over-slf4j.version>
@@ -192,6 +194,12 @@
                     <artifactId>snakeyaml</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!-- Common Expression Language (CEL) -->
+        <dependency>
+            <groupId>org.projectnessie.cel</groupId>
+            <artifactId>cel-tools</artifactId>
+            <version>${lib.cel-tools.version}</version>
         </dependency>
         <!-- CVSS Calculator -->
         <dependency>
@@ -325,6 +333,11 @@
             <groupId>com.fasterxml.woodstox</groupId>
             <artifactId>woodstox-core</artifactId>
             <version>${lib.woodstox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.nscuro</groupId>
+            <artifactId>versatile</artifactId>
+            <version>${lib.versatile.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
