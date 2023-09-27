@@ -1,21 +1,21 @@
 package org.dependencytrack.tasks;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.PolicyEngine;
+import org.dependencytrack.policy.cel.CelPolicyEngine;
 
-import java.time.Instant;
-import java.util.Date;
+import java.util.UUID;
 
-import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 
 /**
@@ -27,6 +27,16 @@ public class PolicyEvaluationTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 
+    private final boolean celPolicyEngineEnabled;
+
+    public PolicyEvaluationTask() {
+        this(Config.getInstance().getPropertyAsBoolean(ConfigKey.CEL_POLICY_ENGINE_ENABLED));
+    }
+
+    PolicyEvaluationTask(final boolean celPolicyEngineEnabled) {
+        this.celPolicyEngineEnabled = celPolicyEngineEnabled;
+    }
+
     @Override
     public void inform(final Event e) {
         if (e instanceof final ProjectPolicyEvaluationEvent event) {
@@ -34,7 +44,7 @@ public class PolicyEvaluationTask implements Subscriber {
             try (final var qm = new QueryManager()) {
                 projectPolicyEvaluationState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), POLICY_EVALUATION);
                 try {
-                    new PolicyEngine().evaluateProject(event.getUuid());
+                    evaluateProject(event.getUuid());
                     qm.updateWorkflowStateToComplete(projectPolicyEvaluationState);
                 } catch (Exception ex) {
                     qm.updateWorkflowStateToFailed(projectPolicyEvaluationState, ex.getMessage());
@@ -46,7 +56,7 @@ public class PolicyEvaluationTask implements Subscriber {
             try (final var qm = new QueryManager()) {
                 componentMetricsEvaluationState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), POLICY_EVALUATION);
                 try {
-                    new PolicyEngine().evaluate(event.getUuid());
+                    evaluateComponent(event.getUuid());
                     qm.updateWorkflowStateToComplete(componentMetricsEvaluationState);
                 } catch (Exception ex) {
                     qm.updateWorkflowStateToFailed(componentMetricsEvaluationState, ex.getMessage());
@@ -55,4 +65,21 @@ public class PolicyEvaluationTask implements Subscriber {
             }
         }
     }
+
+    private void evaluateProject(final UUID uuid) {
+        if (celPolicyEngineEnabled) {
+            new CelPolicyEngine().evaluateProject(uuid);
+        } else {
+            new PolicyEngine().evaluateProject(uuid);
+        }
+    }
+
+    private void evaluateComponent(final UUID uuid) {
+        if (celPolicyEngineEnabled) {
+            new CelPolicyEngine().evaluateComponent(uuid);
+        } else {
+            new PolicyEngine().evaluate(uuid);
+        }
+    }
+
 }

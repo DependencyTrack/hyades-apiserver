@@ -46,6 +46,9 @@ import java.util.UUID;
 @PersistenceCapable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
+// TODO: Add @Unique composite constraint on the fields component, policyCondition, and type.
+//   The legacy PolicyEngine erroneously allows for duplicates on those fields, but CelPolicyEngine
+//   will never produce such duplicates. Until we remove the legacy engine, we can't add this constraint.
 public class PolicyViolation implements Serializable {
 
     public enum Type {

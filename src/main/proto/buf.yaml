@@ -1,0 +1,5 @@
+version: v1
+name: github.com/DependencyTrack/hyades-apiserver
+lint:
+  ignore:
+  - org/cyclonedx/v1_4/cyclonedx.proto
