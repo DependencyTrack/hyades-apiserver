@@ -735,6 +735,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final var params = new HashMap<String, Object>();
         params.put("purl", purl);
         query.setParameters(params);
+        query.setRange(0, 1);
         return query.executeUnique();
     }
 
@@ -764,7 +765,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
      */
     public synchronized void synchronizeIntegrityMetaComponent() {
-        final String PURL_SYNC_QUERY = """
+        final String purlSyncQuery = """
                     INSERT INTO "INTEGRITY_META_COMPONENT" ("PURL")
                     SELECT DISTINCT "PURL"
                     FROM "COMPONENT"
@@ -774,7 +775,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         PreparedStatement preparedStatement = null;
         try {
             connection = (Connection) pm.getDataStoreConnection();
-            preparedStatement = connection.prepareStatement(PURL_SYNC_QUERY);
+            preparedStatement = connection.prepareStatement(purlSyncQuery);
             var purlCount = preparedStatement.executeUpdate();
             LOGGER.info("Number of component purls synchronized for integrity check : " + purlCount);
         } catch (Exception ex) {
@@ -792,7 +793,24 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return the count of records
      */
     public int getIntegrityMetaComponentCount() {
-        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
-        return query.executeList().size();
+        final String countQuery = """
+                    SELECT COUNT("ID") AS TOTAL
+                    FROM "INTEGRITY_META_COMPONENT"
+                """;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            connection = (Connection) pm.getDataStoreConnection();
+            preparedStatement = connection.prepareStatement(countQuery);
+            var rs = preparedStatement.executeQuery();
+            rs.next();
+            return rs.getInt("TOTAL");
+        } catch (Exception ex) {
+            LOGGER.error("Error in getting count of integrity meta.", ex);
+            throw new RuntimeException(ex);
+        } finally {
+            DbUtil.close(preparedStatement);
+            DbUtil.close(connection);
+        }
     }
 }

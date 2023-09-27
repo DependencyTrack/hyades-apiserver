@@ -118,7 +118,6 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         assertThat(result).isNull();
 
         result = qm.persist(integrityMeta);
-        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(qm.getIntegrityMetaComponent(result.getPurl())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isEqualTo(FetchStatus.TIMED_OUT);
@@ -161,13 +160,11 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
 
         // without any component in database
         qm.synchronizeIntegrityMetaComponent();
-        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(0);
         assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).isNull();
 
         // with existing component in database
         qm.persist(component);
         qm.synchronizeIntegrityMetaComponent();
-        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isNull();
@@ -180,5 +177,22 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
                     assertThat(meta.getPublishedAt()).isNull();
                 }
         );
+    }
+
+    @Test
+    public void testGetIntegrityMetaComponentCount() {
+        var integrityMeta = new IntegrityMetaComponent();
+        integrityMeta.setPurl("pkg:maven/acme/example@1.0.0?type=jar");
+        integrityMeta.setStatus(FetchStatus.TIMED_OUT);
+        qm.persist(integrityMeta);
+
+        integrityMeta = new IntegrityMetaComponent();
+        integrityMeta.setPurl("pkg:npm/acme/example@2.0.0");
+        integrityMeta.setStatus(FetchStatus.PROCESSED);
+        qm.persist(integrityMeta);
+
+        qm.getIntegrityMetaComponent("pkg:npm/acme/example@2.0.0");
+        qm.getIntegrityMetaComponent(integrityMeta.getPurl());
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(2);
     }
 }
