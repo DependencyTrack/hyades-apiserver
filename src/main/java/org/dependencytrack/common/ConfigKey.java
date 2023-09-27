@@ -70,7 +70,9 @@ public enum ConfigKey implements Config.Key {
     BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
     WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3D"),
     WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H"),
-    TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false");
+    TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
+    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR("task.integrity.integrityMetaInitializer.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("task.integrity.integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis()));
 
     private final String propertyName;
     private final Object defaultValue;
