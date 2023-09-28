@@ -8,6 +8,7 @@ import org.dependencytrack.model.IntegrityMetaComponent;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
 
 public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
@@ -37,21 +38,21 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
         initializer.contextInitialized(null);
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
+        );
         assertThat(qm.getIntegrityMetaComponent(componentProjectA.getPurl().toString())).satisfies(
                 meta -> {
-                    assertThat(meta.getStatus()).isNull();
+                    assertThat(meta.getStatus()).isEqualTo(IN_PROGRESS);
                     assertThat(meta.getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
                     assertThat(meta.getId()).isEqualTo(1L);
                     assertThat(meta.getMd5()).isNull();
                     assertThat(meta.getSha1()).isNull();
                     assertThat(meta.getSha256()).isNull();
-                    assertThat(meta.getLastFetch()).isNull();
+                    assertThat(meta.getLastFetch()).isNotNull();
                     assertThat(meta.getPublishedAt()).isNull();
                 }
-        );
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
         );
     }
 

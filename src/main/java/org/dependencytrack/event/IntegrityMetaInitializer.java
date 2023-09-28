@@ -6,6 +6,7 @@ import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
@@ -55,13 +56,21 @@ public class IntegrityMetaInitializer implements ServletContextListener {
                         LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
                     }
                     dispatchPurls(pm, purls);
-
+                    updateIntegrityMetaForPurls(qm, purls);
                     offset += purls.size();
                     purls = fetchNextPurlsPage(pm, offset);
                 }
             } else {
                 LOGGER.info("Skipping integrity meta initializer process as data already exists.");
             }
+        }
+    }
+
+    private void updateIntegrityMetaForPurls(QueryManager qm, List<String> purls) {
+        for (var purl : purls) {
+            var purlIntegrityRecord = qm.getIntegrityMetaComponent(purl);
+            purlIntegrityRecord.setStatus(FetchStatus.IN_PROGRESS);
+            qm.updateIntegrityMetaComponent(purlIntegrityRecord);
         }
     }
 
@@ -77,7 +86,9 @@ public class IntegrityMetaInitializer implements ServletContextListener {
     }
 
     private List<String> fetchNextPurlsPage(PersistenceManager pm, long offset) throws Exception {
-        try (final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class)) {
+        try (final Query<IntegrityMetaComponent> query =
+                     pm.newQuery(IntegrityMetaComponent.class, "status == null || status == :timedout")) {
+            query.setParameters(FetchStatus.TIMED_OUT);
             query.setRange(offset, offset + 5000);
             query.setResult("purl");
             return List.copyOf(query.executeResultList(String.class));

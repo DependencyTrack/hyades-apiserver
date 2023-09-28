@@ -44,13 +44,13 @@ import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -132,6 +132,7 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
+    private IntegrityMetaQueryManager integrityMetaQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -348,6 +349,13 @@ public class QueryManager extends AlpineQueryManager {
             workflowStateQueryManager = (request == null) ? new WorkflowStateQueryManager(getPersistenceManager()) : new WorkflowStateQueryManager(getPersistenceManager(), request);
         }
         return workflowStateQueryManager;
+    }
+
+    private IntegrityMetaQueryManager getIntegrityMetaQueryManager() {
+        if (integrityMetaQueryManager == null) {
+            integrityMetaQueryManager = (request == null) ? new IntegrityMetaQueryManager(getPersistenceManager()) : new IntegrityMetaQueryManager(getPersistenceManager(), request);
+        }
+        return integrityMetaQueryManager;
     }
 
     /**
@@ -1687,18 +1695,18 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        return getComponentQueryManager().getIntegrityMetaComponent(purl);
+        return getIntegrityMetaQueryManager().getIntegrityMetaComponent(purl);
     }
 
     public IntegrityMetaComponent updateIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getComponentQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
+        return getIntegrityMetaQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
     }
 
     public void synchronizeIntegrityMetaComponent() {
-        getComponentQueryManager().synchronizeIntegrityMetaComponent();
+        getIntegrityMetaQueryManager().synchronizeIntegrityMetaComponent();
     }
 
-    public int getIntegrityMetaComponentCount() {
-        return getComponentQueryManager().getIntegrityMetaComponentCount();
+    public long getIntegrityMetaComponentCount() {
+        return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
     }
 }
