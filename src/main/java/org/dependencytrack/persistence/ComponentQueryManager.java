@@ -26,6 +26,8 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -188,6 +190,21 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params, false);
         return execute(query, params);
+    }
+
+    /**
+     * Returns ComponentProjection for the purl.
+     * @param purl the purl of the component to retrieve
+     * @return associated ComponentProjection
+     */
+    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+        if (purl == null) {
+            return null;
+        }
+        final Query<Component> query = pm.newQuery(Component.class, "purl == :purl");
+        query.setParameters(purl);
+        query.setResult("DISTINCT purlCoordinates, internal");
+        return query.executeResultUnique(IntegrityMetaInitializer.ComponentProjection.class);
     }
 
     /**

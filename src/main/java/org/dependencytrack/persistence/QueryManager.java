@@ -33,6 +33,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
+import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -571,6 +572,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getComponentByHash(String hash) {
         return getComponentQueryManager().getComponentByHash(hash);
+    }
+
+    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+        return getComponentQueryManager().getComponentByPurl(purl);
     }
 
     public PaginatedResult getComponents(ComponentIdentity identity) {
@@ -1708,5 +1713,9 @@ public class QueryManager extends AlpineQueryManager {
 
     public long getIntegrityMetaComponentCount() {
         return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
+    }
+
+    public List<String> fetchNextPurlsPage(long offset) {
+        return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
     }
 }

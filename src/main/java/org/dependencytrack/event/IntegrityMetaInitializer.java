@@ -5,14 +5,10 @@ import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.time.Duration;
@@ -35,34 +31,33 @@ public class IntegrityMetaInitializer implements ServletContextListener {
         }
     }
 
-    private void process() throws Exception {
+    private void process() {
         LOGGER.info("Initializing integrity meta component sync");
-        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(INTEGRITY_META_INITIALIZER_TASK_LOCK);
-
         try (final var qm = new QueryManager()) {
             if (qm.getIntegrityMetaComponentCount() == 0) {
-
                 // Sync purls from Component only if IntegrityMetaComponent is empty
                 qm.synchronizeIntegrityMetaComponent();
-
-                // dispatch ComponentRepositoryMetaAnalysisEvent for each purl
-                final PersistenceManager pm = qm.getPersistenceManager();
-                long offset = 0;
-                long startTime = System.currentTimeMillis();
-                List<String> purls = fetchNextPurlsPage(pm, offset);
-                while (!purls.isEmpty()) {
-                    long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
-                    if(isLockToBeExtended(cumulativeProcessingTime, INTEGRITY_META_INITIALIZER_TASK_LOCK)) {
-                        LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
-                    }
-                    dispatchPurls(pm, purls);
-                    updateIntegrityMetaForPurls(qm, purls);
-                    offset += purls.size();
-                    purls = fetchNextPurlsPage(pm, offset);
-                }
-            } else {
-                LOGGER.info("Skipping integrity meta initializer process as data already exists.");
+                batchProcessPurls(qm);
             }
+            // dispatch purls not processed yet
+            batchProcessPurls(qm);
+        }
+    }
+
+    private void batchProcessPurls(QueryManager qm) {
+        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(INTEGRITY_META_INITIALIZER_TASK_LOCK);
+        long offset = 0;
+        long startTime = System.currentTimeMillis();
+        List<String> purls = qm.fetchNextPurlsPage(offset);
+        while (!purls.isEmpty()) {
+            long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
+            if(isLockToBeExtended(cumulativeProcessingTime, INTEGRITY_META_INITIALIZER_TASK_LOCK)) {
+                LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
+            }
+            dispatchPurls(qm, purls);
+            updateIntegrityMetaForPurls(qm, purls);
+            offset += purls.size();
+            purls = qm.fetchNextPurlsPage(offset);
         }
     }
 
@@ -74,24 +69,10 @@ public class IntegrityMetaInitializer implements ServletContextListener {
         }
     }
 
-    private void dispatchPurls(PersistenceManager pm, List<String> purls) throws Exception {
+    private void dispatchPurls(QueryManager qm, List<String> purls) {
         for (final var purl : purls) {
-            try (final Query<Component> query = pm.newQuery(Component.class, "purl == :purl")) {
-                query.setParameters(purl);
-                query.setResult("DISTINCT purlCoordinates, internal");
-                ComponentProjection componentProjection = query.executeResultUnique(ComponentProjection.class);
-                kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal));
-            }
-        }
-    }
-
-    private List<String> fetchNextPurlsPage(PersistenceManager pm, long offset) throws Exception {
-        try (final Query<IntegrityMetaComponent> query =
-                     pm.newQuery(IntegrityMetaComponent.class, "status == null || status == :timedout")) {
-            query.setParameters(FetchStatus.TIMED_OUT);
-            query.setRange(offset, offset + 5000);
-            query.setResult("purl");
-            return List.copyOf(query.executeResultList(String.class));
+            ComponentProjection componentProjection = qm.getComponentByPurl(purl);
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal));
         }
     }
 

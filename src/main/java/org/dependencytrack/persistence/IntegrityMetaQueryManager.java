@@ -3,6 +3,7 @@ package org.dependencytrack.persistence;
 import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
+import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 
 import javax.jdo.PersistenceManager;
@@ -10,7 +11,9 @@ import javax.jdo.Query;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 
 public class IntegrityMetaQueryManager extends QueryManager implements IQueryManager {
 
@@ -104,6 +107,24 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
             return query.executeResultUnique(Long.class);
         } catch (Exception e) {
             LOGGER.error("Error in getting count of integrity meta.", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns the list of purls in IntegrityMetaComponent which are not yet processed.
+     *
+     * @return the list of purls
+     */
+    public List<String> fetchNextPurlsPage(long offset) {
+        try (final Query<IntegrityMetaComponent> query =
+                     pm.newQuery(IntegrityMetaComponent.class, "status == null || (status == :inProgress && lastFetch < :latest)")) {
+            query.setParameters(FetchStatus.IN_PROGRESS, Date.from(Instant.now().minus(1, ChronoUnit.HOURS)));
+            query.setRange(offset, offset + 5000);
+            query.setResult("purl");
+            return List.copyOf(query.executeResultList(String.class));
+        } catch (Exception e) {
+            LOGGER.error("Error in getting purls from integrity meta.", e);
             throw new RuntimeException(e);
         }
     }
