@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.model.PolicyCondition;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class PackageUrlCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
@@ -10,7 +10,7 @@ public class PackageUrlCelPolicyScriptSourceBuilder implements CelPolicyScriptSo
     public String apply(final PolicyCondition policyCondition) {
         final String scriptSrc = """
                 component.purl.matches("%s")
-                """.formatted(escapeJson(policyCondition.getValue()));
+                """.formatted(escapeQuotes(policyCondition.getValue()));
 
         if (policyCondition.getOperator() == PolicyCondition.Operator.MATCHES) {
             return scriptSrc;
