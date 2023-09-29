@@ -5,7 +5,7 @@ import org.cyclonedx.model.Hash;
 import org.dependencytrack.model.PolicyCondition;
 import org.json.JSONObject;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
@@ -26,7 +26,7 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
         if (policyCondition.getOperator().equals(PolicyCondition.Operator.IS)) {
             return """
                     component.%s == "%s"
-                    """.formatted(fieldName, escapeJson(hash.getValue()));
+                    """.formatted(fieldName, escapeQuotes(hash.getValue()));
         } else {
             LOGGER.warn("Policy operator %s is not allowed with this policy".formatted(policyCondition.getOperator().toString()));
             return null;
