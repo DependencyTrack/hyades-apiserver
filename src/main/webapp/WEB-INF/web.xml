@@ -59,6 +59,9 @@
     <listener>
         <listener-class>org.dependencytrack.persistence.H2WebConsoleInitializer</listener-class>
     </listener>
+    <listener>
+        <listener-class>org.dependencytrack.event.IntegrityMetaInitializer</listener-class>
+    </listener>
 
     <filter>
         <filter-name>WhitelistUrlFilter</filter-name>

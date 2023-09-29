@@ -24,13 +24,13 @@ import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -42,8 +42,6 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import java.io.StringReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -192,6 +190,21 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params, false);
         return execute(query, params);
+    }
+
+    /**
+     * Returns ComponentProjection for the purl.
+     * @param purl the purl of the component to retrieve
+     * @return associated ComponentProjection
+     */
+    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+        if (purl == null) {
+            return null;
+        }
+        final Query<Component> query = pm.newQuery(Component.class, "purl == :purl");
+        query.setParameters(purl);
+        query.setResult("DISTINCT purlCoordinates, internal");
+        return query.executeResultUnique(IntegrityMetaInitializer.ComponentProjection.class);
     }
 
     /**
@@ -722,67 +735,5 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
         }
         dependencyGraph.putAll(addToDependencyGraph);
-    }
-
-    /**
-     * Returns a IntegrityMetaComponent object from the specified purl.
-     *
-     * @param purl           the Package URL string of the component
-     * @return a IntegrityMetaComponent object, or null if not found
-     */
-    public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        final Query<IntegrityMetaComponent> query = pm.newQuery(IntegrityMetaComponent.class);
-        final var params = new HashMap<String, Object>();
-        params.put("purl", purl);
-        query.setParameters(params);
-        return query.executeUnique();
-    }
-
-    /**
-     * Updates a IntegrityMetaComponent record.
-     *
-     * @param transientIntegrityMetaComponent the IntegrityMetaComponent object to synchronize
-     * @return a synchronized IntegrityMetaComponent object
-     */
-    public synchronized IntegrityMetaComponent updateIntegrityMetaComponent(final IntegrityMetaComponent transientIntegrityMetaComponent) {
-        final IntegrityMetaComponent integrityMeta = getIntegrityMetaComponent(transientIntegrityMetaComponent.getPurl());
-        if (integrityMeta != null) {
-            integrityMeta.setMd5(transientIntegrityMetaComponent.getMd5());
-            integrityMeta.setSha1(transientIntegrityMetaComponent.getSha1());
-            integrityMeta.setSha256(transientIntegrityMetaComponent.getSha256());
-            integrityMeta.setPublishedAt(transientIntegrityMetaComponent.getPublishedAt());
-            integrityMeta.setStatus(transientIntegrityMetaComponent.getStatus());
-            integrityMeta.setLastFetch(transientIntegrityMetaComponent.getLastFetch());
-            return persist(integrityMeta);
-        } else {
-            LOGGER.debug("No record found in IntegrityMetaComponent for purl " + transientIntegrityMetaComponent.getPurl());
-            return null;
-        }
-    }
-
-    /**
-     * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
-     */
-    public synchronized void synchronizeIntegrityMetaComponent() {
-        final String PURL_SYNC_QUERY = """
-                    INSERT INTO "INTEGRITY_META_COMPONENT" ("PURL")
-                    SELECT DISTINCT "PURL"
-                    FROM "COMPONENT"
-                    WHERE "PURL" IS NOT NULL
-                """;
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-            preparedStatement = connection.prepareStatement(PURL_SYNC_QUERY);
-            var purlCount = preparedStatement.executeUpdate();
-            LOGGER.info("Number of component purls synchronized for integrity check : " + purlCount);
-        } catch (Exception ex) {
-            LOGGER.error("Error in synchronizing component purls for integrity meta.", ex);
-            throw new RuntimeException(ex);
-        } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
-        }
     }
 }
