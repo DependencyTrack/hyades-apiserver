@@ -32,8 +32,16 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testIntegrityMetaInitializer() {
+    public void testIntegrityMetaInitializerWhenDisabledByDefault() {
         IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
+        initializer.contextInitialized(null);
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(0);
+        assertThat(kafkaMockProducer.history().size()).isEqualTo(0);
+    }
+
+    @Test
+    public void testIntegrityMetaInitializer() {
+        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -60,7 +68,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         integrityMetaExisting.setStatus(PROCESSED);
         qm.persist(integrityMetaExisting);
         // data exists in IntegrityMetaComponent so sync will be skipped
-        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
+        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is not dispatched
         assertThat(kafkaMockProducer.history().size()).isEqualTo(0);
@@ -73,7 +81,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         var integrityMetaExisting = new IntegrityMetaComponent();
         integrityMetaExisting.setPurl(componentPersisted.getPurl().toString());
         qm.persist(integrityMetaExisting);
-        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
+        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is dispatched
         assertThat(kafkaMockProducer.history().size()).isEqualTo(1);
@@ -88,7 +96,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         integrityMetaExisting.setStatus(IN_PROGRESS);
         integrityMetaExisting.setLastFetch(Date.from(Instant.now().minus(3, ChronoUnit.HOURS)));
         qm.persist(integrityMetaExisting);
-        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
+        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is dispatched
         assertThat(kafkaMockProducer.history().size()).isEqualTo(1);
@@ -104,7 +112,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         integrityMetaExisting.setLastFetch(Date.from(Instant.now().minus(30, ChronoUnit.MINUTES)));
         qm.persist(integrityMetaExisting);
 
-        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
+        IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is dispatched
         assertThat(kafkaMockProducer.history().size()).isEqualTo(0);

@@ -1,9 +1,11 @@
 package org.dependencytrack.event;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
@@ -22,13 +24,27 @@ public class IntegrityMetaInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(IntegrityMetaInitializer.class);
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
+    private final boolean integrityInitializerEnabled;
+
+    public IntegrityMetaInitializer() {
+        this(Config.getInstance().getPropertyAsBoolean(ConfigKey.INTEGRITY_INITIALIZER_ENABLED));
+    }
+
+    IntegrityMetaInitializer(final boolean integrityInitializerEnabled) {
+        this.integrityInitializerEnabled = integrityInitializerEnabled;
+    }
+
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        try {
-            LockProvider.executeWithLock(INTEGRITY_META_INITIALIZER_TASK_LOCK, (LockingTaskExecutor.Task) () -> process());
-        } catch (Throwable e) {
-            throw new RuntimeException("An unexpected error occurred while running Initializer for integrity meta", e);
+        if (integrityInitializerEnabled) {
+            try {
+                LockProvider.executeWithLock(INTEGRITY_META_INITIALIZER_TASK_LOCK, (LockingTaskExecutor.Task) () -> process());
+            } catch (Throwable e) {
+                throw new RuntimeException("An unexpected error occurred while running Initializer for integrity meta", e);
+            }
+        } else {
+            LOGGER.info("Component integrity initializer is disabled.");
         }
     }
 

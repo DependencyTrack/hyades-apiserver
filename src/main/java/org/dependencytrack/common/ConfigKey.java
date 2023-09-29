@@ -73,7 +73,8 @@ public enum ConfigKey implements Config.Key {
     TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
     CEL_POLICY_ENGINE_ENABLED("cel.policy.engine.enabled", "false"),
     TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR("task.integrity.integrityMetaInitializer.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
-    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("task.integrity.integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis()));
+    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("task.integrity.integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
+    INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false");
 
     private final String propertyName;
     private final Object defaultValue;
