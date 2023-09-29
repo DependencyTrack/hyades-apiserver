@@ -5,13 +5,14 @@ import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.dependencytrack.tasks.LockName.INTEGRITY_META_INITIALIZER_TASK_LOCK;
@@ -62,11 +63,11 @@ public class IntegrityMetaInitializer implements ServletContextListener {
     }
 
     private void updateIntegrityMetaForPurls(QueryManager qm, List<String> purls) {
+        List<IntegrityMetaComponent> purlRecords = new ArrayList<>();
         for (var purl : purls) {
-            var purlIntegrityRecord = qm.getIntegrityMetaComponent(purl);
-            purlIntegrityRecord.setStatus(FetchStatus.IN_PROGRESS);
-            qm.updateIntegrityMetaComponent(purlIntegrityRecord);
+            purlRecords.add(qm.getIntegrityMetaComponent(purl));
         }
+        qm.batchUpdateIntegrityMetaComponent(purlRecords);
     }
 
     private void dispatchPurls(QueryManager qm, List<String> purls) {

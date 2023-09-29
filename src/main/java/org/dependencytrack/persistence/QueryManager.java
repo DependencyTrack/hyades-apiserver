@@ -1718,4 +1718,8 @@ public class QueryManager extends AlpineQueryManager {
     public List<String> fetchNextPurlsPage(long offset) {
         return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
     }
+
+    public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
+        getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
+    }
 }

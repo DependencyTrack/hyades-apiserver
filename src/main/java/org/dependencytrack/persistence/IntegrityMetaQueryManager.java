@@ -10,6 +10,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -126,6 +127,36 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
         } catch (Exception e) {
             LOGGER.error("Error in getting purls from integrity meta.", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Batch updates IntegrityMetaComponent records
+     */
+    public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
+        final String updateQuery = """
+                UPDATE "INTEGRITY_META_COMPONENT"
+                SET "LAST_FETCH" = ?, "STATUS" = ?
+                WHERE "ID" = ?
+                """;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            connection = (Connection) pm.getDataStoreConnection();
+            preparedStatement = connection.prepareStatement(updateQuery);
+            for (var purlRecord : purls) {
+                preparedStatement.setTimestamp(1, new Timestamp(Date.from(Instant.now()).getTime()));
+                preparedStatement.setString(2, FetchStatus.IN_PROGRESS.toString());
+                preparedStatement.setLong(3, purlRecord.getId());
+                preparedStatement.addBatch();
+            }
+            preparedStatement.executeBatch();
+        } catch (Exception ex) {
+            LOGGER.error("Error in batch updating integrity meta.", ex);
+            throw new RuntimeException(ex);
+        } finally {
+            DbUtil.close(preparedStatement);
+            DbUtil.close(connection);
         }
     }
 }
