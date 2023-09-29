@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
@@ -52,7 +52,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
                     .build();
             return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
-                """.formatted(escapeJson(group), escapeJson(name), conditionVers.toString());
+                """.formatted(escapeQuotes(group), escapeQuotes(name), conditionVers.toString());
         }
 
         io.github.nscuro.versatile.Comparator versionComparator = switch (versionOperatorMatcher.group(1)) {
@@ -76,7 +76,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
 
         return """
                 component.group.matches("%s") && component.name.matches("%s") && component.matches_range("%s")
-                """.formatted(escapeJson(group), escapeJson(name), conditionVers.toString());
+                """.formatted(escapeQuotes(group), escapeQuotes(name), conditionVers.toString());
     }
 
     private static String replace(String conditionString) {
