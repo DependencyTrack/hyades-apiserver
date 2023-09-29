@@ -38,7 +38,6 @@ public class IntegrityMetaInitializer implements ServletContextListener {
             if (qm.getIntegrityMetaComponentCount() == 0) {
                 // Sync purls from Component only if IntegrityMetaComponent is empty
                 qm.synchronizeIntegrityMetaComponent();
-                batchProcessPurls(qm);
             }
             // dispatch purls not processed yet
             batchProcessPurls(qm);
