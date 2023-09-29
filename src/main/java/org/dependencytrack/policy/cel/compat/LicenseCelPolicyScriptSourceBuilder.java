@@ -20,7 +20,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.model.PolicyCondition;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeJson;
+import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class LicenseCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
@@ -37,7 +37,7 @@ public class LicenseCelPolicyScriptSourceBuilder implements CelPolicyScriptSourc
                         """;
             }
         } else {
-            final String escapedLicenseUuid = escapeJson(policyCondition.getValue());
+            final String escapedLicenseUuid = escapeQuotes(policyCondition.getValue());
             if (policyCondition.getOperator() == PolicyCondition.Operator.IS) {
                 return """
                         component.resolved_license.uuid == "%s"
