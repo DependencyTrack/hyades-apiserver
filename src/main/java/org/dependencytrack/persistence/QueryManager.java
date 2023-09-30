@@ -33,6 +33,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
+import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -132,6 +133,7 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
+    private IntegrityMetaQueryManager integrityMetaQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -350,6 +352,13 @@ public class QueryManager extends AlpineQueryManager {
         return workflowStateQueryManager;
     }
 
+    private IntegrityMetaQueryManager getIntegrityMetaQueryManager() {
+        if (integrityMetaQueryManager == null) {
+            integrityMetaQueryManager = (request == null) ? new IntegrityMetaQueryManager(getPersistenceManager()) : new IntegrityMetaQueryManager(getPersistenceManager(), request);
+        }
+        return integrityMetaQueryManager;
+    }
+
     /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
@@ -563,6 +572,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getComponentByHash(String hash) {
         return getComponentQueryManager().getComponentByHash(hash);
+    }
+
+    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+        return getComponentQueryManager().getComponentByPurl(purl);
     }
 
     public PaginatedResult getComponents(ComponentIdentity identity) {
@@ -1687,15 +1700,27 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        return getComponentQueryManager().getIntegrityMetaComponent(purl);
+        return getIntegrityMetaQueryManager().getIntegrityMetaComponent(purl);
     }
 
     public IntegrityMetaComponent updateIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getComponentQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
+        return getIntegrityMetaQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
     }
 
     public void synchronizeIntegrityMetaComponent() {
-        getComponentQueryManager().synchronizeIntegrityMetaComponent();
+        getIntegrityMetaQueryManager().synchronizeIntegrityMetaComponent();
+    }
+
+    public long getIntegrityMetaComponentCount() {
+        return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
+    }
+
+    public List<String> fetchNextPurlsPage(long offset) {
+        return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
+    }
+
+    public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
+        getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
     }
 
     public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {

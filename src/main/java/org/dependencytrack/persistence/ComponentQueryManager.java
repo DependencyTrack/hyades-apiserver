@@ -24,13 +24,13 @@ import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -42,9 +42,12 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import java.io.StringReader;
+<<<<<<< HEAD
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Instant;
+=======
+>>>>>>> a0c2364d (Add initialiser for integrity meta component sync (#334))
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -194,6 +197,21 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params, false);
         return execute(query, params);
+    }
+
+    /**
+     * Returns ComponentProjection for the purl.
+     * @param purl the purl of the component to retrieve
+     * @return associated ComponentProjection
+     */
+    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+        if (purl == null) {
+            return null;
+        }
+        final Query<Component> query = pm.newQuery(Component.class, "purl == :purl");
+        query.setParameters(purl);
+        query.setResult("DISTINCT purlCoordinates, internal");
+        return query.executeResultUnique(IntegrityMetaInitializer.ComponentProjection.class);
     }
 
     /**
@@ -725,6 +743,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
         dependencyGraph.putAll(addToDependencyGraph);
     }
+<<<<<<< HEAD
 
     /**
      * Returns a IntegrityMetaComponent object from the specified purl.
@@ -792,4 +811,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         return persist(integrityMetaComponent);
     }
 
+=======
+>>>>>>> a0c2364d (Add initialiser for integrity meta component sync (#334))
 }

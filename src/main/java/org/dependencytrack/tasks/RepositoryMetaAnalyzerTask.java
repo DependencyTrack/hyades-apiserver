@@ -102,7 +102,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
                 dispatchComponents(components, qm);
 
                 offset += components.size();
-                components = fetchNextComponentsPage(qm.getPersistenceManager(), project, offset);
+                components = fetchNextComponentsPage(pm, project, offset);
             }
         }
 
@@ -129,7 +129,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
                 dispatchComponents(components, qm);
 
                 offset += components.size();
-                components = fetchNextComponentsPage(qm.getPersistenceManager(), null, offset);
+                components = fetchNextComponentsPage(pm, null, offset);
             }
         }
 

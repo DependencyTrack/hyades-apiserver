@@ -20,6 +20,8 @@ import java.time.Instant;
 
 import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR;
@@ -35,6 +37,7 @@ import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_VULN_ANALYSIS_
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.INTEGRITY_META_INITIALIZER_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.LDAP_SYNC_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
@@ -134,6 +137,10 @@ public class LockProvider {
                     PORTFOLIO_VULN_ANALYSIS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR)),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR)));
+            case INTEGRITY_META_INITIALIZER_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    INTEGRITY_META_INITIALIZER_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR)));
         };
 
     }
