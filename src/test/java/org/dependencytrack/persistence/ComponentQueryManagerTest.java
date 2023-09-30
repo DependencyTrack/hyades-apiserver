@@ -105,6 +105,4 @@ public class ComponentQueryManagerTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(PolicyCondition.class, policyCondition.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
     }
-
-
 }

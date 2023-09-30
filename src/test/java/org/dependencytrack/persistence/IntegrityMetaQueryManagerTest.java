@@ -74,7 +74,6 @@ public class IntegrityMetaQueryManagerTest extends PersistenceCapableTest {
         // with existing component in database
         qm.persist(component);
         qm.synchronizeIntegrityMetaComponent();
-
         assertThat(qm.getIntegrityMetaComponent(component.getPurl().toString())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isNull();
