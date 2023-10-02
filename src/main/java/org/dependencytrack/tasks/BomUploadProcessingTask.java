@@ -980,13 +980,13 @@ public class BomUploadProcessingTask implements Subscriber {
         if (integrityMetaComponent != null) {
             if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
                 integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-                qm.updateIntegrityMetaComponent(integrityMetaComponent);
+                qm.getPersistenceManager().makePersistent(integrityMetaComponent);
                 return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), true, true);
             } else {
                 return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), false, true);
             }
         } else {
-            qm.createIntegrityMetaComponent(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
+            qm.getPersistenceManager().makePersistent(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
             return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), true, true);
         }
     }

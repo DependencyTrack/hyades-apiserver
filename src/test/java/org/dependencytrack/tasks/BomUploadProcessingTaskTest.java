@@ -18,18 +18,23 @@
  */
 package org.dependencytrack.tasks;
 
+import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.event.kafka.componentmeta.ComponentProjectionWithPurl;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.util.PurlUtil;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
@@ -43,6 +48,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -86,6 +92,92 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+        );
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getLastBomImport()).isNotNull();
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.4");
+        assertThat(project.getExternalReferences()).isNotNull();
+        assertThat(project.getExternalReferences()).hasSize(4);
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(1);
+
+        final Component component = components.get(0);
+        assertThat(component.getAuthor()).isEqualTo("Sometimes this field is long because it is composed of a list of authors......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
+        assertThat(component.getPublisher()).isEqualTo("Example Incorporated");
+        assertThat(component.getGroup()).isEqualTo("com.example");
+        assertThat(component.getName()).isEqualTo("xmlutil");
+        assertThat(component.getVersion()).isEqualTo("1.0.0");
+        assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
+        assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
+        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
+
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //vuln analysis has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //policy evaluation has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getParent()).isNotNull();
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //metrics update has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getParent()).isNotNull();
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                }
+        );
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        assertThat(vulnerabilityScan).isNotNull();
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStartedAt()).isNotNull();
+    }
+
+    @Test
+    public void informTestWithComponentAlreadyExistsForIntegrityCheck() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        PackageURL packageUrl = new PackageURL("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+        var integrityMeta = new IntegrityMetaComponent();
+        integrityMeta.setPurl("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
+        integrityMeta.setLastFetch(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+        qm.createIntegrityMetaComponent(integrityMeta);
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() >= 5, Duration.ofSeconds(5));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
@@ -433,7 +525,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
     public void informIssue2519Test() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        
+
         // Upload the same BOM again a few times.
         // Ensure processing does not fail, and the number of components ingested doesn't change.
         for (int i = 0; i < 3; i++) {

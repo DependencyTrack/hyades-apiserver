@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.model;
 
+import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
@@ -31,6 +33,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -59,8 +62,11 @@ public class IntegrityMetaComponent implements Serializable {
     private String sha256;
 
     @Persistent
-    @Column(name = "PURL", allowsNull = "false")
+    @Column(name = "PURL", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
     @Index(name = "PURL_IDX")
+    @Size(max = 1024)
+    @com.github.packageurl.validator.PackageURL
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Unique
     @NotNull
     private String purl;
