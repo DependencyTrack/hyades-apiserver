@@ -16,7 +16,6 @@ public class UnSupportedMetaHandler extends AbstractMetaHandler {
 
     @Override
     public IntegrityMetaComponent handle() {
-        KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), false, fetchLatestVersion));
         return null;
     }

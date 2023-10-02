@@ -389,6 +389,7 @@ public class ComponentResource extends AlpineResource {
                 component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
                 component.setClassifier(jsonComponent.getClassifier());
                 component.setPurl(jsonComponent.getPurl());
+                component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
                 component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
                 component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
                 component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));

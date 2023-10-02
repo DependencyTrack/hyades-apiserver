@@ -471,11 +471,11 @@ public class ComponentResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
         Component component = new Component();
         component.setProject(project);
+        component.setPurl("pkg:maven/org.acme/abc");
         component.setName("My Component");
         component.setVersion("1.0");
-        component.setPurl("pkg:maven/org.acme/abc");
-        component = qm.createComponent(component, false);
         component.setDescription("Test component");
+        component = qm.createComponent(component, false);
         Response response = target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(component, MediaType.APPLICATION_JSON));
