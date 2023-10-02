@@ -6,7 +6,6 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.util.PurlUtil;
 import org.junit.Test;
@@ -25,7 +24,7 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:golang/foo/bar@baz?ping=pong#1/2/3");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, false);

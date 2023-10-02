@@ -13,7 +13,7 @@ import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TI
 
 public class SupportedMetaHandler extends AbstractMetaHandler {
 
-    public SupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) {
+    public SupportedMetaHandler(ComponentProjectionWithPurl componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) {
         this.componentProjection = componentProjection;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.queryManager = queryManager;

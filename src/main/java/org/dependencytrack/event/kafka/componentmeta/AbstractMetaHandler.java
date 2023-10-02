@@ -10,7 +10,7 @@ import java.util.Date;
 
 public abstract class AbstractMetaHandler implements Handler {
 
-    ComponentProjection componentProjection;
+    ComponentProjectionWithPurl componentProjection;
     QueryManager queryManager;
     KafkaEventDispatcher kafkaEventDispatcher;
     boolean fetchLatestVersion;

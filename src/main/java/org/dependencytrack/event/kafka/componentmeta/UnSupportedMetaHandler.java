@@ -7,7 +7,7 @@ import org.dependencytrack.persistence.QueryManager;
 
 public class UnSupportedMetaHandler extends AbstractMetaHandler {
 
-    public UnSupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher,boolean fetchLatestVersion) {
+    public UnSupportedMetaHandler(ComponentProjectionWithPurl componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) {
         this.componentProjection = componentProjection;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.queryManager = queryManager;

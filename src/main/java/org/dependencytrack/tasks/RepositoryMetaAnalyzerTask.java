@@ -28,7 +28,7 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
+import org.dependencytrack.event.kafka.componentmeta.ComponentProjectionWithPurl;
 import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
@@ -139,10 +139,10 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
     private void dispatchComponents(final List<ComponentProjection> components, QueryManager queryManager) {
         for (final var component : components) {
             try {
-                Handler repoMetaHandler = HandlerFactory.createHandler(new ComponentProjection(component.purlCoordinates(), component.internal(), component.purl()), queryManager, kafkaEventDispatcher, true);
+                Handler repoMetaHandler = HandlerFactory.createHandler(new ComponentProjectionWithPurl(component.purlCoordinates(), component.internal(), component.purlCoordinates()), queryManager, kafkaEventDispatcher, true);
                 repoMetaHandler.handle();
             } catch (MalformedPackageURLException ex) {
-                LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.purl()), ex);
+                LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.purlCoordinates()), ex);
             }
         }
     }
@@ -163,6 +163,9 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             query.setResult("DISTINCT purlCoordinates, internal");
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
+    }
+
+    public record ComponentProjection(String purlCoordinates, Boolean internal) {
     }
 
 }

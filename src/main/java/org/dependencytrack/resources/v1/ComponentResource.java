@@ -37,7 +37,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
+import org.dependencytrack.event.kafka.componentmeta.ComponentProjectionWithPurl;
 import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
@@ -320,8 +320,8 @@ public class ComponentResource extends AlpineResource {
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
             component = qm.createComponent(component, true);
-            ComponentProjection componentProjection =
-                    new ComponentProjection(component.getPurlCoordinates().toString(),
+            ComponentProjectionWithPurl componentProjection =
+                    new ComponentProjectionWithPurl(component.getPurlCoordinates().toString(),
                             component.isInternal(), component.getPurl().toString());
             try {
                 Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, true);
@@ -415,8 +415,8 @@ public class ComponentResource extends AlpineResource {
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);
-                ComponentProjection componentProjection =
-                        new ComponentProjection(component.getPurlCoordinates().toString(),
+                ComponentProjectionWithPurl componentProjection =
+                        new ComponentProjectionWithPurl(component.getPurlCoordinates().toString(),
                                 component.isInternal(), component.getPurl().toString());
                 try {
 

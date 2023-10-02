@@ -28,7 +28,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, false);
@@ -57,7 +57,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
@@ -90,7 +90,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);

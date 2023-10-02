@@ -7,7 +7,7 @@ import org.dependencytrack.persistence.QueryManager;
 
 public class HandlerFactory {
 
-    public static Handler createHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) throws MalformedPackageURLException {
+    public static Handler createHandler(ComponentProjectionWithPurl componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) throws MalformedPackageURLException {
         PackageURL packageURL = new PackageURL(componentProjection.purl());
         boolean result = RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(packageURL.getType());
         if (result) {
