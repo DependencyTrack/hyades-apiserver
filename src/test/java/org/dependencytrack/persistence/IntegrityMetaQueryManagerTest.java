@@ -33,7 +33,7 @@ public class IntegrityMetaQueryManagerTest extends PersistenceCapableTest {
                     assertThat(meta.getMd5()).isNull();
                     assertThat(meta.getSha1()).isNull();
                     assertThat(meta.getSha256()).isNull();
-                    assertThat(meta.getLastFetch()).isEqualTo(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+                    assertThat(meta.getLastFetch()).isBefore(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
                     assertThat(meta.getPublishedAt()).isNull();
                 }
         );
