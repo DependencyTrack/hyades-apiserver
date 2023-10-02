@@ -193,6 +193,10 @@
                     <groupId>org.yaml</groupId>
                     <artifactId>snakeyaml</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <!-- Common Expression Language (CEL) -->
@@ -348,7 +352,7 @@
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock-jre8</artifactId>
-            <version>2.35.1</version>
+            <version>3.0.1</version>
             <scope>test</scope>
         </dependency>
 
