@@ -2,6 +2,7 @@ package org.dependencytrack.event.kafka.componentmeta;
 
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
 
 public class UnSupportedMetaHandler extends AbstractMetaHandler {
@@ -14,8 +15,9 @@ public class UnSupportedMetaHandler extends AbstractMetaHandler {
     }
 
     @Override
-    public void handle() {
+    public IntegrityMetaComponent handle() {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), false, fetchLatestVersion));
+        return null;
     }
 }

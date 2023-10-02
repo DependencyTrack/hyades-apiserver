@@ -1,5 +1,7 @@
 package org.dependencytrack.event.kafka.componentmeta;
 
+import org.dependencytrack.model.IntegrityMetaComponent;
+
 public interface Handler {
-    void handle();
+    IntegrityMetaComponent handle();
 }

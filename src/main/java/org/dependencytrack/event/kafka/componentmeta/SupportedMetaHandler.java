@@ -21,21 +21,24 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
     }
 
     @Override
-    public void handle() {
+    public IntegrityMetaComponent handle() {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try (QueryManager queryManager = new QueryManager()) {
             IntegrityMetaComponent integrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl());
             if (integrityMetaComponent != null) {
                 if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
                     integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-                    queryManager.updateIntegrityMetaComponent(integrityMetaComponent);
+                    IntegrityMetaComponent integrityMetaComponent1 = queryManager.updateIntegrityMetaComponent(integrityMetaComponent);
                     kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), true, fetchLatestVersion));
+                    return integrityMetaComponent1;
                 } else {
                     kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), false, fetchLatestVersion));
+                    return integrityMetaComponent;
                 }
             } else {
-                queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
+                IntegrityMetaComponent integrityMetaComponent1 = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
                 kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), true, fetchLatestVersion));
+                return integrityMetaComponent1;
             }
         }
     }
