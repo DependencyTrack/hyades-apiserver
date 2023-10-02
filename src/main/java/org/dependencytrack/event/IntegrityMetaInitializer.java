@@ -67,7 +67,7 @@ public class IntegrityMetaInitializer implements ServletContextListener {
         List<String> purls = qm.fetchNextPurlsPage(offset);
         while (!purls.isEmpty()) {
             long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
-            if(isLockToBeExtended(cumulativeProcessingTime, INTEGRITY_META_INITIALIZER_TASK_LOCK)) {
+            if (isLockToBeExtended(cumulativeProcessingTime, INTEGRITY_META_INITIALIZER_TASK_LOCK)) {
                 LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
             }
             dispatchPurls(qm, purls);
@@ -88,7 +88,7 @@ public class IntegrityMetaInitializer implements ServletContextListener {
     private void dispatchPurls(QueryManager qm, List<String> purls) {
         for (final var purl : purls) {
             ComponentProjection componentProjection = qm.getComponentByPurl(purl);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal, true, false));
         }
     }
 

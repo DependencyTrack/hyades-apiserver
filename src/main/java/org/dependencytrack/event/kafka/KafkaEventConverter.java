@@ -58,6 +58,8 @@ final class KafkaEventConverter {
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
+                .setFetchIntegrityData(event.fetchIntegrityData())
+                .setFetchLatestVersion(event.fetchLatestVersion())
                 .build();
 
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);

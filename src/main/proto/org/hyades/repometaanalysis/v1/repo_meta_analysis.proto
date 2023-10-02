@@ -11,6 +11,8 @@ option java_package = "org.hyades.proto.repometaanalysis.v1";
 message AnalysisCommand {
   // The component that shall be analyzed.
   Component component = 1;
+  bool fetch_integrity_data = 2;
+  bool fetch_latest_version = 3;
 }
 
 message AnalysisResult {
