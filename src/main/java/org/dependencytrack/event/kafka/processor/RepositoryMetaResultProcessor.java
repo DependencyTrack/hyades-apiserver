@@ -37,6 +37,8 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             final Timer.Sample timerSample = Timer.start();
             try (final var qm = new QueryManager()) {
                 synchronizeRepositoryMetaComponent(qm.getPersistenceManager(), record);
+                //synchronize Integrity metadata
+                //perform integrity check
             } catch (Exception e) {
                 LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
             } finally {

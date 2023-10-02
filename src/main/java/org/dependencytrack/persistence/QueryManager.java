@@ -51,6 +51,7 @@ import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
+import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
@@ -134,6 +135,7 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
     private IntegrityMetaQueryManager integrityMetaQueryManager;
+    private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -357,6 +359,13 @@ public class QueryManager extends AlpineQueryManager {
             integrityMetaQueryManager = (request == null) ? new IntegrityMetaQueryManager(getPersistenceManager()) : new IntegrityMetaQueryManager(getPersistenceManager(), request);
         }
         return integrityMetaQueryManager;
+    }
+
+    private IntegrityAnalysisQueryManager getIntegrityAnalysisQueryManager() {
+        if (integrityAnalysisQueryManager == null) {
+            integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
+        }
+        return integrityAnalysisQueryManager;
     }
 
     /**
@@ -1721,5 +1730,9 @@ public class QueryManager extends AlpineQueryManager {
 
     public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
         getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
+    }
+
+    public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {
+        return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
     }
 }
