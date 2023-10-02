@@ -18,38 +18,21 @@
  */
 package alpine.server.persistence;
 
-import alpine.Config;
-
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-/**
- * Initializes the embedded H2 database. This can be used as a configuration
- * store or as the main database for the application.
- *
- * Refer to {@link Config.AlpineKey#DATABASE_MODE} and application.properties for
- * additional details.
- *
- * @author Steve Springett
- * @since 1.0.0
- */
+
 public class PersistenceInitializer implements ServletContextListener {
 
-
+    // Alpine Starts the H2 database engine if the database mode is set to 'server'
+    // Since the application is built to run with postgres db, H2 dependency
+    // and initialization of server has been removed in shadowed class
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
-
     }
-
-    /**
-     * Starts the H2 database engine if the database mode is set to 'server'
-     */
-
-
 }
