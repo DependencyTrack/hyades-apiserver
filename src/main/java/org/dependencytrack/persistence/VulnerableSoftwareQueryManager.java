@@ -21,11 +21,11 @@ package org.dependencytrack.persistence;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.h2.util.StringUtils;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -304,7 +304,7 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
             query.setOrdering("id asc");
         }
         if (filter != null) {
-            if (StringUtils.isNumber(filter)) {
+            if (StringUtils.isNumeric(filter)) {
                 query.setFilter("cweId == :cweId || name.matches(:filter)");
                 final String filterString = ".*" + filter.toLowerCase() + ".*";
                 return execute(query, Integer.valueOf(filter), filterString);
