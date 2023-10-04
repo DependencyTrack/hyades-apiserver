@@ -58,6 +58,19 @@ public class IntegrityMetaComponent implements Serializable {
     @Pattern(regexp = "^[0-9a-fA-F]{64}$", message = "The SHA-256 hash must be a valid 64 character HEX number")
     private String sha256;
 
+    public String getSha512() {
+        return sha512;
+    }
+
+    public void setSha512(String sha512) {
+        this.sha512 = sha512;
+    }
+
+    @Persistent
+    @Column(name = "SHA_512", jdbcType = "VARCHAR", length = 128)
+    @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA-512 hash must be a valid 128 character HEX number")
+    private String sha512;
+
     @Persistent
     @Column(name = "PURL", allowsNull = "false")
     @Index(name = "PURL_IDX")

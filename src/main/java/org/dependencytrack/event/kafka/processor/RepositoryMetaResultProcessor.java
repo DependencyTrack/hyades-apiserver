@@ -165,6 +165,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                 persistentIntegrityMetaComponent.setMd5(result.getIntegrityMeta().getMd5());
                 persistentIntegrityMetaComponent.setSha256(result.getIntegrityMeta().getSha256());
                 persistentIntegrityMetaComponent.setSha1(result.getIntegrityMeta().getSha1());
+                persistentIntegrityMetaComponent.setSha512(result.getIntegrityMeta().getSha512());
                 persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
                 persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
                 persistentIntegrityMetaComponent.setPublishedAt(new Date(result.getIntegrityMeta().getCurrentVersionPublished().getSeconds() * 1000));
@@ -173,6 +174,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                 persistentIntegrityMetaComponent.setMd5("");
                 persistentIntegrityMetaComponent.setSha256("");
                 persistentIntegrityMetaComponent.setSha1("");
+                persistentIntegrityMetaComponent.setSha512("");
                 persistentIntegrityMetaComponent.setPurl(purl.toString());
                 persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
                 persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
