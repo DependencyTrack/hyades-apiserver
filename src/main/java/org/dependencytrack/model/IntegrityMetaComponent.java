@@ -82,6 +82,10 @@ public class IntegrityMetaComponent implements Serializable {
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
 
+    @Persistent
+    @Column(name = "REPOSITORY_URL", jdbcType = "VARCHAR", length = 1024)
+    private String repositoryUrl;
+
 
     public long getId() {
         return id;
@@ -133,6 +137,14 @@ public class IntegrityMetaComponent implements Serializable {
 
     public Date getLastFetch() {
         return lastFetch;
+    }
+
+    public String getRepositoryUrl() {
+        return repositoryUrl;
+    }
+
+    public void setRepositoryUrl(String repositoryUrl) {
+        this.repositoryUrl = repositoryUrl;
     }
 
     public void setLastFetch(Date lastFetch) {

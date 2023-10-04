@@ -8,6 +8,8 @@ import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.Record;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
@@ -33,19 +35,18 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
 
     @Override
     public void process(final Record<String, AnalysisResult> record) {
-        if (record.value().hasLatestVersion()) {
-            final Timer.Sample timerSample = Timer.start();
-            try (final var qm = new QueryManager()) {
-                synchronizeRepositoryMetaComponent(qm.getPersistenceManager(), record);
-            } catch (Exception e) {
-                LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
-            } finally {
-                timerSample.stop(TIMER);
-            }
+        final Timer.Sample timerSample = Timer.start();
+        try (final var qm = new QueryManager()) {
+            synchronizeMetaInformationForComponent(qm, record);
+        } catch (Exception e) {
+            LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
+        } finally {
+            timerSample.stop(TIMER);
         }
     }
 
-    private void synchronizeRepositoryMetaComponent(final PersistenceManager pm, final Record<String, AnalysisResult> record) {
+    private void synchronizeMetaInformationForComponent(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws Exception {
+        PersistenceManager pm = queryManager.getPersistenceManager();
         final AnalysisResult result = record.value();
         if (!result.hasComponent()) {
             LOGGER.warn("""
@@ -73,42 +74,18 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         for (int i = 0; i < 3; i++) {
             final Transaction trx = pm.currentTransaction();
             try {
-                trx.begin();
-
-                final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class);
-                query.setFilter("repositoryType == :repositoryType && namespace == :namespace && name == :name");
-                query.setParameters(
-                        RepositoryType.resolve(purl),
-                        purl.getNamespace(),
-                        purl.getName()
-                );
-                RepositoryMetaComponent persistentRepoMetaComponent = query.executeUnique();
-                if (persistentRepoMetaComponent == null) {
-                    persistentRepoMetaComponent = new RepositoryMetaComponent();
+                RepositoryMetaComponent repositoryMetaComponentResult = createRepositoryMetaResult(record, pm, purl);
+                if (repositoryMetaComponentResult != null) {
+                    trx.begin();
+                    pm.makePersistent(repositoryMetaComponentResult);
+                    trx.commit();
                 }
 
-                if (persistentRepoMetaComponent.getLastCheck() != null
-                        && persistentRepoMetaComponent.getLastCheck().after(new Date(record.timestamp()))) {
-                    LOGGER.warn("""
-                            Received repository meta information for %s that is older\s
-                            than what's already in the database; Discarding
-                            """.formatted(purl));
-                    return;
+                //snychronize integrity meta information if available
+                IntegrityMetaComponent res = synchronizeIntegrityMetaResult(record, queryManager, purl);
+                if (res == null) {
+                    LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
                 }
-
-                persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(purl));
-                persistentRepoMetaComponent.setNamespace(purl.getNamespace());
-                persistentRepoMetaComponent.setName(purl.getName());
-                if (result.hasLatestVersion()) {
-                    persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
-                }
-                if (result.hasPublished()) {
-                    persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
-                }
-                persistentRepoMetaComponent.setLastCheck(new Date(record.timestamp()));
-                pm.makePersistent(persistentRepoMetaComponent);
-
-                trx.commit();
             } catch (JDODataStoreException e) {
                 // TODO: DataNucleus doesn't map constraint violation exceptions very well,
                 // so we have to depend on the exception of the underlying JDBC driver to
@@ -127,6 +104,82 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             }
 
             return;
+        }
+    }
+
+    private RepositoryMetaComponent createRepositoryMetaResult(Record<String, AnalysisResult> incomingAnalysisResultRecord, PersistenceManager pm, PackageURL purl) throws Exception {
+        final AnalysisResult result = incomingAnalysisResultRecord.value();
+        if (result.hasLatestVersion()) {
+            try (final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class)) {
+                query.setFilter("repositoryType == :repositoryType && namespace == :namespace && name == :name");
+                query.setParameters(
+                        RepositoryType.resolve(purl),
+                        purl.getNamespace(),
+                        purl.getName()
+                );
+                RepositoryMetaComponent persistentRepoMetaComponent = query.executeUnique();
+                if (persistentRepoMetaComponent == null) {
+                    persistentRepoMetaComponent = new RepositoryMetaComponent();
+                }
+
+                if (persistentRepoMetaComponent.getLastCheck() != null
+                        && persistentRepoMetaComponent.getLastCheck().after(new Date(incomingAnalysisResultRecord.timestamp()))) {
+                    LOGGER.warn("""
+                            Received repository meta information for %s that is older\s
+                            than what's already in the database; Discarding
+                            """.formatted(purl));
+                    return null;
+                }
+
+                persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(purl));
+                persistentRepoMetaComponent.setNamespace(purl.getNamespace());
+                persistentRepoMetaComponent.setName(purl.getName());
+                if (result.hasLatestVersion()) {
+                    persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
+                }
+                if (result.hasPublished()) {
+                    persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
+                }
+                persistentRepoMetaComponent.setLastCheck(new Date(incomingAnalysisResultRecord.timestamp()));
+                return persistentRepoMetaComponent;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
+        final AnalysisResult result = incomingAnalysisResultRecord.value();
+
+        IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
+
+        if (persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
+            LOGGER.warn("""
+                    Received hash information for %s that has already been processed; Discarding
+                    """.formatted(purl));
+            return null;
+        }
+        if (result.hasIntegrityMeta()) {
+            if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
+                    || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionPublished()) {
+                persistentIntegrityMetaComponent.setMd5(result.getIntegrityMeta().getMd5());
+                persistentIntegrityMetaComponent.setSha256(result.getIntegrityMeta().getSha256());
+                persistentIntegrityMetaComponent.setSha1(result.getIntegrityMeta().getSha1());
+                persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
+                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
+                persistentIntegrityMetaComponent.setPublishedAt(new Date(result.getIntegrityMeta().getCurrentVersionPublished().getSeconds() * 1000));
+                persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+            } else {
+                persistentIntegrityMetaComponent.setMd5("");
+                persistentIntegrityMetaComponent.setSha256("");
+                persistentIntegrityMetaComponent.setSha1("");
+                persistentIntegrityMetaComponent.setPurl(purl.toString());
+                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
+                persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
+            }
+            return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
+        } else {
+            return null;
         }
     }
 

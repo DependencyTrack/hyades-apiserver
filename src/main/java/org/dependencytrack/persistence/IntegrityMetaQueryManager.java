@@ -64,6 +64,7 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
             integrityMeta.setPublishedAt(transientIntegrityMetaComponent.getPublishedAt());
             integrityMeta.setStatus(transientIntegrityMetaComponent.getStatus());
             integrityMeta.setLastFetch(Date.from(Instant.now()));
+            integrityMeta.setRepositoryUrl(transientIntegrityMetaComponent.getRepositoryUrl());
             return persist(integrityMeta);
         } else {
             LOGGER.debug("No record found in IntegrityMetaComponent for purl " + transientIntegrityMetaComponent.getPurl());
