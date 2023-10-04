@@ -61,6 +61,7 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
             integrityMeta.setMd5(transientIntegrityMetaComponent.getMd5());
             integrityMeta.setSha1(transientIntegrityMetaComponent.getSha1());
             integrityMeta.setSha256(transientIntegrityMetaComponent.getSha256());
+            integrityMeta.setSha512(transientIntegrityMetaComponent.getSha512());
             integrityMeta.setPublishedAt(transientIntegrityMetaComponent.getPublishedAt());
             integrityMeta.setStatus(transientIntegrityMetaComponent.getStatus());
             integrityMeta.setLastFetch(Date.from(Instant.now()));
