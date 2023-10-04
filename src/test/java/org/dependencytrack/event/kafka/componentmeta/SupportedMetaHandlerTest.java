@@ -9,6 +9,7 @@ import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.util.PurlUtil;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
@@ -28,7 +29,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, false);
@@ -39,8 +40,8 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
                         final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                         assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                         assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchIntegrityData()).isTrue();
-                        assertThat(command.getFetchLatestVersion()).isFalse();
+                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_INTEGRITY_DATA);
+                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);
                     }
 
             );
@@ -57,7 +58,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
@@ -71,8 +72,8 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
                         final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                         assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                         assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchIntegrityData()).isFalse();
-                        assertThat(command.getFetchLatestVersion()).isFalse();
+                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);
+                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);
                     }
 
             );
@@ -90,7 +91,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjectionWithPurl componentProjection = new ComponentProjectionWithPurl(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
@@ -104,8 +105,8 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
                         final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                         assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                         assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchIntegrityData()).isTrue();
-                        assertThat(command.getFetchLatestVersion()).isFalse();
+                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_INTEGRITY_DATA);
+                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);;
                     }
 
             );

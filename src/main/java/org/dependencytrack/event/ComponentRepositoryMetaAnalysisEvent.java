@@ -2,6 +2,7 @@ package org.dependencytrack.event;
 
 import alpine.event.framework.Event;
 import org.dependencytrack.model.Component;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 /**
  * Defines an {@link Event} triggered when requesting a component to be analyzed for meta information.
@@ -12,7 +13,6 @@ import org.dependencytrack.model.Component;
  * @param fetchLatestVersion Whether to fetch latest version meta information for a component.
  */
 public record ComponentRepositoryMetaAnalysisEvent(String purlCoordinates, Boolean internal,
-                                                   boolean fetchIntegrityData,
-                                                   boolean fetchLatestVersion) implements Event {
+                                                  FetchMeta fetchIntegrityData, FetchMeta fetchLatestVersion ) implements Event {
 
 }

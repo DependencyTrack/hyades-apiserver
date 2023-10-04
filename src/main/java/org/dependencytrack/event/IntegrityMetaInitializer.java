@@ -10,6 +10,7 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -88,7 +89,7 @@ public class IntegrityMetaInitializer implements ServletContextListener {
     private void dispatchPurls(QueryManager qm, List<String> purls) {
         for (final var purl : purls) {
             ComponentProjection componentProjection = qm.getComponentByPurl(purl);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal, true, false));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates, componentProjection.internal, FetchMeta.FETCH_INTEGRITY_DATA, FetchMeta.FETCH_UNSPECIFIED));
         }
     }
 

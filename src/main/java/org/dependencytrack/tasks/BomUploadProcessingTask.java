@@ -61,6 +61,7 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.FlushHelper;
 import org.dependencytrack.persistence.QueryManager;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.json.JSONArray;
 
 import javax.jdo.PersistenceManager;
@@ -325,7 +326,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     if (result) {
                         event = collectRepoMetaAnalysisEvents(component, qm);
                     } else {
-                        event = new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), false, true);
+                        event = new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_UNSPECIFIED, FetchMeta.FETCH_LATEST_VERSION);
                     }
                     repoMetaAnalysisEvents.add(event);
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
@@ -977,17 +978,16 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private ComponentRepositoryMetaAnalysisEvent collectRepoMetaAnalysisEvents(Component component, QueryManager qm) {
         IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
-        if (integrityMetaComponent != null) {
-            if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
-                integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-                qm.getPersistenceManager().makePersistent(integrityMetaComponent);
-                return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), true, true);
-            } else {
-                return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), false, true);
-            }
-        } else {
+        if (integrityMetaComponent == null) {
             qm.getPersistenceManager().makePersistent(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
-            return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), true, true);
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_LATEST_VERSION, FetchMeta.FETCH_INTEGRITY_DATA);
+        }
+        if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+            integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
+            qm.getPersistenceManager().makePersistent(integrityMetaComponent);
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_LATEST_VERSION, FetchMeta.FETCH_INTEGRITY_DATA);
+        } else {
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_UNSPECIFIED, FetchMeta.FETCH_LATEST_VERSION);
         }
     }
 

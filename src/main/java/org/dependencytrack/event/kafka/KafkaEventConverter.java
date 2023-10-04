@@ -58,6 +58,7 @@ final class KafkaEventConverter {
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
+                .setFetchLatestVersion(event.fetchLatestVersion())
                 .setFetchIntegrityData(event.fetchIntegrityData())
                 .setFetchLatestVersion(event.fetchLatestVersion())
                 .build();
