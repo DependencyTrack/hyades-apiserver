@@ -36,8 +36,8 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
                         final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                         assertThat(command.getComponent().getPurl()).isEqualTo("pkg:golang/foo/bar@baz");
                         assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);
-                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_UNSPECIFIED);
+                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_META_UNSPECIFIED);
+                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_META_UNSPECIFIED);
                     }
 
             );

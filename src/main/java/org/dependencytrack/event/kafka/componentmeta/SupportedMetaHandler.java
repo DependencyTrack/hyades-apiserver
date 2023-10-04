@@ -25,23 +25,23 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
     public IntegrityMetaComponent handle() {
         FetchMeta fetchMeta;
         if (fetchLatestVersion) {
-            fetchMeta = FetchMeta.FETCH_LATEST_VERSION;
+            fetchMeta = FetchMeta.FETCH_META_LATEST_VERSION;
         } else {
-            fetchMeta = FetchMeta.FETCH_UNSPECIFIED;
+            fetchMeta = FetchMeta.FETCH_META_UNSPECIFIED;
         }
         IntegrityMetaComponent integrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl());
         if (integrityMetaComponent == null) {
             IntegrityMetaComponent integrityMetaComponent1 = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_INTEGRITY_DATA, fetchMeta));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_INTEGRITY_DATA, fetchMeta));
             return integrityMetaComponent1;
         }
         if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             IntegrityMetaComponent integrityMetaComponent1 = queryManager.updateIntegrityMetaComponent(integrityMetaComponent);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_INTEGRITY_DATA, fetchMeta));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_INTEGRITY_DATA, fetchMeta));
             return integrityMetaComponent1;
         } else {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_UNSPECIFIED, fetchMeta));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, fetchMeta));
             return integrityMetaComponent;
         }
     }

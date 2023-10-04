@@ -94,7 +94,7 @@ public class RepositoryMetaAnalyzerTaskTest extends AbstractPostgresEnabledTest 
     }
 
     @Test
-    public void testProjectRepositoryMetaAnalysis() {
+    public void dxtestProjectRepositoryMetaAnalysis() {
         final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentA = new Component();
         componentA.setProject(project);

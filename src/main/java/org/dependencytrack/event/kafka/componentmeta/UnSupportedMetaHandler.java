@@ -18,9 +18,9 @@ public class UnSupportedMetaHandler extends AbstractMetaHandler {
     @Override
     public IntegrityMetaComponent handle() {
         if(fetchLatestVersion){
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_UNSPECIFIED, FetchMeta.FETCH_LATEST_VERSION));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, FetchMeta.FETCH_META_LATEST_VERSION));
         } else{
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_UNSPECIFIED, FetchMeta.FETCH_UNSPECIFIED));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, FetchMeta.FETCH_META_UNSPECIFIED));
         }
         return null;
     }
