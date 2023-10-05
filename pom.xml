@@ -93,7 +93,7 @@
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
-        <lib.kafka.version>3.5.1</lib.kafka.version>
+        <lib.kafka.version>3.6.0</lib.kafka.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
