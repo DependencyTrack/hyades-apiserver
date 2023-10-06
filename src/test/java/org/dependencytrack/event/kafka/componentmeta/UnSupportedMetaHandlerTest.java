@@ -28,7 +28,7 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
             ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
             Assertions.assertNull(integrityMetaComponent);
-            handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, false);
+            handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_LATEST_VERSION);
             handler.handle();
             assertThat(kafkaMockProducer.history()).satisfiesExactly(
                     record -> {
@@ -36,8 +36,7 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
                         final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                         assertThat(command.getComponent().getPurl()).isEqualTo("pkg:golang/foo/bar@baz");
                         assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchIntegrityData()).isEqualTo(FetchMeta.FETCH_META_UNSPECIFIED);
-                        assertThat(command.getFetchLatestVersion()).isEqualTo(FetchMeta.FETCH_META_UNSPECIFIED);
+                        assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_LATEST_VERSION);
                     }
 
             );

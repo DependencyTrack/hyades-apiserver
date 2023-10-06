@@ -14,35 +14,29 @@ import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TI
 
 public class SupportedMetaHandler extends AbstractMetaHandler {
 
-    public SupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) {
+    public SupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, FetchMeta fetchMeta) {
         this.componentProjection = componentProjection;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.queryManager = queryManager;
-        this.fetchLatestVersion = fetchLatestVersion;
+        this.fetchMeta = fetchMeta;
     }
 
     @Override
     public IntegrityMetaComponent handle() {
-        FetchMeta fetchMeta;
-        if (fetchLatestVersion) {
-            fetchMeta = FetchMeta.FETCH_META_LATEST_VERSION;
-        } else {
-            fetchMeta = FetchMeta.FETCH_META_UNSPECIFIED;
-        }
-        IntegrityMetaComponent integrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl());
-        if (integrityMetaComponent == null) {
-            IntegrityMetaComponent integrityMetaComponent1 = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_INTEGRITY_DATA, fetchMeta));
-            return integrityMetaComponent1;
-        }
-        if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
-            integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-            IntegrityMetaComponent integrityMetaComponent1 = queryManager.updateIntegrityMetaComponent(integrityMetaComponent);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_INTEGRITY_DATA, fetchMeta));
-            return integrityMetaComponent1;
-        } else {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, fetchMeta));
+        IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl());
+        if (persistentIntegrityMetaComponent == null) {
+            IntegrityMetaComponent integrityMetaComponent = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), fetchMeta));
             return integrityMetaComponent;
+        }
+        if (persistentIntegrityMetaComponent.getStatus() == null || (persistentIntegrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - persistentIntegrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
+            persistentIntegrityMetaComponent.setLastFetch(Date.from(Instant.now()));
+            IntegrityMetaComponent updateIntegrityMetaComponent = queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), fetchMeta));
+            return updateIntegrityMetaComponent;
+        } else {
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), fetchMeta));
+            return persistentIntegrityMetaComponent;
         }
     }
 

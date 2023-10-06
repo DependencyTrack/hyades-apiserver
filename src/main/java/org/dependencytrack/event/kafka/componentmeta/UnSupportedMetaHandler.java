@@ -8,20 +8,16 @@ import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 public class UnSupportedMetaHandler extends AbstractMetaHandler {
 
-    public UnSupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, boolean fetchLatestVersion) {
+    public UnSupportedMetaHandler(ComponentProjection componentProjection, QueryManager queryManager, KafkaEventDispatcher kafkaEventDispatcher, FetchMeta fetchMeta) {
         this.componentProjection = componentProjection;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.queryManager = queryManager;
-        this.fetchLatestVersion = fetchLatestVersion;
+        this.fetchMeta = fetchMeta;
     }
 
     @Override
     public IntegrityMetaComponent handle() {
-        if(fetchLatestVersion){
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, FetchMeta.FETCH_META_LATEST_VERSION));
-        } else{
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), FetchMeta.FETCH_META_UNSPECIFIED, FetchMeta.FETCH_META_UNSPECIFIED));
-        }
+        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), fetchMeta));
         return null;
     }
 }

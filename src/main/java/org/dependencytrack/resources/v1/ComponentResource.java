@@ -51,6 +51,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.PurlUtil;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -324,7 +325,7 @@ public class ComponentResource extends AlpineResource {
                     new ComponentProjection(component.getPurlCoordinates().toString(),
                             component.isInternal(), component.getPurl().toString());
             try {
-                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, true);
+                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
                 repoMetaHandler.handle();
             } catch (MalformedPackageURLException ex) {
                 LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
@@ -420,7 +421,7 @@ public class ComponentResource extends AlpineResource {
                                 component.isInternal(), component.getPurl().toString());
                 try {
 
-                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, true);
+                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
                     repoMetaHandler.handle();
                 } catch (MalformedPackageURLException ex) {
                     LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);

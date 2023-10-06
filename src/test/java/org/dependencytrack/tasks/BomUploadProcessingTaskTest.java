@@ -125,7 +125,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
-                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStatus ()).isEqualTo(COMPLETED);
                     assertThat(state.getStartedAt()).isNotNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },

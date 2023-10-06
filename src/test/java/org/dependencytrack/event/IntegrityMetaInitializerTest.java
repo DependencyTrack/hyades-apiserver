@@ -35,8 +35,8 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
     public void testIntegrityMetaInitializerWhenDisabledByDefault() {
         IntegrityMetaInitializer initializer = new IntegrityMetaInitializer();
         initializer.contextInitialized(null);
-        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(0);
-        assertThat(kafkaMockProducer.history().size()).isEqualTo(0);
+        assertThat(qm.getIntegrityMetaComponentCount()).isZero();
+        assertThat(kafkaMockProducer.history().size()).isZero();
     }
 
     @Test
@@ -71,7 +71,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is not dispatched
-        assertThat(kafkaMockProducer.history().size()).isEqualTo(0);
+        assertThat(kafkaMockProducer.history().size()).isZero();
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
     }
 
@@ -115,7 +115,7 @@ public class IntegrityMetaInitializerTest extends AbstractPostgresEnabledTest {
         IntegrityMetaInitializer initializer = new IntegrityMetaInitializer(true);
         initializer.contextInitialized(null);
         // kafka event is dispatched
-        assertThat(kafkaMockProducer.history().size()).isEqualTo(0);
+        assertThat(kafkaMockProducer.history().size()).isZero();
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
     }
 }
