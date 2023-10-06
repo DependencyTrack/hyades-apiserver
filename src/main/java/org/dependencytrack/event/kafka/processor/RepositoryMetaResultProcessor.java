@@ -22,6 +22,7 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.Optional;
 
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
@@ -162,19 +163,19 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         if (result.hasIntegrityMeta()) {
             if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
                     || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionPublished()) {
-                persistentIntegrityMetaComponent.setMd5(result.getIntegrityMeta().getMd5());
-                persistentIntegrityMetaComponent.setSha256(result.getIntegrityMeta().getSha256());
-                persistentIntegrityMetaComponent.setSha1(result.getIntegrityMeta().getSha1());
-                persistentIntegrityMetaComponent.setSha512(result.getIntegrityMeta().getSha512());
+                Optional.ofNullable(result.getIntegrityMeta().getMd5()).ifPresent(persistentIntegrityMetaComponent::setMd5);
+                Optional.ofNullable(result.getIntegrityMeta().getSha1()).ifPresent(persistentIntegrityMetaComponent::setSha1);
+                Optional.ofNullable(result.getIntegrityMeta().getSha256()).ifPresent(persistentIntegrityMetaComponent::setSha256);
+                Optional.ofNullable(result.getIntegrityMeta().getSha512()).ifPresent(persistentIntegrityMetaComponent::setSha512);
                 persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
                 persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
-                persistentIntegrityMetaComponent.setPublishedAt(new Date(result.getIntegrityMeta().getCurrentVersionPublished().getSeconds() * 1000));
+                persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionPublished() ? new Date(result.getIntegrityMeta().getCurrentVersionPublished().getSeconds() * 1000) : null);
                 persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
             } else {
-                persistentIntegrityMetaComponent.setMd5("");
-                persistentIntegrityMetaComponent.setSha256("");
-                persistentIntegrityMetaComponent.setSha1("");
-                persistentIntegrityMetaComponent.setSha512("");
+                persistentIntegrityMetaComponent.setMd5(null);
+                persistentIntegrityMetaComponent.setSha256(null);
+                persistentIntegrityMetaComponent.setSha1(null);
+                persistentIntegrityMetaComponent.setSha512(null);
                 persistentIntegrityMetaComponent.setPurl(purl.toString());
                 persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
                 persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);

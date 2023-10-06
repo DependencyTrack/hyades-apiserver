@@ -33,9 +33,9 @@ message IntegrityMeta {
   optional string sha1 = 2;
   optional string sha256 = 3;
   optional string sha512 = 4;
-  string integrity_meta_source_url = 5;
   // When the component current version last modified.
-  optional google.protobuf.Timestamp current_version_published = 6;
+  optional google.protobuf.Timestamp current_version_last_modified = 5;
+  string meta_source_url = 6;
 }
 
 message Component {
