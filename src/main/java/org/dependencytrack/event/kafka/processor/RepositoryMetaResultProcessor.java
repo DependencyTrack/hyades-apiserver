@@ -162,14 +162,14 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
         if (result.hasIntegrityMeta()) {
             if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
-                    || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionPublished()) {
+                    || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
                 Optional.ofNullable(result.getIntegrityMeta().getMd5()).ifPresent(persistentIntegrityMetaComponent::setMd5);
                 Optional.ofNullable(result.getIntegrityMeta().getSha1()).ifPresent(persistentIntegrityMetaComponent::setSha1);
                 Optional.ofNullable(result.getIntegrityMeta().getSha256()).ifPresent(persistentIntegrityMetaComponent::setSha256);
                 Optional.ofNullable(result.getIntegrityMeta().getSha512()).ifPresent(persistentIntegrityMetaComponent::setSha512);
                 persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
-                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
-                persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionPublished() ? new Date(result.getIntegrityMeta().getCurrentVersionPublished().getSeconds() * 1000) : null);
+                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
+                persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionLastModified() ? new Date(result.getIntegrityMeta().getCurrentVersionLastModified().getSeconds() * 1000) : null);
                 persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
             } else {
                 persistentIntegrityMetaComponent.setMd5(null);
@@ -177,7 +177,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                 persistentIntegrityMetaComponent.setSha1(null);
                 persistentIntegrityMetaComponent.setSha512(null);
                 persistentIntegrityMetaComponent.setPurl(purl.toString());
-                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getIntegrityMetaSourceUrl());
+                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
                 persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
             }
             return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);

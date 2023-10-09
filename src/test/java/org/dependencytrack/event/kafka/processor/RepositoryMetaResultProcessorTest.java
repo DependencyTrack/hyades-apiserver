@@ -175,7 +175,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
                         .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
-                        .setIntegrityMetaSourceUrl("test").build())
+                        .setMetaSourceUrl("test").build())
                 .build();
 
         inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
@@ -202,7 +202,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         final var result = AnalysisResult.newBuilder()
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
-                .setIntegrityMeta(IntegrityMeta.newBuilder().setIntegrityMetaSourceUrl("test").build())
+                .setIntegrityMeta(IntegrityMeta.newBuilder().setMetaSourceUrl("test").build())
                 .build();
 
         inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
@@ -233,7 +233,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                 .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
-                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e587982fbbd3").setIntegrityMetaSourceUrl("test2").build())
+                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e587982fbbd3").setMetaSourceUrl("test2").build())
                 .build();
 
         inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
@@ -266,7 +266,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setSeconds(published.getEpochSecond()))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
                         .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
-                        .setIntegrityMetaSourceUrl("test").build())
+                        .setMetaSourceUrl("test").build())
                 .build();
 
         inputTopic.pipeInput("pkg:maven/foo/bar", result);
