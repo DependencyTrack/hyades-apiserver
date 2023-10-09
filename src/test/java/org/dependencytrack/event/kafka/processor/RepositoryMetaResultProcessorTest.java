@@ -209,8 +209,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
-        assertThat(integrityMetaComponent.getMd5()).isEmpty();
-        assertThat(integrityMetaComponent.getSha1()).isEmpty();
+        assertThat(integrityMetaComponent.getMd5()).isNull();
+        assertThat(integrityMetaComponent.getSha1()).isNull();
         assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test");
         assertThat(integrityMetaComponent.getLastFetch()).isAfter(date);
         assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.NOT_AVAILABLE);
