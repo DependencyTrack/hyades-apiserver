@@ -1,5 +1,7 @@
 package org.dependencytrack.event.kafka.componentmeta;
 
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -16,8 +18,8 @@ public class UnSupportedMetaHandler extends AbstractMetaHandler {
     }
 
     @Override
-    public IntegrityMetaComponent handle() {
-        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purlCoordinates(), componentProjection.internal(), fetchMeta));
+    public IntegrityMetaComponent handle() throws MalformedPackageURLException {
+        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
         return null;
     }
 }
