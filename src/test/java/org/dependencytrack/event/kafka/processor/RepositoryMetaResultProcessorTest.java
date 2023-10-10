@@ -10,9 +10,12 @@ import org.apache.kafka.streams.test.TestRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.hyades.proto.repometaanalysis.v1.IntegrityMeta;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -158,4 +161,157 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(metaComponent.getLastCheck()).isBefore(testStartTime); // Must not have been updated
     }
 
+    @Test
+    public void processUpdateIntegrityResultTest() {
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        integrityMetaComponent.setLastFetch(date);
+        qm.persist(integrityMetaComponent);
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
+                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+                        .setMetaSourceUrl("test").build())
+                .build();
+
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getMd5()).isEqualTo("098f6bcd4621d373cade4e832627b4f6");
+        assertThat(integrityMetaComponent.getSha1()).isEqualTo("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3");
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test");
+        assertThat(integrityMetaComponent.getLastFetch()).isAfter(date);
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.PROCESSED);
+    }
+
+    @Test
+    public void processUpdateIntegrityResultNotAvailableTest() {
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        integrityMetaComponent.setLastFetch(date);
+        qm.persist(integrityMetaComponent);
+
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setIntegrityMeta(IntegrityMeta.newBuilder().setMetaSourceUrl("test").build())
+                .build();
+
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getMd5()).isNull();
+        assertThat(integrityMetaComponent.getSha1()).isNull();
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test");
+        assertThat(integrityMetaComponent.getLastFetch()).isAfter(date);
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.NOT_AVAILABLE);
+    }
+
+    @Test
+    public void processUpdateOldIntegrityResultSent() {
+
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(date);
+        integrityMetaComponent.setMd5("098f6bcd4621d373cade4e832627b4f6");
+        integrityMetaComponent.setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3");
+        integrityMetaComponent.setRepositoryUrl("test1");
+        qm.persist(integrityMetaComponent);
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
+                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e587982fbbd3").setMetaSourceUrl("test2").build())
+                .build();
+
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getLastFetch()).isEqualTo(date);
+        assertThat(integrityMetaComponent.getMd5()).isEqualTo("098f6bcd4621d373cade4e832627b4f6");
+        assertThat(integrityMetaComponent.getSha1()).isEqualTo("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3");
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test1");
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.PROCESSED);
+    }
+
+
+    @Test
+    public void processBothMetaModelAndIntegrityMeta() {
+        final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        integrityMetaComponent.setLastFetch(date);
+        qm.persist(integrityMetaComponent);
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setLatestVersion("1.2.4")
+                .setPublished(Timestamp.newBuilder()
+                        .setSeconds(published.getEpochSecond()))
+                .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
+                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+                        .setMetaSourceUrl("test").build())
+                .build();
+
+        inputTopic.pipeInput("pkg:maven/foo/bar", result);
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        final RepositoryMetaComponent metaComponent =
+                qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
+        assertThat(metaComponent).isNotNull();
+        assertThat(metaComponent.getRepositoryType()).isEqualTo(RepositoryType.MAVEN);
+        assertThat(metaComponent.getNamespace()).isEqualTo("foo");
+        assertThat(metaComponent.getName()).isEqualTo("bar");
+        assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
+        assertThat(metaComponent.getPublished()).isEqualToIgnoringMillis(Date.from(published));
+
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getMd5()).isEqualTo("098f6bcd4621d373cade4e832627b4f6");
+        assertThat(integrityMetaComponent.getSha1()).isEqualTo("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3");
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test");
+        assertThat(integrityMetaComponent.getLastFetch()).isAfter(date);
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.PROCESSED);
+    }
+
+    @Test
+    public void processUpdateIntegrityResultNotSentTest() {
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        integrityMetaComponent.setLastFetch(date);
+        qm.persist(integrityMetaComponent);
+
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .build();
+
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getMd5()).isNull();
+        assertThat(integrityMetaComponent.getSha1()).isNull();
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isNull();
+        assertThat(integrityMetaComponent.getLastFetch()).isEqualTo(date);
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.IN_PROGRESS);
+    }
 }
