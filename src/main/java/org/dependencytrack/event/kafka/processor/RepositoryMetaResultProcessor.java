@@ -81,12 +81,6 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                     pm.makePersistent(repositoryMetaComponentResult);
                     trx.commit();
                 }
-
-                //snychronize integrity meta information if available
-                IntegrityMetaComponent res = synchronizeIntegrityMetaResult(record, queryManager, purl);
-                if (res == null) {
-                    LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
-                }
             } catch (JDODataStoreException e) {
                 // TODO: DataNucleus doesn't map constraint violation exceptions very well,
                 // so we have to depend on the exception of the underlying JDBC driver to
@@ -103,8 +97,11 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                     trx.rollback();
                 }
             }
-
-            return;
+        }
+        //snychronize integrity meta information if available
+        IntegrityMetaComponent res = synchronizeIntegrityMetaResult(record, queryManager, purl);
+        if (res == null) {
+            LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
         }
     }
 
