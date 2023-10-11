@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
@@ -33,10 +34,12 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
+import org.dependencytrack.event.kafka.componentmeta.Handler;
+import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.License;
@@ -48,6 +51,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.PurlUtil;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -74,6 +78,7 @@ import java.util.UUID;
 @Api(value = "component", authorizations = @Authorization(value = "X-Api-Key"))
 public class ComponentResource extends AlpineResource {
 
+    private static final Logger LOGGER = Logger.getLogger(ComponentResource.class);
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
     @GET
@@ -276,7 +281,7 @@ public class ComponentResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (! qm.hasAccess(super.getPrincipal(), project)) {
+            if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
             final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
@@ -316,7 +321,15 @@ public class ComponentResource extends AlpineResource {
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
             component = qm.createComponent(component, true);
-            kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
+            ComponentProjection componentProjection =
+                    new ComponentProjection(component.getPurlCoordinates().toString(),
+                            component.isInternal(), component.getPurl());
+            try {
+                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                repoMetaHandler.handle();
+            } catch (MalformedPackageURLException ex) {
+                LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
+            }
             final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
             qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
             kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
@@ -361,7 +374,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
             if (component != null) {
-                if (! qm.hasAccess(super.getPrincipal(), component.getProject())) {
+                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
                 // Name cannot be empty or null - prevent it
@@ -377,6 +390,7 @@ public class ComponentResource extends AlpineResource {
                 component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
                 component.setClassifier(jsonComponent.getClassifier());
                 component.setPurl(jsonComponent.getPurl());
+                component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
                 component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
                 component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
                 component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
@@ -402,7 +416,16 @@ public class ComponentResource extends AlpineResource {
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);
-                kafkaEventDispatcher.dispatchBlocking(new ComponentRepositoryMetaAnalysisEvent(component));
+                ComponentProjection componentProjection =
+                        new ComponentProjection(component.getPurlCoordinates().toString(),
+                                component.isInternal(), component.getPurl());
+                try {
+
+                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                    repoMetaHandler.handle();
+                } catch (MalformedPackageURLException ex) {
+                    LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
+                }
                 final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
                 qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
                 kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
@@ -433,7 +456,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
             if (component != null) {
-                if (! qm.hasAccess(super.getPrincipal(), component.getProject())) {
+                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
                 qm.recursivelyDelete(component, false);

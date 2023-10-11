@@ -1722,4 +1722,8 @@ public class QueryManager extends AlpineQueryManager {
     public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
         getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
     }
+
+    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return getComponentQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
+    }
 }

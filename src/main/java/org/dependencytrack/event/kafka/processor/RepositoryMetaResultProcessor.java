@@ -80,6 +80,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                     trx.begin();
                     pm.makePersistent(repositoryMetaComponentResult);
                     trx.commit();
+                    break; // this means that transaction was successful and we do not need to retry
                 }
             } catch (JDODataStoreException e) {
                 // TODO: DataNucleus doesn't map constraint violation exceptions very well,
@@ -99,8 +100,9 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             }
         }
         //snychronize integrity meta information if available
-        IntegrityMetaComponent res = synchronizeIntegrityMetaResult(record, queryManager, purl);
-        if (res == null) {
+        if (result.hasIntegrityMeta()) {
+            synchronizeIntegrityMetaResult(record, queryManager, purl);
+        } else {
             LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
         }
     }
@@ -146,41 +148,39 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
+    private void synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
         final AnalysisResult result = incomingAnalysisResultRecord.value();
-
         IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
+        if (persistentIntegrityMetaComponent == null) {
+            persistentIntegrityMetaComponent = new IntegrityMetaComponent();
+        }
 
         if (persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
             LOGGER.warn("""
                     Received hash information for %s that has already been processed; Discarding
                     """.formatted(purl));
-            return null;
+            return;
         }
-        if (result.hasIntegrityMeta()) {
-            if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
-                    || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
-                Optional.ofNullable(result.getIntegrityMeta().getMd5()).ifPresent(persistentIntegrityMetaComponent::setMd5);
-                Optional.ofNullable(result.getIntegrityMeta().getSha1()).ifPresent(persistentIntegrityMetaComponent::setSha1);
-                Optional.ofNullable(result.getIntegrityMeta().getSha256()).ifPresent(persistentIntegrityMetaComponent::setSha256);
-                Optional.ofNullable(result.getIntegrityMeta().getSha512()).ifPresent(persistentIntegrityMetaComponent::setSha512);
-                persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
-                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
-                persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionLastModified() ? new Date(result.getIntegrityMeta().getCurrentVersionLastModified().getSeconds() * 1000) : null);
-                persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-            } else {
-                persistentIntegrityMetaComponent.setMd5(null);
-                persistentIntegrityMetaComponent.setSha256(null);
-                persistentIntegrityMetaComponent.setSha1(null);
-                persistentIntegrityMetaComponent.setSha512(null);
-                persistentIntegrityMetaComponent.setPurl(purl.toString());
-                persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
-                persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
-            }
-            return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
+        if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
+                || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
+            Optional.ofNullable(result.getIntegrityMeta().getMd5()).ifPresent(persistentIntegrityMetaComponent::setMd5);
+            Optional.ofNullable(result.getIntegrityMeta().getSha1()).ifPresent(persistentIntegrityMetaComponent::setSha1);
+            Optional.ofNullable(result.getIntegrityMeta().getSha256()).ifPresent(persistentIntegrityMetaComponent::setSha256);
+            Optional.ofNullable(result.getIntegrityMeta().getSha512()).ifPresent(persistentIntegrityMetaComponent::setSha512);
+            persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
+            persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
+            persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionLastModified() ? new Date(result.getIntegrityMeta().getCurrentVersionLastModified().getSeconds() * 1000) : null);
+            persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
         } else {
-            return null;
+            persistentIntegrityMetaComponent.setMd5(null);
+            persistentIntegrityMetaComponent.setSha256(null);
+            persistentIntegrityMetaComponent.setSha1(null);
+            persistentIntegrityMetaComponent.setSha512(null);
+            persistentIntegrityMetaComponent.setPurl(purl.toString());
+            persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
+            persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
         }
+        queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
     }
 
 }
