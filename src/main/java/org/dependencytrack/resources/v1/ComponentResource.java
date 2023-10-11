@@ -323,7 +323,7 @@ public class ComponentResource extends AlpineResource {
             component = qm.createComponent(component, true);
             ComponentProjection componentProjection =
                     new ComponentProjection(component.getPurlCoordinates().toString(),
-                            component.isInternal(), component.getPurl().toString());
+                            component.isInternal(), component.getPurl());
             try {
                 Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
                 repoMetaHandler.handle();
@@ -418,7 +418,7 @@ public class ComponentResource extends AlpineResource {
                 component = qm.updateComponent(component, true);
                 ComponentProjection componentProjection =
                         new ComponentProjection(component.getPurlCoordinates().toString(),
-                                component.isInternal(), component.getPurl().toString());
+                                component.isInternal(), component.getPurl());
                 try {
 
                     Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);

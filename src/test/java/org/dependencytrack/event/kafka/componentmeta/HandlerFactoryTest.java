@@ -21,7 +21,7 @@ public class HandlerFactoryTest extends PersistenceCapableTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
             assertTrue(handler instanceof SupportedMetaHandler);
         } catch (MalformedPackageURLException e) {
@@ -36,7 +36,7 @@ public class HandlerFactoryTest extends PersistenceCapableTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:golang/github.com/foo/bar@1.2.3");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_LATEST_VERSION);
             assertTrue(handler instanceof UnSupportedMetaHandler);
         } catch (MalformedPackageURLException e) {

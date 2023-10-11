@@ -29,8 +29,8 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
-            IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+            IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
             IntegrityMetaComponent result = handler.handle();
@@ -57,7 +57,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);

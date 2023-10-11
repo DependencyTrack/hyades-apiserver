@@ -70,7 +70,7 @@ public class IntegrityMetaComponent implements Serializable {
     }
 
     @Persistent
-    @Column(name = "SHA_512", jdbcType = "VARCHAR", length = 128)
+    @Column(name = "SHA512", jdbcType = "VARCHAR", length = 128)
     @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA-512 hash must be a valid 128 character HEX number")
     private String sha512;
 

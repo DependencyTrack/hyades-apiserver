@@ -25,19 +25,19 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
 
     @Override
     public IntegrityMetaComponent handle() throws MalformedPackageURLException {
-        IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl());
+        IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl().toString());
         if (persistentIntegrityMetaComponent == null) {
-            IntegrityMetaComponent integrityMetaComponent = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl()));
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
+            IntegrityMetaComponent integrityMetaComponent = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl().toString()));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return integrityMetaComponent;
         }
         if (persistentIntegrityMetaComponent.getStatus() == null || (persistentIntegrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - persistentIntegrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
             persistentIntegrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             IntegrityMetaComponent updateIntegrityMetaComponent = queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return updateIntegrityMetaComponent;
         } else {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return persistentIntegrityMetaComponent;
         }
     }

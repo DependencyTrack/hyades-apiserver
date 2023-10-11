@@ -25,8 +25,8 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:golang/foo/bar@baz?ping=pong#1/2/3");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl.toString());
-            IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl());
+            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+            IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_LATEST_VERSION);
             handler.handle();
