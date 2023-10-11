@@ -178,7 +178,7 @@ public class BomResourceTest extends ResourceTest {
                 .isEqualTo(json("""
                         {
                             "bomFormat": "CycloneDX",
-                            "specVersion": "1.4",
+                            "specVersion": "1.5",
                             "serialNumber": "${json-unit.ignore}",
                             "version": 1,
                             "metadata": {
@@ -327,7 +327,7 @@ public class BomResourceTest extends ResourceTest {
                 .isEqualTo(json("""
                 {
                     "bomFormat": "CycloneDX",
-                    "specVersion": "1.4",
+                    "specVersion": "1.5",
                     "serialNumber": "${json-unit.ignore}",
                     "version": 1,
                     "metadata": {
@@ -520,7 +520,7 @@ public class BomResourceTest extends ResourceTest {
                 .isEqualTo(json("""
                 {
                     "bomFormat": "CycloneDX",
-                    "specVersion": "1.4",
+                    "specVersion": "1.5",
                     "serialNumber": "${json-unit.ignore}",
                     "version": 1,
                     "metadata": {
@@ -763,7 +763,7 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.version: is missing but it is required; $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
+        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
     }
 
     @Test
