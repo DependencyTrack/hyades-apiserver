@@ -159,6 +159,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             LOGGER.warn("""
                     Received hash information for %s that has already been processed; Discarding
                     """.formatted(purl));
+            return;
         }
         if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
                 || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
