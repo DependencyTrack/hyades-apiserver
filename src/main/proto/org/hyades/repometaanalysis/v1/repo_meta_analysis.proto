@@ -34,6 +34,17 @@ message AnalysisResult {
 
   // When the latest version was published.
   optional google.protobuf.Timestamp published = 4;
+  optional IntegrityMeta integrity_meta = 5;
+}
+
+message IntegrityMeta {
+  optional string md5 = 1;
+  optional string sha1 = 2;
+  optional string sha256 = 3;
+  optional string sha512 = 4;
+  // When the component current version last modified.
+  optional google.protobuf.Timestamp current_version_last_modified = 5;
+  string meta_source_url = 6;
 }
 
 message Component {
