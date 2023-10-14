@@ -135,6 +135,7 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
     private IntegrityMetaQueryManager integrityMetaQueryManager;
+
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
 
     private TagQueryManager tagQueryManager;
@@ -1730,6 +1731,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
         getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
+    }
+
+    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return getComponentQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
     }
 
     public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {

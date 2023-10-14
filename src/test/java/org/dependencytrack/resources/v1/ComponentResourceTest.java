@@ -406,6 +406,7 @@ public class ComponentResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("My Component");
         component.setVersion("1.0");
+        component.setPurl("pkg:maven/org.acme/abc");
         Response response = target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(component, MediaType.APPLICATION_JSON));
@@ -415,8 +416,13 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
+                },
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
                     final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
@@ -432,6 +438,7 @@ public class ComponentResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("My Component");
         component.setVersion("1.0");
+        component.setPurl("pkg:maven/org.acme/abc");
         component.setSha1("640ab2bae07bedc4c163f679a746f7ab7fb5d1fa".toUpperCase());
         component.setSha256("532eaabd9574880dbf76b9b8cc00832c20a6ec113d682299550d7a6e0f345e25".toUpperCase());
         component.setSha3_256("c0a5cca43b8aa79eb50e3464bc839dd6fd414fae0ddf928ca23dcebf8a8b8dd0".toUpperCase());
@@ -464,10 +471,11 @@ public class ComponentResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
         Component component = new Component();
         component.setProject(project);
+        component.setPurl("pkg:maven/org.acme/abc");
         component.setName("My Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
         component.setDescription("Test component");
+        component = qm.createComponent(component, false);
         Response response = target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(component, MediaType.APPLICATION_JSON));
@@ -477,8 +485,13 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test component", json.getString("description"));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
+                },
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
                     final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);

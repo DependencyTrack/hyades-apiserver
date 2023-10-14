@@ -31,7 +31,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track</artifactId>
     <packaging>war</packaging>
-    <version>5.1.0-SNAPSHOT</version>
+    <version>5.1.0</version>
 
     <name>Dependency-Track</name>
     <url>https://dependencytrack.org/</url>
@@ -86,20 +86,20 @@
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
         <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
-        <lib.cvss-calculator.version>1.4.1</lib.cvss-calculator.version>
+        <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>7.3.0</lib.cyclonedx-java.version>
         <lib.jackson.version>2.15.2</lib.jackson.version>
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
-        <lib.kafka.version>3.5.1</lib.kafka.version>
+        <lib.kafka.version>3.6.0</lib.kafka.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
-        <lib.protobuf-java.version>3.24.3</lib.protobuf-java.version>
+        <lib.protobuf-java.version>3.24.4</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
         <lib.snappy-java.version>1.1.10.1</lib.snappy-java.version>
@@ -192,6 +192,10 @@
                 <exclusion>
                     <groupId>org.yaml</groupId>
                     <artifactId>snakeyaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -342,13 +346,20 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
-            <version>3.9.4</version>
+            <version>3.9.5</version>
         </dependency>
 
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock-jre8</artifactId>
-            <version>2.35.1</version>
+            <version>3.0.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
             <scope>test</scope>
         </dependency>
 

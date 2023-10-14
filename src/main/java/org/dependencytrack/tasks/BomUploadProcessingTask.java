@@ -40,9 +40,12 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
@@ -58,6 +61,7 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.FlushHelper;
 import org.dependencytrack.persistence.QueryManager;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.json.JSONArray;
 
 import javax.jdo.PersistenceManager;
@@ -83,6 +87,8 @@ import java.util.stream.Stream;
 import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD;
+import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
+import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
@@ -315,7 +321,14 @@ public class BomUploadProcessingTask implements Subscriber {
                     // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
                     // merely call a few getters on it, but the component object itself is not passed around.
                     // Detaching would imply additional database interactions that we'd rather not do.
-                    repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component));
+                    boolean result = SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType());
+                    ComponentRepositoryMetaAnalysisEvent event;
+                    if (result) {
+                        event = createRepoMetaAnalysisEvent(component, qm);
+                    } else {
+                        event = new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
+                    }
+                    repoMetaAnalysisEvents.add(event);
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
                             ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
                 }
@@ -962,5 +975,21 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
     }
+
+    private ComponentRepositoryMetaAnalysisEvent createRepoMetaAnalysisEvent(Component component, QueryManager qm) {
+        IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
+        if (integrityMetaComponent == null) {
+            qm.getPersistenceManager().makePersistent(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+        }
+        if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+            integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
+            qm.getPersistenceManager().makePersistent(integrityMetaComponent);
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+        } else {
+            return new ComponentRepositoryMetaAnalysisEvent(component.getPurlCoordinates().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
+        }
+    }
+
 
 }

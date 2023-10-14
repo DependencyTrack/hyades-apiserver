@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.model;
 
+import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
@@ -31,6 +33,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -58,9 +61,25 @@ public class IntegrityMetaComponent implements Serializable {
     @Pattern(regexp = "^[0-9a-fA-F]{64}$", message = "The SHA-256 hash must be a valid 64 character HEX number")
     private String sha256;
 
+    public String getSha512() {
+        return sha512;
+    }
+
+    public void setSha512(String sha512) {
+        this.sha512 = sha512;
+    }
+
     @Persistent
-    @Column(name = "PURL", allowsNull = "false")
+    @Column(name = "SHA512", jdbcType = "VARCHAR", length = 128)
+    @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA-512 hash must be a valid 128 character HEX number")
+    private String sha512;
+
+    @Persistent
+    @Column(name = "PURL", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
     @Index(name = "PURL_IDX")
+    @Size(max = 1024)
+    @com.github.packageurl.validator.PackageURL
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Unique
     @NotNull
     private String purl;
@@ -81,6 +100,10 @@ public class IntegrityMetaComponent implements Serializable {
     @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64)
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
+
+    @Persistent
+    @Column(name = "REPOSITORY_URL", jdbcType = "VARCHAR", length = 1024)
+    private String repositoryUrl;
 
 
     public long getId() {
@@ -133,6 +156,14 @@ public class IntegrityMetaComponent implements Serializable {
 
     public Date getLastFetch() {
         return lastFetch;
+    }
+
+    public String getRepositoryUrl() {
+        return repositoryUrl;
+    }
+
+    public void setRepositoryUrl(String repositoryUrl) {
+        this.repositoryUrl = repositoryUrl;
     }
 
     public void setLastFetch(Date lastFetch) {

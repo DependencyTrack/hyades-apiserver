@@ -1,7 +1,9 @@
 package org.dependencytrack.model;
 
 public enum FetchStatus {
+    //request processed successfully
     PROCESSED,
-    TIMED_OUT,
-    IN_PROGRESS
+    //fetching information for this component is in progress
+    IN_PROGRESS,
+    NOT_AVAILABLE
 }
