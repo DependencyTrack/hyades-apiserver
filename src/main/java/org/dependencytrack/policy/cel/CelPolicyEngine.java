@@ -315,7 +315,7 @@ public class CelPolicyEngine {
     private Pair<PolicyCondition, CelPolicyScript> compileConditionScript(final Pair<PolicyCondition, String> conditionScriptSrcPair) {
         final CelPolicyScript script;
         try {
-            script = scriptHost.compile(conditionScriptSrcPair.getRight(), CacheMode.CACHE);
+            script = scriptHost.compile(conditionScriptSrcPair.getRight(), CacheMode.NO_CACHE);
         } catch (ScriptCreateException e) {
             LOGGER.warn("Failed to compile script for condition %s; Condition will be skipped"
                     .formatted(conditionScriptSrcPair.getLeft().getUuid()), e);
