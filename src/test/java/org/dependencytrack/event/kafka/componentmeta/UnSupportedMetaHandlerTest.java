@@ -12,6 +12,8 @@ import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
@@ -25,7 +27,7 @@ public class UnSupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:golang/foo/bar@baz?ping=pong#1/2/3");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+            ComponentProjection componentProjection = new ComponentProjection(UUID.randomUUID(), PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_LATEST_VERSION);

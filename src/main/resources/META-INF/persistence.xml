@@ -56,6 +56,7 @@
         <class>org.dependencytrack.model.VulnerabilityScan</class>
         <class>org.dependencytrack.model.VulnerableSoftware</class>
         <class>org.dependencytrack.model.WorkflowState</class>
+        <class>org.dependencytrack.model.IntegrityAnalysis</class>
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
     </persistence-unit>
 </persistence>

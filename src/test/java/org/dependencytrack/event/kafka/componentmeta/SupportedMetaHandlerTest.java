@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
@@ -29,7 +30,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+            ComponentProjection componentProjection = new ComponentProjection(UUID.randomUUID(), PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
             Assertions.assertNull(integrityMetaComponent);
             handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
@@ -57,7 +58,7 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
         try {
             PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+            ComponentProjection componentProjection = new ComponentProjection(UUID.randomUUID(), PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
             var integrityMeta = new IntegrityMetaComponent();
             integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
             integrityMeta.setStatus(FetchStatus.IN_PROGRESS);

@@ -89,7 +89,8 @@ public class IntegrityMetaInitializer implements ServletContextListener {
     private void dispatchPurls(QueryManager qm, List<String> purls) {
         for (final var purl : purls) {
             ComponentProjection componentProjection = qm.getComponentByPurl(purl);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(purl, componentProjection.internal, FetchMeta.FETCH_META_INTEGRITY_DATA));
+            //Initializer will not trigger Integrity Check on component so component uuid is not required
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, purl, componentProjection.internal, FetchMeta.FETCH_META_INTEGRITY_DATA));
         }
     }
 

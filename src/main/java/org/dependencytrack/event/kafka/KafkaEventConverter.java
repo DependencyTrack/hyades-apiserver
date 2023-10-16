@@ -55,6 +55,7 @@ final class KafkaEventConverter {
         final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
                 .setPurl(event.purlCoordinates());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
+        Optional.ofNullable(event.componentUuid()).map(uuid -> uuid.toString()).ifPresent(componentBuilder::setUuid);
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)

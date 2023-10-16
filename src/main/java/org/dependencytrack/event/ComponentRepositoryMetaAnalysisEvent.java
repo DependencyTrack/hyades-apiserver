@@ -4,6 +4,8 @@ import alpine.event.framework.Event;
 import org.dependencytrack.model.Component;
 import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
+import java.util.UUID;
+
 /**
  * Defines an {@link Event} triggered when requesting a component to be analyzed for meta information.
  *
@@ -11,7 +13,7 @@ import org.hyades.proto.repometaanalysis.v1.FetchMeta;
  * @param internal        Whether the {@link Component} is internal
  * @param fetchMeta       Whether component hash data or component meta data needs to be fetched from external api
  */
-public record ComponentRepositoryMetaAnalysisEvent(String purlCoordinates, Boolean internal,
+public record ComponentRepositoryMetaAnalysisEvent(UUID componentUuid, String purlCoordinates, Boolean internal,
                                                    FetchMeta fetchMeta) implements Event {
 
 }

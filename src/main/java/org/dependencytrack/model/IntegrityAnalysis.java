@@ -20,17 +20,10 @@ public class IntegrityAnalysis {
     @JsonIgnore
     private long id;
 
+    @Persistent
     @Column(name = "COMPONENT_ID", allowsNull = "false")
     @NotNull
     private Component component;
-
-    /**
-     * This is a representation of the Package URL "name" field.
-     */
-    @Persistent
-    @Column(name = "REPOSITORY_IDENTIFIER", allowsNull = "false")
-    @NotNull
-    private String repositoryIdentifier;
 
     /**
      * The latest version of the component.
@@ -41,30 +34,29 @@ public class IntegrityAnalysis {
     private IntegrityMatchStatus md5HashMatchStatus;
 
     @Persistent
-    @Column(name = "SHA256_HASH_MATCH_STATUS", allowsNull = "false")
-    @NotNull
-    private IntegrityMatchStatus sha256HashMatchStatus;
-
-    @Persistent
     @Column(name = "SHA1_HASH_MATCH_STATUS", allowsNull = "false")
     @NotNull
     private IntegrityMatchStatus sha1HashMatchStatus;
 
     @Persistent
-    @Column(name = "INTEGRITY_CHECK_PASSED", allowsNull = "false")
+    @Column(name = "SHA256_HASH_MATCH_STATUS", allowsNull = "false")
     @NotNull
-    private boolean integrityCheckPassed;
+    private IntegrityMatchStatus sha256HashMatchStatus;
 
+    @Persistent
+    @Column(name = "SHA512_HASH_MATCH_STATUS", allowsNull = "false")
+    @NotNull
+    private IntegrityMatchStatus sha512HashMatchStatus;
+
+    @Persistent
+    @Column(name = "INTEGRITY_CHECK_STATUS", allowsNull = "false")
+    @NotNull
+    private IntegrityMatchStatus integrityCheckStatus;
+
+    @Persistent
+    @Column(name = "UPDATED_AT", allowsNull = "false")
+    @NotNull
     private Date updatedAt;
-
-
-    public boolean isIntegrityCheckPassed() {
-        return integrityCheckPassed;
-    }
-
-    public void setIntegrityCheckPassed(boolean integrityCheckPassed) {
-        this.integrityCheckPassed = integrityCheckPassed;
-    }
 
     public long getId() {
         return id;
@@ -72,15 +64,6 @@ public class IntegrityAnalysis {
 
     public void setId(long id) {
         this.id = id;
-    }
-
-
-    public String getRepositoryIdentifier() {
-        return repositoryIdentifier;
-    }
-
-    public void setRepositoryIdentifier(String repositoryIdentifier) {
-        this.repositoryIdentifier = repositoryIdentifier;
     }
 
     public Component getComponent() {
@@ -113,6 +96,22 @@ public class IntegrityAnalysis {
 
     public void setSha1HashMatchStatus(IntegrityMatchStatus sha1HashMatchStatus) {
         this.sha1HashMatchStatus = sha1HashMatchStatus;
+    }
+
+    public IntegrityMatchStatus getSha512HashMatchStatus() {
+        return sha512HashMatchStatus;
+    }
+
+    public void setSha512HashMatchStatus(IntegrityMatchStatus sha512HashMatchStatus) {
+        this.sha512HashMatchStatus = sha512HashMatchStatus;
+    }
+
+    public IntegrityMatchStatus getIntegrityCheckStatus() {
+        return integrityCheckStatus;
+    }
+
+    public void setIntegrityCheckStatus(IntegrityMatchStatus integrityCheckStatus) {
+        this.integrityCheckStatus = integrityCheckStatus;
     }
 
     public Date getUpdatedAt() {
