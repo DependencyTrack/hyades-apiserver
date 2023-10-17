@@ -32,15 +32,15 @@ public class IntegrityCheck {
             LOGGER.info("Result received on topic does not have component uuid, integrity check cannot be performed");
             return;
         }
-        //if integritymetacomponent is  null, try to get it from db
-        //it could be that integrity metadata is already in db
-        IntegrityMetaComponent metadata = integrityMetaComponent == null ? qm.getIntegrityMetaComponent(result.getComponent().getPurl().toString()) : integrityMetaComponent;
+        //check if the object is not null
         final Component component = qm.getObjectByUuid(Component.class, result.getComponent().getUuid());
         if (component == null) {
             LOGGER.info("Component is not present in database for which Integrity Check is performed");
             return;
         }
-        //check if the object is not null
+        //if integritymetacomponent is  null, try to get it from db
+        //it could be that integrity metadata is already in db
+        IntegrityMetaComponent metadata = integrityMetaComponent == null ? qm.getIntegrityMetaComponent(result.getComponent().getPurl().toString()) : integrityMetaComponent;
         IntegrityMatchStatus md5Status = checkHash(metadata.getMd5(), component.getMd5());
         IntegrityMatchStatus sha1Status = checkHash(metadata.getSha1(), component.getSha1());
         IntegrityMatchStatus sha256Status = checkHash(metadata.getSha256(), component.getSha256());
