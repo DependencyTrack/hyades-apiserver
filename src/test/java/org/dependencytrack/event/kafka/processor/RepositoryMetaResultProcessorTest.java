@@ -180,7 +180,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         componentProjectA.setProject(projectA);
         componentProjectA.setName("acme-lib-a");
         componentProjectA.setVersion("1.0.1");
-        componentProjectA.setPurl("pkg:maven/foo/bar@1.2.3?foo=bar");
+        componentProjectA.setPurl("pkg:maven/foo/bar@1.2.3");
         componentProjectA.setPurlCoordinates("pkg:maven/foo/bar@1.2.3");
         componentProjectA.setUuid(uuid);
         componentProjectA.setMd5("098f6bcd4621d373cade4e832627b4f6");
@@ -220,6 +220,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(analysis.getSha1HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
         assertThat(analysis.getSha256HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
         assertThat(analysis.getSha512HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
+        assertThat(analysis.getUpdatedAt()).isNotNull();
+        assertThat(analysis.getComponent().getPurl().toString()).isEqualTo("pkg:maven/foo/bar@1.2.3");
     }
 
     @Test
@@ -231,7 +233,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         componentProjectA.setProject(projectA);
         componentProjectA.setName("acme-lib-a");
         componentProjectA.setVersion("1.0.1");
-        componentProjectA.setPurl("pkg:maven/foo/bar@1.2.3?foo=bar");
+        componentProjectA.setPurl("pkg:maven/foo/bar@1.2.3");
         componentProjectA.setPurlCoordinates("pkg:maven/foo/bar@1.2.3");
         componentProjectA.setUuid(uuid);
         componentProjectA.setMd5("098f6bcd4621d373cade4e832627b4f6");
@@ -262,6 +264,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         assertThat(analysis.getSha1HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
         assertThat(analysis.getSha256HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
         assertThat(analysis.getSha512HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
+        assertThat(analysis.getUpdatedAt()).isNotNull();
+        assertThat(analysis.getComponent().getPurl().toString()).isEqualTo("pkg:maven/foo/bar@1.2.3");
     }
 
     @Test

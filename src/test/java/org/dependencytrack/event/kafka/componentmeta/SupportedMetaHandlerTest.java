@@ -1,6 +1,5 @@
 package org.dependencytrack.event.kafka.componentmeta;
 
-import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.AbstractPostgresEnabledTest;
@@ -22,65 +21,58 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
-    private static final Logger LOGGER = Logger.getLogger(SupportedMetaHandlerTest.class);
 
     @Test
-    public void testHandleIntegrityComponentNotInDB() {
+    public void testHandleIntegrityComponentNotInDB() throws MalformedPackageURLException {
         Handler handler;
+        UUID uuid = UUID.randomUUID();
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
-        try {
-            PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(UUID.randomUUID(), PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
-            IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
-            Assertions.assertNull(integrityMetaComponent);
-            handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
-            IntegrityMetaComponent result = handler.handle();
-            assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                    record -> {
-                        assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                        final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                        assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
-                        assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_INTEGRITY_DATA);
-                    }
+        PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
+        ComponentProjection componentProjection = new ComponentProjection(uuid, PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+        IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(componentProjection.purl().toString());
+        Assertions.assertNull(integrityMetaComponent);
+        handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
+        IntegrityMetaComponent result = handler.handle();
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
+                    assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                    assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_INTEGRITY_DATA);
+                }
 
-            );
-            Assertions.assertEquals(FetchStatus.IN_PROGRESS, result.getStatus());
-
-        } catch (MalformedPackageURLException ex) {
-            LOGGER.warn("Package url not formed correctly");
-        }
+        );
+        Assertions.assertEquals(FetchStatus.IN_PROGRESS, result.getStatus());
     }
 
     @Test
-    public void testHandleIntegrityComponentInDBForMoreThanAnHour() {
+    public void testHandleIntegrityComponentInDBForMoreThanAnHour() throws MalformedPackageURLException {
         Handler handler;
+        UUID uuid = UUID.randomUUID();
         KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
-        try {
-            PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
-            ComponentProjection componentProjection = new ComponentProjection(UUID.randomUUID(), PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
-            var integrityMeta = new IntegrityMetaComponent();
-            integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
-            integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
-            integrityMeta.setLastFetch(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
-            qm.createIntegrityMetaComponent(integrityMeta);
-            handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
-            IntegrityMetaComponent integrityMetaComponent = handler.handle();
-            assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                    record -> {
-                        assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                        final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                        assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
-                        assertThat(command.getComponent().getInternal()).isFalse();
-                        assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_INTEGRITY_DATA);
-                    }
+        PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
+        ComponentProjection componentProjection = new ComponentProjection(uuid, PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+        var integrityMeta = new IntegrityMetaComponent();
+        integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
+        integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
+        integrityMeta.setLastFetch(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+        qm.createIntegrityMetaComponent(integrityMeta);
+        handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA);
+        IntegrityMetaComponent integrityMetaComponent = handler.handle();
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
+                    assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                    assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_INTEGRITY_DATA);
+                }
 
-            );
-            Assertions.assertEquals(FetchStatus.IN_PROGRESS, integrityMetaComponent.getStatus());
-            assertThat(integrityMetaComponent.getLastFetch()).isAfter(Date.from(Instant.now().minus(2, ChronoUnit.MINUTES)));
-
-        } catch (MalformedPackageURLException ex) {
-            LOGGER.warn("Package url not formed correctly");
-        }
+        );
+        Assertions.assertEquals(FetchStatus.IN_PROGRESS, integrityMetaComponent.getStatus());
+        assertThat(integrityMetaComponent.getLastFetch()).isAfter(Date.from(Instant.now().minus(2, ChronoUnit.MINUTES)));
     }
 }
