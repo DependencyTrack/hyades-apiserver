@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.model;
 
+import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
@@ -31,6 +33,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -67,13 +70,16 @@ public class IntegrityMetaComponent implements Serializable {
     }
 
     @Persistent
-    @Column(name = "SHA_512", jdbcType = "VARCHAR", length = 128)
+    @Column(name = "SHA512", jdbcType = "VARCHAR", length = 128)
     @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA-512 hash must be a valid 128 character HEX number")
     private String sha512;
 
     @Persistent
-    @Column(name = "PURL", allowsNull = "false")
+    @Column(name = "PURL", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
     @Index(name = "PURL_IDX")
+    @Size(max = 1024)
+    @com.github.packageurl.validator.PackageURL
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Unique
     @NotNull
     private String purl;

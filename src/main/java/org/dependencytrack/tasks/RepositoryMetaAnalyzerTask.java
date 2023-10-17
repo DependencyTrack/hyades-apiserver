@@ -32,6 +32,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
+import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -73,7 +74,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
         } else if (e instanceof PortfolioRepositoryMetaAnalysisEvent) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task)() -> processPortfolio());
+                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task) () -> processPortfolio());
             } catch (Throwable ex) {
                 LOGGER.error("An unexpected error occurred while submitting components for repository meta analysis", ex);
             }
@@ -95,6 +96,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             long offset = 0;
             List<ComponentProjection> components = fetchNextComponentsPage(pm, project, offset);
             while (!components.isEmpty()) {
+                //latest version information needs to be fetched for project as either triggered because of fresh bom upload or individual project reanalysis
                 dispatchComponents(components);
 
                 offset += components.size();
@@ -118,9 +120,10 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             List<ComponentProjection> components = fetchNextComponentsPage(pm, null, offset);
             while (!components.isEmpty()) {
                 long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
-                if(isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
+                if (isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
                     LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
                 }
+                //latest version information does not need to be fetched for project as triggered for portfolio means it is a scheduled event happening
                 dispatchComponents(components);
 
                 offset += components.size();
@@ -133,7 +136,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private void dispatchComponents(final List<ComponentProjection> components) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal()));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
         }
     }
 

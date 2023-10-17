@@ -48,7 +48,7 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purlCoordinates()== null) {
+        if (event == null || event.purlCoordinates() == null) {
             return null;
         }
 
@@ -58,6 +58,7 @@ final class KafkaEventConverter {
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
+                .setFetchMeta(event.fetchMeta())
                 .build();
 
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
