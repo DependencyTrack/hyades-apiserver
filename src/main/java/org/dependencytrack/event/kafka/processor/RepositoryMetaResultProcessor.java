@@ -24,6 +24,8 @@ import java.sql.SQLException;
 import java.util.Date;
 import java.util.Optional;
 
+import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.performIntegrityCheck;
+
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
  */
@@ -37,8 +39,13 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
     @Override
     public void process(final Record<String, AnalysisResult> record) {
         final Timer.Sample timerSample = Timer.start();
+        if(!isRecordValid(record)) {
+            return;
+        }
         try (final var qm = new QueryManager()) {
-            synchronizeMetaInformationForComponent(qm, record);
+            synchronizeRepositoryMetadata(qm, record);
+            IntegrityMetaComponent integrityMetaComponent = synchronizeIntegrityMetadata(qm, record);
+            performIntegrityCheck(integrityMetaComponent, record.value(), qm);
         } catch (Exception e) {
             LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
         } finally {
@@ -46,27 +53,21 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private void synchronizeMetaInformationForComponent(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws Exception {
+    private IntegrityMetaComponent synchronizeIntegrityMetadata(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws MalformedPackageURLException {
+        final AnalysisResult result = record.value();
+        PackageURL purl = new PackageURL(result.getComponent().getPurl());
+        if (result.hasIntegrityMeta()) {
+            return synchronizeIntegrityMetaResult(record, queryManager, purl);
+        } else {
+            LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
+            return null;
+        }
+    }
+
+    private void synchronizeRepositoryMetadata(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws Exception {
         PersistenceManager pm = queryManager.getPersistenceManager();
         final AnalysisResult result = record.value();
-        if (!result.hasComponent()) {
-            LOGGER.warn("""
-                    Received repository meta information without component,\s
-                    will not be able to correlate; Dropping
-                    """);
-            return;
-        }
-
-        final PackageURL purl;
-        try {
-            purl = new PackageURL(result.getComponent().getPurl());
-        } catch (MalformedPackageURLException e) {
-            LOGGER.warn("""
-                    Received repository meta information with invalid PURL,\s
-                    will not be able to correlate; Dropping
-                    """, e);
-            return;
-        }
+        PackageURL purl = new PackageURL(result.getComponent().getPurl());
 
         // It is possible that the same meta info is reported for multiple components in parallel,
         // causing unique constraint violations when attempting to insert into the REPOSITORY_META_COMPONENT table.
@@ -98,12 +99,6 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                     trx.rollback();
                 }
             }
-        }
-        //snychronize integrity meta information if available
-        if (result.hasIntegrityMeta()) {
-            synchronizeIntegrityMetaResult(record, queryManager, purl);
-        } else {
-            LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
         }
     }
 
@@ -148,19 +143,19 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private void synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
+    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
         final AnalysisResult result = incomingAnalysisResultRecord.value();
         IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
+        if (persistentIntegrityMetaComponent != null && persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
+            LOGGER.warn("""
+                    Received hash information for %s that has already been processed; Discarding
+                    """.formatted(purl));
+            return persistentIntegrityMetaComponent;
+        }
         if (persistentIntegrityMetaComponent == null) {
             persistentIntegrityMetaComponent = new IntegrityMetaComponent();
         }
 
-        if (persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
-            LOGGER.warn("""
-                    Received hash information for %s that has already been processed; Discarding
-                    """.formatted(purl));
-            return;
-        }
         if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
                 || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
             Optional.ofNullable(result.getIntegrityMeta().getMd5()).ifPresent(persistentIntegrityMetaComponent::setMd5);
@@ -180,7 +175,28 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
             persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
             persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
         }
-        queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
+        return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
     }
 
+    private static boolean isRecordValid(final Record<String, AnalysisResult> record) {
+        final AnalysisResult result = record.value();
+        if (!result.hasComponent()) {
+            LOGGER.warn("""
+                    Received repository meta information without component,\s
+                    will not be able to correlate; Dropping
+                    """);
+            return false;
+        }
+
+        try {
+            new PackageURL(result.getComponent().getPurl());
+        } catch (MalformedPackageURLException e) {
+            LOGGER.warn("""
+                    Received repository meta information with invalid PURL,\s
+                    will not be able to correlate; Dropping
+                    """, e);
+            return false;
+        }
+        return true;
+    }
 }

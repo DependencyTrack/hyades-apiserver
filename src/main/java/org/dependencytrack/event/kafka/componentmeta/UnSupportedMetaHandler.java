@@ -19,7 +19,7 @@ public class UnSupportedMetaHandler extends AbstractMetaHandler {
 
     @Override
     public IntegrityMetaComponent handle() throws MalformedPackageURLException {
-        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
+        kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, new PackageURL(componentProjection.purlCoordinates()).canonicalize(), componentProjection.internal(), fetchMeta));
         return null;
     }
 }
