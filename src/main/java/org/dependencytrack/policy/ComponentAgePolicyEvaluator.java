@@ -19,9 +19,7 @@
 package org.dependencytrack.policy;
 
 import alpine.common.logging.Logger;
-import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -74,20 +72,18 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
         if (repoType == RepositoryType.UNSUPPORTED) {
             return violations;
         }
-        final IntegrityMetaComponent integrityMetaComponent;
-        try(final var qm = new QueryManager()){
-            integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
+
+        final RepositoryMetaComponent metaComponent;
+        try (final var qm = new QueryManager()) {
+            metaComponent = qm.getRepositoryMetaComponent(repoType,
+                    component.getPurl().getNamespace(), component.getPurl().getName());
+            qm.getPersistenceManager().detachCopy(metaComponent);
         }
-        if(integrityMetaComponent == null || integrityMetaComponent.getPublishedAt() == null){
+        if (metaComponent == null || metaComponent.getPublished() == null) {
             return violations;
         }
         for (final PolicyCondition condition : policyConditions) {
-            if (evaluate(condition, integrityMetaComponent.getPublishedAt())) {
-                violations.add(new PolicyConditionViolation(condition, component));
-            }
-        }
-        for (final PolicyCondition condition : policyConditions) {
-            if (evaluate(condition, integrityMetaComponent.getPublishedAt())) {
+            if (evaluate(condition, metaComponent.getPublished())) {
                 violations.add(new PolicyConditionViolation(condition, component));
             }
         }

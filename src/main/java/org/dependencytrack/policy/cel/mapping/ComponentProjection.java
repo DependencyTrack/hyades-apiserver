@@ -1,11 +1,8 @@
 package org.dependencytrack.policy.cel.mapping;
 
-import java.sql.Date;
+import java.util.Date;
 
 public class ComponentProjection {
-
-    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
-    public static FieldMapping PUBLISHED_DATE_MAPPING = new FieldMapping("publishedDate", "current_version_last_modified", "PUBLISHED_AT");
 
     public long id;
 
@@ -78,16 +75,16 @@ public class ComponentProjection {
     @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
     public String licenseName;
 
-    public Date getPublishedDate() {
-        return publishedDate;
+    public Date getCurrentVersionLastModified() {
+        return currentVersionLastModified;
     }
 
-    public void setPublishedDate(Date publishedDate) {
-        this.publishedDate = publishedDate;
+    public void setCurrentVersionLastModified(Date currentVersionLastModified) {
+        this.currentVersionLastModified = currentVersionLastModified;
     }
 
     @MappedField(protoFieldName = "current_version_last_modified", sqlColumnName = "PUBLISHED_AT")
-    public Date publishedDate;
+    public Date currentVersionLastModified;
 
     // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.
     // @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")

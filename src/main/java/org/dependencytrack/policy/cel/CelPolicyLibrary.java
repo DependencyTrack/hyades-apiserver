@@ -110,7 +110,7 @@ class CelPolicyLibrary implements Library {
                                 FUNC_COMPARE_COMPONENT_AGE,
                                 Decls.newInstanceOverload(
                                         "compare_component_age_bool",
-                                        List.of(TYPE_COMPONENT, Decls.String),
+                                        List.of(TYPE_COMPONENT, Decls.String, Decls.String),
                                         Decls.Bool
                                 )
                         )
@@ -143,9 +143,7 @@ class CelPolicyLibrary implements Library {
                                 FUNC_MATCHES_RANGE,
                                 CelPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.binary(FUNC_COMPARE_COMPONENT_AGE,
-                                CelPolicyLibrary::isComponentOldFunc
-                        )
+                        Overload.function(FUNC_COMPARE_COMPONENT_AGE, CelPolicyLibrary::isComponentOldFunc)
                 )
         );
     }
@@ -203,10 +201,18 @@ class CelPolicyLibrary implements Library {
         return Types.boolOf(matchesRange(version, versStr));
     }
 
-    private static Val isComponentOldFunc(final Val lhs, final Val rhs) {
-        final Component lhsValue = (Component) lhs.value();
-        final String dateValue = (String) rhs.value();
-        return Types.boolOf(isComponentOld(lhsValue, dateValue));
+    private static Val isComponentOldFunc(Val... vals) {
+        if (vals.length != 3) {
+            return Types.boolOf(false);
+        }
+        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
+            return Types.boolOf(false);
+        }
+
+        final Component component = (Component) vals[0].value();
+        final String dateValue = (String) vals[1].value();
+        final String comparator = (String) vals[2].value();
+        return Types.boolOf(isComponentOld(component, dateValue, comparator));
     }
 
     private static boolean dependsOn(final Project project, final Component component) {
@@ -368,18 +374,11 @@ class CelPolicyLibrary implements Library {
         }
     }
 
-    private static boolean isComponentOld(Component component, String rhs) {
-        String comparator = null;
-        String operand = null;
-        if (rhs.contains("==")) {
-            comparator = "==";
-            operand = rhs.split("==")[1];
-        }
-
+    private static boolean isComponentOld(Component component, String age, String comparator) {
         var componentPublishedDate = component.getCurrentVersionLastModified();
         final Period agePeriod;
         try {
-            agePeriod = Period.parse(operand);
+            agePeriod = Period.parse(age);
         } catch (DateTimeParseException e) {
             LOGGER.error("Invalid age duration format", e);
             return false;
@@ -388,14 +387,25 @@ class CelPolicyLibrary implements Library {
             LOGGER.warn("Age durations must not be zero or negative");
             return false;
         }
+        if (!component.hasCurrentVersionLastModified()) {
+            return false;
+        }
         Instant instant = Instant.ofEpochSecond(componentPublishedDate.getSeconds(), componentPublishedDate.getNanos());
         final LocalDate publishedDate = LocalDate.ofInstant(instant, ZoneId.systemDefault());
         final LocalDate ageDate = publishedDate.plus(agePeriod);
         final LocalDate today = LocalDate.now(ZoneId.systemDefault());
-        if(comparator.equals("==")) {
-            return ageDate.isEqual(today);
-        }
-        return false;
+        return switch (comparator) {
+            case "NUMERIC_GREATER_THAN" -> ageDate.isBefore(today);
+            case "NUMERIC_GREATER_THAN_OR_EQUAL" -> ageDate.isEqual(today) || ageDate.isBefore(today);
+            case "NUMERIC_EQUAL" -> ageDate.isEqual(today);
+            case "NUMERIC_NOT_EQUAL" -> !ageDate.isEqual(today);
+            case "NUMERIC_LESSER_THAN_OR_EQUAL" -> ageDate.isEqual(today) || ageDate.isAfter(today);
+            case "NUMERIC_LESS_THAN" -> ageDate.isAfter(LocalDate.now(ZoneId.systemDefault()));
+            default -> {
+                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(comparator));
+                yield false;
+            }
+        };
     }
 
     private static Pair<String, Map<String, Object>> toFilterAndParams(final Component component) {

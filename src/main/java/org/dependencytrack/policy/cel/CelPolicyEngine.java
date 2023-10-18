@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.api.expr.v1alpha1.Type;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
@@ -26,7 +27,7 @@ import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
-import org.dependencytrack.policy.cel.compat.ComponentAgePolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.ComponentAgeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CpeCelPolicyScriptSourceBuilder;
@@ -102,7 +103,7 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgePolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder());
     }
 
     private final CelPolicyScriptHost scriptHost;
@@ -317,7 +318,7 @@ public class CelPolicyEngine {
     private Pair<PolicyCondition, CelPolicyScript> compileConditionScript(final Pair<PolicyCondition, String> conditionScriptSrcPair) {
         final CelPolicyScript script;
         try {
-            script = scriptHost.compile(conditionScriptSrcPair.getRight(), CacheMode.NO_CACHE);
+            script = scriptHost.compile(conditionScriptSrcPair.getRight(), CacheMode.CACHE);
         } catch (ScriptCreateException e) {
             LOGGER.warn("Failed to compile script for condition %s; Condition will be skipped"
                     .formatted(conditionScriptSrcPair.getLeft().getUuid()), e);
@@ -428,7 +429,7 @@ public class CelPolicyEngine {
     }
 
     private static org.dependencytrack.proto.policy.v1.Component mapToProto(final ComponentProjection projection,
-                                                                   final Map<Long, org.dependencytrack.proto.policy.v1.License> protoLicenseById) {
+                                                                            final Map<Long, org.dependencytrack.proto.policy.v1.License> protoLicenseById) {
         final org.dependencytrack.proto.policy.v1.Component.Builder componentBuilder =
                 org.dependencytrack.proto.policy.v1.Component.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
@@ -453,6 +454,10 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
+        if (projection.getCurrentVersionLastModified() != null) {
+            componentBuilder.setCurrentVersionLastModified(Timestamp.newBuilder().setSeconds(projection
+                    .getCurrentVersionLastModified().getTime() / 1000).build());
+        }
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
