@@ -21,7 +21,6 @@ package org.dependencytrack.model;
 import alpine.common.validation.RegexSequence;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -90,7 +89,6 @@ import java.util.UUID;
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class Component implements Serializable {
 
     private static final long serialVersionUID = 6841650046433674702L;
