@@ -375,6 +375,9 @@ class CelPolicyLibrary implements Library {
     }
 
     private static boolean isComponentOld(Component component, String age, String comparator) {
+        if (!component.hasCurrentVersionLastModified()) {
+            return false;
+        }
         var componentPublishedDate = component.getCurrentVersionLastModified();
         final Period agePeriod;
         try {
@@ -395,12 +398,12 @@ class CelPolicyLibrary implements Library {
         final LocalDate ageDate = publishedDate.plus(agePeriod);
         final LocalDate today = LocalDate.now(ZoneId.systemDefault());
         return switch (comparator) {
-            case "NUMERIC_GREATER_THAN" -> ageDate.isBefore(today);
-            case "NUMERIC_GREATER_THAN_OR_EQUAL" -> ageDate.isEqual(today) || ageDate.isBefore(today);
-            case "NUMERIC_EQUAL" -> ageDate.isEqual(today);
-            case "NUMERIC_NOT_EQUAL" -> !ageDate.isEqual(today);
-            case "NUMERIC_LESSER_THAN_OR_EQUAL" -> ageDate.isEqual(today) || ageDate.isAfter(today);
-            case "NUMERIC_LESS_THAN" -> ageDate.isAfter(LocalDate.now(ZoneId.systemDefault()));
+            case "NUMERIC_GREATER_THAN", ">" -> ageDate.isBefore(today);
+            case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> ageDate.isEqual(today) || ageDate.isBefore(today);
+            case "NUMERIC_EQUAL", "==" -> ageDate.isEqual(today);
+            case "NUMERIC_NOT_EQUAL", "!=" -> !ageDate.isEqual(today);
+            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" -> ageDate.isEqual(today) || ageDate.isAfter(today);
+            case "NUMERIC_LESS_THAN", "<" -> ageDate.isAfter(LocalDate.now(ZoneId.systemDefault()));
             default -> {
                 LOGGER.warn("Operator %s is not supported for component age conditions".formatted(comparator));
                 yield false;

@@ -454,9 +454,9 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
-        if (projection.getCurrentVersionLastModified() != null) {
+        if (projection.getPublishedAt() != null) {
             componentBuilder.setCurrentVersionLastModified(Timestamp.newBuilder().setSeconds(projection
-                    .getCurrentVersionLastModified().getTime() / 1000).build());
+                    .getPublishedAt().getTime() / 1000).build());
         }
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {

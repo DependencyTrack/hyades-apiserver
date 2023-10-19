@@ -137,9 +137,17 @@ class CelPolicyQueryManager implements AutoCloseable {
     }
 
     List<ComponentProjection> fetchAllComponents(final long projectId, final Collection<String> protoFieldNames) {
+        String sqlSelectColumns = Stream.concat(
+                        Stream.of(ComponentProjection.ID_FIELD_MAPPING),
+                        getFieldMappings(ComponentProjection.class).stream()
+                                .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
+                )
+                .map(mapping -> "c.\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
+                .collect(Collectors.joining(", "));
+
         final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT "COMPONENT"."ID" AS id, "INTEGRITY_META_COMPONENT"."PUBLISHED_AT" AS currentVersionLastModified FROM "COMPONENT" LEFT JOIN "INTEGRITY_META_COMPONENT" ON  "COMPONENT"."PURL"="INTEGRITY_META_COMPONENT"."PURL" WHERE "PROJECT_ID" = ?
-                """);
+                SELECT %s , imc."PUBLISHED_AT" AS "publishedAt" FROM "COMPONENT" c LEFT JOIN "INTEGRITY_META_COMPONENT" imc ON  c."PURL"=imc."PURL" WHERE "PROJECT_ID" = ?
+                """.formatted(sqlSelectColumns));
         query.setParameters(projectId);
         try {
             return List.copyOf(query.executeResultList(ComponentProjection.class));

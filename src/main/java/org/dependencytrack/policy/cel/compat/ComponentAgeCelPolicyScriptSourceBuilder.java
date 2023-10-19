@@ -24,22 +24,8 @@ public class ComponentAgeCelPolicyScriptSourceBuilder implements CelPolicyScript
             return null;
         }
 
-        PolicyCondition.Operator operatorResult = switch (policyCondition.getOperator().toString()) {
-            case "NUMERIC_GREATER_THAN", ">" -> PolicyCondition.Operator.NUMERIC_GREATER_THAN;
-            case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> PolicyCondition.Operator.NUMERIC_GREATER_THAN_OR_EQUAL;
-            case "NUMERIC_EQUAL", "==" -> PolicyCondition.Operator.NUMERIC_EQUAL;
-            case "NUMERIC_NOT_EQUAL", "!=" -> PolicyCondition.Operator.NUMERIC_NOT_EQUAL;
-            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" -> PolicyCondition.Operator.NUMERIC_LESSER_THAN_OR_EQUAL;
-            case "NUMERIC_LESS_THAN", "<" -> PolicyCondition.Operator.NUMERIC_LESS_THAN;
-            default -> {
-                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(policyCondition.getOperator()));
-                yield null;
-            }
-
-        };
-
         return """
                 component.compare_component_age("%s", "%s")
-                    """.formatted(CelPolicyScriptSourceBuilder.escapeQuotes(agePeriod.toString()), operatorResult);
+                    """.formatted(CelPolicyScriptSourceBuilder.escapeQuotes(agePeriod.toString()), policyCondition.getOperator());
     }
 }
