@@ -713,6 +713,25 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
     }
 
+
+    @Test
+    public void createProjectWithoutVersionDuplicateTest() {
+        Project project = new Project();
+        project.setName("Acme Example");
+        Response response = target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(201, response.getStatus(), 0);
+        response = target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(409, response.getStatus(), 0);
+        String body = getPlainTextBody(response);
+        Assert.assertEquals("A project with the specified name already exists.", body);
+    }
+
     @Test
     public void updateProjectParentToSelf() {
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
