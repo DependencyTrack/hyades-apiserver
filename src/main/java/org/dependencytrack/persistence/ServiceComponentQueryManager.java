@@ -208,7 +208,7 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
         service.setNotes(sourceService.getNotes());
         service.setVulnerabilities(sourceService.getVulnerabilities());
         service.setProject(destinationProject);
-        return createServiceComponent(sourceService, commitIndex);
+        return createServiceComponent(service, commitIndex);
     }
 
     /**
