@@ -25,6 +25,7 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -36,6 +37,7 @@ import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.jdo.JDOObjectNotFoundException;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
@@ -45,6 +47,8 @@ import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
 
 public class ComponentResourceTest extends ResourceTest {
 
@@ -520,12 +524,24 @@ public class ComponentResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
         Component component = new Component();
         component.setProject(project);
+        component.setUuid(UUID.randomUUID());
         component.setName("My Component");
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
+        IntegrityAnalysis analysis = new IntegrityAnalysis();
+        analysis.setComponent(component);
+        analysis.setIntegrityCheckStatus(HASH_MATCH_UNKNOWN);
+        analysis.setMd5HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha512HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setUpdatedAt(new Date());
+        IntegrityAnalysis integrityResponse = qm.persist(analysis);
         Response response = target(V1_COMPONENT + "/" + component.getUuid().toString())
                 .request().header(X_API_KEY, apiKey).delete();
         Assert.assertEquals(204, response.getStatus(), 0);
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityResponse.getId()));
     }
 
     @Test
