@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.api.expr.v1alpha1.Type;
-import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;

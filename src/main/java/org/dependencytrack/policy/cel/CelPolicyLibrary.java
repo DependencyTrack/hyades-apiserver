@@ -209,13 +209,13 @@ class CelPolicyLibrary implements Library {
             return Types.boolOf(false);
         }
 
-        if(!(vals[0].value() instanceof final Component component)){
+        if (!(vals[0].value() instanceof final Component component)) {
             return Err.maybeNoSuchOverloadErr(vals[0]);
         }
-        if(!(vals[1].value() instanceof final String dateValue)){
+        if (!(vals[1].value() instanceof final String dateValue)) {
             return Err.maybeNoSuchOverloadErr(vals[1]);
         }
-        if(!(vals[2].value() instanceof final String comparator)){
+        if (!(vals[2].value() instanceof final String comparator)) {
             return Err.maybeNoSuchOverloadErr(vals[2]);
         }
         return Types.boolOf(isComponentOld(component, dateValue, comparator));
