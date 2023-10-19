@@ -321,14 +321,16 @@ public class BomUploadProcessingTask implements Subscriber {
                     // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
                     // merely call a few getters on it, but the component object itself is not passed around.
                     // Detaching would imply additional database interactions that we'd rather not do.
-                    boolean result = SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType());
-                    ComponentRepositoryMetaAnalysisEvent event;
-                    if (result) {
-                        event = createRepoMetaAnalysisEvent(component, qm);
-                    } else {
-                        event = new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
+                    if (component.getPurl() != null) {
+                        boolean result = SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType());
+                        ComponentRepositoryMetaAnalysisEvent event;
+                        if (result) {
+                            event = createRepoMetaAnalysisEvent(component, qm);
+                        } else {
+                            event = new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
+                        }
+                        repoMetaAnalysisEvents.add(event);
                     }
-                    repoMetaAnalysisEvents.add(event);
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
                             ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
                 }
