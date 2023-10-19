@@ -85,7 +85,7 @@ public class ComponentProjection {
         this.publishedAt = currentVersionLastModified;
     }
 
-    @MappedField(protoFieldName = "current_version_last_modified", sqlColumnName = "PUBLISHED_AT")
+    @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
 
     // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.

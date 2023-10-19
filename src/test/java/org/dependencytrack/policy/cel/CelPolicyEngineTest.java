@@ -300,7 +300,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithPolicyOperatorForComponentAgeLessThan() throws MalformedPackageURLException {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.compare_component_age("P666D", "NUMERIC_LESS_THAN")
+                component.compare_age("P666D", "NUMERIC_LESS_THAN")
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -322,7 +322,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.compare_component_age("P666D", "NUMERIC_LESS_THAN")
+                component.compare_age("P666D", "NUMERIC_LESS_THAN")
                 """);
     }
 
@@ -330,7 +330,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithPolicyOperatorForComponentAgeGreaterThan() throws MalformedPackageURLException {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.compare_component_age("P666D", "<")
+                component.compare_age("P666D", "<")
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -353,7 +353,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.compare_component_age("P666D", "<")
+                component.compare_age("P666D", "<")
                 """);
     }
 

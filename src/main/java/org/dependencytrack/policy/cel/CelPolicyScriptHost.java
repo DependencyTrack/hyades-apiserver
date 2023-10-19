@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_COMPONENT_AGE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;

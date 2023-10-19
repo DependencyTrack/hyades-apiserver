@@ -55,7 +55,7 @@ class CelPolicyLibrary implements Library {
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
-    static final String FUNC_COMPARE_COMPONENT_AGE = "compare_component_age";
+    static final String FUNC_COMPARE_AGE = "compare_age";
 
     @Override
     public List<EnvOption> getCompileOptions() {
@@ -107,9 +107,9 @@ class CelPolicyLibrary implements Library {
                                 )
                         ),
                         Decls.newFunction(
-                                FUNC_COMPARE_COMPONENT_AGE,
+                                FUNC_COMPARE_AGE,
                                 Decls.newInstanceOverload(
-                                        "compare_component_age_bool",
+                                        "compare_age_bool",
                                         List.of(TYPE_COMPONENT, Decls.String, Decls.String),
                                         Decls.Bool
                                 )
@@ -143,7 +143,7 @@ class CelPolicyLibrary implements Library {
                                 FUNC_MATCHES_RANGE,
                                 CelPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.function(FUNC_COMPARE_COMPONENT_AGE, CelPolicyLibrary::isComponentOldFunc)
+                        Overload.function(FUNC_COMPARE_AGE, CelPolicyLibrary::isComponentOldFunc)
                 )
         );
     }
@@ -209,9 +209,15 @@ class CelPolicyLibrary implements Library {
             return Types.boolOf(false);
         }
 
-        final Component component = (Component) vals[0].value();
-        final String dateValue = (String) vals[1].value();
-        final String comparator = (String) vals[2].value();
+        if(!(vals[0].value() instanceof final Component component)){
+            return Err.maybeNoSuchOverloadErr(vals[0]);
+        }
+        if(!(vals[1].value() instanceof final String dateValue)){
+            return Err.maybeNoSuchOverloadErr(vals[1]);
+        }
+        if(!(vals[2].value() instanceof final String comparator)){
+            return Err.maybeNoSuchOverloadErr(vals[2]);
+        }
         return Types.boolOf(isComponentOld(component, dateValue, comparator));
     }
 
@@ -375,10 +381,10 @@ class CelPolicyLibrary implements Library {
     }
 
     private static boolean isComponentOld(Component component, String age, String comparator) {
-        if (!component.hasCurrentVersionLastModified()) {
+        if (!component.hasPublishedAt()) {
             return false;
         }
-        var componentPublishedDate = component.getCurrentVersionLastModified();
+        var componentPublishedDate = component.getPublishedAt();
         final Period agePeriod;
         try {
             agePeriod = Period.parse(age);
@@ -390,7 +396,7 @@ class CelPolicyLibrary implements Library {
             LOGGER.warn("Age durations must not be zero or negative");
             return false;
         }
-        if (!component.hasCurrentVersionLastModified()) {
+        if (!component.hasPublishedAt()) {
             return false;
         }
         Instant instant = Instant.ofEpochSecond(componentPublishedDate.getSeconds(), componentPublishedDate.getNanos());

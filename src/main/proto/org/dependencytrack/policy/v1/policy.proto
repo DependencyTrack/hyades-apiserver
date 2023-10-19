@@ -64,7 +64,7 @@ message Component {
   optional string license_expression = 51;
   optional License resolved_license = 52;
   // When the component current version last modified.
-  optional google.protobuf.Timestamp current_version_last_modified = 53;
+  optional google.protobuf.Timestamp published_at = 53;
 }
 
 message License {
