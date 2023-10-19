@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import com.github.packageurl.PackageURL;
-import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
@@ -56,6 +55,7 @@ import java.util.UUID;
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
@@ -681,6 +681,28 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_PROCESSED);
                 }
         );
+    }
+
+    @Test
+    public void informWithComponentWithoutPurl() throws Exception {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-no-purl.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        // (No REPO_META_ANALYSIS_COMMAND event because the component doesn't have a PURL)
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project))
+                .satisfiesExactly(component -> assertThat(component.getName()).isEqualTo("acme-lib"));
     }
 
     private static File createTempBomFile(final String testFileName) throws Exception {

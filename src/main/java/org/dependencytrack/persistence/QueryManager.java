@@ -439,6 +439,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot);
     }
 
+    public Project getProject(final String uuid) {
+        return getProjectQueryManager().getProject(uuid);
+    }
+
     public Project getProject(final String name, final String version) {
         return getProjectQueryManager().getProject(name, version);
     }
@@ -1469,7 +1473,7 @@ public class QueryManager extends AlpineQueryManager {
         pm.currentTransaction().begin();
         pm.deletePersistentAll(team.getApiKeys());
         String aclDeleteQuery = """
-                    DELETE FROM PROJECT_ACCESS_TEAMS WHERE \"PROJECT_ACCESS_TEAMS\".\"TEAM_ID\" = ?      
+                    DELETE FROM PROJECT_ACCESS_TEAMS WHERE \"PROJECT_ACCESS_TEAMS\".\"TEAM_ID\" = ?
                 """;
         final Query query = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, aclDeleteQuery);
         query.executeWithArray(team.getId());

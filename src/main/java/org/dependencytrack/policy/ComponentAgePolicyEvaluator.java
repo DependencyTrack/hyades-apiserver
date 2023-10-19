@@ -20,9 +20,9 @@ package org.dependencytrack.policy;
 
 import alpine.common.logging.Logger;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -73,17 +73,16 @@ public class ComponentAgePolicyEvaluator extends AbstractPolicyEvaluator {
             return violations;
         }
 
-        final RepositoryMetaComponent metaComponent;
+        final IntegrityMetaComponent metaComponent;
         try (final var qm = new QueryManager()) {
-            metaComponent = qm.getRepositoryMetaComponent(repoType,
-                    component.getPurl().getNamespace(), component.getPurl().getName());
+            metaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
             qm.getPersistenceManager().detachCopy(metaComponent);
         }
-        if (metaComponent == null || metaComponent.getPublished() == null) {
+        if (metaComponent == null || metaComponent.getPublishedAt() == null) {
             return violations;
         }
         for (final PolicyCondition condition : policyConditions) {
-            if (evaluate(condition, metaComponent.getPublished())) {
+            if (evaluate(condition, metaComponent.getPublishedAt())) {
                 violations.add(new PolicyConditionViolation(condition, component));
             }
         }
