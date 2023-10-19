@@ -1,6 +1,8 @@
 package org.dependencytrack.policy.cel;
 
 import alpine.model.IConfigProperty;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -8,6 +10,8 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
@@ -31,8 +35,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -288,6 +294,67 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(2);
+    }
+
+    @Test
+    public void testEvaluateProjectWithPolicyOperatorForComponentAgeLessThan() throws MalformedPackageURLException {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.compare_age("P666D", "NUMERIC_LESS_THAN")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+        Date publishedDate = Date.from(Instant.now());
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(publishedDate);
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
+                component.compare_age("P666D", "NUMERIC_LESS_THAN")
+                """);
+    }
+
+    @Test
+    public void testEvaluateProjectWithPolicyOperatorForComponentAgeGreaterThan() throws MalformedPackageURLException {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.compare_age("P666D", "<")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+        Date publishedDate = Date.from(Instant.now());
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(publishedDate);
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
+                component.compare_age("P666D", "<")
+                """);
     }
 
     @Test

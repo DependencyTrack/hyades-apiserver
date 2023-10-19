@@ -114,7 +114,7 @@ public class ProjectResource extends AlpineResource {
             @ApiParam(value = "The UUID of the project to retrieve", required = true)
             @PathParam("uuid") String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
+            final Project project = qm.getProject(uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.ok(project).build();
