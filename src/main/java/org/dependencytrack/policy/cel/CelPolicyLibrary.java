@@ -24,6 +24,11 @@ import javax.jdo.datastore.JDOConnection;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +55,7 @@ class CelPolicyLibrary implements Library {
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
+    static final String FUNC_COMPARE_AGE = "compare_age";
 
     @Override
     public List<EnvOption> getCompileOptions() {
@@ -99,6 +105,14 @@ class CelPolicyLibrary implements Library {
                                         List.of(TYPE_PROJECT, Decls.String),
                                         Decls.Bool
                                 )
+                        ),
+                        Decls.newFunction(
+                                FUNC_COMPARE_AGE,
+                                Decls.newInstanceOverload(
+                                        "compare_age_bool",
+                                        List.of(TYPE_COMPONENT, Decls.String, Decls.String),
+                                        Decls.Bool
+                                )
                         )
                 ),
                 EnvOption.types(
@@ -128,7 +142,8 @@ class CelPolicyLibrary implements Library {
                         Overload.binary(
                                 FUNC_MATCHES_RANGE,
                                 CelPolicyLibrary::matchesRangeFunc
-                        )
+                        ),
+                        Overload.function(FUNC_COMPARE_AGE, CelPolicyLibrary::isComponentOldFunc)
                 )
         );
     }
@@ -184,6 +199,26 @@ class CelPolicyLibrary implements Library {
         }
 
         return Types.boolOf(matchesRange(version, versStr));
+    }
+
+    private static Val isComponentOldFunc(Val... vals) {
+        if (vals.length != 3) {
+            return Types.boolOf(false);
+        }
+        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
+            return Types.boolOf(false);
+        }
+
+        if (!(vals[0].value() instanceof final Component component)) {
+            return Err.maybeNoSuchOverloadErr(vals[0]);
+        }
+        if (!(vals[1].value() instanceof final String dateValue)) {
+            return Err.maybeNoSuchOverloadErr(vals[1]);
+        }
+        if (!(vals[2].value() instanceof final String comparator)) {
+            return Err.maybeNoSuchOverloadErr(vals[2]);
+        }
+        return Types.boolOf(isComponentOld(component, dateValue, comparator));
     }
 
     private static boolean dependsOn(final Project project, final Component component) {
@@ -343,6 +378,43 @@ class CelPolicyLibrary implements Library {
                     .formatted(FUNC_MATCHES_RANGE, version, versStr), e);
             return false;
         }
+    }
+
+    private static boolean isComponentOld(Component component, String age, String comparator) {
+        if (!component.hasPublishedAt()) {
+            return false;
+        }
+        var componentPublishedDate = component.getPublishedAt();
+        final Period agePeriod;
+        try {
+            agePeriod = Period.parse(age);
+        } catch (DateTimeParseException e) {
+            LOGGER.error("Invalid age duration format", e);
+            return false;
+        }
+        if (agePeriod.isZero() || agePeriod.isNegative()) {
+            LOGGER.warn("Age durations must not be zero or negative");
+            return false;
+        }
+        if (!component.hasPublishedAt()) {
+            return false;
+        }
+        Instant instant = Instant.ofEpochSecond(componentPublishedDate.getSeconds(), componentPublishedDate.getNanos());
+        final LocalDate publishedDate = LocalDate.ofInstant(instant, ZoneId.systemDefault());
+        final LocalDate ageDate = publishedDate.plus(agePeriod);
+        final LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        return switch (comparator) {
+            case "NUMERIC_GREATER_THAN", ">" -> ageDate.isBefore(today);
+            case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> ageDate.isEqual(today) || ageDate.isBefore(today);
+            case "NUMERIC_EQUAL", "==" -> ageDate.isEqual(today);
+            case "NUMERIC_NOT_EQUAL", "!=" -> !ageDate.isEqual(today);
+            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" -> ageDate.isEqual(today) || ageDate.isAfter(today);
+            case "NUMERIC_LESS_THAN", "<" -> ageDate.isAfter(LocalDate.now(ZoneId.systemDefault()));
+            default -> {
+                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(comparator));
+                yield false;
+            }
+        };
     }
 
     private static Pair<String, Map<String, Object>> toFilterAndParams(final Component component) {

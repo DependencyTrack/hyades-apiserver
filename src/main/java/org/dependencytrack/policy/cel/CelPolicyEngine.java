@@ -26,6 +26,7 @@ import org.dependencytrack.persistence.CollectionIntegerConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.ComponentAgeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CpeCelPolicyScriptSourceBuilder;
@@ -101,6 +102,7 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder());
     }
 
     private final CelPolicyScriptHost scriptHost;
@@ -426,7 +428,7 @@ public class CelPolicyEngine {
     }
 
     private static org.dependencytrack.proto.policy.v1.Component mapToProto(final ComponentProjection projection,
-                                                                   final Map<Long, org.dependencytrack.proto.policy.v1.License> protoLicenseById) {
+                                                                            final Map<Long, org.dependencytrack.proto.policy.v1.License> protoLicenseById) {
         final org.dependencytrack.proto.policy.v1.Component.Builder componentBuilder =
                 org.dependencytrack.proto.policy.v1.Component.newBuilder()
                         .setUuid(trimToEmpty(projection.uuid))
@@ -451,6 +453,9 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
+        if (projection.getPublishedAt() != null) {
+            componentBuilder.setPublishedAt(Timestamps.fromDate(projection.getPublishedAt())).build();
+        }
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
