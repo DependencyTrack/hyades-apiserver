@@ -59,11 +59,11 @@ jobs:
         run: |-
           pushd target
           echo "# SHA1" >> checksums.txt
-          sha1sum dependency-track-apiserver.jar dependency-track-bundled.jar >> checksums.txt
+          sha1sum dependency-track-apiserver.jar >> checksums.txt
           echo "# SHA256" >> checksums.txt
-          sha256sum dependency-track-apiserver.jar dependency-track-bundled.jar >> checksums.txt
+          sha256sum dependency-track-apiserver.jar >> checksums.txt
           echo "# SHA512" >> checksums.txt
-          sha512sum dependency-track-apiserver.jar dependency-track-bundled.jar >> checksums.txt
+          sha512sum dependency-track-apiserver.jar >> checksums.txt
           popd
 
       - name: Update Release
@@ -82,6 +82,5 @@ jobs:
           gh release upload ${{ needs.read-version.outputs.version }} \
             --clobber \
             target/dependency-track-apiserver.jar \
-            target/dependency-track-bundled.jar \
             target/checksums.txt \
             target/bom.json
