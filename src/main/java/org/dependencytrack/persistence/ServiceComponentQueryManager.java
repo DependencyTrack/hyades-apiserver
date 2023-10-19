@@ -23,12 +23,14 @@ import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 final class ServiceComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -286,5 +288,17 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
                 trx.rollback();
             }
         }
+    }
+
+    /**
+     * Returns a list of all {@link DependencyGraphResponse} objects by {@link ServiceComponent} UUID.
+     * @param uuids a list of {@link ServiceComponent} UUIDs
+     * @return a list of {@link DependencyGraphResponse} objects
+     * @since 4.9.0
+     */
+    public List<DependencyGraphResponse> getDependencyGraphByUUID(final List<UUID> uuids) {
+        final Query<ServiceComponent> query = this.getObjectsByUuidsQuery(ServiceComponent.class, uuids);
+        query.setResult("uuid, name, version, null, null, null");
+        return List.copyOf(query.executeResultList(DependencyGraphResponse.class));
     }
 }

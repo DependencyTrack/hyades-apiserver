@@ -33,6 +33,7 @@ import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -47,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -704,6 +706,18 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             dependencyGraph.put(entry.getKey(), transientComponent);
         }
         return dependencyGraph;
+    }
+
+    /**
+     * Returns a list of all {@link DependencyGraphResponse} objects by {@link Component} UUID.
+     * @param uuids a list of {@link Component} UUIDs
+     * @return a list of {@link DependencyGraphResponse} objects
+     * @since 4.9.0
+     */
+    public List<DependencyGraphResponse> getDependencyGraphByUUID(final List<UUID> uuids) {
+        final Query<Component> query = this.getObjectsByUuidsQuery(Component.class, uuids);
+        query.setResult("uuid, name, version, purl, directDependencies, null");
+        return List.copyOf(query.executeResultList(DependencyGraphResponse.class));
     }
 
     private void getParentDependenciesOfComponent(Project project, Component parentNode, Map<String, Component> dependencyGraph, Component searchedComponent) {
