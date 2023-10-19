@@ -20,6 +20,7 @@ package org.dependencytrack.tasks;
 
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.awaitility.Awaitility;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -30,6 +31,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
@@ -694,6 +696,49 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
         assertThat(qm.getAllComponents(project))
                 .satisfiesExactly(component -> assertThat(component.getName()).isEqualTo("acme-lib"));
+    }
+
+    @Test
+    public void informWithCustomLicenseResolutionTest() throws Exception {
+        final var customLicense = new License();
+        customLicense.setName("custom license foobar");
+        qm.createCustomLicense(customLicense, false);
+
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-custom-license.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(
+                component -> {
+                    assertThat(component.getName()).isEqualTo("acme-lib-a");
+                    assertThat(component.getResolvedLicense()).isNotNull();
+                    assertThat(component.getResolvedLicense().getName()).isEqualTo("custom license foobar");
+                    assertThat(component.getLicense()).isEqualTo("custom license foobar");
+                },
+                component -> {
+                    assertThat(component.getName()).isEqualTo("acme-lib-b");
+                    assertThat(component.getResolvedLicense()).isNull();
+                    assertThat(component.getLicense()).isEqualTo("does not exist");
+                },
+                component -> {
+                    assertThat(component.getName()).isEqualTo("acme-lib-c");
+                    assertThat(component.getResolvedLicense()).isNull();
+                    assertThat(component.getLicense()).isNull();
+                }
+        );
     }
 
     private static File createTempBomFile(final String testFileName) throws Exception {
