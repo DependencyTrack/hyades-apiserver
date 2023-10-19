@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks;
 
 import com.github.packageurl.PackageURL;
+import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
@@ -54,6 +55,7 @@ import java.util.UUID;
 
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
@@ -540,6 +542,14 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
             // Ensure the expected amount of components is present.
             assertThat(qm.getAllComponents(project)).hasSize(1756);
         }
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/2859
+    public void informIssue2859Test() {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        assertThatNoException()
+                .isThrownBy(() -> new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2859.xml"))));
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/1905
