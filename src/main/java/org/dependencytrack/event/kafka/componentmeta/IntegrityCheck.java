@@ -81,7 +81,10 @@ public class IntegrityCheck {
                 && (sha256Status == COMPONENT_MISSING_HASH || sha256Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
                 && (sha512Status == COMPONENT_MISSING_HASH || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)) {
             return COMPONENT_MISSING_HASH;
-        } else if (md5Status == HASH_MATCH_UNKNOWN && sha1Status == HASH_MATCH_UNKNOWN && sha256Status == HASH_MATCH_UNKNOWN && sha512Status == HASH_MATCH_UNKNOWN) {
+        } else if ((md5Status == HASH_MATCH_UNKNOWN || md5Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
+                && (sha1Status == HASH_MATCH_UNKNOWN || sha1Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
+                && (sha256Status == HASH_MATCH_UNKNOWN || sha256Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
+                && (sha512Status == HASH_MATCH_UNKNOWN || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN))  {
             return HASH_MATCH_UNKNOWN;
         } else if (md5Status == HASH_MATCH_PASSED || sha1Status == HASH_MATCH_PASSED || sha256Status == HASH_MATCH_PASSED || sha512Status == HASH_MATCH_PASSED) {
             return HASH_MATCH_PASSED;

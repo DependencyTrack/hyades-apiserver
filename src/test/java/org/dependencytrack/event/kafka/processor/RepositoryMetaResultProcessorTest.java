@@ -225,6 +225,56 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testIntegrityCheckWhenComponentHashIsMissing() {
+        // Create an active project with one component.
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var componentProjectA = new Component();
+        UUID uuid = UUID.randomUUID();
+        componentProjectA.setProject(projectA);
+        componentProjectA.setName("acme-lib-a");
+        componentProjectA.setVersion("1.0.1");
+        componentProjectA.setPurl("pkg:maven/foo/bar@1.2.3");
+        componentProjectA.setPurlCoordinates("pkg:maven/foo/bar@1.2.3");
+        componentProjectA.setUuid(uuid);
+        componentProjectA.setMd5("098f6bcd4621d373cade4e832627b4f6");
+        componentProjectA.setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3");
+
+        Component c = qm.persist(componentProjectA);
+
+        var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
+        integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
+        Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
+        integrityMetaComponent.setLastFetch(date);
+        qm.persist(integrityMetaComponent);
+
+        final var result = AnalysisResult.newBuilder()
+                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                        .setUuid(c.getUuid().toString())
+                        .setPurl("pkg:maven/foo/bar@1.2.3"))
+                .setIntegrityMeta(IntegrityMeta.newBuilder()
+                        .setMetaSourceUrl("test").build())
+                .build();
+
+        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        qm.getPersistenceManager().refresh(integrityMetaComponent);
+        integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
+        assertThat(integrityMetaComponent).isNotNull();
+        assertThat(integrityMetaComponent.getRepositoryUrl()).isEqualTo("test");
+        assertThat(integrityMetaComponent.getLastFetch()).isAfter(date);
+        assertThat(integrityMetaComponent.getStatus()).isEqualTo(FetchStatus.NOT_AVAILABLE);
+
+        IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
+        assertThat(analysis.getIntegrityCheckStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
+        assertThat(analysis.getMd5HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
+        assertThat(analysis.getSha1HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
+        assertThat(analysis.getSha256HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
+        assertThat(analysis.getSha512HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
+        assertThat(analysis.getUpdatedAt()).isNotNull();
+        assertThat(analysis.getComponent().getPurl().toString()).isEqualTo("pkg:maven/foo/bar@1.2.3");
+    }
+
+    @Test
     public void testIntegrityCheckWithDataInDb() {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
