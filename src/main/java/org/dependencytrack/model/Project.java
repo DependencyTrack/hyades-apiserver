@@ -277,6 +277,8 @@ public class Project implements Serializable {
 
     private transient ProjectMetrics metrics;
 
+    private transient List<ProjectVersion> versions;
+
     private transient List<Component> dependencyGraph;
 
     public long getId() {
@@ -474,6 +476,14 @@ public class Project implements Serializable {
 
     public void setMetrics(ProjectMetrics metrics) {
         this.metrics = metrics;
+    }
+
+    public List<ProjectVersion> getVersions() {
+        return versions;
+    }
+
+    public void setVersions(List<ProjectVersion> versions) {
+        this.versions = versions;
     }
 
     public List<Team> getAccessTeams() {

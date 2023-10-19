@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
-import alpine.notification.Notification;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
@@ -48,7 +47,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -69,8 +67,6 @@ public class ProjectResourceTest extends ResourceTest {
                                 .register(AuthenticationFilter.class)))
                 .build();
     }
-
-    private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
 
     @Test
     public void getProjectsDefaultRequestTest() {
@@ -180,6 +176,29 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getProjectLookupTest() {
+        for (int i=0; i<500; i++) {
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, false, false);
+        }
+        Response response = target(V1_PROJECT+"/lookup")
+                .queryParam("name", "Acme Example")
+                .queryParam("version", "10")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("Acme Example", json.getString("name"));
+        Assert.assertEquals("10", json.getString("version"));
+        Assert.assertEquals(500, json.getJsonArray("versions").size());
+        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
+        Assert.assertNotEquals("", json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
+        Assert.assertEquals("100", json.getJsonArray("versions").getJsonObject(100).getString("version"));
+    }
+
+    @Test
     public void getProjectsAscOrderedRequestTest() {
         qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         qm.createProject("DEF", null, "1.0", null, null, null, true, false);
@@ -225,6 +244,9 @@ public class ProjectResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
         Assert.assertEquals("ABC", json.getString("name"));
+        Assert.assertEquals(1, json.getJsonArray("versions").size());
+        Assert.assertEquals(project.getUuid().toString(), json.getJsonArray("versions").getJsonObject(0).getJsonString("uuid").getString());
+        Assert.assertEquals("1.0", json.getJsonArray("versions").getJsonObject(0).getJsonString("version").getString());
     }
 
     @Test
