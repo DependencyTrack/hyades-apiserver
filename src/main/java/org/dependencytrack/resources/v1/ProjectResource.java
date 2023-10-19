@@ -40,16 +40,13 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 
+import javax.jdo.FetchGroup;
 import javax.validation.Validator;
-import java.util.Collection;
-import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
-
-import javax.jdo.FetchGroup;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -58,6 +55,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.security.Principal;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -115,7 +114,7 @@ public class ProjectResource extends AlpineResource {
             @ApiParam(value = "The UUID of the project to retrieve", required = true)
             @PathParam("uuid") String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
+            final Project project = qm.getProject(uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.ok(project).build();
