@@ -39,6 +39,7 @@ import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectVersion;
+import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
@@ -624,6 +625,15 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                          boolean includeACL) {
         final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
         if (source == null) {
+            LOGGER.warn("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
+            return null;
+        }
+        if (doesProjectExist(source.getName(), newVersion)) {
+            // Project cloning is an asynchronous process. When receiving the clone request, we already perform
+            // this check. It is possible though that a project with the new version is created synchronously
+            // between the clone event being dispatched, and it being processed.
+            LOGGER.warn("Project %s was supposed to be cloned to version %s, but that version already exists"
+                    .formatted(source, newVersion));
             return null;
         }
         Project project = new Project();
@@ -676,6 +686,15 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                         this.addVulnerability(vuln, clonedComponent, sourceAttribution.getAnalyzerIdentity(), sourceAttribution.getAlternateIdentifier(), sourceAttribution.getReferenceUrl());
                     }
                     clonedComponents.put(sourceComponent.getId(), clonedComponent);
+                }
+            }
+        }
+
+        if (includeServices) {
+            final List<ServiceComponent> sourceServices = getAllServiceComponents(source);
+            if (sourceServices != null) {
+                for (final ServiceComponent sourceService : sourceServices) {
+                    cloneServiceComponent(sourceService, project, false);
                 }
             }
         }
@@ -1208,6 +1227,40 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
         parents.add(parentUuid);
         return getParents(parentUuid, parents);
+    }
+
+    /**
+     * Check whether a {@link Project} with a given {@code name} and {@code version} exists.
+     *
+     * @param name    Name of the {@link Project} to check for
+     * @param version Version of the {@link Project} to check for
+     * @return {@code true} when a matching {@link Project} exists, otherwise {@code false}
+     * @since 4.9.0
+     */
+    @Override
+    public boolean doesProjectExist(final String name, final String version) {
+        final Query<Project> query = pm.newQuery(Project.class);
+        if (version != null) {
+            query.setFilter("name == :name && version == :version");
+            query.setNamedParameters(Map.of(
+                    "name", name,
+                    "version", version
+            ));
+        } else {
+            // Version is optional for projects, but using null
+            // for parameter values bypasses the query compilation cache.
+            // https://github.com/DependencyTrack/dependency-track/issues/2540
+            query.setFilter("name == :name && version == null");
+            query.setNamedParameters(Map.of(
+                    "name", name
+            ));
+        }
+        query.setResult("count(this)");
+        try {
+            return query.executeResultUnique(Long.class) > 0;
+        } finally {
+            query.closeAll();
+        }
     }
 
     private static boolean isChildOf(Project project, UUID uuid) {
