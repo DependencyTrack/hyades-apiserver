@@ -34,7 +34,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-import org.dependencytrack.util.ComponentMetaInformationUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -201,7 +200,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(ComponentMetaInformationUtil.getMetaInformation(purl, component.getUuid()));
+                        component.setComponentMetaInformation(QueryManager.getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }
@@ -333,7 +332,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(ComponentMetaInformationUtil.getMetaInformation(purl, component.getUuid()));
+                        component.setComponentMetaInformation(QueryManager.getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }

@@ -1,4 +1,4 @@
-package org.dependencytrack.util;
+package org.dependencytrack.persistence;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
@@ -16,8 +16,7 @@ import java.util.Date;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
 
-public class ComponentIdentificationUtilTest extends PersistenceCapableTest {
-
+public class QueryManagerTest extends PersistenceCapableTest {
     @Test
     public void testGetMetaInformation() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
@@ -43,7 +42,7 @@ public class ComponentIdentificationUtilTest extends PersistenceCapableTest {
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
         qm.createIntegrityMetaComponent(integrityMetaComponent);
         component = qm.createComponent(component, false);
-        ComponentMetaInformation componentMetaInformation = ComponentMetaInformationUtil.getMetaInformation(component.getPurl(), component.getUuid());
+        ComponentMetaInformation componentMetaInformation = QueryManager.getMetaInformation(component.getPurl(), component.getUuid());
         Assert.assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
         Assert.assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
         Assert.assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());

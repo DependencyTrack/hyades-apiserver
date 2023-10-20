@@ -51,7 +51,6 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.ComponentMetaInformationUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.PurlUtil;
 import org.hyades.proto.repometaanalysis.v1.FetchMeta;
@@ -154,7 +153,7 @@ public class ComponentResource extends AlpineResource {
                                 detachedComponent.setRepositoryMeta(repoMetaComponent);
                             }
                             if (includeIntegrityMetaData) {
-                                detachedComponent.setComponentMetaInformation(ComponentMetaInformationUtil.getMetaInformation(component.getPurl(), component.getUuid()));
+                                detachedComponent.setComponentMetaInformation(QueryManager.getMetaInformation(component.getPurl(), component.getUuid()));
                             }
                         }
                     }
