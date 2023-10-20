@@ -27,7 +27,7 @@ There are a few things you'll need on your journey:
 * Docker (optional)
 
 > We provide common [run configurations](https://www.jetbrains.com/help/idea/run-debug-configuration.html) for IntelliJ
-> in the [`.run`](./.run) directory for convenience. IntelliJ will automatically pick those up when you open this
+> in the [`.idea/runConfigurations`](.idea/runConfigurations) directory for convenience. IntelliJ will automatically pick those up when you open this
 > repository.
 
 ## Core Technologies
@@ -97,7 +97,7 @@ To build and run the API server in one go, invoke the Jetty Maven plugin as foll
 mvn jetty:run -P enhance -Dlogback.configurationFile=src/main/docker/logback.xml
 ```
 
-The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](./.run/Jetty.run.xml) run
+The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
 configuration.
 
 ## Debugging with Frontend
