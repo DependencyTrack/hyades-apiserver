@@ -44,6 +44,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityAnalysis;
+import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
@@ -68,6 +69,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
@@ -150,7 +152,17 @@ public class ComponentResource extends AlpineResource {
                             if (includeIntegrityMetaData) {
                                 final IntegrityAnalysis integrityAnalysis = qm.getIntegrityAnalysisByComponentUuid(component.getUuid());
                                 final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
-                                detachedComponent.setComponentMetaInformation(new ComponentMetaInformation(integrityMetaComponent.getPublishedAt(), integrityAnalysis.getIntegrityCheckStatus(), integrityMetaComponent.getLastFetch()));
+                                Date publishedAt = null;
+                                Date lastFetched = null;
+                                IntegrityMatchStatus integrityMatchStatus = null;
+                                if(integrityMetaComponent!=null) {
+                                    publishedAt = integrityMetaComponent.getPublishedAt();
+                                    lastFetched = integrityMetaComponent.getLastFetch();
+                                }
+                                if(integrityAnalysis!=null){
+                                    integrityMatchStatus = integrityAnalysis.getIntegrityCheckStatus();
+                                }
+                                detachedComponent.setComponentMetaInformation(new ComponentMetaInformation(publishedAt, integrityMatchStatus, lastFetched));
                             }
                         }
                     }

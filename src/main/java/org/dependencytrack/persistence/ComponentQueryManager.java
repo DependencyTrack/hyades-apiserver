@@ -302,7 +302,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         component.setRepositoryMeta(repoMetaComponent);
                         final IntegrityMetaComponent integrityMetaComponent = getIntegrityMetaComponent(purl.toString());
                         final IntegrityAnalysis integrityAnalysis = getIntegrityAnalysisByComponentUuid(component.getUuid());
-                        component.setComponentMetaInformation(new ComponentMetaInformation(integrityMetaComponent.getPublishedAt(), integrityAnalysis.getIntegrityCheckStatus(), integrityMetaComponent.getLastFetch()));
+                        if (integrityAnalysis != null) {
+                            component.setComponentMetaInformation(new ComponentMetaInformation(integrityMetaComponent.getPublishedAt(), integrityAnalysis.getIntegrityCheckStatus(), integrityMetaComponent.getLastFetch()));
+                        }
                     }
                 }
             }
