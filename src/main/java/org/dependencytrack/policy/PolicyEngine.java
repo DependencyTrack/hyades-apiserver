@@ -65,6 +65,7 @@ public class PolicyEngine {
         evaluators.add(new ComponentHashPolicyEvaluator());
         evaluators.add(new CwePolicyEvaluator());
         evaluators.add(new VulnerabilityIdPolicyEvaluator());
+        evaluators.add(new VersionDistancePolicyEvaluator());
     }
 
     public List<PolicyViolation> evaluateProject(final UUID projectUuid) {
@@ -210,7 +211,7 @@ public class PolicyEngine {
         }
         return switch (subject) {
             case CWE, SEVERITY, VULNERABILITY_ID -> PolicyViolation.Type.SECURITY;
-            case AGE, COORDINATES, PACKAGE_URL, CPE, SWID_TAGID, COMPONENT_HASH, VERSION ->
+            case AGE, COORDINATES, PACKAGE_URL, CPE, SWID_TAGID, COMPONENT_HASH, VERSION, VERSION_DISTANCE ->
                     PolicyViolation.Type.OPERATIONAL;
             case LICENSE, LICENSE_GROUP -> PolicyViolation.Type.LICENSE;
             // Just here to satisfy the switch exhaustiveness. Conditions with subject EXPRESSION
