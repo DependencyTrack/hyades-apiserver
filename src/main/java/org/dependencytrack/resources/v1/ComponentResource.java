@@ -42,9 +42,7 @@ import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
@@ -53,6 +51,7 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.ComponentMetaInformationUtil;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.PurlUtil;
 import org.hyades.proto.repometaanalysis.v1.FetchMeta;
@@ -69,7 +68,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
@@ -150,19 +148,7 @@ public class ComponentResource extends AlpineResource {
                                 detachedComponent.setRepositoryMeta(repoMetaComponent);
                             }
                             if (includeIntegrityMetaData) {
-                                final IntegrityAnalysis integrityAnalysis = qm.getIntegrityAnalysisByComponentUuid(component.getUuid());
-                                final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
-                                Date publishedAt = null;
-                                Date lastFetched = null;
-                                IntegrityMatchStatus integrityMatchStatus = null;
-                                if(integrityMetaComponent!=null) {
-                                    publishedAt = integrityMetaComponent.getPublishedAt();
-                                    lastFetched = integrityMetaComponent.getLastFetch();
-                                }
-                                if(integrityAnalysis!=null){
-                                    integrityMatchStatus = integrityAnalysis.getIntegrityCheckStatus();
-                                }
-                                detachedComponent.setComponentMetaInformation(new ComponentMetaInformation(publishedAt, integrityMatchStatus, lastFetched));
+                                detachedComponent.setComponentMetaInformation(ComponentMetaInformationUtil.getMetaInformation(component.getPurl(), component.getUuid()));
                             }
                         }
                     }
@@ -187,7 +173,7 @@ public class ComponentResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The integrity meta information for the specified component cannot be found"),
-            @ApiResponse(code =  400, message = "The package url being queried for is invalid")
+            @ApiResponse(code = 400, message = "The package url being queried for is invalid")
     })
     public Response getIntegrityMetaComponent(
             @ApiParam(value = "The package url of the component", required = true)

@@ -30,7 +30,8 @@ import org.dependencytrack.model.Component;
  */
 public class ComponentIdentificationUtil {
 
-    private ComponentIdentificationUtil() { }
+    private ComponentIdentificationUtil() {
+    }
 
     @SuppressWarnings("deprecation")
     public static boolean doesIdentityMatch(final Component a, final org.cyclonedx.model.Component b) {
