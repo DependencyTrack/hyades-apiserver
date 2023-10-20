@@ -28,6 +28,7 @@ import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
+import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
@@ -83,6 +84,7 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
@@ -97,6 +99,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -1388,6 +1391,35 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Fetch a list of object from the datastore by theirs {@link UUID}
+     *
+     * @param clazz Class of the object to fetch
+     * @param uuids {@link UUID} list of uuids to fetch
+     * @return The list of objects found
+     * @param <T> Type of the object
+     * @since 4.9.0
+     */
+    public <T> List<T> getObjectsByUuids(final Class<T> clazz, final List<UUID> uuids) {
+        final Query<T> query = getObjectsByUuidsQuery(clazz, uuids);
+        return query.executeList();
+    }
+
+    /**
+     * Create the query to fetch a list of object from the datastore by theirs {@link UUID}
+     *
+     * @param clazz Class of the object to fetch
+     * @param uuids {@link UUID} list of uuids to fetch
+     * @return The query to execute
+     * @param <T> Type of the object
+     * @since 4.9.0
+     */
+    public <T> Query<T> getObjectsByUuidsQuery(final Class<T> clazz, final List<UUID> uuids) {
+        final Query<T> query = pm.newQuery(clazz, ":uuids.contains(uuid)");
+        query.setParameters(uuids);
+        return query;
+    }
+
+    /**
      * Fetch an object from the datastore by its {@link UUID}, using the provided fetch groups.
      * <p>
      * {@code fetchGroups} will override any other fetch groups set on the {@link PersistenceManager},
@@ -1479,6 +1511,54 @@ public class QueryManager extends AlpineQueryManager {
         query.executeWithArray(team.getId());
         pm.deletePersistent(team);
         pm.currentTransaction().commit();
+    }
+
+    /**
+     * Returns a list of all {@link DependencyGraphResponse} objects by {@link Component} UUID.
+     * @param uuids a list of {@link Component} UUIDs
+     * @return a list of {@link DependencyGraphResponse} objects
+     * @since 4.9.0
+     */
+    public List<DependencyGraphResponse> getComponentDependencyGraphByUuids(final List<UUID> uuids) {
+        return this.getComponentQueryManager().getDependencyGraphByUUID(uuids);
+    }
+
+    /**
+     * Returns a list of all {@link DependencyGraphResponse} objects by {@link ServiceComponent} UUID.
+     * @param uuids a list of {@link ServiceComponent} UUIDs
+     * @return a list of {@link DependencyGraphResponse} objects
+     * @since 4.9.0
+     */
+    public List<DependencyGraphResponse> getServiceDependencyGraphByUuids(final List<UUID> uuids) {
+        return this.getServiceComponentQueryManager().getDependencyGraphByUUID(uuids);
+    }
+
+    /**
+     * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} with batchSize 10.
+     * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
+     * @return a list of {@link RepositoryMetaComponent} objects
+     * @since 4.9.0
+     */
+    public List<RepositoryMetaComponent> getRepositoryMetaComponentsBatch(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
+        return getRepositoryMetaComponentsBatch(list, 10);
+    }
+
+    /**
+     * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} UUID.
+     * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
+     * @param batchSize the batch size
+     * @return a list of {@link RepositoryMetaComponent} objects
+     * @since 4.9.0
+     */
+    public List<RepositoryMetaComponent> getRepositoryMetaComponentsBatch(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list, final int batchSize) {
+        final List<RepositoryMetaComponent> results = new ArrayList<>(list.size());
+
+        // Split the list into batches
+        for (List<RepositoryQueryManager.RepositoryMetaComponentSearch> batch : Lists.partition(list, batchSize)) {
+            results.addAll(this.getRepositoryQueryManager().getRepositoryMetaComponents(batch));
+        }
+
+        return results;
     }
 
     /**
