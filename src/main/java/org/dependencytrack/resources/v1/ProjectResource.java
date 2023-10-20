@@ -40,16 +40,13 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 
+import javax.jdo.FetchGroup;
 import javax.validation.Validator;
-import java.util.Collection;
-import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
-
-import javax.jdo.FetchGroup;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -58,6 +55,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.security.Principal;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -115,7 +114,7 @@ public class ProjectResource extends AlpineResource {
             @ApiParam(value = "The UUID of the project to retrieve", required = true)
             @PathParam("uuid") String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
+            final Project project = qm.getProject(uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.ok(project).build();
@@ -249,8 +248,8 @@ public class ProjectResource extends AlpineResource {
                 Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                 jsonProject.setParent(parent);
             }
-            Project project = qm.getProject(StringUtils.trimToNull(jsonProject.getName()), StringUtils.trimToNull(jsonProject.getVersion()));
-            if (project == null) {
+            if (!qm.doesProjectExist(StringUtils.trimToNull(jsonProject.getName()), StringUtils.trimToNull(jsonProject.getVersion()))) {
+                final Project project;
                 try {
                     project = qm.createProject(jsonProject, jsonProject.getTags(), true);
                 } catch (IllegalArgumentException e) {
@@ -371,7 +370,7 @@ public class ProjectResource extends AlpineResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getName, Project::setName);
                 modified |= setIfDifferent(jsonProject, project, Project::getVersion, Project::setVersion);
                 // if either name or version has been changed, verify that this new combination does not already exist
-                if (modified && qm.getProject(project.getName(), project.getVersion()) != null) {
+                if (modified && qm.doesProjectExist(project.getName(), project.getVersion())) {
                     return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
                 }
                 modified |= setIfDifferent(jsonProject, project, Project::getAuthor, Project::setAuthor);
@@ -510,7 +509,13 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
             if (sourceProject != null) {
-                LOGGER.info("Project " + sourceProject.toString() + " is being cloned by " + super.getPrincipal().getName());
+                if (!qm.hasAccess(super.getPrincipal(), sourceProject)) {
+                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                }
+                if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
+                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                }
+                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
                 Event.dispatch(new CloneProjectEvent(jsonRequest));
                 return Response.ok().build();
             } else {

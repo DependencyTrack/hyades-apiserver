@@ -46,8 +46,15 @@ class ProjectQueryFilterBuilder {
     }
 
     ProjectQueryFilterBuilder withVersion(String version) {
-        params.put("version", version);
-        filterCriteria.add("(version == :version)");
+        if(version == null) {
+            // Version is optional for projects, but using null
+            // for parameter values bypasses the query compilation cache.
+            // https://github.com/DependencyTrack/dependency-track/issues/2540
+            filterCriteria.add("(version == null)");
+        } else {
+            params.put("version", version);
+            filterCriteria.add("(version == :version)");
+        }
         return this;
     }
 

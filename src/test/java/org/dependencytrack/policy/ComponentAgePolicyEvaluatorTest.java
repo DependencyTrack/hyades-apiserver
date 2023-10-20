@@ -20,11 +20,10 @@ package org.dependencytrack.policy;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition.Operator;
 import org.dependencytrack.model.PolicyCondition.Subject;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -92,17 +91,13 @@ public class ComponentAgePolicyEvaluatorTest extends PersistenceCapableTest {
     public void evaluateTest() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final var condition = qm.createPolicyCondition(policy, Subject.AGE, operator, ageValue);
-
-        final var metaComponent = new RepositoryMetaComponent();
-        metaComponent.setRepositoryType(RepositoryType.MAVEN);
-        metaComponent.setNamespace("foo");
-        metaComponent.setName("bar");
-        metaComponent.setLatestVersion("6.6.6");
+        final var metaComponent = new IntegrityMetaComponent();
+        metaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
         if (publishedDate != null) {
-            metaComponent.setPublished(Date.from(publishedDate));
+            metaComponent.setPublishedAt(Date.from(publishedDate));
         }
-        metaComponent.setLastCheck(new Date());
-        qm.persist(metaComponent);
+        metaComponent.setLastFetch(new Date());
+        qm.createIntegrityMetaComponent(metaComponent);
 
         final var component = new Component();
         component.setPurl("pkg:maven/foo/bar@1.2.3");

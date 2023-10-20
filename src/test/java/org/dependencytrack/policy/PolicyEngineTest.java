@@ -18,6 +18,10 @@
  */
 package org.dependencytrack.policy;
 
+import alpine.notification.Notification;
+import alpine.notification.NotificationService;
+import alpine.notification.Subscriber;
+import alpine.notification.Subscription;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -33,7 +37,11 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.util.NotificationUtil;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.time.Duration;
@@ -41,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
@@ -51,6 +60,37 @@ import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.junit.Assert.assertNull;
 
 public class PolicyEngineTest extends PersistenceCapableTest {
+
+    public static class NotificationSubscriber implements Subscriber {
+
+        @Override
+        public void inform(final Notification notification) {
+            NOTIFICATIONS.add(notification);
+        }
+
+    }
+
+    private static final ConcurrentLinkedQueue<Notification> NOTIFICATIONS = new ConcurrentLinkedQueue<>();
+
+    @BeforeClass
+    public static void setUpClass() {
+        NotificationService.getInstance().subscribe(new Subscription(NotificationSubscriber.class));
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        NotificationService.getInstance().unsubscribe(new Subscription(NotificationSubscriber.class));
+    }
+
+    @Before
+    public void setup() {
+        NOTIFICATIONS.clear();
+    }
+
+    @After
+    public void tearDown() {
+        NOTIFICATIONS.clear();
+    }
 
     @Test
     public void hasTagMatchPolicyLimitedToTag() {
