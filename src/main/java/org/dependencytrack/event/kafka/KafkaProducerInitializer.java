@@ -17,6 +17,7 @@ import org.dependencytrack.common.ConfigKey;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Properties;
 
 public class KafkaProducerInitializer implements ServletContextListener {
@@ -83,7 +84,7 @@ public class KafkaProducerInitializer implements ServletContextListener {
     private static Producer<byte[], byte[]> createProducer() {
         final var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(ConfigKey.KAFKA_BOOTSTRAP_SERVERS));
-        properties.put(ProducerConfig.CLIENT_ID_CONFIG,Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
+        properties.put(ProducerConfig.CLIENT_ID_CONFIG, Config.getInstance().getProperty(ConfigKey.APPLICATION_ID));
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name);
@@ -98,6 +99,17 @@ public class KafkaProducerInitializer implements ServletContextListener {
                 properties.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, Config.getInstance().getProperty(ConfigKey.KEY_STORE_PASSWORD));
             }
         }
+
+        final Map<String, String> passThroughProperties = Config.getInstance().getPassThroughProperties("kafka.producer");
+        for (final Map.Entry<String, String> passThroughProperty : passThroughProperties.entrySet()) {
+            final String key = passThroughProperty.getKey().replaceFirst("^kafka\\.producer\\.", "");
+            if (ProducerConfig.configNames().contains(key)) {
+                properties.put(key, passThroughProperty.getValue());
+            } else {
+                LOGGER.warn("%s is not a known Producer property; Ignoring".formatted(key));
+            }
+        }
+
         return new KafkaProducer<>(properties);
     }
 

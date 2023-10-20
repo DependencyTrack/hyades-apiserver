@@ -19,13 +19,29 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class KafkaStreamsInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(KafkaStreamsInitializer.class);
-    private static final Duration DRAIN_TIMEOUT_DURATION =
-            Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_DRAIN_TIMEOUT_DURATION));
+    private static final Duration DRAIN_TIMEOUT_DURATION;
+    private static final Pattern CONSUMER_PREFIX_PATTERN;
+    private static final Pattern PRODUCER_PREFIX_PATTERN;
+
+    static {
+        DRAIN_TIMEOUT_DURATION = Duration.parse(Config.getInstance().getProperty(ConfigKey.KAFKA_STREAMS_DRAIN_TIMEOUT_DURATION));
+
+        CONSUMER_PREFIX_PATTERN = Pattern.compile("^(%s|%s|%s)".formatted(
+                Pattern.quote(StreamsConfig.CONSUMER_PREFIX),
+                Pattern.quote(StreamsConfig.GLOBAL_CONSUMER_PREFIX),
+                Pattern.quote(StreamsConfig.MAIN_CONSUMER_PREFIX)
+        ));
+
+        PRODUCER_PREFIX_PATTERN = Pattern.compile("^" + Pattern.quote(StreamsConfig.PRODUCER_PREFIX));
+    }
 
     private static KafkaStreams STREAMS;
     private static KafkaStreamsMetrics STREAMS_METRICS;
@@ -91,6 +107,28 @@ public class KafkaStreamsInitializer implements ServletContextListener {
         properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name);
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
+
+        final Map<String, String> passThroughProperties = Config.getInstance().getPassThroughProperties("kafka.streams");
+        for (final Map.Entry<String, String> passThroughProperty : passThroughProperties.entrySet()) {
+            final String key = passThroughProperty.getKey().replaceFirst("^kafka\\.streams\\.", "");
+            if (StreamsConfig.configDef().names().contains(key)) {
+                properties.put(key, passThroughProperty.getValue());
+            } else {
+                final Matcher consumerPrefixMatcher = CONSUMER_PREFIX_PATTERN.matcher(key);
+                final Matcher producerPrefixMatcher = PRODUCER_PREFIX_PATTERN.matcher(key);
+
+                final boolean isValidConsumerProperty = ConsumerConfig.configNames().contains(key)
+                        || (consumerPrefixMatcher.find() && ConsumerConfig.configNames().contains(consumerPrefixMatcher.replaceFirst("")));
+                final boolean isValidProducerProperty = ProducerConfig.configNames().contains(key)
+                        || (producerPrefixMatcher.find() && ProducerConfig.configNames().contains(producerPrefixMatcher.replaceFirst("")));
+                if (isValidConsumerProperty || isValidProducerProperty) {
+                    properties.put(key, passThroughProperty.getValue());
+                } else {
+                    LOGGER.warn("%s is not a known Streams, Consumer, or Producer property; Ignoring".formatted(key));
+                }
+            }
+        }
+
         return properties;
     }
 
