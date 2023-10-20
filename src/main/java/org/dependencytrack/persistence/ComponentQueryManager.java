@@ -28,7 +28,9 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -164,6 +166,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        final IntegrityAnalysis integrityAnalysis = getIntegrityAnalysisByComponentUuid(component.getUuid());
+                        final IntegrityMetaComponent integrityMetaComponent = getIntegrityMetaComponent(purl.toString());
+                        component.setComponentMetaInformation(new ComponentMetaInformation(integrityMetaComponent.getPublishedAt(), integrityAnalysis.getIntegrityCheckStatus(), integrityMetaComponent.getLastFetch()));
                     }
                 }
             }
@@ -295,6 +300,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        final IntegrityMetaComponent integrityMetaComponent = getIntegrityMetaComponent(purl.toString());
+                        final IntegrityAnalysis integrityAnalysis = getIntegrityAnalysisByComponentUuid(component.getUuid());
+                        component.setComponentMetaInformation(new ComponentMetaInformation(integrityMetaComponent.getPublishedAt(), integrityAnalysis.getIntegrityCheckStatus(), integrityMetaComponent.getLastFetch()));
                     }
                 }
             }
@@ -411,7 +419,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
         query.setParameters(project);
         List<Component> components = query.executeList();
-        for(Component component : components) {
+        for (Component component : components) {
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
         }
         try {

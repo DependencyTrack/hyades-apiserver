@@ -355,6 +355,8 @@ public class Component implements Serializable {
     private transient String licenseId;
     private transient DependencyMetrics metrics;
     private transient RepositoryMetaComponent repositoryMeta;
+
+    private transient ComponentMetaInformation componentMetaInformation;
     private transient boolean isNew;
     private transient int usedBy;
     private transient Set<String> dependencyGraph;
@@ -739,6 +741,14 @@ public class Component implements Serializable {
 
     public void setRepositoryMeta(RepositoryMetaComponent repositoryMeta) {
         this.repositoryMeta = repositoryMeta;
+    }
+
+    public ComponentMetaInformation getComponentMetaInformation() {
+        return componentMetaInformation;
+    }
+
+    public void setComponentMetaInformation(ComponentMetaInformation componentMetaInformation) {
+        this.componentMetaInformation = componentMetaInformation;
     }
 
     public boolean isNew() {
