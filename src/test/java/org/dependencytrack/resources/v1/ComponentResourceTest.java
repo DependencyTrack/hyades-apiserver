@@ -81,6 +81,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     /**
      * Generate a project with different dependencies
+     *
      * @return A project with 1000 dpendencies: <ul>
      * <li>200 outdated dependencies, 75 direct and 125 transitive</li>
      * <li>800 recent dependencies, 25 direct, 775 transitive</li>
@@ -94,9 +95,9 @@ public class ComponentResourceTest extends ResourceTest {
             Component component = new Component();
             component.setProject(project);
             component.setGroup("component-group");
-            component.setName("component-name-"+i);
-            component.setVersion(String.valueOf(i)+".0");
-            component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-"+i , String.valueOf(i)+".0", null, null));
+            component.setName("component-name-" + i);
+            component.setVersion(String.valueOf(i) + ".0");
+            component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-" + i, String.valueOf(i) + ".0", null, null));
             component = qm.createComponent(component, false);
             // direct depencencies
             if (i < 100) {
@@ -109,17 +110,17 @@ public class ComponentResourceTest extends ResourceTest {
                 final var metaComponent = new RepositoryMetaComponent();
                 metaComponent.setRepositoryType(RepositoryType.MAVEN);
                 metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-"+i);
-                metaComponent.setLatestVersion(String.valueOf(i+1)+".0");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
                 metaComponent.setLastCheck(new Date());
                 qm.persist(metaComponent);
-            } else if (i<500) {
+            } else if (i < 500) {
                 // 300 recent components, 25 of these are direct dependencies
                 final var metaComponent = new RepositoryMetaComponent();
                 metaComponent.setRepositoryType(RepositoryType.MAVEN);
                 metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-"+i);
-                metaComponent.setLatestVersion(String.valueOf(i)+".0");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
                 metaComponent.setLastCheck(new Date());
                 qm.persist(metaComponent);
             } else {
