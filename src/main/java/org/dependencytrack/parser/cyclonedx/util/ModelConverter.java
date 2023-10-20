@@ -58,6 +58,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -681,19 +682,19 @@ public class ModelConverter {
 
         final var dependencies = new ArrayList<Dependency>();
         final var rootDependency = new Dependency(project.getUuid().toString());
-        rootDependency.setDependencies(convertDirectDependencies(project.getDirectDependencies()));
+        rootDependency.setDependencies(convertDirectDependencies(project.getDirectDependencies(), components));
         dependencies.add(rootDependency);
 
         for (final Component component : components) {
             final var dependency = new Dependency(component.getUuid().toString());
-            dependency.setDependencies(convertDirectDependencies(component.getDirectDependencies()));
+            dependency.setDependencies(convertDirectDependencies(component.getDirectDependencies(), components));
             dependencies.add(dependency);
         }
 
         return dependencies;
     }
 
-    private static List<Dependency> convertDirectDependencies(final String directDependenciesRaw) {
+    private static List<Dependency> convertDirectDependencies(final String directDependenciesRaw, final List<Component> components) {
         if (directDependenciesRaw == null || directDependenciesRaw.isBlank()) {
             return Collections.emptyList();
         }
@@ -705,7 +706,10 @@ public class ModelConverter {
         if (directDependenciesJson instanceof final JsonArray directDependenciesJsonArray) {
             for (final JsonValue directDependency : directDependenciesJsonArray) {
                 if (directDependency instanceof final JsonObject directDependencyObject) {
-                    dependencies.add(new Dependency(directDependencyObject.getString("uuid")));
+                    final String componentUuid = directDependencyObject.getString("uuid", null);
+                    if (componentUuid != null && components.stream().map(Component::getUuid).map(UUID::toString).anyMatch(componentUuid::equals)) {
+                        dependencies.add(new Dependency(directDependencyObject.getString("uuid")));
+                    }
                 }
             }
         }
