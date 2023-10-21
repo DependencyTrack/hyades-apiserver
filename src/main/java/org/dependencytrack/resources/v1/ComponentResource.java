@@ -42,6 +42,8 @@ import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.IntegrityAnalysis;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -135,18 +137,24 @@ public class ComponentResource extends AlpineResource {
             @ApiParam(value = "The UUID of the component to retrieve", required = true)
             @PathParam("uuid") String uuid,
             @ApiParam(value = "Optionally includes third-party metadata about the component from external repositories", required = false)
-            @QueryParam("includeRepositoryMetaData") boolean includeRepositoryMetaData) {
+            @QueryParam("includeRepositoryMetaData") boolean includeRepositoryMetaData,
+            @QueryParam("includeIntegrityMetaData") boolean includeIntegrityMetaData) {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
                 final Project project = component.getProject();
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     final Component detachedComponent = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
-                    if (includeRepositoryMetaData && detachedComponent.getPurl() != null) {
+                    if ((includeRepositoryMetaData || includeIntegrityMetaData) && detachedComponent.getPurl() != null) {
                         final RepositoryType type = RepositoryType.resolve(detachedComponent.getPurl());
                         if (RepositoryType.UNSUPPORTED != type) {
-                            final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
-                            detachedComponent.setRepositoryMeta(repoMetaComponent);
+                            if (includeRepositoryMetaData) {
+                                final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
+                                detachedComponent.setRepositoryMeta(repoMetaComponent);
+                            }
+                            if (includeIntegrityMetaData) {
+                                detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getPurl(), component.getUuid()));
+                            }
                         }
                     }
                     return Response.ok(detachedComponent).build();
@@ -155,6 +163,68 @@ public class ComponentResource extends AlpineResource {
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+            }
+        }
+    }
+
+    @GET
+    @Path("/integritymetadata")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Provides the published date and hashes of the requested version of component " +
+                    "as received from configured repositories for integrity analysis",
+            response = IntegrityMetaComponent.class
+    )
+    @ApiResponses(value = {
+            @ApiResponse(code = 401, message = "Unauthorized"),
+            @ApiResponse(code = 404, message = "The integrity meta information for the specified component cannot be found"),
+            @ApiResponse(code = 400, message = "The package url being queried for is invalid")
+    })
+    public Response getIntegrityMetaComponent(
+            @ApiParam(value = "The package url of the component", required = true)
+            @QueryParam("purl") String purl) {
+        try {
+            final PackageURL packageURL = new PackageURL(purl);
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+                final RepositoryType type = RepositoryType.resolve(packageURL);
+                if (RepositoryType.UNSUPPORTED == type) {
+                    return Response.noContent().build();
+                }
+                final IntegrityMetaComponent result = qm.getIntegrityMetaComponent(packageURL.toString());
+                if (result == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The integrity metadata for the specified component cannot be found.").build();
+                } else {
+                    //todo: future enhancement: provide pass-thru capability for component metadata not already present and being tracked
+                    return Response.ok(result).build();
+                }
+            }
+        } catch (MalformedPackageURLException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
+    @GET
+    @Path("/{uuid}/integritycheckstatus")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Provides the integrity check status of component with provided uuid based on the configured " +
+                    "repository for integrity analysis",
+            response = IntegrityAnalysis.class
+    )
+    @ApiResponses(value = {
+            @ApiResponse(code = 401, message = "Unauthorized"),
+            @ApiResponse(code = 404, message = "The integrity analysis information for the specified component cannot be found"),
+    })
+    public Response getIntegrityStatus(
+            @ApiParam(value = "UUID of the component for which integrity status information is needed", required = true)
+            @PathParam("uuid") String uuid) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(UUID.fromString(uuid));
+            if (result == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The integrity status for the specified component cannot be found.").build();
+            } else {
+                //todo: future enhancement: provide pass-thru capability for component metadata not already present and being tracked
+                return Response.ok(result).build();
             }
         }
     }

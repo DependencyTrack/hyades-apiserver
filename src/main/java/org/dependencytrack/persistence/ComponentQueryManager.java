@@ -137,7 +137,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
     /**
      * Returns a List of Dependency for the specified Project.
-     * @param project the Project to retrieve dependencies of
+     *
+     * @param project        the Project to retrieve dependencies of
      * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
      * @return a List of Dependency objects
      */
@@ -147,15 +148,16 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
     /**
      * Returns a List of Dependency for the specified Project.
-     * @param project the Project to retrieve dependencies of
+     *
+     * @param project        the Project to retrieve dependencies of
      * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
-     * @param onlyOutdated Optionally exclude recent components so only outdated components are shown
-     * @param onlyDirect Optionally exclude transitive dependencies so only direct dependencies are shown
+     * @param onlyOutdated   Optionally exclude recent components so only outdated components are shown
+     * @param onlyDirect     Optionally exclude transitive dependencies so only direct dependencies are shown
      * @return a List of Dependency objects
      */
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         final PaginatedResult result;
-        String querySring ="SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
+        String querySring = "SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
         if (filter != null) {
             querySring += " && (project == :project) && name.toLowerCase().matches(:name)";
         }
@@ -164,7 +166,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             // Different should always mean version < latestVersion
             // Hack JDO using % instead of .* to get the SQL LIKE clause working:
             querySring +=
-                    " && !("+
+                    " && !(" +
                             " SELECT FROM org.dependencytrack.model.RepositoryMetaComponent m " +
                             " WHERE m.name == this.name " +
                             " && m.namespace == this.group " +
@@ -198,6 +200,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        component.setComponentMetaInformation(getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }
@@ -329,6 +332,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        component.setComponentMetaInformation(getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }
@@ -445,7 +449,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
         query.setParameters(project);
         List<Component> components = query.executeList();
-        for(Component component : components) {
+        for (Component component : components) {
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
         }
         try {
@@ -742,6 +746,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
     /**
      * Returns a list of all {@link DependencyGraphResponse} objects by {@link Component} UUID.
+     *
      * @param uuids a list of {@link Component} UUIDs
      * @return a list of {@link DependencyGraphResponse} objects
      * @since 4.9.0

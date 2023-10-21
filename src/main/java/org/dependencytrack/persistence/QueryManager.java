@@ -46,6 +46,7 @@ import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cpe;
 import org.dependencytrack.model.Cwe;
@@ -53,6 +54,7 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
+import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
@@ -1399,8 +1401,8 @@ public class QueryManager extends AlpineQueryManager {
      *
      * @param clazz Class of the object to fetch
      * @param uuids {@link UUID} list of uuids to fetch
+     * @param <T>   Type of the object
      * @return The list of objects found
-     * @param <T> Type of the object
      * @since 4.9.0
      */
     public <T> List<T> getObjectsByUuids(final Class<T> clazz, final List<UUID> uuids) {
@@ -1413,8 +1415,8 @@ public class QueryManager extends AlpineQueryManager {
      *
      * @param clazz Class of the object to fetch
      * @param uuids {@link UUID} list of uuids to fetch
+     * @param <T>   Type of the object
      * @return The query to execute
-     * @param <T> Type of the object
      * @since 4.9.0
      */
     public <T> Query<T> getObjectsByUuidsQuery(final Class<T> clazz, final List<UUID> uuids) {
@@ -1519,6 +1521,7 @@ public class QueryManager extends AlpineQueryManager {
 
     /**
      * Returns a list of all {@link DependencyGraphResponse} objects by {@link Component} UUID.
+     *
      * @param uuids a list of {@link Component} UUIDs
      * @return a list of {@link DependencyGraphResponse} objects
      * @since 4.9.0
@@ -1529,6 +1532,7 @@ public class QueryManager extends AlpineQueryManager {
 
     /**
      * Returns a list of all {@link DependencyGraphResponse} objects by {@link ServiceComponent} UUID.
+     *
      * @param uuids a list of {@link ServiceComponent} UUIDs
      * @return a list of {@link DependencyGraphResponse} objects
      * @since 4.9.0
@@ -1539,6 +1543,7 @@ public class QueryManager extends AlpineQueryManager {
 
     /**
      * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} with batchSize 10.
+     *
      * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
      * @return a list of {@link RepositoryMetaComponent} objects
      * @since 4.9.0
@@ -1549,7 +1554,8 @@ public class QueryManager extends AlpineQueryManager {
 
     /**
      * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} UUID.
-     * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
+     *
+     * @param list      a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
      * @param batchSize the batch size
      * @return a list of {@link RepositoryMetaComponent} objects
      * @since 4.9.0
@@ -1831,5 +1837,21 @@ public class QueryManager extends AlpineQueryManager {
 
     public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {
         return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
+    }
+
+    public ComponentMetaInformation getMetaInformation(PackageURL purl, UUID uuid) {
+        Date publishedAt = null;
+        Date lastFetched = null;
+        IntegrityMatchStatus integrityMatchStatus = null;
+        final IntegrityMetaComponent integrityMetaComponent = getIntegrityMetaComponent(purl.toString());
+        final IntegrityAnalysis integrityAnalysis = getIntegrityAnalysisByComponentUuid(uuid);
+        if (integrityMetaComponent != null) {
+            publishedAt = integrityMetaComponent.getPublishedAt();
+            lastFetched = integrityMetaComponent.getLastFetch();
+        }
+        if (integrityAnalysis != null) {
+            integrityMatchStatus = integrityAnalysis.getIntegrityCheckStatus();
+        }
+        return new ComponentMetaInformation(publishedAt, integrityMatchStatus, lastFetched);
     }
 }
