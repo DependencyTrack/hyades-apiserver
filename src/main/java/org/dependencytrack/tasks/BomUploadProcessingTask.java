@@ -26,6 +26,7 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
+import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -263,6 +264,8 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
+        final var integrityMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
+        Map<ComponentIdentity, Component> copyOfPersistentComponents;
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -311,6 +314,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         processServices(qm, project, services, identitiesByBomRef, bomRefsByIdentity);
                 processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
                 recordBomImport(ctx, pm, project);
+                copyOfPersistentComponents = ImmutableMap.copyOf(persistentComponents);
 
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
@@ -322,15 +326,8 @@ public class BomUploadProcessingTask implements Subscriber {
                     // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
                     // merely call a few getters on it, but the component object itself is not passed around.
                     // Detaching would imply additional database interactions that we'd rather not do.
-                    if (component.getPurl() != null) {
-                        boolean result = SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType());
-                        ComponentRepositoryMetaAnalysisEvent event;
-                        if (result) {
-                            event = createRepoMetaAnalysisEvent(component, qm);
-                        } else {
-                            event = new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
-                        }
-                        repoMetaAnalysisEvents.add(event);
+                    if(component.getPurl() != null) {
+                        repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION));
                     }
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
                             ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
@@ -340,6 +337,23 @@ public class BomUploadProcessingTask implements Subscriber {
             } finally {
                 if (trx.isActive()) {
                     trx.rollback();
+                }
+            }
+
+            //only integrity metadata events have to be sent because latest version events
+            //have been sent already
+            for (final Component component : copyOfPersistentComponents.values()) {
+                // Note: component does not need to be detached.
+                // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
+                // merely call a few getters on it, but the component object itself is not passed around.
+                // Detaching would imply additional database interactions that we'd rather not do
+                if (component.getPurl() != null) {
+                    if(SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType())) {
+                        ComponentRepositoryMetaAnalysisEvent event = integrityRepoMetaAnalysisEvent(component, qm);
+                        if (event != null) {
+                            integrityMetaAnalysisEvents.add(event);
+                        }
+                    }
                 }
             }
 
@@ -383,6 +397,13 @@ public class BomUploadProcessingTask implements Subscriber {
             }
 
             repoMetaAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
+                if (exception != null) {
+                    // Include context in the log message to make log correlation easier.
+                    LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
+                }
+            }));
+
+            integrityMetaAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
                 if (exception != null) {
                     // Include context in the log message to make log correlation easier.
                     LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
@@ -1013,20 +1034,20 @@ public class BomUploadProcessingTask implements Subscriber {
 
     }
 
-    private ComponentRepositoryMetaAnalysisEvent createRepoMetaAnalysisEvent(Component component, QueryManager qm) {
+
+    private ComponentRepositoryMetaAnalysisEvent integrityRepoMetaAnalysisEvent(Component component, QueryManager qm) {
         IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
         if (integrityMetaComponent == null) {
-            qm.getPersistenceManager().makePersistent(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
-            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
+            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA);
         }
-        if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+        else if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             qm.getPersistenceManager().makePersistent(integrityMetaComponent);
-            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-        } else {
-            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION);
+            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA);
         }
+        //don't send event because integrity metadata would be in db already in Processed state or sent recently
+        //and don't want to send again
+        return null;
     }
-
-
 }
