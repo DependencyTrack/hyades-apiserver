@@ -1832,7 +1832,11 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getComponentQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
+        return getIntegrityMetaQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
+    }
+
+    public void createIntegrityMetaHandlingConflict(IntegrityMetaComponent integrityMetaComponent) {
+        getIntegrityMetaQueryManager().createIntegrityMetaHandlingConflict(integrityMetaComponent);
     }
 
     public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {

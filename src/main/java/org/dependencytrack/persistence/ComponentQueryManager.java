@@ -29,7 +29,6 @@ import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -810,9 +809,5 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
         }
         dependencyGraph.putAll(addToDependencyGraph);
-    }
-
-    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return persist(integrityMetaComponent);
     }
 }

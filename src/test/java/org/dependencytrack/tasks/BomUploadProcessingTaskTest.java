@@ -20,7 +20,6 @@ package org.dependencytrack.tasks;
 
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.awaitility.Awaitility;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -100,6 +99,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
@@ -185,6 +185,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
@@ -520,7 +521,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                 .map(ProducerRecord::topic)
                 .filter(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()::equals)
                 .count();
-        assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
+        assertThat(repoMetaAnalysisCommandsSent).isEqualTo(18112);
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
@@ -656,6 +657,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(notification.getGroup()).isEqualTo(Group.GROUP_BOM_CONSUMED);
                 },
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
                 // BOM_PROCESSED notification should not have been sent.
         );
