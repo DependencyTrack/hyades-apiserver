@@ -70,15 +70,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_RELEASE_TOKEN }}
         run: |-
-          cat << EOF >> .github/default-release-notes.md
-          \`\`\`text
-          $(cat target/checksums.txt)
-          \`\`\`
-          EOF
-
-          gh release edit ${{ needs.read-version.outputs.version }} \
-            --notes-file ".github/default-release-notes.md"
-
           gh release upload ${{ needs.read-version.outputs.version }} \
             --clobber \
             target/dependency-track-apiserver.jar \
