@@ -85,6 +85,7 @@
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.14.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -102,14 +103,14 @@
         <lib.protobuf-java.version>3.24.4</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
-        <lib.snappy-java.version>1.1.10.1</lib.snappy-java.version>
+        <lib.snappy-java.version>1.1.10.5</lib.snappy-java.version>
         <lib.versatile.version>0.3.0</lib.versatile.version>
         <lib.woodstox.version>6.4.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.9</lib.log4j-over-slf4j.version>
         <lib.signpost-core.version>2.1.1</lib.signpost-core.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>5.9.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>5.9.1</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <!-- JDBC Drivers -->
         <lib.jdbc-driver.postgresql.version>42.5.1</lib.jdbc-driver.postgresql.version>
@@ -369,11 +370,22 @@
             <artifactId>postgresql</artifactId>
             <version>${lib.jdbc-driver.postgresql.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.cloud.sql</groupId>
+            <artifactId>postgres-socket-factory</artifactId>
+            <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
+        </dependency>
         <!-- Xerces -->
         <dependency>
             <groupId>xerces</groupId>
             <artifactId>xercesImpl</artifactId>
             <version>2.12.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>xml-apis</groupId>
+                    <artifactId>xml-apis</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Commons Compress -->
         <dependency>
@@ -682,87 +694,6 @@
             <properties>
                 <war-embedded-finalname>${project.build.finalName}-apiserver</war-embedded-finalname>
             </properties>
-        </profile>
-        <profile>
-            <id>h2-console</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>jetty-maven-plugin</artifactId>
-                        <version>${plugin.jetty.version}</version>
-                        <configuration>
-                            <webApp>
-                                <contextPath>/</contextPath>
-                            </webApp>
-                            <contextXml>src/test/webapp/WEB-INF/h2-console-activation.xml</contextXml>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>bundle-ui</id>
-            <activation>
-                <property>
-                    <name>env.ACTIVATE_BUNDLE_UI</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <properties>
-                <war-embedded-finalname>${project.build.finalName}-bundled</war-embedded-finalname>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <version>3.1.0</version>
-                        <executions>
-                            <execution>
-                                <id>frontend-download</id>
-                                <phase>prepare-package</phase>
-                                <configuration>
-                                    <target>
-                                        <get src="https://github.com/sahibamittal/dependency-track-frontend/files/9733406/dist.zip" dest="${project.build.directory}" verbose="true"/>
-                                    </target>
-                                </configuration>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>frontend-extract</id>
-                                <phase>prepare-package</phase>
-                                <configuration>
-                                    <target>
-                                        <unzip src="${project.build.directory}/dist.zip" dest="${project.build.directory}/frontend">
-                                        </unzip>
-                                    </target>
-                                </configuration>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>frontend-resource-deploy</id>
-                                <phase>prepare-package</phase>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${project.build.directory}/${project.artifactId}">
-                                            <fileset dir="${project.build.directory}/frontend/dist">
-                                                <include name="**/*"/>
-                                            </fileset>
-                                        </copy>
-                                    </target>
-                                </configuration>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
     </profiles>
 

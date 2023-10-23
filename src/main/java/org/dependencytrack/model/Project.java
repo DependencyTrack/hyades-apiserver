@@ -277,7 +277,8 @@ public class Project implements Serializable {
 
     private transient ProjectMetrics metrics;
 
-    @JsonIgnore
+    private transient List<ProjectVersion> versions;
+
     private transient List<Component> dependencyGraph;
 
     public long getId() {
@@ -477,6 +478,14 @@ public class Project implements Serializable {
         this.metrics = metrics;
     }
 
+    public List<ProjectVersion> getVersions() {
+        return versions;
+    }
+
+    public void setVersions(List<ProjectVersion> versions) {
+        this.versions = versions;
+    }
+
     public List<Team> getAccessTeams() {
         return accessTeams;
     }
@@ -492,10 +501,12 @@ public class Project implements Serializable {
         this.accessTeams.add(accessTeam);
     }
 
+    @JsonIgnore
     public List<Component> getDependencyGraph() {
         return dependencyGraph;
     }
 
+    @JsonIgnore
     public void setDependencyGraph(List<Component> dependencyGraph) {
         this.dependencyGraph = dependencyGraph;
     }

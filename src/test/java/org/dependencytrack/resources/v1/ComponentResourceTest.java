@@ -21,10 +21,16 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityAnalysis;
+import org.dependencytrack.model.IntegrityMatchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -36,15 +42,23 @@ import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.jdo.JDOObjectNotFoundException;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_FAILED;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
 
 public class ComponentResourceTest extends ResourceTest {
 
@@ -65,26 +79,122 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals(405, response.getStatus()); // No longer prohibited in DT 4.0+
     }
 
-    @Test
-    public void getAllComponentsTest() {
+    /**
+     * Generate a project with different dependencies
+     *
+     * @return A project with 1000 dpendencies: <ul>
+     * <li>200 outdated dependencies, 75 direct and 125 transitive</li>
+     * <li>800 recent dependencies, 25 direct, 775 transitive</li>
+     * @throws MalformedPackageURLException
+     */
+    private Project prepareProject() throws MalformedPackageURLException {
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final List<String> directDepencencies = new ArrayList<>();
+        // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
             Component component = new Component();
             component.setProject(project);
-            component.setName("Component Name");
-            component.setVersion(String.valueOf(i));
-            qm.createComponent(component, false);
+            component.setGroup("component-group");
+            component.setName("component-name-" + i);
+            component.setVersion(String.valueOf(i) + ".0");
+            component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-" + i, String.valueOf(i) + ".0", null, null));
+            component = qm.createComponent(component, false);
+            // direct depencencies
+            if (i < 100) {
+                // 100 direct depencencies, 900 transitive depencencies
+                directDepencencies.add("{\"uuid\":\"" + component.getUuid() + "\"}");
+            }
+            // Recent & Outdated
+            if ((i >= 25) && (i < 225)) {
+                // 100 outdated components, 75 of these are direct dependencies, 25 transitive
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.MAVEN);
+                metaComponent.setNamespace("component-group");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            } else if (i < 500) {
+                // 300 recent components, 25 of these are direct dependencies
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.MAVEN);
+                metaComponent.setNamespace("component-group");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            } else {
+                // 500 components with no RepositoryMetaComponent containing version
+                // metadata, all transitive dependencies
+            }
         }
+        project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
+        return project;
+    }
+
+    @Test
+    public void getOutdatedComponentsTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
+
+        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("onlyOutdated", true)
+                .queryParam("onlyDirect", false)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("200"); // 200 outdated dependencies,  direct and transitive
+
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).hasSize(100); // Default page size is 100
+    }
+
+    @Test
+    public void getOutdatedDirectComponentsTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
+
+        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("onlyOutdated", true)
+                .queryParam("onlyDirect", true)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("75"); // 75 outdated direct dependencies
+
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).hasSize(75);
+    }
+
+    @Test
+    public void getAllComponentsTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
 
         final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1000");
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1000"); // 1000 dependencies
 
         final JsonArray json = parseJsonArray(response);
         assertThat(json).hasSize(100); // Default page size is 100
+    }
+
+    @Test
+    public void getAllDirectComponentsTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
+
+        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("onlyDirect", true)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("100"); // 100 direct dependencies
+
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).hasSize(100);
     }
 
     @Test
@@ -142,6 +252,183 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
         Assert.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
         Assert.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
+    }
+
+    @Test
+    public void getComponentByUuidWithPublishedMetaDataTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        Date published = new Date();
+        integrityAnalysis.setUpdatedAt(published);
+        integrityAnalysis.setId(component.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
+        qm.persist(integrityAnalysis);
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(published);
+        integrityMetaComponent.setLastFetch(published);
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        RepositoryMetaComponent meta = new RepositoryMetaComponent();
+        Date lastCheck = new Date();
+        meta.setLastCheck(lastCheck);
+        meta.setNamespace("org.acme");
+        meta.setName("abc");
+        meta.setLatestVersion("2.0.0");
+        meta.setRepositoryType(RepositoryType.MAVEN);
+        qm.persist(meta);
+        component = qm.createComponent(component, false);
+        Response response = target(V1_COMPONENT + "/" + component.getUuid())
+                .queryParam("includeRepositoryMetaData", true)
+                .queryParam("includeIntegrityMetaData", true)
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("ABC", json.getString("name"));
+        Assert.assertEquals("MAVEN", json.getJsonObject("repositoryMeta").getString("repositoryType"));
+        Assert.assertEquals("org.acme", json.getJsonObject("repositoryMeta").getString("namespace"));
+        Assert.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
+        Assert.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
+        Assert.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
+        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("publishedDate").longValue() / 1000)).toString());
+        Assert.assertEquals(HASH_MATCH_PASSED.toString(), json.getJsonObject("componentMetaInformation").getString("integrityMatchStatus"));
+        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("lastFetched").longValue() / 1000)).toString());
+    }
+
+
+    @Test
+    public void integrityCheckStatusPassTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        Date published = new Date();
+        integrityAnalysis.setUpdatedAt(published);
+        integrityAnalysis.setId(component.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
+        qm.persist(integrityAnalysis);
+        component = qm.createComponent(component, false);
+        Response response = target(V1_COMPONENT + "/" + component.getUuid() + "/integritycheckstatus")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("md5HashMatchStatus"));
+        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("integrityCheckStatus"));
+        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("sha512HashMatchStatus"));
+        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
+    }
+
+    @Test
+    public void integrityCheckStatusFailTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_FAILED);
+        Date published = new Date();
+        integrityAnalysis.setUpdatedAt(published);
+        integrityAnalysis.setId(component.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_FAILED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_FAILED);
+        qm.persist(integrityAnalysis);
+        component = qm.createComponent(component, false);
+        Response response = target(V1_COMPONENT + "/" + component.getUuid() + "/integritycheckstatus")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("md5HashMatchStatus"));
+        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("integrityCheckStatus"));
+        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("sha512HashMatchStatus"));
+        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
+    }
+
+    @Test
+    public void integrityMetaDataFoundTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/io.micrometer/micrometer-registry-prometheus@1.9.4?type=jar");
+        Date published = new Date();
+        component = qm.createComponent(component, false);
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(published);
+        integrityMetaComponent.setLastFetch(published);
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setRepositoryUrl("https://repo1.maven.org/maven2/io/micrometer/micrometer-registry-prometheus/1.9.4/micrometer-registry-prometheus-1.9.4.jar");
+        integrityMetaComponent.setMd5("45e5bdba87362b16852ec279c254eb57");
+        integrityMetaComponent.setSha1("45e5bdba87362b16852ec279c254eb57");
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+
+        Response response = target(V1_COMPONENT + "/integritymetadata")
+                .queryParam("purl", component.getPurl())
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("https://repo1.maven.org/maven2/io/micrometer/micrometer-registry-prometheus/1.9.4/micrometer-registry-prometheus-1.9.4.jar", json.getString("repositoryUrl"));
+        Assert.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("md5"));
+        Assert.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("sha1"));
+        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("publishedAt").longValue() / 1000)).toString());
+    }
+
+    @Test
+    public void integrityMetaDataNotFoundTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/io.micrometer/micrometer-registry-prometheus@1.9.4?type=jar");
+        Date published = new Date();
+        component = qm.createComponent(component, false);
+        Response response = target(V1_COMPONENT + "/integritymetadata")
+                .queryParam("purl", component.getPurl())
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(404, response.getStatus(), 0);
+    }
+
+    @Test
+    public void integrityMetaDataInvalidPurlTest() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/io.micrometer/micrometer-registry-prometheus@1.9.4?type=jar");
+        Date published = new Date();
+        component = qm.createComponent(component, false);
+        Response response = target(V1_COMPONENT + "/integritymetadata")
+                .queryParam("purl", "component.getPurl()")
+                .request().header(X_API_KEY, apiKey).get(Response.class);
+        Assert.assertEquals(400, response.getStatus(), 0);
     }
 
     @Test
@@ -520,12 +807,24 @@ public class ComponentResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
         Component component = new Component();
         component.setProject(project);
+        component.setUuid(UUID.randomUUID());
         component.setName("My Component");
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
+        IntegrityAnalysis analysis = new IntegrityAnalysis();
+        analysis.setComponent(component);
+        analysis.setIntegrityCheckStatus(HASH_MATCH_UNKNOWN);
+        analysis.setMd5HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setSha512HashMatchStatus(HASH_MATCH_UNKNOWN);
+        analysis.setUpdatedAt(new Date());
+        IntegrityAnalysis integrityResponse = qm.persist(analysis);
         Response response = target(V1_COMPONENT + "/" + component.getUuid().toString())
                 .request().header(X_API_KEY, apiKey).delete();
         Assert.assertEquals(204, response.getStatus(), 0);
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityResponse.getId()));
     }
 
     @Test

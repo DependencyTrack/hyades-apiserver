@@ -53,6 +53,7 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String V1_BOM = "/v1/bom";
     protected final String V1_CALCULATOR = "/v1/calculator";
     protected final String V1_COMPONENT = "/v1/component";
+    protected final String V1_DEPENDENCY_GRAPH = "/v1/dependencyGraph";
     protected final String V1_CONFIG_PROPERTY = "/v1/configProperty";
     protected final String V1_CWE = "/v1/cwe";
     protected final String V1_DEPENDENCY = "/v1/dependency";
@@ -73,6 +74,7 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String V1_SEARCH = "/v1/search";
     protected final String V1_TEAM = "/v1/team";
     protected final String V1_USER = "/v1/user";
+    protected final String V1_VEX = "/v1/vex";
     protected final String V1_VIOLATION_ANALYSIS = "/v1/violation/analysis";
     protected final String V1_VULNERABILITY = "/v1/vulnerability";
     protected final String V1_WORKFLOW = "/v1/workflow";

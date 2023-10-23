@@ -29,10 +29,10 @@ import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -136,18 +137,52 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     /**
      * Returns a List of Dependency for the specified Project.
      *
-     * @param project the Project to retrieve dependencies of
+     * @param project        the Project to retrieve dependencies of
+     * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
      * @return a List of Dependency objects
      */
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
+        return getComponents(project, includeMetrics, false, false);
+    }
+
+    /**
+     * Returns a List of Dependency for the specified Project.
+     *
+     * @param project        the Project to retrieve dependencies of
+     * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
+     * @param onlyOutdated   Optionally exclude recent components so only outdated components are shown
+     * @param onlyDirect     Optionally exclude transitive dependencies so only direct dependencies are shown
+     * @return a List of Dependency objects
+     */
+    public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         final PaginatedResult result;
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project");
+        String querySring = "SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
+        if (filter != null) {
+            querySring += " && (project == :project) && name.toLowerCase().matches(:name)";
+        }
+        if (onlyOutdated) {
+            // Components are considered outdated when metadata does exists, but the version is different than latestVersion
+            // Different should always mean version < latestVersion
+            // Hack JDO using % instead of .* to get the SQL LIKE clause working:
+            querySring +=
+                    " && !(" +
+                            " SELECT FROM org.dependencytrack.model.RepositoryMetaComponent m " +
+                            " WHERE m.name == this.name " +
+                            " && m.namespace == this.group " +
+                            " && m.latestVersion != this.version " +
+                            " && this.purl.matches('pkg:' + m.repositoryType.toString().toLowerCase() + '/%') " +
+                            " ).isEmpty()";
+        }
+        if (onlyDirect) {
+            querySring +=
+                    " && this.project.directDependencies.matches('%\"uuid\":\"'+this.uuid+'\"%') "; // only direct dependencies
+        }
+        final Query<Component> query = pm.newQuery(querySring);
         query.getFetchPlan().setMaxFetchDepth(2);
         if (orderBy == null) {
             query.setOrdering("name asc, version desc");
         }
         if (filter != null) {
-            query.setFilter("project == :project && name.toLowerCase().matches(:name)");
             final String filterString = ".*" + filter.toLowerCase() + ".*";
             result = execute(query, project, filterString);
         } else {
@@ -164,6 +199,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        component.setComponentMetaInformation(getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }
@@ -295,6 +331,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
+                        component.setComponentMetaInformation(getMetaInformation(purl, component.getUuid()));
                     }
                 }
             }
@@ -409,6 +446,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     protected void deleteComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
+        query.setParameters(project);
+        List<Component> components = query.executeList();
+        for (Component component : components) {
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
+        }
         try {
             query.deletePersistentAll(project);
         } finally {
@@ -443,6 +485,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component == :component"), component);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component == :component"), component);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component == :component"), component);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
+
 
             // The component itself must be deleted via deletePersistentAll, otherwise relationships
             // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
@@ -699,6 +743,19 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         return dependencyGraph;
     }
 
+    /**
+     * Returns a list of all {@link DependencyGraphResponse} objects by {@link Component} UUID.
+     *
+     * @param uuids a list of {@link Component} UUIDs
+     * @return a list of {@link DependencyGraphResponse} objects
+     * @since 4.9.0
+     */
+    public List<DependencyGraphResponse> getDependencyGraphByUUID(final List<UUID> uuids) {
+        final Query<Component> query = this.getObjectsByUuidsQuery(Component.class, uuids);
+        query.setResult("uuid, name, version, purl, directDependencies, null");
+        return List.copyOf(query.executeResultList(DependencyGraphResponse.class));
+    }
+
     private void getParentDependenciesOfComponent(Project project, Component parentNode, Map<String, Component> dependencyGraph, Component searchedComponent) {
         String queryUuid = ".*" + parentNode.getUuid().toString() + ".*";
         final Query<Component> query = pm.newQuery(Component.class, "directDependencies.matches(:queryUuid) && project == :project");
@@ -752,9 +809,5 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
         }
         dependencyGraph.putAll(addToDependencyGraph);
-    }
-
-    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return persist(integrityMetaComponent);
     }
 }

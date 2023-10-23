@@ -73,6 +73,34 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
         }
     }
 
+    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
+        return persist(integrityMetaComponent);
+    }
+
+    public void createIntegrityMetaHandlingConflict(IntegrityMetaComponent integrityMetaComponent) {
+        final String createQuery = """
+                    INSERT INTO "INTEGRITY_META_COMPONENT" ("PURL", "STATUS", "LAST_FETCH")
+                    VALUES (?, ?, ?) 
+                    ON CONFLICT DO NOTHING
+                """;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            connection = (Connection) pm.getDataStoreConnection();
+            preparedStatement = connection.prepareStatement(createQuery);
+            preparedStatement.setString(1, integrityMetaComponent.getPurl().toString());
+            preparedStatement.setString(2, integrityMetaComponent.getStatus().toString());
+            preparedStatement.setTimestamp(3, new java.sql.Timestamp(integrityMetaComponent.getLastFetch().getTime()));
+            preparedStatement.execute();
+        } catch (Exception ex) {
+            LOGGER.error("Error in creating integrity meta component", ex);
+            throw new RuntimeException(ex);
+        } finally {
+            DbUtil.close(preparedStatement);
+            DbUtil.close(connection);
+        }
+    }
+
     /**
      * Synchronizes IntegrityMetaComponent with purls from COMPONENT. This is part of initializer.
      */

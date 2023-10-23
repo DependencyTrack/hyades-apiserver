@@ -2,5 +2,7 @@ package org.dependencytrack.event.kafka.componentmeta;
 
 import com.github.packageurl.PackageURL;
 
-public record ComponentProjection(String purlCoordinates, Boolean internal, PackageURL purl) {
+import java.util.UUID;
+
+public record ComponentProjection(UUID componentUuid, String purlCoordinates, Boolean internal, PackageURL purl) {
 }

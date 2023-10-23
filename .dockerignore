@@ -1,6 +1,5 @@
 .github/
 .idea/
-.run/
 docs/
 scripts/
 # The source directory is required by Dockerfile.demo

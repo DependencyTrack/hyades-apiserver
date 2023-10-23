@@ -136,13 +136,13 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
 
     private void dispatchComponents(final List<ComponentProjection> components) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(component.purlCoordinates(), component.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, component.purlCoordinates(), component.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
         }
     }
 
     private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final long offset) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "project.active == :projectActive && purlCoordinates != null";
+            var filter = "(project.active == :projectActive || project.active == null) && purlCoordinates != null";
             var params = new HashMap<String, Object>();
             params.put("projectActive", true);
             if (project != null) {

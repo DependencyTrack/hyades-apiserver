@@ -20,14 +20,13 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
 import alpine.model.ConfigProperty;
+import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import alpine.model.Team;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.persistence.QueryManager;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -48,15 +47,15 @@ public class TeamResourceTest extends ResourceTest {
     @Override
     protected DeploymentContext configureDeployment() {
         return ServletDeploymentContext.forServlet(new ServletContainer(
-                new ResourceConfig(TeamResource.class)
-                        .register(ApiFilter.class)
-                        .register(AuthenticationFilter.class)))
+                        new ResourceConfig(TeamResource.class)
+                                .register(ApiFilter.class)
+                                .register(AuthenticationFilter.class)))
                 .build();
     }
 
     @Test
     public void getTeamsTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createTeam("Team " + i, false);
         }
         Response response = target(V1_TEAM).request()
@@ -91,7 +90,7 @@ public class TeamResourceTest extends ResourceTest {
         String body = getPlainTextBody(response);
         Assert.assertEquals("The team could not be found.", body);
     }
-    
+
     @Test
     public void getTeamSelfTest() {
         initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
@@ -187,8 +186,8 @@ public class TeamResourceTest extends ResourceTest {
         if (aclToogle == null) {
             qm.createConfigProperty(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(), ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(), "true", ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(), ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
         } else {
-             aclToogle.setPropertyValue("true");
-             qm.persist(aclToogle);
+            aclToogle.setPropertyValue("true");
+            qm.persist(aclToogle);
         }
         Project project = qm.createProject("Acme Example", null, "1", null, null, null, true, false);
         project.addAccessTeam(team);

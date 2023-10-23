@@ -30,9 +30,9 @@ jobs:
           fi
           NEXT_VERSION="${VERSION%.*}.$((${VERSION##*.} + 1))-SNAPSHOT"
 
-          echo "::set-output name=version::${VERSION}"
-          echo "::set-output name=next-version::${NEXT_VERSION}"
-          echo "::set-output name=release-branch::${VERSION%.*}.x"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "next-version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
+          echo "release-branch=${VERSION%.*}.x" >> $GITHUB_OUTPUT
 
   create-release:
     runs-on: ubuntu-latest
@@ -97,8 +97,7 @@ jobs:
         run: |-
           gh release create "${{ needs.prepare-release.outputs.version }}" \
             --target "${{ needs.prepare-release.outputs.release-branch }}" \
-            --title "${{ needs.prepare-release.outputs.version }}" \
-            --notes-file ".github/default-release-notes.md"
+            --generate-notes
 
   post-release:
     runs-on: ubuntu-latest

@@ -27,7 +27,7 @@ There are a few things you'll need on your journey:
 * Docker (optional)
 
 > We provide common [run configurations](https://www.jetbrains.com/help/idea/run-debug-configuration.html) for IntelliJ
-> in the [`.run`](./.run) directory for convenience. IntelliJ will automatically pick those up when you open this
+> in the [`.idea/runConfigurations`](.idea/runConfigurations) directory for convenience. IntelliJ will automatically pick those up when you open this
 > repository.
 
 ## Core Technologies
@@ -51,22 +51,10 @@ Build an executable JAR containing just the API server:
 mvn clean package -P clean-exclude-wars -P enhance -P embedded-jetty -DskipTests -Dlogback.configuration.file=src/main/docker/logback.xml
 ```
 
-Build an executable JAR that contains both API server and frontend (aka "bundled" distribution):
-
-```shell
-mvn clean package -P clean-exclude-wars -P enhance -P embedded-jetty -P bundle-ui -DskipTests -Dlogback.configuration.file=src/main/docker/logback.xml
-```
-
-> When using the `bundle-ui` profile, Maven will download
-> a [`DependencyTrack/frontend`](https://github.com/DependencyTrack/frontend)
-> release and include it in the JAR. The frontend version is specified via the `frontend.version` property
-> in [`pom.xml`](./pom.xml).
-
-The resulting files are placed in `./target` as `dependency-track-apiserver.jar` or `dependency-track-bundled.jar`
-respectively.
-Both JARs ship with
+The resulting file is placed in `./target` as `dependency-track-apiserver.jar`.
+The JAR ships with 
 an [embedded Jetty server](https://github.com/stevespringett/Alpine/tree/master/alpine-executable-war),
-there's no need to deploy them in an application server like Tomcat or WildFly.
+there's no need to deploy it in an application server like Tomcat or WildFly.
 
 ## Running
 
@@ -109,38 +97,8 @@ To build and run the API server in one go, invoke the Jetty Maven plugin as foll
 mvn jetty:run -P enhance -Dlogback.configurationFile=src/main/docker/logback.xml
 ```
 
-> Note that the `bundle-ui` profile has no effect using this method.
-> It works only for the API server, not the bundled distribution.
-
-The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](./.run/Jetty.run.xml) run
+The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
 configuration.
-
-### Skipping NVD mirroring
-
-For local debugging and testing, it is sometimes desirable to skip the NVD mirroring process
-that is executed a minute after Dependency-Track has started.
-
-This can be achieved by tricking Dependency-Track into thinking that it already
-mirrored the NVD data, so there's no need to re-download it again.
-
-Prior to starting Dependency-Track, execute the `data-nist-generate-dummy.sh` script:
-
-```shell
-./scripts/data-nist-generate-dummy.sh
-```
-
-> **Note**
-> The `modified` feed will still be downloaded. But that feed is so small that it
-> doesn't really have an impact.
-When testing containerized deployments, simply mount the local directory containing the prepared
-NVD data into the container:
-
-```shell
-./scripts/data-nist-generate-dummy.sh
-docker run -d --name dtrack \
-  -v "$HOME/.dependency-track:/data/.dependency-track" \
-  -p '127.0.0.1:8080:8080' dependencytrack/apiserver:snapshot
-```
 
 ## Debugging with Frontend
 
@@ -206,18 +164,12 @@ Now just execute the test again, and it should just work.
 
 ## Building Container Images
 
-Ensure you've built either API server or the bundled distribution, or both.
+Ensure you've built the API server JAR.
 
 To build the API server image:
 
 ```shell
 docker build --build-arg WAR_FILENAME=dependency-track-apiserver.jar -t dependencytrack/apiserver:local -f ./src/main/docker/Dockerfile .
-```
-
-To build the bundled image:
-
-```shell
-docker build --build-arg WAR_FILENAME=dependency-track-bundled.jar -t dependencytrack/bundled:local -f ./src/main/docker/Dockerfile .
 ```
 
 ## Shedlock 
