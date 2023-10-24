@@ -110,6 +110,7 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
                     SELECT DISTINCT "PURL"
                     FROM "COMPONENT"
                     WHERE "PURL" IS NOT NULL
+                    ON CONFLICT DO NOTHING
                 """;
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -147,13 +148,13 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
      *
      * @return the list of purls
      */
-    public List<String> fetchNextPurlsPage(long offset) {
+    public List<IntegrityMetaComponent> fetchNextPurlsPage(long offset) {
         try (final Query<IntegrityMetaComponent> query =
                      pm.newQuery(IntegrityMetaComponent.class, "status == null || (status == :inProgress && lastFetch < :latest)")) {
             query.setParameters(FetchStatus.IN_PROGRESS, Date.from(Instant.now().minus(1, ChronoUnit.HOURS)));
             query.setRange(offset, offset + 5000);
-            query.setResult("purl");
-            return List.copyOf(query.executeResultList(String.class));
+            query.setResult("id, purl");
+            return List.copyOf(query.executeResultList(IntegrityMetaComponent.class));
         } catch (Exception e) {
             LOGGER.error("Error in getting purls from integrity meta.", e);
             throw new RuntimeException(e);
