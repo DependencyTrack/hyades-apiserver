@@ -44,6 +44,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
+import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
@@ -56,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,6 +66,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.dependencytrack.util.PurlUtil.silentPurlCoordinatesOnly;
 
@@ -162,18 +167,33 @@ public class ModelConverter {
             }
         }
 
-        if (cdxComponent.getLicenseChoice() != null
-                && cdxComponent.getLicenseChoice().getLicenses() != null
-                && !cdxComponent.getLicenseChoice().getLicenses().isEmpty()) {
-            for (final org.cyclonedx.model.License cdxLicense : cdxComponent.getLicenseChoice().getLicenses()) {
-                if (cdxLicense != null) {
-                    component.setLicenseId(trimToNull(cdxLicense.getId()));
-                    component.setLicense(trimToNull(cdxLicense.getName()));
-                    component.setLicenseUrl(trimToNull(cdxLicense.getUrl()));
-                    break; // Components in CDX can have multiple licenses, but DT supports only one
+        final var licenseCandidates = new ArrayList<org.cyclonedx.model.License>();
+        if (cdxComponent.getLicenseChoice() != null) {
+            if (cdxComponent.getLicenseChoice().getLicenses() != null) {
+                cdxComponent.getLicenseChoice().getLicenses().stream()
+                        .filter(license -> isNotBlank(license.getId()) || isNotBlank(license.getName()))
+                        .peek(license -> {
+                            // License text can be large, but we don't need it for further processing. Drop it.
+                            license.setLicenseText(null);
+                        })
+                        .forEach(licenseCandidates::add);
+            }
+
+            if (isNotBlank(cdxComponent.getLicenseChoice().getExpression())) {
+                component.setLicenseExpression(trim(cdxComponent.getLicenseChoice().getExpression()));
+
+                // If the expression consists of just one license ID, add it as another option.
+                final var expressionParser = new SpdxExpressionParser();
+                final SpdxExpression expression = expressionParser.parse(component.getLicenseExpression());
+                if (expression.getSpdxLicenseId() != null) {
+                    final var expressionLicense = new org.cyclonedx.model.License();
+                    expressionLicense.setId(expression.getSpdxLicenseId());
+                    expressionLicense.setName(expression.getSpdxLicenseId());
+                    licenseCandidates.add(expressionLicense);
                 }
             }
         }
+        component.setLicenseCandidates(licenseCandidates);
 
         if (cdxComponent.getComponents() != null && !cdxComponent.getComponents().isEmpty()) {
             final var children = new ArrayList<Component>();
@@ -358,32 +378,33 @@ public class ModelConverter {
             cycloneComponent.addHash(new Hash(Hash.Algorithm.SHA3_512, component.getSha3_512()));
         }
 
+        final LicenseChoice licenseChoice = new LicenseChoice();
         if (component.getResolvedLicense() != null) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setId(component.getResolvedLicense().getLicenseId());
             license.setUrl(component.getLicenseUrl());
-            final LicenseChoice licenseChoice = new LicenseChoice();
             licenseChoice.addLicense(license);
             cycloneComponent.setLicenseChoice(licenseChoice);
         } else if (component.getLicense() != null) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setName(component.getLicense());
             license.setUrl(component.getLicenseUrl());
-            final LicenseChoice licenseChoice = new LicenseChoice();
             licenseChoice.addLicense(license);
             cycloneComponent.setLicenseChoice(licenseChoice);
         } else if (StringUtils.isNotEmpty(component.getLicenseUrl())) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setUrl(component.getLicenseUrl());
-            final LicenseChoice licenseChoice = new LicenseChoice();
             licenseChoice.addLicense(license);
             cycloneComponent.setLicenseChoice(licenseChoice);
         }
-
+        if (component.getLicenseExpression() != null) {
+            licenseChoice.setExpression(component.getLicenseExpression());
+            cycloneComponent.setLicenseChoice(licenseChoice);
+        }
 
         if (component.getExternalReferences() != null && component.getExternalReferences().size() > 0) {
             List<org.cyclonedx.model.ExternalReference> references = new ArrayList<>();
-            for (ExternalReference ref: component.getExternalReferences()) {
+            for (ExternalReference ref : component.getExternalReferences()) {
                 org.cyclonedx.model.ExternalReference cdxRef = new org.cyclonedx.model.ExternalReference();
                 cdxRef.setType(ref.getType());
                 cdxRef.setUrl(ref.getUrl());
@@ -737,17 +758,23 @@ public class ModelConverter {
         cdxSource.setName(vulnSource.name());
         switch (vulnSource) {
             case NVD:
-                cdxSource.setUrl("https://nvd.nist.gov/"); break;
+                cdxSource.setUrl("https://nvd.nist.gov/");
+                break;
             case NPM:
-                cdxSource.setUrl("https://www.npmjs.com/"); break;
+                cdxSource.setUrl("https://www.npmjs.com/");
+                break;
             case GITHUB:
-                cdxSource.setUrl("https://github.com/advisories"); break;
+                cdxSource.setUrl("https://github.com/advisories");
+                break;
             case VULNDB:
-                cdxSource.setUrl("https://vulndb.cyberriskanalytics.com/"); break;
+                cdxSource.setUrl("https://vulndb.cyberriskanalytics.com/");
+                break;
             case OSSINDEX:
-                cdxSource.setUrl("https://ossindex.sonatype.org/"); break;
+                cdxSource.setUrl("https://ossindex.sonatype.org/");
+                break;
             case RETIREJS:
-                cdxSource.setUrl("https://github.com/RetireJS/retire.js"); break;
+                cdxSource.setUrl("https://github.com/RetireJS/retire.js");
+                break;
         }
         return cdxSource;
     }

@@ -34,6 +34,7 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
@@ -88,6 +89,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void informTest() throws Exception {
+        // Required for license resolution.
+        DefaultObjectGenerator.loadDefaultLicenses();
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
@@ -122,6 +126,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        assertThat(component.getResolvedLicense()).isNotNull();
+        assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
+        assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
@@ -169,6 +176,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void informTestWithComponentAlreadyExistsForIntegrityCheck() throws Exception {
+        // Required for license resolution.
+        DefaultObjectGenerator.loadDefaultLicenses();
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
@@ -208,6 +218,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        assertThat(component.getResolvedLicense()).isNotNull();
+        assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
+        assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
