@@ -49,6 +49,7 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC("task.cron.defectdojo.sync", "0 2 * * *"),
     CRON_EXPRESSION_FOR_KENNA_SYNC("task.cron.kenna.sync", "0 2 * * *"),
     CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK("task.cron.workflow.state.cleanup", "*/15 * * * *"),
+    CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK("task.cron.integrityInitializer", "0 */12 * * *"),
     TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
     TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
     TASK_PORTFOLIO_LOCK_AT_MOST_FOR("task.metrics.portfolio.lockAtMostForInMillis", "900000"),
@@ -72,8 +73,8 @@ public enum ConfigKey implements Config.Key {
     WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H"),
     TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
     CEL_POLICY_ENGINE_ENABLED("cel.policy.engine.enabled", "false"),
-    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR("task.integrity.integrityMetaInitializer.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
-    TASK_INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("task.integrity.integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
+    INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR("integrityMetaInitializer.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
+    INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false");
 

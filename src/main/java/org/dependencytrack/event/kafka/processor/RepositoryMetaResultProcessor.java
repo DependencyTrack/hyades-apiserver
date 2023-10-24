@@ -146,7 +146,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
     private IntegrityMetaComponent synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
         final AnalysisResult result = incomingAnalysisResultRecord.value();
         IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
-        if (persistentIntegrityMetaComponent != null && persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
+        if (persistentIntegrityMetaComponent != null && persistentIntegrityMetaComponent.getStatus() != null && persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
             LOGGER.warn("""
                     Received hash information for %s that has already been processed; Discarding
                     """.formatted(purl));

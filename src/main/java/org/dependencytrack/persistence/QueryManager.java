@@ -34,7 +34,6 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
-import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -87,6 +86,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
+import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 import org.hyades.proto.vulnanalysis.v1.ScanResult;
 import org.hyades.proto.vulnanalysis.v1.ScanStatus;
 import org.hyades.proto.vulnanalysis.v1.ScannerResult;
@@ -597,7 +597,7 @@ public class QueryManager extends AlpineQueryManager {
         return getComponentQueryManager().getComponentByHash(hash);
     }
 
-    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+    public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
         return getComponentQueryManager().getComponentByPurl(purl);
     }
 
@@ -1823,7 +1823,7 @@ public class QueryManager extends AlpineQueryManager {
         return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
     }
 
-    public List<String> fetchNextPurlsPage(long offset) {
+    public List<IntegrityMetaComponent> fetchNextPurlsPage(long offset) {
         return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
     }
 

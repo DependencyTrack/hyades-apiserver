@@ -30,6 +30,7 @@ import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
 import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
+import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
 import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.LdapSyncTaskWrapper;
@@ -98,6 +99,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EVENT_SERVICE.subscribe(WorkflowStateCleanupEvent.class, WorkflowStateCleanupTask.class);
+        EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
 
         TaskScheduler.getInstance();
     }
@@ -132,6 +134,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
         EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);
         EVENT_SERVICE.unsubscribe(WorkflowStateCleanupTask.class);
+        EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
     }
 }

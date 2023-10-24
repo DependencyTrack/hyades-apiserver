@@ -25,7 +25,6 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.event.IntegrityMetaInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -33,6 +32,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
+import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -240,14 +240,14 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param purl the purl of the component to retrieve
      * @return associated ComponentProjection
      */
-    public IntegrityMetaInitializer.ComponentProjection getComponentByPurl(String purl) {
+    public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
         if (purl == null) {
             return null;
         }
         final Query<Component> query = pm.newQuery(Component.class, "purl == :purl");
         query.setParameters(purl);
         query.setResult("DISTINCT purlCoordinates, internal");
-        return query.executeResultUnique(IntegrityMetaInitializer.ComponentProjection.class);
+        return query.executeResultUnique(IntegrityMetaInitializerTask.ComponentProjection.class);
     }
 
     /**
