@@ -153,7 +153,7 @@ public class ComponentResource extends AlpineResource {
                                 detachedComponent.setRepositoryMeta(repoMetaComponent);
                             }
                             if (includeIntegrityMetaData) {
-                                detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getPurl(), component.getUuid()));
+                                detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
                             }
                         }
                     }

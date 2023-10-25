@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
@@ -27,6 +28,7 @@ import alpine.notification.NotificationLevel;
 import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
+import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
 import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
@@ -125,6 +127,8 @@ import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 public class QueryManager extends AlpineQueryManager {
 
     private AlpineRequest request;
+
+    private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
     private FindingsQueryManager findingsQueryManager;
@@ -1843,19 +1847,35 @@ public class QueryManager extends AlpineQueryManager {
         return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
     }
 
-    public ComponentMetaInformation getMetaInformation(PackageURL purl, UUID uuid) {
-        Date publishedAt = null;
-        Date lastFetched = null;
-        IntegrityMatchStatus integrityMatchStatus = null;
-        final IntegrityMetaComponent integrityMetaComponent = getIntegrityMetaComponent(purl.toString());
-        final IntegrityAnalysis integrityAnalysis = getIntegrityAnalysisByComponentUuid(uuid);
-        if (integrityMetaComponent != null) {
-            publishedAt = integrityMetaComponent.getPublishedAt();
-            lastFetched = integrityMetaComponent.getLastFetch();
+    public ComponentMetaInformation getMetaInformation(UUID uuid) {
+
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        String queryString = """
+                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
+                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."ID" ="C"."ID"  WHERE "C"."UUID" = ?
+                """;
+        try {
+            connection = (Connection) pm.getDataStoreConnection();
+
+            preparedStatement = connection.prepareStatement(queryString);
+            preparedStatement.setString(1, uuid.toString());
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                var publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
+                Date lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
+                return new ComponentMetaInformation(publishedDate,
+                        IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
+                        lastFetch);
+
+            }
+        } catch (Exception ex) {
+            LOGGER.error("error occurred while fetch component published date and integrity information", ex);
+            throw new RuntimeException(ex);
+        } finally {
+            DbUtil.close(preparedStatement);
+            DbUtil.close(connection);
         }
-        if (integrityAnalysis != null) {
-            integrityMatchStatus = integrityAnalysis.getIntegrityCheckStatus();
-        }
-        return new ComponentMetaInformation(publishedAt, integrityMatchStatus, lastFetched);
+        return null;
     }
 }
