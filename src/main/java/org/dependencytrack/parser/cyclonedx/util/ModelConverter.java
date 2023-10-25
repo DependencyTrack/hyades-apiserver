@@ -180,16 +180,24 @@ public class ModelConverter {
             }
 
             if (isNotBlank(cdxComponent.getLicenseChoice().getExpression())) {
-                component.setLicenseExpression(trim(cdxComponent.getLicenseChoice().getExpression()));
-
                 // If the expression consists of just one license ID, add it as another option.
                 final var expressionParser = new SpdxExpressionParser();
-                final SpdxExpression expression = expressionParser.parse(component.getLicenseExpression());
-                if (expression.getSpdxLicenseId() != null) {
-                    final var expressionLicense = new org.cyclonedx.model.License();
-                    expressionLicense.setId(expression.getSpdxLicenseId());
-                    expressionLicense.setName(expression.getSpdxLicenseId());
-                    licenseCandidates.add(expressionLicense);
+                final SpdxExpression expression = expressionParser.parse(cdxComponent.getLicenseChoice().getExpression());
+                if (!SpdxExpression.INVALID.equals(expression)) {
+                    component.setLicenseExpression(trim(cdxComponent.getLicenseChoice().getExpression()));
+
+                    if (expression.getSpdxLicenseId() != null) {
+                        final var expressionLicense = new org.cyclonedx.model.License();
+                        expressionLicense.setId(expression.getSpdxLicenseId());
+                        expressionLicense.setName(expression.getSpdxLicenseId());
+                        licenseCandidates.add(expressionLicense);
+                    }
+                } else {
+                    LOGGER.warn("""
+                            Encountered invalid license expression "%s" for \
+                            Component{group=%s, name=%s, version=%s, bomRef=%s}; Skipping\
+                            """.formatted(cdxComponent.getLicenseChoice().getExpression(), component.getGroup(),
+                            component.getName(), component.getVersion(), component.getBomRef()));
                 }
             }
         }
