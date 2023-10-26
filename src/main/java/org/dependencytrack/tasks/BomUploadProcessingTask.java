@@ -541,7 +541,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         final License resolvedLicense = resolveLicense(pm, licenseCache, licenseCandidate.getId());
                         if (resolvedLicense != null) {
                             component.setResolvedLicense(resolvedLicense);
-                            component.setLicense(trimToNull(licenseCandidate.getName()));
                             component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
                             break;
                         }
@@ -551,7 +550,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         final License resolvedCustomLicense = resolveCustomLicense(pm, customLicenseCache, licenseCandidate.getName());
                         if (resolvedCustomLicense != null) {
                             component.setResolvedLicense(resolvedCustomLicense);
-                            component.setLicense(trimToNull(licenseCandidate.getName()));
                             component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
                             break;
                         }
