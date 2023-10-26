@@ -88,8 +88,7 @@ public class ComponentProjection {
     @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
 
-    // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.
-    // @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
-    // public String licenseExpression;
+    @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
+    public String licenseExpression;
 
 }
