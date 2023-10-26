@@ -106,7 +106,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
-        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.4");
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
         assertThat(project.getExternalReferences()).isNotNull();
         assertThat(project.getExternalReferences()).hasSize(4);
 
@@ -192,7 +192,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
-        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.4");
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
         assertThat(project.getExternalReferences()).isNotNull();
         assertThat(project.getExternalReferences()).hasSize(4);
 
