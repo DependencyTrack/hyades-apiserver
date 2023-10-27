@@ -814,4 +814,13 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
         dependencyGraph.putAll(addToDependencyGraph);
     }
+
+    public List<Component> getComponentsByPurl(String purl) {
+        try(final Query<Component> query = pm.newQuery(Component.class, "purl == :purl")) {
+            query.setParameters(purl);
+            return List.copyOf(query.executeResultList(Component.class));
+        } catch(Exception exception) {
+            throw new RuntimeException(exception);
+        }
+    }
 }
