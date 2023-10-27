@@ -4,8 +4,6 @@ import java.util.Date;
 
 public class ComponentProjection {
     public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
-
-
     public long id;
 
     @MappedField(sqlColumnName = "UUID")
@@ -87,6 +85,17 @@ public class ComponentProjection {
 
     @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
+
+    public String getLatestVersion() {
+        return latestVersion;
+    }
+
+    public void setLatestVersion(String latestVersion) {
+        this.latestVersion = latestVersion;
+    }
+
+    @MappedField(protoFieldName = "latest_version", sqlColumnName = "LATEST_VERSION")
+    public String latestVersion;
 
     // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.
     // @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")

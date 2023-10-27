@@ -144,9 +144,17 @@ class CelPolicyQueryManager implements AutoCloseable {
                 )
                 .map(mapping -> "\"C\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
-
         final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT %s , "IMC"."PUBLISHED_AT" AS "publishedAt" FROM "COMPONENT" "C" LEFT JOIN "INTEGRITY_META_COMPONENT" "IMC" ON  "C"."PURL"="IMC"."PURL" WHERE "PROJECT_ID" = ?
+                SELECT %s , "IMC"."PUBLISHED_AT" as "publishedAt",
+                "RMC"."LATEST_VERSION" as "latestVersion"
+                from
+                "COMPONENT" "C"
+                LEFT JOIN "INTEGRITY_META_COMPONENT" "IMC" ON
+                "C"."PURL" = "IMC"."PURL"
+                LEFT JOIN "REPOSITORY_META_COMPONENT" "RMC" ON
+                "C"."NAME" = "RMC"."NAME"
+                WHERE
+                "PROJECT_ID" = ?
                 """.formatted(sqlSelectColumns));
         query.setParameters(projectId);
         try {

@@ -1,15 +1,19 @@
 package org.dependencytrack.policy.cel;
 
 import alpine.common.logging.Logger;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
+import org.dependencytrack.util.VersionDistance;
 import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Library;
 import org.projectnessie.cel.ProgramOption;
@@ -56,6 +60,8 @@ class CelPolicyLibrary implements Library {
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
+
+    static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
 
     @Override
     public List<EnvOption> getCompileOptions() {
@@ -113,6 +119,14 @@ class CelPolicyLibrary implements Library {
                                         List.of(TYPE_COMPONENT, Decls.String, Decls.String),
                                         Decls.Bool
                                 )
+                        ),
+                        Decls.newFunction(
+                                FUNC_COMPARE_VERSION_DISTANCE,
+                                Decls.newInstanceOverload(
+                                        "matches_version_distance_bool",
+                                        List.of(TYPE_COMPONENT, Decls.String, Decls.String),
+                                        Decls.Bool
+                                )
                         )
                 ),
                 EnvOption.types(
@@ -143,9 +157,79 @@ class CelPolicyLibrary implements Library {
                                 FUNC_MATCHES_RANGE,
                                 CelPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.function(FUNC_COMPARE_AGE, CelPolicyLibrary::isComponentOldFunc)
+                        Overload.function(FUNC_COMPARE_AGE,
+                                CelPolicyLibrary::isComponentOldFunc),
+                        Overload.function(FUNC_COMPARE_VERSION_DISTANCE,
+                                CelPolicyLibrary::matchesVersionDistanceFunc)
                 )
         );
+    }
+
+    private static Val matchesVersionDistanceFunc(Val... vals) {
+        if (vals.length != 3) {
+            return Types.boolOf(false);
+        }
+        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
+            return Types.boolOf(false);
+        }
+
+        if (!(vals[0].value() instanceof final Component component)) {
+            return Err.maybeNoSuchOverloadErr(vals[0]);
+        }
+        if (!(vals[1].value() instanceof final String value)) {
+            return Err.maybeNoSuchOverloadErr(vals[1]);
+        }
+        if (!(vals[2].value() instanceof final String comparator)) {
+            return Err.maybeNoSuchOverloadErr(vals[2]);
+        }
+        if (!component.hasPurl()) {
+            return Err.newErr("Provided component does not have a purl", vals[0]);
+        }
+        try {
+            if (RepositoryType.resolve(new PackageURL(component.getPurl())) == RepositoryType.UNSUPPORTED) {
+                return Err.newErr("Unsupported repository type for component: ", vals[0]);
+            }
+        } catch (MalformedPackageURLException ex) {
+            return Err.newErr("Invalid package url ", component.getPurl());
+        }
+        if (!component.hasLatestVersion()) {
+            return Err.newErr("Requested component does not have latest version information", component);
+        }
+        return Types.boolOf(matchesVersionDIstance(component, value, comparator));
+    }
+
+    private static boolean matchesVersionDIstance(Component component, String value, String comparator) {
+
+        String comparatorComputed = switch (comparator) {
+            case "NUMERIC_GREATER_THAN", ">" -> "NUMERIC_GREATER_THAN";
+            case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
+            case "NUMERIC_EQUAL", "==" -> "NUMERIC_EQUAL";
+            case "NUMERIC_NOT_EQUAL", "!=" -> "NUMERIC_NOT_EQUAL";
+            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" ->"NUMERIC_LESSER_THAN_OR_EQUAL";
+            case "NUMERIC_LESS_THAN", "<" -> "NUMERIC_LESS_THAN";
+            default -> "";
+        };
+        final VersionDistance versionDistance;
+        try {
+            versionDistance = VersionDistance.getVersionDistance(component.getVersion(), component.getLatestVersion());
+        } catch (RuntimeException e) {
+            LOGGER.warn("""
+                    Failed to compute version distance for component %s (UUID: %s), \
+                    between component version %s and latest version %s; Skipping\
+                    """.formatted(component, component.getUuid(), component.getVersion(), component.getLatestVersion(), e));
+            return false;
+        }
+        return isDirectDependency(component) && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
+    }
+
+    static boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
+        try (QueryManager queryManager = new QueryManager()) {
+            org.dependencytrack.model.Component componentFromDb = queryManager.getObjectByUuid(org.dependencytrack.model.Component.class, UUID.fromString(component.getUuid()));
+            return componentFromDb.getProject().getDirectDependencies().contains("\"uuid\":\"" + component.getUuid() + "\"");
+        } catch (Exception ex) {
+            LOGGER.error("Unable to determine if project associated with component has the component as a direct dependency", ex);
+            return false;
+        }
     }
 
     private static Val dependsOnFunc(final Val lhs, final Val rhs) {
@@ -218,6 +302,17 @@ class CelPolicyLibrary implements Library {
         if (!(vals[2].value() instanceof final String comparator)) {
             return Err.maybeNoSuchOverloadErr(vals[2]);
         }
+        if (!component.hasPurl()) {
+            return Err.newErr("Provided component does not have a purl", vals[0]);
+        }
+        try {
+            if (RepositoryType.resolve(new PackageURL(component.getPurl())) == RepositoryType.UNSUPPORTED) {
+                return Err.newErr("Unsupported repository type for component: ", vals[0]);
+            }
+        } catch (MalformedPackageURLException ex) {
+            return Err.newErr("Invalid package url ", component.getPurl());
+        }
+
         return Types.boolOf(isComponentOld(component, dateValue, comparator));
     }
 
@@ -446,5 +541,4 @@ class CelPolicyLibrary implements Library {
 
         return Pair.of(String.join(" && ", filters), params);
     }
-
 }
