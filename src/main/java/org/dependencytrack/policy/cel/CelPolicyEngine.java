@@ -455,8 +455,8 @@ public class CelPolicyEngine {
                         .setBlake2B256(trimToEmpty(projection.blake2b_256))
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
-                        .setBlake3(trimToEmpty(projection.blake3))
-                        .setLatestVersion(projection.getLatestVersion());
+                        .setBlake3(trimToEmpty(projection.blake3));
+        Optional.ofNullable(projection.getLatestVersion()).ifPresent(componentBuilder::setLatestVersion);
         if (projection.getPublishedAt() != null) {
             componentBuilder.setPublishedAt(Timestamps.fromDate(projection.getPublishedAt())).build();
         }

@@ -7,6 +7,7 @@ import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -205,10 +206,14 @@ class CelPolicyLibrary implements Library {
             case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
             case "NUMERIC_EQUAL", "==" -> "NUMERIC_EQUAL";
             case "NUMERIC_NOT_EQUAL", "!=" -> "NUMERIC_NOT_EQUAL";
-            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" ->"NUMERIC_LESSER_THAN_OR_EQUAL";
+            case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" -> "NUMERIC_LESSER_THAN_OR_EQUAL";
             case "NUMERIC_LESS_THAN", "<" -> "NUMERIC_LESS_THAN";
             default -> "";
         };
+        if(comparatorComputed.equals("")){
+            LOGGER.warn("Was passed a not supported operator for version distance policy "+comparator);
+            return false;
+        }
         final VersionDistance versionDistance;
         try {
             versionDistance = VersionDistance.getVersionDistance(component.getVersion(), component.getLatestVersion());
