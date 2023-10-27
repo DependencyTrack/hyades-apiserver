@@ -97,8 +97,7 @@ public class ComponentProjection {
     @MappedField(protoFieldName = "latest_version", sqlColumnName = "LATEST_VERSION")
     public String latestVersion;
 
-    // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades.
-    // @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
-    // public String licenseExpression;
+    @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
+    public String licenseExpression;
 
 }

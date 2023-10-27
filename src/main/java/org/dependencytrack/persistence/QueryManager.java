@@ -1878,4 +1878,8 @@ public class QueryManager extends AlpineQueryManager {
         }
         return null;
     }
+
+    public List<Component> getComponentsByPurl(String purl) {
+        return getComponentQueryManager().getComponentsByPurl(purl);
+    }
 }

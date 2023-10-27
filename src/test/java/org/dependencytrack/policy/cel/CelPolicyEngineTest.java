@@ -134,6 +134,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         component.setBlake2b_512("componentBlake2b_512");
         component.setBlake3("componentBlake3");
         component.setLicense("componentLicenseName");
+        component.setLicenseExpression("componentLicenseExpression");
         component.setResolvedLicense(license);
         qm.persist(component);
 
@@ -199,7 +200,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
                   && component.blake2b_512 == "componentBlake2b_512"
                   && component.blake3 == "componentBlake3"
                   && component.license_name == "componentLicenseName"
-                  && !has(component.license_expression) // Requires https://github.com/DependencyTrack/dependency-track/pull/2400 to be ported to Hyades
+                  && component.license_expression == "componentLicenseExpression"
                   && component.resolved_license.uuid == "__RESOLVED_LICENSE_UUID__"
                   && component.resolved_license.id == "resolvedLicenseId"
                   && component.resolved_license.name == "resolvedLicenseName"

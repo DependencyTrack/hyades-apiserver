@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
@@ -86,6 +87,8 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.trim;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD;
@@ -235,7 +238,6 @@ public class BomUploadProcessingTask implements Subscriber {
         services = services.stream()
                 .filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity))
                 .toList();
-
 
         LOGGER.info("Consumed %d components (%d before de-duplication) and %d services (%d before de-duplication) from uploaded BOM (%s)"
                 .formatted(components.size(), numComponentsTotal, services.size(), numServicesTotal, ctx));
@@ -531,12 +533,39 @@ public class BomUploadProcessingTask implements Subscriber {
             for (final Component component : components) {
                 component.setInternal(isInternalComponent(component, qm));
 
-                if (isNotBlank(component.getLicenseId())) {
-                    // Try to resolve the license by its ID.
-                    // Note: licenseId is a transient field of Component and will not survive this transaction.
-                    component.setResolvedLicense(resolveLicense(pm, licenseCache, component.getLicenseId()));
-                } else if (isNotBlank(component.getLicense())) {
-                    component.setResolvedLicense(resolveCustomLicense(pm, customLicenseCache, component.getLicense()));
+                // CycloneDX components can declare multiple licenses, but we currently
+                // only support one. We assume that the licenseCandidates list is ordered
+                // by priority, and simply take the first resolvable candidate.
+                for (final org.cyclonedx.model.License licenseCandidate : component.getLicenseCandidates()) {
+                    if (isNotBlank(licenseCandidate.getId())) {
+                        final License resolvedLicense = resolveLicense(pm, licenseCache, licenseCandidate.getId());
+                        if (resolvedLicense != null) {
+                            component.setResolvedLicense(resolvedLicense);
+                            component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
+                            break;
+                        }
+                    }
+
+                    if (isNotBlank(licenseCandidate.getName())) {
+                        final License resolvedCustomLicense = resolveCustomLicense(pm, customLicenseCache, licenseCandidate.getName());
+                        if (resolvedCustomLicense != null) {
+                            component.setResolvedLicense(resolvedCustomLicense);
+                            component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
+                            break;
+                        }
+                    }
+                }
+
+                // If we were unable to resolve any license by its ID, at least
+                // populate the license name. Again assuming order by priority.
+                if (component.getResolvedLicense() == null) {
+                    component.getLicenseCandidates().stream()
+                            .filter(license -> isNotBlank(license.getName()))
+                            .findFirst()
+                            .ifPresent(license -> {
+                                component.setLicense(trim(license.getName()));
+                                component.setLicenseUrl(trimToNull(license.getUrl()));
+                            });
                 }
 
                 final boolean isNewOrUpdated;

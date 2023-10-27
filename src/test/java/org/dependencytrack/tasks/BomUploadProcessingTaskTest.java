@@ -34,6 +34,7 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
 import org.hyades.proto.notification.v1.Group;
 import org.hyades.proto.notification.v1.Notification;
@@ -88,6 +89,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void informTest() throws Exception {
+        // Required for license resolution.
+        DefaultObjectGenerator.loadDefaultLicenses();
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
@@ -106,7 +110,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
-        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.4");
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
         assertThat(project.getExternalReferences()).isNotNull();
         assertThat(project.getExternalReferences()).hasSize(4);
 
@@ -122,6 +126,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        assertThat(component.getResolvedLicense()).isNotNull();
+        assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
+        assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
@@ -169,6 +176,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 
     @Test
     public void informTestWithComponentAlreadyExistsForIntegrityCheck() throws Exception {
+        // Required for license resolution.
+        DefaultObjectGenerator.loadDefaultLicenses();
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
@@ -192,7 +202,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
-        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.4");
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
         assertThat(project.getExternalReferences()).isNotNull();
         assertThat(project.getExternalReferences()).hasSize(4);
 
@@ -208,6 +218,9 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         assertThat(component.getDescription()).isEqualTo("A makebelieve XML utility library");
         assertThat(component.getCpe()).isEqualTo("cpe:/a:example:xmlutil:1.0.0");
         assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
+        assertThat(component.getResolvedLicense()).isNotNull();
+        assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
+        assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
@@ -737,7 +750,7 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(component.getName()).isEqualTo("acme-lib-a");
                     assertThat(component.getResolvedLicense()).isNotNull();
                     assertThat(component.getResolvedLicense().getName()).isEqualTo("custom license foobar");
-                    assertThat(component.getLicense()).isEqualTo("custom license foobar");
+                    assertThat(component.getLicense()).isNull();
                 },
                 component -> {
                     assertThat(component.getName()).isEqualTo("acme-lib-b");
@@ -750,6 +763,84 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
                     assertThat(component.getLicense()).isNull();
                 }
         );
+    }
+
+    @Test
+    public void informWithBomContainingLicenseExpressionTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-license-expression.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getLicense()).isNull();
+            assertThat(component.getLicenseExpression()).isEqualTo("EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0");
+            assertThat(component.getResolvedLicense()).isNull();
+        });
+    }
+
+    @Test
+    public void informWithBomContainingLicenseExpressionWithSingleIdTest() throws Exception {
+        final var license = new License();
+        license.setLicenseId("EPL-2.0");
+        license.setName("Eclipse Public License 2.0");
+        qm.persist(license);
+
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-license-expression-single-license.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("EPL-2.0");
+            assertThat(component.getLicense()).isNull();
+            assertThat(component.getLicenseExpression()).isEqualTo("EPL-2.0");
+        });
+    }
+
+    @Test
+    public void informWithBomContainingInvalidLicenseExpressionTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid-license-expression.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getLicense()).isNull();
+            assertThat(component.getLicenseExpression()).isNull();
+            assertThat(component.getResolvedLicense()).isNull();
+        });
     }
 
     private static File createTempBomFile(final String testFileName) throws Exception {

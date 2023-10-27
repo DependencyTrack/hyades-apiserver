@@ -333,6 +333,8 @@ public class ComponentResource extends AlpineResource {
                 validator.validateProperty(jsonComponent, "group"),
                 validator.validateProperty(jsonComponent, "description"),
                 validator.validateProperty(jsonComponent, "license"),
+                validator.validateProperty(jsonComponent, "licenseExpression"),
+                validator.validateProperty(jsonComponent, "licenseUrl"),
                 validator.validateProperty(jsonComponent, "filename"),
                 validator.validateProperty(jsonComponent, "classifier"),
                 validator.validateProperty(jsonComponent, "cpe"),
@@ -387,12 +389,20 @@ public class ComponentResource extends AlpineResource {
             component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
             if (resolvedLicense != null) {
                 component.setLicense(null);
+                component.setLicenseExpression(null);
+                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
                 component.setResolvedLicense(resolvedLicense);
-            } else {
-                component.setLicense(StringUtils.trimToNull(jsonComponent.getLicense()));
+            } else if (StringUtils.isNotBlank(jsonComponent.getLicense())) {
+                component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
+                component.setLicenseExpression(null);
+                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                component.setResolvedLicense(null);
+            } else if (StringUtils.isNotBlank(jsonComponent.getLicenseExpression())) {
+                component.setLicense(null);
+                component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
+                component.setLicenseUrl(null);
                 component.setResolvedLicense(null);
             }
-            component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
             component.setParent(parent);
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
@@ -434,6 +444,7 @@ public class ComponentResource extends AlpineResource {
                 validator.validateProperty(jsonComponent, "group"),
                 validator.validateProperty(jsonComponent, "description"),
                 validator.validateProperty(jsonComponent, "license"),
+                validator.validateProperty(jsonComponent, "licenseExpression"),
                 validator.validateProperty(jsonComponent, "licenseUrl"),
                 validator.validateProperty(jsonComponent, "filename"),
                 validator.validateProperty(jsonComponent, "classifier"),
@@ -483,12 +494,25 @@ public class ComponentResource extends AlpineResource {
                 final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
                 if (resolvedLicense != null) {
                     component.setLicense(null);
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
                     component.setResolvedLicense(resolvedLicense);
+                } else if (StringUtils.trimToNull(jsonComponent.getLicense()) != null) {
+                    component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                    component.setResolvedLicense(null);
+                } else if (StringUtils.trimToNull(jsonComponent.getLicenseExpression()) != null) {
+                    component.setLicense(null);
+                    component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
+                    component.setLicenseUrl(null);
+                    component.setResolvedLicense(null);
                 } else {
-                    component.setLicense(StringUtils.trimToNull(jsonComponent.getLicense()));
+                    component.setLicense(null);
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(null);
                     component.setResolvedLicense(null);
                 }
-                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);

@@ -131,7 +131,7 @@ public class VexResourceTest extends ResourceTest {
                 .isEqualTo("""
                         {
                           "bomFormat": "CycloneDX",
-                          "specVersion": "1.4",
+                          "specVersion": "1.5",
                           "serialNumber": "${json-unit.any-string}",
                           "version": 1,
                           "metadata": {

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.model.validation.ValidSpdxExpression;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
 import javax.jdo.annotations.Column;
@@ -289,6 +290,12 @@ public class Component implements Serializable {
     private String license;
 
     @Persistent
+    @Column(name = "LICENSE_EXPRESSION", jdbcType = "CLOB", allowsNull = "true")
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The license expression may only contain printable characters")
+    @ValidSpdxExpression
+    private String licenseExpression;
+
+    @Persistent
     @Column(name = "LICENSE_URL", jdbcType = "VARCHAR")
     @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
@@ -352,7 +359,7 @@ public class Component implements Serializable {
     private UUID uuid;
 
     private transient String bomRef;
-    private transient String licenseId;
+    private transient List<org.cyclonedx.model.License> licenseCandidates;
     private transient DependencyMetrics metrics;
     private transient RepositoryMetaComponent repositoryMeta;
 
@@ -629,6 +636,14 @@ public class Component implements Serializable {
         this.license = StringUtils.abbreviate(license, 255);
     }
 
+    public String getLicenseExpression() {
+        return licenseExpression;
+    }
+
+    public void setLicenseExpression(String licenseExpression) {
+        this.licenseExpression = licenseExpression;
+    }
+
     public String getLicenseUrl() {
         return licenseUrl;
     }
@@ -775,12 +790,12 @@ public class Component implements Serializable {
         this.bomRef = bomRef;
     }
 
-    public String getLicenseId() {
-        return licenseId;
+    public List<org.cyclonedx.model.License> getLicenseCandidates() {
+        return licenseCandidates;
     }
 
-    public void setLicenseId(final String licenseId) {
-        this.licenseId = licenseId;
+    public void setLicenseCandidates(final List<org.cyclonedx.model.License> licenseCandidates) {
+        this.licenseCandidates = licenseCandidates;
     }
 
     public int getUsedBy() {

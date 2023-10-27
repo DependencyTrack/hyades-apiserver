@@ -81,7 +81,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     /**
      * Loads the default licenses into the database if no license data exists.
      */
-    private void loadDefaultLicenses() {
+    public static void loadDefaultLicenses() {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing SPDX license definitions to datastore");
 

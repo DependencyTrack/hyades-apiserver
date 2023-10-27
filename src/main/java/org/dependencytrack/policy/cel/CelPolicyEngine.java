@@ -443,6 +443,7 @@ public class CelPolicyEngine {
                         .setSwidTagId(trimToEmpty(projection.swidTagId))
                         .setIsInternal(Optional.ofNullable(projection.internal).orElse(false))
                         .setLicenseName(trimToEmpty(projection.licenseName))
+                        .setLicenseExpression(trimToEmpty(projection.licenseExpression))
                         .setMd5(trimToEmpty(projection.md5))
                         .setSha1(trimToEmpty(projection.sha1))
                         .setSha256(trimToEmpty(projection.sha256))
