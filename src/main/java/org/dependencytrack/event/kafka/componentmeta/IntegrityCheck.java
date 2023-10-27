@@ -68,7 +68,7 @@ public class IntegrityCheck {
         //it could be that integrity metadata is already in db
         IntegrityMetaComponent metadata = integrityMetaComponent == null ? qm.getIntegrityMetaComponent(component.getPurl().toString()) : integrityMetaComponent;
         if(metadata == null) {
-            LOGGER.info("Metadata is null in result and db. Cannot perform integrity analysis");
+            LOGGER.info("Integrity metadata is null in result and db. Cannot perform integrity analysis");
             return;
         }
         IntegrityMatchStatus md5Status = checkHash(metadata.getMd5(), component.getMd5());

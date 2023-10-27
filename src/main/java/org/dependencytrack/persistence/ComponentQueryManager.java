@@ -815,9 +815,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         try(final Query<Component> query = pm.newQuery(Component.class, "purl == :purl")) {
             query.setParameters(purl);
             return List.copyOf(query.executeResultList(Component.class));
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+        } catch(Exception exception) {
+            throw new RuntimeException(exception);
         }
     }
 }
