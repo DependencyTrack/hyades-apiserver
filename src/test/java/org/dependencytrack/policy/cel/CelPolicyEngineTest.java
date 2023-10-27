@@ -330,47 +330,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
-    public void testEvaluateProjectWithPolicyOperatorForVersionDistance() throws MalformedPackageURLException {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.version_distance("{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }", "NUMERIC_GREATER_THAN_OR_EQUAL")
-                """, PolicyViolation.Type.OPERATIONAL);
-
-        final var project = new Project();
-        project.setName("name");
-        project.setActive(true);
-
-        final var metaComponent = new RepositoryMetaComponent();
-        metaComponent.setRepositoryType(RepositoryType.MAVEN);
-        metaComponent.setNamespace("foo");
-        metaComponent.setName("bar");
-        metaComponent.setLatestVersion("6.6.6");
-        //   if (latestVersion != null) {
-        metaComponent.setLatestVersion("1.3.1");
-        //    }
-        metaComponent.setLastCheck(new Date());
-        qm.persist(metaComponent);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setGroup("foo");
-        component.setName("bar");
-        component.setPurl("pkg:maven/foo/bar@1.0.0");
-        component.setVersion("1.2.3");
-        qm.persist(component);
-
-        project.setDirectDependencies("[{\"uuid\":\"" + component.getUuid() + "\"}]");
-        qm.persist(project);
-
-        new CelPolicyEngine().evaluateProject(project.getUuid());
-        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
-        assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.version_distance("{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }", "NUMERIC_GREATER_THAN_OR_EQUAL")
-                """);
-    }
-
-    @Test
-    public void testEvaluateProjectWithPolicyOperatorForVersionDistance() throws MalformedPackageURLException {
+    public void testEvaluateProjectWithPolicyOperatorForVersionDistance() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.version_distance("{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }", "NUMERIC_GREATER_THAN_OR_EQUAL")
