@@ -18,6 +18,7 @@ import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Library;
 import org.projectnessie.cel.ProgramOption;
 import org.projectnessie.cel.checker.Decls;
+import org.projectnessie.cel.common.types.BoolT;
 import org.projectnessie.cel.common.types.Err;
 import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
@@ -166,39 +167,20 @@ class CelPolicyLibrary implements Library {
     }
 
     private static Val matchesVersionDistanceFunc(Val... vals) {
-        if (vals.length != 3) {
-            return Types.boolOf(false);
+        var basicCheckResult = basicCheck(vals);
+        if ((basicCheckResult instanceof BoolT && basicCheckResult.value() == Types.boolOf(false)) || basicCheckResult instanceof Err) {
+            return basicCheckResult;
         }
-        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
-            return Types.boolOf(false);
-        }
-
-        if (!(vals[0].value() instanceof final Component component)) {
-            return Err.maybeNoSuchOverloadErr(vals[0]);
-        }
-        if (!(vals[1].value() instanceof final String value)) {
-            return Err.maybeNoSuchOverloadErr(vals[1]);
-        }
-        if (!(vals[2].value() instanceof final String comparator)) {
-            return Err.maybeNoSuchOverloadErr(vals[2]);
-        }
-        if (!component.hasPurl()) {
-            return Err.newErr("Provided component does not have a purl", vals[0]);
-        }
-        try {
-            if (RepositoryType.resolve(new PackageURL(component.getPurl())) == RepositoryType.UNSUPPORTED) {
-                return Err.newErr("Unsupported repository type for component: ", vals[0]);
-            }
-        } catch (MalformedPackageURLException ex) {
-            return Err.newErr("Invalid package url ", component.getPurl());
-        }
+        var component = (Component) vals[0].value();
+        var value = (String) vals[2].value();
+        var comparator = (String) vals[1].value();
         if (!component.hasLatestVersion()) {
             return Err.newErr("Requested component does not have latest version information", component);
         }
-        return Types.boolOf(matchesVersionDIstance(component, value, comparator));
+        return Types.boolOf(matchesVersionDIstance(component, comparator, value));
     }
 
-    private static boolean matchesVersionDIstance(Component component, String value, String comparator) {
+    private static boolean matchesVersionDIstance(Component component, String comparator, String value) {
         String comparatorComputed = switch (comparator) {
             case "NUMERIC_GREATER_THAN", ">" -> "NUMERIC_GREATER_THAN";
             case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
@@ -289,6 +271,17 @@ class CelPolicyLibrary implements Library {
     }
 
     private static Val isComponentOldFunc(Val... vals) {
+        Val basicCheckResult = basicCheck(vals);
+        if ((basicCheckResult instanceof BoolT && basicCheckResult.value().equals(Types.boolOf(false))) || basicCheckResult instanceof Err) {
+            return basicCheckResult;
+        }
+        final var component = (Component) vals[0].value();
+        final var dateValue = (String) vals[2].value();
+        final var comparator = (String) vals[1].value();
+        return Types.boolOf(isComponentOld(component, comparator, dateValue));
+    }
+
+    private static Val basicCheck(Val... vals) {
         if (vals.length != 3) {
             return Types.boolOf(false);
         }
@@ -299,12 +292,14 @@ class CelPolicyLibrary implements Library {
         if (!(vals[0].value() instanceof final Component component)) {
             return Err.maybeNoSuchOverloadErr(vals[0]);
         }
-        if (!(vals[1].value() instanceof final String dateValue)) {
+        if (!(vals[1].value() instanceof String)) {
             return Err.maybeNoSuchOverloadErr(vals[1]);
         }
-        if (!(vals[2].value() instanceof final String comparator)) {
+
+        if (!(vals[2].value() instanceof String)) {
             return Err.maybeNoSuchOverloadErr(vals[2]);
         }
+
         if (!component.hasPurl()) {
             return Err.newErr("Provided component does not have a purl", vals[0]);
         }
@@ -315,8 +310,7 @@ class CelPolicyLibrary implements Library {
         } catch (MalformedPackageURLException ex) {
             return Err.newErr("Invalid package url ", component.getPurl());
         }
-
-        return Types.boolOf(isComponentOld(component, dateValue, comparator));
+        return Types.boolOf(true);
     }
 
     private static boolean dependsOn(final Project project, final Component component) {
@@ -478,7 +472,7 @@ class CelPolicyLibrary implements Library {
         }
     }
 
-    private static boolean isComponentOld(Component component, String age, String comparator) {
+    private static boolean isComponentOld(Component component, String comparator, String age) {
         if (!component.hasPublishedAt()) {
             return false;
         }

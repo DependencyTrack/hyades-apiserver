@@ -303,7 +303,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithPolicyOperatorForComponentAgeLessThan() throws MalformedPackageURLException {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.compare_age("P666D", "NUMERIC_LESS_THAN")
+                component.compare_age("NUMERIC_LESS_THAN", "P666D")
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -325,7 +325,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.compare_age("P666D", "NUMERIC_LESS_THAN")
+                component.compare_age("NUMERIC_LESS_THAN", "P666D")
                 """);
     }
 
@@ -333,7 +333,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithPolicyOperatorForVersionDistance() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.version_distance("{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }", "NUMERIC_GREATER_THAN_OR_EQUAL")
+                component.version_distance("NUMERIC_GREATER_THAN_OR_EQUAL", "{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }")
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -365,7 +365,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.version_distance("{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }", "NUMERIC_GREATER_THAN_OR_EQUAL")
+                component.version_distance("NUMERIC_GREATER_THAN_OR_EQUAL", "{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }")
                 """);
     }
 
@@ -373,7 +373,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithPolicyOperatorForComponentAgeGreaterThan() throws MalformedPackageURLException {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.compare_age("P666D", "<")
+                component.compare_age("<", "P666D")
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -396,7 +396,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.compare_age("P666D", "<")
+                component.compare_age("<", "P666D")
                 """);
     }
 
