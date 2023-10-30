@@ -94,6 +94,11 @@
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
+        <!--
+          Overriding logstash-logback-encoder version as a temporary workaround until
+          https://github.com/stevespringett/Alpine/pull/517 is merged and released.
+        -->
+        <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.kafka.version>3.6.0</lib.kafka.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
