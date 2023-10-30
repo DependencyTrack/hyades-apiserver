@@ -81,7 +81,6 @@
 
     <properties>
         <!-- Dependency Versions -->
-        <frontend.version>4.7.1</frontend.version>
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
