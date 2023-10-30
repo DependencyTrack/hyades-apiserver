@@ -29,7 +29,6 @@ public class IntegrityCheck {
             LOGGER.debug("Integrity check is disabled");
             return;
         }
-
         //if integritymeta is in result with hashses but component uuid is not present, result has integrity data for existing
         // components. Get components from database and perform integrity check
         if (StringUtils.isBlank(result.getComponent().getUuid())) {
@@ -39,16 +38,13 @@ public class IntegrityCheck {
         //check if the object is not null
         final Component component = qm.getObjectByUuid(Component.class, result.getComponent().getUuid());
         if (component == null) {
-            LOGGER.info("Component is not present in database for which Integrity Check is performed");
+            LOGGER.debug("Component is not present in database for which Integrity metadata is received so skipping analysis");
             return;
         }
         calculateIntegrityResult(integrityMetaComponent, component, qm);
     }
 
     private static void integrityAnalysisOfExistingComponents(final IntegrityMetaComponent integrityMetaComponent, final AnalysisResult result, final QueryManager qm) {
-        //if integritymeta is in result with hashses but component uuid is not present, result has integrity data for existing
-        // components. Get components from database and perform integrity check
-
         if (integrityMetaComponent != null) {
             List<Component> componentList = qm.getComponentsByPurl(result.getComponent().getPurl());
             for (Component component : componentList) {
