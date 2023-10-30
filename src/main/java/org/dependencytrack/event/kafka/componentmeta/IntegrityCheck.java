@@ -29,16 +29,11 @@ public class IntegrityCheck {
             LOGGER.debug("Integrity check is disabled");
             return;
         }
+
         //if integritymeta is in result with hashses but component uuid is not present, result has integrity data for existing
         // components. Get components from database and perform integrity check
-        if (result.hasIntegrityMeta() && StringUtils.isBlank(result.getComponent().getUuid())) {
-            if(integrityMetaComponent != null) {
-                List<Component> componentList = qm.getComponentsByPurl(result.getComponent().getPurl());
-                for(Component component : componentList) {
-                    LOGGER.debug("calculate integrity for component : " + component.getUuid());
-                    calculateIntegrityResult(integrityMetaComponent, component, qm);
-                }
-            }
+        if (StringUtils.isBlank(result.getComponent().getUuid())) {
+            integrityAnalysisOfExistingComponents(integrityMetaComponent, result, qm);
             return;
         }
         //check if the object is not null
@@ -48,6 +43,19 @@ public class IntegrityCheck {
             return;
         }
         calculateIntegrityResult(integrityMetaComponent, component, qm);
+    }
+
+    private static void integrityAnalysisOfExistingComponents(final IntegrityMetaComponent integrityMetaComponent, final AnalysisResult result, final QueryManager qm) {
+        //if integritymeta is in result with hashses but component uuid is not present, result has integrity data for existing
+        // components. Get components from database and perform integrity check
+
+        if (integrityMetaComponent != null) {
+            List<Component> componentList = qm.getComponentsByPurl(result.getComponent().getPurl());
+            for (Component component : componentList) {
+                LOGGER.debug("calculate integrity for component : " + component.getUuid());
+                calculateIntegrityResult(integrityMetaComponent, component, qm);
+            }
+        }
     }
 
     private static IntegrityMatchStatus checkHash(String metadataHash, String componentHash) {
@@ -67,7 +75,7 @@ public class IntegrityCheck {
         //if integritymetacomponent is  null, try to get it from db
         //it could be that integrity metadata is already in db
         IntegrityMetaComponent metadata = integrityMetaComponent == null ? qm.getIntegrityMetaComponent(component.getPurl().toString()) : integrityMetaComponent;
-        if(metadata == null) {
+        if (metadata == null) {
             LOGGER.info("Integrity metadata is null in result and db. Cannot perform integrity analysis");
             return;
         }
@@ -101,7 +109,7 @@ public class IntegrityCheck {
         } else if ((md5Status == HASH_MATCH_UNKNOWN || md5Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
                 && (sha1Status == HASH_MATCH_UNKNOWN || sha1Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
                 && (sha256Status == HASH_MATCH_UNKNOWN || sha256Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
-                && (sha512Status == HASH_MATCH_UNKNOWN || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN))  {
+                && (sha512Status == HASH_MATCH_UNKNOWN || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)) {
             return HASH_MATCH_UNKNOWN;
         } else if (md5Status == HASH_MATCH_PASSED || sha1Status == HASH_MATCH_PASSED || sha256Status == HASH_MATCH_PASSED || sha512Status == HASH_MATCH_PASSED) {
             return HASH_MATCH_PASSED;
