@@ -1852,8 +1852,8 @@ public class QueryManager extends AlpineQueryManager {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         String queryString = """
-                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH", "IMC"."PUBLISHED_AT", "IMC"."REPOSITORY_URL", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
-                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."ID" ="C"."ID"  WHERE "C"."UUID" = ?
+                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
+                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
             connection = (Connection) pm.getDataStoreConnection();

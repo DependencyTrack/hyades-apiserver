@@ -275,7 +275,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testIntegrityCheckWithDataInDb() {
+    public void testIntegrityAnalysisWillNotBePerformedIfNoIntegrityDataInResult() {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -309,13 +309,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
-        assertThat(analysis.getIntegrityCheckStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        assertThat(analysis.getMd5HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        assertThat(analysis.getSha1HashMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        assertThat(analysis.getSha256HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
-        assertThat(analysis.getSha512HashMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN);
-        assertThat(analysis.getUpdatedAt()).isNotNull();
-        assertThat(analysis.getComponent().getPurl().toString()).isEqualTo("pkg:maven/foo/bar@1.2.3");
+        assertThat(analysis).isNull();
     }
 
     @Test
