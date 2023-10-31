@@ -45,7 +45,9 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         try (final var qm = new QueryManager()) {
             synchronizeRepositoryMetadata(qm, record);
             IntegrityMetaComponent integrityMetaComponent = synchronizeIntegrityMetadata(qm, record);
-            performIntegrityCheck(integrityMetaComponent, record.value(), qm);
+            if(integrityMetaComponent != null) {
+                performIntegrityCheck(integrityMetaComponent, record.value(), qm);
+            }
         } catch (Exception e) {
             LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
         } finally {
