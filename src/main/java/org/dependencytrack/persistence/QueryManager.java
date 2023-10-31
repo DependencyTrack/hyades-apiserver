@@ -1852,7 +1852,7 @@ public class QueryManager extends AlpineQueryManager {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         String queryString = """
-                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
+                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH", "IMC"."PUBLISHED_AT", "IMC"."REPOSITORY_URL", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
                 JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
@@ -1866,7 +1866,8 @@ public class QueryManager extends AlpineQueryManager {
                 Date lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
                 return new ComponentMetaInformation(publishedDate,
                         IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
-                        lastFetch);
+                        lastFetch,
+                        resultSet.getString("REPOSITORY_URL"));
 
             }
         } catch (Exception ex) {
