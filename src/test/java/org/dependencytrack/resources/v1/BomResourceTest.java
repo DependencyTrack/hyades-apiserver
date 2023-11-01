@@ -21,6 +21,8 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
@@ -44,12 +46,23 @@ import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.json.JsonObject;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
@@ -64,6 +77,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
 
+@RunWith(JUnitParamsRunner.class)
 public class BomResourceTest extends ResourceTest {
 
     @Override
@@ -750,7 +764,7 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
+        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.version: is missing but it is required; $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
     }
 
     @Test
@@ -764,7 +778,7 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded file contains malformed JSON or XML", getPlainTextBody(response));
+        Assert.assertEquals("Unable to parse BOM from byte array", getPlainTextBody(response));
     }
 
     @Test
@@ -897,6 +911,39 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertEquals(404, response.getStatus(), 0);
         body = getPlainTextBody(response);
         Assert.assertEquals("The parent component could not be found.", body);
+    }
+
+    @SuppressWarnings("unused")
+    private Object[] uploadBomSchemaValidationTestParameters() throws Exception {
+        final PathMatcher pathMatcherJson = FileSystems.getDefault().getPathMatcher("glob:**/bom-schema*.json");
+        final PathMatcher pathMatcherXml = FileSystems.getDefault().getPathMatcher("glob:**/bom-schema*.xml");
+        final var bomFilePaths = new ArrayList<Path>();
+
+        Files.walkFileTree(Paths.get("./src/test/resources"), new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
+                if (pathMatcherJson.matches(file) || pathMatcherXml.matches(file)) {
+                    bomFilePaths.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        return bomFilePaths.stream().sorted().toArray();
+    }
+
+    @Test
+    @Parameters(method = "uploadBomSchemaValidationTestParameters")
+    public void uploadBomSchemaValidationTest(final Path filePath) throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        File file = filePath.toFile();
+        String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        Response response = target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test

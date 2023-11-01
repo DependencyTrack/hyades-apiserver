@@ -34,8 +34,10 @@ import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.CycloneDxMediaType;
+import org.cyclonedx.CycloneDxSchema;
 import org.cyclonedx.exception.GeneratorException;
 import org.cyclonedx.exception.ParseException;
+import org.cyclonedx.model.Bom;
 import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
@@ -77,6 +79,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -434,7 +438,23 @@ public class BomResource extends AlpineResource {
         final List<ParseException> validationErrors;
         try {
             final Parser parser = BomParserFactory.createParser(bomBytes);
-            validationErrors = parser.validate(bomBytes);
+
+            // Have to parse the entire BOM in order to determine the spec version :c
+            final Bom bom = parser.parse(bomBytes);
+            final CycloneDxSchema.Version specVersion = switch (trimToEmpty(bom.getSpecVersion())) {
+                case "1.0" -> CycloneDxSchema.Version.VERSION_10;
+                case "1.1" -> CycloneDxSchema.Version.VERSION_11;
+                case "1.2" -> CycloneDxSchema.Version.VERSION_12;
+                case "1.3" -> CycloneDxSchema.Version.VERSION_13;
+                case "1.4" -> CycloneDxSchema.Version.VERSION_14;
+                case "1.5" -> CycloneDxSchema.Version.VERSION_15;
+                // Default to latest schema version when the BOM does not specify
+                // one explicitly. Validation will fail anyway though, as specifying
+                // a schema version is mandatory across all spec versions.
+                default -> CycloneDxSchema.VERSION_LATEST;
+            };
+
+            validationErrors = parser.validate(bomBytes, specVersion);
         } catch (JsonParseException e) {
             throw new IllegalArgumentException("The uploaded file contains malformed JSON or XML", e);
         }
