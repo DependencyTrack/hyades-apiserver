@@ -168,7 +168,7 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
         final String updateQuery = """
                 UPDATE "INTEGRITY_META_COMPONENT"
                 SET "LAST_FETCH" = ?, "STATUS" = ?
-                WHERE "ID" = ?
+                WHERE "ID" = ? AND ("STATUS" IS NULL OR "STATUS" = 'IN_PROGRESS')
                 """;
         Connection connection = null;
         PreparedStatement preparedStatement = null;
