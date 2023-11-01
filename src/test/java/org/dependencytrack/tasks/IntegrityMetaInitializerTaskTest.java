@@ -50,6 +50,16 @@ public class IntegrityMetaInitializerTaskTest extends AbstractPostgresEnabledTes
     }
 
     @Test
+    public void shouldNotDispatchEventIfPackageTypeIsNotSupported() {
+        final var IntegrityMetaComponent = new IntegrityMetaComponent();
+        IntegrityMetaComponent.setPurl("pkg:golang/github.com/prometheus/client_model@0.2.0?type=module");
+        qm.persist(IntegrityMetaComponent);
+        new IntegrityMetaInitializerTask().inform(new IntegrityMetaInitializerEvent());
+        assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
+        assertThat(kafkaMockProducer.history()).isEmpty();
+    }
+
+    @Test
     public void testIntegrityMetaInitializerWithExistingDataFetchedNotRecently() {
         // data exists in IntegrityMetaComponent but last fetched 3 hours ago > 1 hour wait time
         var integrityMetaExisting = new IntegrityMetaComponent();
