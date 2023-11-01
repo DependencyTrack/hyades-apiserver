@@ -1862,8 +1862,14 @@ public class QueryManager extends AlpineQueryManager {
             preparedStatement.setString(1, uuid.toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
-                var publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
-                Date lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
+                Date publishedDate = null;
+                Date lastFetch = null;
+                if(resultSet.getTimestamp("PUBLISHED_AT") != null) {
+                    publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
+                }
+                if(resultSet.getTimestamp("LAST_FETCH") != null) {
+                    lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
+                }
                 return new ComponentMetaInformation(publishedDate,
                         IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
                         lastFetch);
