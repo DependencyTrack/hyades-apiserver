@@ -80,7 +80,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final PaginatedResult result;
         final Query<Component> query = pm.newQuery(Component.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
         if (filter != null) {
             query.setFilter("name.toLowerCase().matches(:name)");
@@ -181,7 +181,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Query<Component> query = pm.newQuery(querySring);
         query.getFetchPlan().setMaxFetchDepth(2);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
         if (filter != null) {
             final String filterString = ".*" + filter.toLowerCase() + ".*";

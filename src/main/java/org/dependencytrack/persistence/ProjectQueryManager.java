@@ -91,7 +91,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
@@ -186,7 +186,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot) {
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("version desc");
+            query.setOrdering("version desc, id asc");
         }
 
         final var filterBuilder = new ProjectQueryFilterBuilder()
@@ -293,7 +293,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc");
+            query.setOrdering("name asc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
@@ -336,7 +336,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc");
+            query.setOrdering("name asc, id asc");
         }
 
         final var filterBuilder = new ProjectQueryFilterBuilder()
@@ -1030,7 +1030,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
@@ -1070,7 +1070,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc");
+            query.setOrdering("name asc, id asc");
         }
 
         final var filterBuilder = new ProjectQueryFilterBuilder()
@@ -1099,7 +1099,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc");
+            query.setOrdering("name asc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
@@ -1132,7 +1132,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
@@ -1167,7 +1167,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
 
         var filterBuilder = new ProjectQueryFilterBuilder()
