@@ -213,7 +213,7 @@ public class QueryManager extends AlpineQueryManager {
                 }
             }
             if (found) {
-                query.setOrdering(orderBy + " " + orderDirection.name().toLowerCase() + " " + "id asc");
+                query.setOrdering(orderBy + " " + orderDirection.name().toLowerCase() + ", id asc");
             }
         }
         return query;
