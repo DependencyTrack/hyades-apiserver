@@ -827,6 +827,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component.id == :cid").execute(componentId);
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component.id == :cid").execute(componentId);
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component.id == :cid").execute(componentId);
 
                 // Can't use bulk DELETE for the component itself, as it doesn't remove entries from
                 // relationship tables like COMPONENTS_VULNERABILITIES. deletePersistentAll does, but
