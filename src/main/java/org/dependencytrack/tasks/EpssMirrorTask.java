@@ -59,29 +59,33 @@ public class EpssMirrorTask implements LoggableSubscriber {
     private static final String FILENAME = "epss_scores-current.csv.gz";
     private static final Logger LOGGER = Logger.getLogger(EpssMirrorTask.class);
 
-    private final boolean isEnabled;
     private String feedUrl;
     private File outputDir;
     private long metricParseTime;
     private long metricDownloadTime;
     private boolean mirroredWithoutErrors = true;
 
-    public EpssMirrorTask() {
-        try (final QueryManager qm = new QueryManager()) {
-            final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(), VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName());
-            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-            this.feedUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(), VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName()).getPropertyValue();
-            if (this.feedUrl.endsWith("/")) {
-                this.feedUrl = this.feedUrl.substring(0, this.feedUrl.length() - 1);
-            }
-        }
-    }
-
     /**
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof EpssMirrorEvent && this.isEnabled) {
+        if (e instanceof EpssMirrorEvent) {
+            try (final QueryManager qm = new QueryManager()) {
+                final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(), VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName());
+                final boolean isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
+                if (!isEnabled) {
+                    return;
+                }
+
+                this.feedUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(), VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName()).getPropertyValue();
+                if (this.feedUrl.endsWith("/")) {
+                    this.feedUrl = this.feedUrl.substring(0, this.feedUrl.length() - 1);
+                }
+            } catch (Exception ex) {
+                LOGGER.error("An unexpected error occurred while mirroring EPSS", ex);
+                return;
+            }
+
             LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, (Runnable) () -> getAllFiles());
         }
     }
