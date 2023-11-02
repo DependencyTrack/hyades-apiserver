@@ -13,28 +13,29 @@ import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SO
 
 public class NistMirrorTask implements LoggableSubscriber {
 
-    private final boolean isEnabled;
-
     private static final Logger LOGGER = Logger.getLogger(NistMirrorTask.class);
-
-    public NistMirrorTask() {
-        try (final QueryManager qm = new QueryManager()) {
-            final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_NVD_ENABLED.getGroupName(), VULNERABILITY_SOURCE_NVD_ENABLED.getPropertyName());
-            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-        }
-    }
 
     /**
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof NistMirrorEvent && this.isEnabled) {
-            final long start = System.currentTimeMillis();
-            LOGGER.info("Starting NIST mirroring task");
-            new KafkaEventDispatcher().dispatchBlocking(new NistMirrorEvent());
-            final long end = System.currentTimeMillis();
-            LOGGER.info("NIST mirroring complete. Time spent (total): " + (end - start) + "ms");
-            Event.dispatch(new EpssMirrorEvent());
+        if (e instanceof NistMirrorEvent) {
+            try (final QueryManager qm = new QueryManager()) {
+                final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_NVD_ENABLED.getGroupName(), VULNERABILITY_SOURCE_NVD_ENABLED.getPropertyName());
+                final boolean isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
+                if (!isEnabled) {
+                    return;
+                }
+
+                final long start = System.currentTimeMillis();
+                LOGGER.info("Starting NIST mirroring task");
+                new KafkaEventDispatcher().dispatchBlocking(new NistMirrorEvent());
+                final long end = System.currentTimeMillis();
+                LOGGER.info("NIST mirroring complete. Time spent (total): " + (end - start) + "ms");
+                Event.dispatch(new EpssMirrorEvent());
+            } catch (Exception ex) {
+                LOGGER.error("An unexpected error occurred while triggering NIST mirroring", ex);
+            }
         }
     }
 }
