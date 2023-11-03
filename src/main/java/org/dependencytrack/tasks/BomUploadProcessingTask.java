@@ -743,10 +743,10 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final Component component = componentsByIdentity.get(dependencyIdentity);
-                assertPersistent(component, "Component must be persistent");
                 // TODO: Check servicesByIdentity when persistentComponent is null
                 //   We do not currently store directDependencies for ServiceComponent
                 if (component != null) {
+                    assertPersistent(component, "Component must be persistent");
                     if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
                         component.setDirectDependencies(directDependenciesJson);
                         flushHelper.maybeFlush();
