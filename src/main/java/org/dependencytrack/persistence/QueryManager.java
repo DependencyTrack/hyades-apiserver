@@ -1883,7 +1883,7 @@ public class QueryManager extends AlpineQueryManager {
         PreparedStatement preparedStatement = null;
         String queryString = """
                 SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
-                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
+                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
             connection = (Connection) pm.getDataStoreConnection();
@@ -1894,15 +1894,17 @@ public class QueryManager extends AlpineQueryManager {
             if (resultSet.next()) {
                 Date publishedDate = null;
                 Date lastFetch = null;
+                IntegrityMatchStatus integrityMatchStatus = null;
                 if(resultSet.getTimestamp("PUBLISHED_AT") != null) {
                     publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
                 }
                 if(resultSet.getTimestamp("LAST_FETCH") != null) {
                     lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
                 }
-                return new ComponentMetaInformation(publishedDate,
-                        IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
-                        lastFetch);
+                if(resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
+                    integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
+                }
+                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch);
 
             }
         } catch (Exception ex) {
