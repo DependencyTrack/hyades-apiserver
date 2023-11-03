@@ -25,6 +25,12 @@ public class QueryManagerTest extends PersistenceCapableTest {
         component.setProject(project);
         component.setName("ABC");
         component.setPurl("pkg:maven/org.acme/abc");
+        //add another component for better testing
+        Component component2 = new Component();
+        component2.setProject(project);
+        component2.setName("ABC");
+        component2.setPurl("pkg:maven/org.acme/abc");
+
         IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
         integrityAnalysis.setComponent(component);
         integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
@@ -73,6 +79,23 @@ public class QueryManagerTest extends PersistenceCapableTest {
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
+        assertNull(componentMetaInformation.publishedDate());
+        assertNull(componentMetaInformation.lastFetched());
+    }
+
+    @Test
+    public void testGetMetaInformationWhenIntregrityAnalysisIsMissing() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component = qm.createComponent(component, false);
+        ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertNull(componentMetaInformation.publishedDate());
         assertNull(componentMetaInformation.lastFetched());
     }

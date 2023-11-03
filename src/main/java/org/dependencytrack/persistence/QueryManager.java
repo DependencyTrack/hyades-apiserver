@@ -1894,15 +1894,17 @@ public class QueryManager extends AlpineQueryManager {
             if (resultSet.next()) {
                 Date publishedDate = null;
                 Date lastFetch = null;
+                IntegrityMatchStatus integrityMatchStatus = null;
                 if(resultSet.getTimestamp("PUBLISHED_AT") != null) {
                     publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
                 }
                 if(resultSet.getTimestamp("LAST_FETCH") != null) {
                     lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
                 }
-                return new ComponentMetaInformation(publishedDate,
-                        IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
-                        lastFetch);
+                if(resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
+                    integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
+                }
+                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch);
 
             }
         } catch (Exception ex) {
