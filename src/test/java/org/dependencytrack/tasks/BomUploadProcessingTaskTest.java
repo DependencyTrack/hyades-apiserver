@@ -840,6 +840,27 @@ public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
         });
     }
 
+    @Test
+    public void informWithBomContainingServiceTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-service.json"));
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        await("BOM processing")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                        event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                ));
+
+        assertThat(qm.getAllComponents(project)).isNotEmpty();
+        assertThat(qm.getAllServiceComponents(project)).isNotEmpty();
+    }
+
     private static File createTempBomFile(final String testFileName) throws Exception {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.
