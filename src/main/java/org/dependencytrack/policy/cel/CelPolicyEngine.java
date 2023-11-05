@@ -454,9 +454,7 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
-        if (projection.getPublishedAt() != null) {
-            componentBuilder.setPublishedAt(Timestamps.fromDate(projection.getPublishedAt())).build();
-        }
+        Optional.ofNullable(projection.publishedAt).map(Timestamps::fromDate).ifPresent(componentBuilder::setPublishedAt);
 
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
