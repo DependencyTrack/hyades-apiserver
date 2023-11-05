@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_AGE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;
@@ -166,6 +167,11 @@ public class CelPolicyScriptHost {
                         requirements.put(TYPE_PROJECT, "version");
                     } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
                         requirements.put(TYPE_COMPONENT, "version");
+                    }
+                }
+                case FUNC_COMPARE_AGE -> {
+                    if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
+                        requirements.put(TYPE_COMPONENT, "published_at");
                     }
                 }
             }
