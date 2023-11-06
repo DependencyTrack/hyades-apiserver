@@ -140,7 +140,11 @@ class CelPolicyQueryManager implements AutoCloseable {
         String sqlSelectColumns = Stream.concat(
                         Stream.of(ComponentProjection.ID_FIELD_MAPPING),
                         getFieldMappings(ComponentProjection.class).stream()
+                                //filtering published_at and latest_version from component requirements as these fields need to
+                                //come from joining with the integrityMetaComponent and RepostioryMetaComponent tables respectively
                                 .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
+                                .filter(fieldMapping -> !fieldMapping.sqlColumnName().equals("PUBLISHED_AT"))
+                                .filter(fieldMapping -> !fieldMapping.sqlColumnName().equals("LATEST_VERSION"))
                 )
                 .map(mapping -> "\"C\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
@@ -156,8 +160,8 @@ class CelPolicyQueryManager implements AutoCloseable {
                 "PROJECT_ID" = :projectId
                 """.formatted(sqlSelectColumns, protoFieldNames));
         query.setNamedParameters(Map.of(
-                "shouldJoinIntegrityMeta", protoFieldNames.contains("publishedAt"),
-                "shouldJoinRepoMeta", protoFieldNames.contains("latestVersion"),
+                "shouldJoinIntegrityMeta", protoFieldNames.contains("publishedAt") || protoFieldNames.contains("published_at"),
+                "shouldJoinRepoMeta", protoFieldNames.contains("latestVersion") || protoFieldNames.contains("latest_version"),
                 "projectId", projectId));
         try {
             return List.copyOf(query.executeResultList(ComponentProjection.class));
