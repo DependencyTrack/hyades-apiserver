@@ -56,13 +56,7 @@ public class FieldMappingUtilTest extends PersistenceCapableTest {
         assertThat(FieldMappingUtil.getFieldMappings(projectionClazz)).allSatisfy(
                 fieldMapping -> {
                     assertHasProtoField(protoDescriptor, fieldMapping.protoFieldName());
-                    //skipping the published_at column for sql check because functionality wise the Component model
-                    // class does not need the published_at column from integrity_meta and this is breaking the unit test
-                    if (fieldMapping.sqlColumnName().equals("PUBLISHED_AT") || fieldMapping.sqlColumnName().equals("LATEST_VERSION")) {
-                        LOGGER.warn("Skipping this column name ");
-                    } else {
-                        assertHasSqlColumn(persistenceClass, fieldMapping.sqlColumnName());
-                    }
+                    assertHasSqlColumn(persistenceClass, fieldMapping.sqlColumnName());
 
                 }
         );
