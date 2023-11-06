@@ -33,7 +33,9 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_INTEGRITY_META_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_REPOSITORY_META_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
@@ -170,9 +172,14 @@ public class CelPolicyScriptHost {
                         requirements.put(TYPE_COMPONENT, "version");
                     }
                 }
-                case FUNC_COMPARE_VERSION_DISTANCE ->
-                        requirements.putAll(TYPE_COMPONENT, List.of("purl", "uuid", "version"));
-                case FUNC_COMPARE_AGE -> requirements.put(TYPE_COMPONENT, "purl");
+                case FUNC_COMPARE_VERSION_DISTANCE -> {
+                    requirements.putAll(TYPE_COMPONENT, List.of("purl", "uuid", "version"));
+                    requirements.put(TYPE_REPOSITORY_META_COMPONENT, "latestVersion");
+                }
+                case FUNC_COMPARE_AGE -> {
+                    requirements.put(TYPE_COMPONENT, "purl");
+                    requirements.put(TYPE_INTEGRITY_META_COMPONENT, "publishedAt");
+                }
             }
         }
 

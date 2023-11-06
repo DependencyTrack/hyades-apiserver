@@ -69,10 +69,12 @@ import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_INTEGRITY_META_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE_GROUP;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_REPOSITORY_META_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
@@ -155,9 +157,16 @@ public class CelPolicyEngine {
             } else {
                 protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }
-
             // Preload components for the entire project, to avoid excessive queries.
-            final List<ComponentProjection> components = celQm.fetchAllComponents(project.getId(), requirements.get(TYPE_COMPONENT));
+            Collection<String> listRequirements = new ArrayList<>();
+            if (requirements.containsKey(TYPE_INTEGRITY_META_COMPONENT)) {
+                listRequirements.addAll(requirements.get(TYPE_INTEGRITY_META_COMPONENT));
+            }
+            if (requirements.containsKey(TYPE_REPOSITORY_META_COMPONENT)) {
+                listRequirements.addAll(requirements.get(TYPE_REPOSITORY_META_COMPONENT));
+            }
+            listRequirements.addAll(requirements.get(TYPE_COMPONENT));
+            final List<ComponentProjection> components = celQm.fetchAllComponents(project.getId(), listRequirements);
 
             // Preload licenses for the entire project, as chances are high that they will be used by multiple components.
             final Map<Long, org.dependencytrack.proto.policy.v1.License> licenseById;
@@ -456,9 +465,9 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
-        Optional.ofNullable(projection.getLatestVersion()).ifPresent(componentBuilder::setLatestVersion);
-        if (projection.getPublishedAt() != null) {
-            componentBuilder.setPublishedAt(Timestamps.fromDate(projection.getPublishedAt())).build();
+        Optional.ofNullable(projection.latestVersion).ifPresent(componentBuilder::setLatestVersion);
+        if (projection.publishedAt != null) {
+            componentBuilder.setPublishedAt(Timestamps.fromDate(projection.publishedAt)).build();
         }
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);

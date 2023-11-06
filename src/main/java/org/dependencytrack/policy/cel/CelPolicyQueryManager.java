@@ -145,18 +145,20 @@ class CelPolicyQueryManager implements AutoCloseable {
                 .map(mapping -> "\"C\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
         final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT %s , "IMC"."PUBLISHED_AT" as "publishedAt",
-                "RMC"."LATEST_VERSION" as "latestVersion"
+                SELECT %s, "latestVersion", "publishedAt"
                 from
                 "COMPONENT" "C"
-                LEFT JOIN "INTEGRITY_META_COMPONENT" "IMC" ON
-                "C"."PURL" = "IMC"."PURL"
-                LEFT JOIN "REPOSITORY_META_COMPONENT" "RMC" ON
-                "C"."NAME" = "RMC"."NAME"
+                LEFT JOIN LATERAL (SELECT "IMC"."PUBLISHED_AT" AS "publishedAt" FROM "INTEGRITY_META_COMPONENT" "IMC" WHERE
+                "C"."PURL" = "IMC"."PURL") AS "publishedAt" ON :shouldJoinIntegrityMeta
+                LEFT JOIN LATERAL (SELECT "RMC"."LATEST_VERSION" AS "latestVersion" FROM "REPOSITORY_META_COMPONENT" "RMC" WHERE
+                "C"."NAME" = "RMC"."NAME") AS "latestVersion" ON :shouldJoinRepoMeta
                 WHERE
-                "PROJECT_ID" = ?
-                """.formatted(sqlSelectColumns));
-        query.setParameters(projectId);
+                "PROJECT_ID" = :projectId
+                """.formatted(sqlSelectColumns, protoFieldNames));
+        query.setNamedParameters(Map.of(
+                "shouldJoinIntegrityMeta", protoFieldNames.contains("publishedAt"),
+                "shouldJoinRepoMeta", protoFieldNames.contains("latestVersion"),
+                "projectId", projectId));
         try {
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         } finally {
@@ -598,6 +600,26 @@ class CelPolicyQueryManager implements AutoCloseable {
 
         parents.add(parentUuid);
         return getParents(parentUuid, parents);
+    }
+
+    boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
+        //Using _ in the first part instead of : as persistence manager not returning result with : even with match
+        String likePart1 = """
+                '%"uuid"_""";
+        String likePart2 = """
+                "%s"%%'""".formatted(component.getUuid());
+        String query1 = """
+                SELECT COUNT(*) FROM "COMPONENT" "C" INNER JOIN "PROJECT" "P" ON "P"."ID"="C"."PROJECT_ID" WHERE "C"."UUID"='%s' AND "P"."DIRECT_DEPENDENCIES" LIKE
+                """.formatted(component.getUuid());
+        final Query<?> query = pm.newQuery(Query.SQL, query1 + likePart1 + likePart2);
+
+        long result;
+        try {
+            result = (Long) query.executeResultUnique(Long.class);
+        } finally {
+            query.closeAll();
+        }
+        return result == 1;
     }
 
     @Override

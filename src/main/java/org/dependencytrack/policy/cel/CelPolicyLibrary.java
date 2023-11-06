@@ -7,6 +7,8 @@ import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -49,6 +51,9 @@ class CelPolicyLibrary implements Library {
     static final String VAR_VULNERABILITIES = "vulns";
 
     static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
+    static final Type TYPE_INTEGRITY_META_COMPONENT = Decls.newObjectType(IntegrityMetaComponent.class.getName());
+
+    static final Type TYPE_REPOSITORY_META_COMPONENT = Decls.newObjectType(RepositoryMetaComponent.class.getName());
     static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
     static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
     static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
@@ -191,7 +196,10 @@ class CelPolicyLibrary implements Library {
             default -> "";
         };
         if (comparatorComputed.equals("")) {
-            LOGGER.warn("Was passed a not supported operator for version distance policy " + comparator);
+
+            LOGGER.warn("""
+                    %s: Was passed a not supported operator : %s for version distance policy;
+                    Unable to resolve, returning false""".formatted(FUNC_COMPARE_VERSION_DISTANCE, comparator));
             return false;
         }
         final VersionDistance versionDistance;
@@ -204,17 +212,8 @@ class CelPolicyLibrary implements Library {
                     """.formatted(component, component.getUuid(), component.getVersion(), component.getLatestVersion(), e));
             return false;
         }
-        return isDirectDependency(component) && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
-    }
-
-    static boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
-        try (QueryManager queryManager = new QueryManager()) {
-            org.dependencytrack.model.Component componentFromDb = queryManager.getObjectByUuid(org.dependencytrack.model.Component.class, UUID.fromString(component.getUuid()));
-            return componentFromDb.getProject().getDirectDependencies().contains("\"uuid\":\"" + component.getUuid() + "\"");
-        } catch (Exception ex) {
-            LOGGER.error("Unable to determine if project associated with component has the component as a direct dependency", ex);
-            return false;
-        }
+        CelPolicyQueryManager celPolicyQueryManager = new CelPolicyQueryManager(new QueryManager());
+        return celPolicyQueryManager.isDirectDependency(component) && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
     }
 
     private static Val dependsOnFunc(final Val lhs, final Val rhs) {

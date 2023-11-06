@@ -344,10 +344,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         metaComponent.setRepositoryType(RepositoryType.MAVEN);
         metaComponent.setNamespace("foo");
         metaComponent.setName("bar");
-        metaComponent.setLatestVersion("6.6.6");
-        //   if (latestVersion != null) {
         metaComponent.setLatestVersion("1.3.1");
-        //    }
         metaComponent.setLastCheck(new Date());
         qm.persist(metaComponent);
 
