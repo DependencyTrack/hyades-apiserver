@@ -140,14 +140,16 @@ class CelPolicyQueryManager implements AutoCloseable {
         String sqlSelectColumns = Stream.concat(
                         Stream.of(ComponentProjection.ID_FIELD_MAPPING),
                         getFieldMappings(ComponentProjection.class).stream()
-                                //filtering published_at and latest_version from component requirements as these fields need to
-                                //come from joining with the integrityMetaComponent and RepostioryMetaComponent tables respectively
                                 .filter(mapping -> protoFieldNames.contains(mapping.protoFieldName()))
-                                .filter(fieldMapping -> !fieldMapping.sqlColumnName().equals("PUBLISHED_AT"))
-                                .filter(fieldMapping -> !fieldMapping.sqlColumnName().equals("LATEST_VERSION"))
                 )
                 .map(mapping -> "\"C\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
+        if (protoFieldNames.contains("published_at")) {
+            sqlSelectColumns += ", \"publishedAt\"";
+        }
+        if (protoFieldNames.contains("latest_version")) {
+            sqlSelectColumns += ", \"latestVersion\"";
+        }
         final Query<?> query = pm.newQuery(Query.SQL, """
                 SELECT %s, "latestVersion", "publishedAt"
                 from
@@ -607,19 +609,17 @@ class CelPolicyQueryManager implements AutoCloseable {
     }
 
     boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
-        //Using _ in the first part instead of : as persistence manager not returning result with : even with match
-        String likePart1 = """
-                '%"uuid"_""";
-        String likePart2 = """
-                "%s"%%'""".formatted(component.getUuid());
-        String query1 = """
-                SELECT COUNT(*) FROM "COMPONENT" "C" INNER JOIN "PROJECT" "P" ON "P"."ID"="C"."PROJECT_ID" WHERE "C"."UUID"='%s' AND "P"."DIRECT_DEPENDENCIES" LIKE
-                """.formatted(component.getUuid());
-        final Query<?> query = pm.newQuery(Query.SQL, query1 + likePart1 + likePart2);
-
+        String queryString = """
+                SELECT COUNT(*) FROM "COMPONENT" "C" 
+                INNER JOIN "PROJECT" "P" ON "P"."ID"="C"."PROJECT_ID" 
+                AND "P"."DIRECT_DEPENDENCIES" LIKE :wildcard WHERE "C"."UUID"= :uuid;
+                """;
+        final Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setNamedParameters(Map.of("uuid", component.getUuid(),
+                "wildcard", "%" + component.getUuid() + "%"));
         long result;
         try {
-            result = (Long) query.executeResultUnique(Long.class);
+            result = query.executeResultUnique(Long.class);
         } finally {
             query.closeAll();
         }

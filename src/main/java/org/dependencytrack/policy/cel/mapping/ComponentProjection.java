@@ -74,10 +74,8 @@ public class ComponentProjection {
     @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
     public String licenseName;
 
-    @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
 
-    @MappedField(protoFieldName = "latest_version", sqlColumnName = "LATEST_VERSION")
     public String latestVersion;
     @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
     public String licenseExpression;

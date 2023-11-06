@@ -8,8 +8,6 @@ import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Classifier;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -52,9 +50,6 @@ class CelPolicyLibrary implements Library {
     static final String VAR_VULNERABILITIES = "vulns";
 
     static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
-    static final Type TYPE_INTEGRITY_META_COMPONENT = Decls.newObjectType(IntegrityMetaComponent.class.getName());
-
-    static final Type TYPE_REPOSITORY_META_COMPONENT = Decls.newObjectType(RepositoryMetaComponent.class.getName());
     static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
     static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
     static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
