@@ -31,7 +31,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track</artifactId>
     <packaging>war</packaging>
-    <version>5.1.0</version>
+    <version>5.2.1</version>
 
     <name>Dependency-Track</name>
     <url>https://dependencytrack.org/</url>
@@ -81,7 +81,6 @@
 
     <properties>
         <!-- Dependency Versions -->
-        <frontend.version>4.7.1</frontend.version>
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
@@ -94,6 +93,11 @@
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
+        <!--
+          Overriding logstash-logback-encoder version as a temporary workaround until
+          https://github.com/stevespringett/Alpine/pull/517 is merged and released.
+        -->
+        <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.kafka.version>3.6.0</lib.kafka.version>
         <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
@@ -120,7 +124,7 @@
         <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
         <!-- Maven Plugin Versions -->
         <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
-        <plugin.jetty.version>10.0.16</plugin.jetty.version>
+        <plugin.jetty.version>10.0.18</plugin.jetty.version>
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
@@ -239,6 +243,11 @@
             <groupId>javax.activation</groupId>
             <artifactId>javax.activation-api</artifactId>
             <version>1.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- org.json
         This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
@@ -460,12 +469,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.mock-server</groupId>
-            <artifactId>mockserver-netty</artifactId>
-            <version>5.14.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>net.mguenther.kafka</groupId>
             <artifactId>kafka-junit</artifactId>
             <version>${lib.kafka-junit.version}</version>
@@ -661,7 +664,7 @@
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-clean-plugin</artifactId>
-                            <version>3.3.1</version>
+                            <version>3.3.2</version>
                             <configuration>
                                 <excludeDefaultDirectories>true</excludeDefaultDirectories>
                                 <filesets>

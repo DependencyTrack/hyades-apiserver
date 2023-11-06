@@ -20,12 +20,14 @@ package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
+import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.AlpineQueryManager;
+import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
@@ -98,6 +100,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
 import javax.jdo.datastore.JDOConnection;
+import java.lang.reflect.Field;
 import java.security.Principal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -187,6 +190,33 @@ public class QueryManager extends AlpineQueryManager {
         super(pm, request);
         disableL2Cache();
         this.request = request;
+    }
+
+    @Override
+    public Query decorate(final Query query) {
+        // Clear the result to fetch if previously specified (i.e. by getting count)
+        query.setResult(null);
+        if (pagination != null && pagination.isPaginated()) {
+            final long begin = pagination.getOffset();
+            final long end = begin + pagination.getLimit();
+            query.setRange(begin, end);
+        }
+        if (orderBy != null && RegexSequence.Pattern.STRING_IDENTIFIER.matcher(orderBy).matches() && orderDirection != OrderDirection.UNSPECIFIED) {
+            // Check to see if the specified orderBy field is defined in the class being queried.
+            boolean found = false;
+            final org.datanucleus.store.query.Query iq = ((JDOQuery) query).getInternalQuery();
+            final String candidateField = orderBy.contains(".") ? orderBy.substring(0, orderBy.indexOf('.')) : orderBy;
+            for (final Field field: iq.getCandidateClass().getDeclaredFields()) {
+                if (candidateField.equals(field.getName())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                query.setOrdering(orderBy + " " + orderDirection.name().toLowerCase() + ", id asc");
+            }
+        }
+        return query;
     }
 
     /**
@@ -1853,7 +1883,7 @@ public class QueryManager extends AlpineQueryManager {
         PreparedStatement preparedStatement = null;
         String queryString = """
                 SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
-                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."ID" ="C"."ID"  WHERE "C"."UUID" = ?
+                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
             connection = (Connection) pm.getDataStoreConnection();
@@ -1862,11 +1892,19 @@ public class QueryManager extends AlpineQueryManager {
             preparedStatement.setString(1, uuid.toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
-                var publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
-                Date lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
-                return new ComponentMetaInformation(publishedDate,
-                        IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS")),
-                        lastFetch);
+                Date publishedDate = null;
+                Date lastFetch = null;
+                IntegrityMatchStatus integrityMatchStatus = null;
+                if(resultSet.getTimestamp("PUBLISHED_AT") != null) {
+                    publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
+                }
+                if(resultSet.getTimestamp("LAST_FETCH") != null) {
+                    lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
+                }
+                if(resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
+                    integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
+                }
+                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch);
 
             }
         } catch (Exception ex) {

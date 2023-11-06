@@ -469,6 +469,7 @@ public class CelPolicyEngine {
         if (projection.publishedAt != null) {
             componentBuilder.setPublishedAt(Timestamps.fromDate(projection.publishedAt)).build();
         }
+        Optional.ofNullable(projection.publishedAt).map(Timestamps::fromDate).ifPresent(componentBuilder::setPublishedAt);
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
             if (protoLicense != null) {

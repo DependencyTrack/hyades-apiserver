@@ -6,10 +6,13 @@ import org.postgresql.util.PSQLState;
 import javax.jdo.JDOHelper;
 import javax.jdo.ObjectState;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.util.Collections.unmodifiableMap;
 import static javax.jdo.ObjectState.HOLLOW_PERSISTENT_NONTRANSACTIONAL;
 import static javax.jdo.ObjectState.PERSISTENT_CLEAN;
 import static javax.jdo.ObjectState.PERSISTENT_DIRTY;
@@ -19,6 +22,53 @@ import static javax.jdo.ObjectState.PERSISTENT_NONTRANSACTIONAL_DIRTY;
 public final class PersistenceUtil {
 
     private PersistenceUtil() {
+    }
+
+    public record Diff(Object before, Object after) {
+    }
+
+    public static final class Differ<T> {
+
+        private final T existingObject;
+        private final T newObject;
+        private final Map<String, Diff> diffs;
+
+        public Differ(final T existingObject, final T newObject) {
+            this.existingObject = existingObject;
+            this.newObject = newObject;
+            this.diffs = new HashMap<>();
+        }
+
+        public <V> boolean applyIfChanged(final String fieldName, final Function<T, V> getter, final Consumer<V> setter) {
+            final V existingValue = getter.apply(existingObject);
+            final V newValue = getter.apply(newObject);
+
+            if (!Objects.equals(existingValue, newValue)) {
+                diffs.put(fieldName, new Diff(existingValue, newValue));
+                setter.accept(newValue);
+                return true;
+            }
+
+            return false;
+        }
+
+        public <V> boolean applyIfNonNullAndChanged(final String fieldName, final Function<T, V> getter, final Consumer<V> setter) {
+            final V existingValue = getter.apply(existingObject);
+            final V newValue = getter.apply(newObject);
+
+            if (newValue != null && !Objects.equals(existingValue, newValue)) {
+                diffs.put(fieldName, new Diff(existingValue, newValue));
+                setter.accept(newValue);
+                return true;
+            }
+
+            return false;
+        }
+
+        public Map<String, Diff> getDiffs() {
+            return unmodifiableMap(diffs);
+        }
+
     }
 
     public static <T, V> boolean applyIfChanged(final T existingObject, final T newObject,

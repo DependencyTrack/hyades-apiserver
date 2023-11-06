@@ -138,6 +138,13 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         component.setResolvedLicense(license);
         qm.persist(component);
 
+        final var metaComponent = new IntegrityMetaComponent();
+        metaComponent.setPurl("componentPurl");
+        metaComponent.setPublishedAt(new java.util.Date(222));
+        metaComponent.setStatus(FetchStatus.PROCESSED);
+        metaComponent.setLastFetch(new Date());
+        qm.persist(metaComponent);
+
         final var vuln = new Vulnerability();
         vuln.setUuid(UUID.fromString("ffe9743f-b916-431e-8a68-9b3ac56db72c"));
         vuln.setVulnId("CVE-001");
@@ -212,6 +219,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
                        licenseGroup.uuid == "__LICENSE_GROUP_UUID__"
                          && licenseGroup.name == "licenseGroupName"
                      )
+                  && component.published_at == timestamp("1970-01-01T00:00:00.222Z")
                   && project.uuid == "__PROJECT_UUID__"
                   && project.group == "projectGroup"
                   && project.name == "projectName"

@@ -73,7 +73,6 @@ public class ComponentProjection {
 
     @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
     public String licenseName;
-
     @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
 
@@ -82,5 +81,4 @@ public class ComponentProjection {
 
     @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
     public String licenseExpression;
-
 }

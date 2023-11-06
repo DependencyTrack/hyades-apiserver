@@ -26,11 +26,9 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import com.google.common.collect.ImmutableMap;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
@@ -266,8 +264,6 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final var vulnAnalysisEvents = new ArrayList<ComponentVulnerabilityAnalysisEvent>();
         final var repoMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
-        final var integrityMetaAnalysisEvents = new ArrayList<ComponentRepositoryMetaAnalysisEvent>();
-        Map<ComponentIdentity, Component> copyOfPersistentComponents;
 
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -316,7 +312,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         processServices(qm, project, services, identitiesByBomRef, bomRefsByIdentity);
                 processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
                 recordBomImport(ctx, pm, project);
-                copyOfPersistentComponents = ImmutableMap.copyOf(persistentComponents);
 
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
@@ -328,8 +323,14 @@ public class BomUploadProcessingTask implements Subscriber {
                     // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
                     // merely call a few getters on it, but the component object itself is not passed around.
                     // Detaching would imply additional database interactions that we'd rather not do.
-                    if(component.getPurl() != null) {
-                        repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION));
+                    if (component.getPurl() != null) {
+                        if (SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType())) {
+                            repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component.getUuid(),
+                                    component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION));
+                        } else {
+                            repoMetaAnalysisEvents.add(new ComponentRepositoryMetaAnalysisEvent(component.getUuid(),
+                                    component.getPurlCoordinates().toString(), component.isInternal(), FetchMeta.FETCH_META_LATEST_VERSION));
+                        }
                     }
                     vulnAnalysisEvents.add(new ComponentVulnerabilityAnalysisEvent(
                             ctx.uploadToken, component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, component.isNew()));
@@ -342,22 +343,10 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
-            //only integrity metadata events have to be sent because latest version events
-            //have been sent already
-            for (final Component component : copyOfPersistentComponents.values()) {
-                // Note: component does not need to be detached.
-                // The constructors of ComponentRepositoryMetaAnalysisEvent and ComponentVulnerabilityAnalysisEvent
-                // merely call a few getters on it, but the component object itself is not passed around.
-                // Detaching would imply additional database interactions that we'd rather not do
-                if (component.getPurl() != null) {
-                    if(SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType())) {
-                        ComponentRepositoryMetaAnalysisEvent event = integrityRepoMetaAnalysisEvent(component, qm);
-                        if (event != null) {
-                            integrityMetaAnalysisEvents.add(event);
-                        }
-                    }
-                }
-            }
+            // Clear the PersistenceManager's L1 cache.
+            // Lessens some overhead of DataNucleus-internal housekeeping during
+            // the following persistence operations.
+            pm.evictAll();
 
             var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
             if (!vulnAnalysisEvents.isEmpty()) {
@@ -398,19 +387,30 @@ public class BomUploadProcessingTask implements Subscriber {
                 }
             }
 
-            repoMetaAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
-                if (exception != null) {
-                    // Include context in the log message to make log correlation easier.
-                    LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
+            for (final ComponentRepositoryMetaAnalysisEvent event : repoMetaAnalysisEvents) {
+                final ComponentRepositoryMetaAnalysisEvent eventToSend;
+                if (event.fetchMeta() == FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION) {
+                    final boolean shouldFetchIntegrityData = qm.runInTransaction(() -> prepareIntegrityMetaComponent(event, qm));
+                    if (shouldFetchIntegrityData) {
+                        eventToSend = event;
+                    } else {
+                        // If integrity metadata was fetched recently, we don't want to fetch it again
+                        // as it's unlikely to change frequently. Fall back to fetching only the latest
+                        // version information.
+                        eventToSend = new ComponentRepositoryMetaAnalysisEvent(null, event.purlCoordinates(),
+                                event.internal(), FetchMeta.FETCH_META_LATEST_VERSION);
+                    }
+                } else {
+                    eventToSend = event;
                 }
-            }));
 
-            integrityMetaAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
-                if (exception != null) {
-                    // Include context in the log message to make log correlation easier.
-                    LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
-                }
-            }));
+                kafkaEventDispatcher.dispatchAsync(eventToSend, (metadata, exception) -> {
+                    if (exception != null) {
+                        // Include context in the log message to make log correlation easier.
+                        LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(eventToSend, ctx), exception);
+                    }
+                });
+            }
 
             // TODO: Trigger index updates
         }
@@ -743,10 +743,10 @@ public class BomUploadProcessingTask implements Subscriber {
 
                 final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
                 final Component component = componentsByIdentity.get(dependencyIdentity);
-                assertPersistent(component, "Component must be persistent");
                 // TODO: Check servicesByIdentity when persistentComponent is null
                 //   We do not currently store directDependencies for ServiceComponent
                 if (component != null) {
+                    assertPersistent(component, "Component must be persistent");
                     if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
                         component.setDirectDependencies(directDependenciesJson);
                         flushHelper.maybeFlush();
@@ -827,6 +827,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component.id == :cid").execute(componentId);
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component.id == :cid").execute(componentId);
                 pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component.id == :cid").execute(componentId);
+                pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component.id == :cid").execute(componentId);
 
                 // Can't use bulk DELETE for the component itself, as it doesn't remove entries from
                 // relationship tables like COMPONENTS_VULNERABILITIES. deletePersistentAll does, but
@@ -1063,20 +1064,17 @@ public class BomUploadProcessingTask implements Subscriber {
 
     }
 
-
-    private ComponentRepositoryMetaAnalysisEvent integrityRepoMetaAnalysisEvent(Component component, QueryManager qm) {
-        IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
+    private static boolean prepareIntegrityMetaComponent(ComponentRepositoryMetaAnalysisEvent event, QueryManager qm) {
+        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(event.purlCoordinates());
         if (integrityMetaComponent == null) {
-            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
-            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA);
-        }
-        else if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(event.purlCoordinates()));
+            return true;
+        } else if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-            qm.getPersistenceManager().makePersistent(integrityMetaComponent);
-            return new ComponentRepositoryMetaAnalysisEvent(component.getUuid(), component.getPurl().canonicalize(), component.isInternal(), FetchMeta.FETCH_META_INTEGRITY_DATA);
+            return true;
         }
         //don't send event because integrity metadata would be in db already in Processed state or sent recently
         //and don't want to send again
-        return null;
+        return false;
     }
 }

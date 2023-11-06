@@ -25,6 +25,7 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -79,7 +80,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final PaginatedResult result;
         final Query<Component> query = pm.newQuery(Component.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
         if (filter != null) {
             query.setFilter("name.toLowerCase().matches(:name)");
@@ -180,7 +181,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Query<Component> query = pm.newQuery(querySring);
         query.getFetchPlan().setMaxFetchDepth(2);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
         if (filter != null) {
             final String filterString = ".*" + filter.toLowerCase() + ".*";
@@ -435,6 +436,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setParent(transientComponent.getParent());
         component.setCpe(transientComponent.getCpe());
         component.setPurl(transientComponent.getPurl());
+        component.setPurlCoordinates(component.getPurl());
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         final Component result = persist(component);
@@ -450,11 +452,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     protected void deleteComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        query.setParameters(project);
-        List<Component> components = query.executeList();
-        for (Component component : components) {
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
-        }
         try {
             query.deletePersistentAll(project);
         } finally {
@@ -516,6 +513,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
     /**
      * Returns a component by matching its identity information.
+     * <p>
+     * Note that this method employs a stricter matching logic than {@link #matchIdentity(Project, ComponentIdentity)}
+     * and {@link #matchIdentity(ComponentIdentity)}. For example, if {@code purl} of the given {@link ComponentIdentity}
+     * is {@code null}, this method will use a query that explicitly checks for the {@code purl} column to be {@code null}.
+     * Whereas other methods will simply not include {@code purl} in the query in such cases.
      *
      * @param project the Project the component is a dependency of
      * @param cid     the identity values of the component
@@ -585,18 +587,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     @SuppressWarnings("unchecked")
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
-        String purlString = null;
-        String purlCoordinates = null;
-        if (cid.getPurl() != null) {
-            try {
-                final PackageURL purl = cid.getPurl();
-                purlString = cid.getPurl().canonicalize();
-                purlCoordinates = new PackageURL(purl.getType(), purl.getNamespace(), purl.getName(), purl.getVersion(), null, null).canonicalize();
-            } catch (MalformedPackageURLException e) { // throw it away
-            }
-        }
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project && ((purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates) || (swidTagId != null && swidTagId == :swidTagId) || (cpe != null && cpe == :cpe) || (group == :group && name == :name && version == :version))");
-        return (List<Component>) query.executeWithArray(project, purlString, purlCoordinates, cid.getSwidTagId(), cid.getCpe(), cid.getGroup(), cid.getName(), cid.getVersion());
+        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(project, cid);
+        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
+        return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
     }
 
     /**
@@ -607,18 +600,72 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     @SuppressWarnings("unchecked")
     public List<Component> matchIdentity(final ComponentIdentity cid) {
+        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(null, cid);
+        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
+        return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
+    }
+
+    private static Pair<String, Map<String, Object>> buildComponentIdentityQuery(final Project project, final ComponentIdentity cid) {
         String purlString = null;
         String purlCoordinates = null;
         if (cid.getPurl() != null) {
-            purlString = cid.getPurl().canonicalize();
             try {
                 final PackageURL purl = cid.getPurl();
+                purlString = cid.getPurl().canonicalize();
                 purlCoordinates = new PackageURL(purl.getType(), purl.getNamespace(), purl.getName(), purl.getVersion(), null, null).canonicalize();
             } catch (MalformedPackageURLException e) { // throw it away
             }
         }
-        final Query<Component> query = pm.newQuery(Component.class, "(purl != null && purl == :purl) || (purlCoordinates != null && purlCoordinates == :purlCoordinates) || (swidTagId != null && swidTagId == :swidTagId) || (cpe != null && cpe == :cpe) || (group == :group && name == :name && version == :version)");
-        return (List<Component>) query.executeWithArray(purlString, purlCoordinates, cid.getSwidTagId(), cid.getCpe(), cid.getGroup(), cid.getName(), cid.getVersion());
+
+        final var filterParts = new ArrayList<String>();
+        final var params = new HashMap<String, Object>();
+
+        if (purlString != null) {
+            filterParts.add("purl == :purl");
+            params.put("purl", purlString);
+        }
+        if (purlCoordinates != null) {
+            filterParts.add("purlCoordinates == :purlCoordinates");
+            params.put("purlCoordinates", purlCoordinates);
+        }
+        if (cid.getCpe() != null) {
+            filterParts.add("cpe == :cpe");
+            params.put("cpe", cid.getCpe());
+        }
+        if (cid.getSwidTagId() != null) {
+            filterParts.add("swidTagId == :swidTagId");
+            params.put("swidTagId", cid.getSwidTagId());
+        }
+
+        final var coordinatesFilterParts = new ArrayList<String>();
+        if (cid.getGroup() != null) {
+            coordinatesFilterParts.add("group == :group");
+            params.put("group", cid.getGroup());
+        } else {
+            coordinatesFilterParts.add("group == null");
+        }
+        if (cid.getName() != null) {
+            coordinatesFilterParts.add("name == :name");
+            params.put("name", cid.getName());
+        } else {
+            coordinatesFilterParts.add("name == null");
+        }
+        if (cid.getVersion() != null) {
+            coordinatesFilterParts.add("version == :version");
+            params.put("version", cid.getVersion());
+        } else {
+            coordinatesFilterParts.add("version == null");
+        }
+        filterParts.add("(%s)".formatted(String.join(" && ", coordinatesFilterParts)));
+
+        if (project == null) {
+            final String filter = String.join(" || ", filterParts);
+            return Pair.of(filter, params);
+        }
+
+        final String filter = "project == :project && (%s)".formatted(String.join(" || ", filterParts));
+        params.put("project", project);
+        return Pair.of(filter, params);
     }
 
     /**
