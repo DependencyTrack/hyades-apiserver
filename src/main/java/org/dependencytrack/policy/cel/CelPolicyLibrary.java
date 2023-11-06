@@ -7,6 +7,7 @@ import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -380,9 +381,30 @@ class CelPolicyLibrary implements Library {
             filters.add("\"C\".\"VERSION\" = ?");
             params.put(paramPosition++, rootComponent.getVersion());
         }
+        if (!rootComponent.getClassifier().isBlank()) {
+            filters.add("\"C\".\"CLASSIFIER\" = ?");
+            params.put(paramPosition++, rootComponent.getClassifier());
+        }
+        if (!rootComponent.getCpe().isBlank()) {
+            filters.add("\"C\".\"CPE\" = ?");
+            params.put(paramPosition++, rootComponent.getCpe());
+        }
         if (!rootComponent.getPurl().isBlank()) {
             filters.add("\"C\".\"PURL\" = ?");
             params.put(paramPosition++, rootComponent.getPurl());
+        }
+        if (!rootComponent.getSwidTagId().isBlank()) {
+            filters.add("\"C\".\"SWIDTAGID\" = ?");
+            params.put(paramPosition++, rootComponent.getSwidTagId());
+        }
+        if (rootComponent.hasIsInternal()) {
+            if (rootComponent.getIsInternal()) {
+                filters.add("\"C\".\"INTERNAL\" = ?");
+                params.put(paramPosition++, true);
+            } else {
+                filters.add("(\"C\".\"INTERNAL\" IS NULL OR \"C\".\"INTERNAL\" = ?)");
+                params.put(paramPosition++, false);
+            }
         }
 
         if (filters.isEmpty()) {
@@ -525,8 +547,35 @@ class CelPolicyLibrary implements Library {
             params.put("name", component.getName());
         }
         if (!component.getVersion().isBlank()) {
-            filters.add("version");
+            filters.add("version == :version");
             params.put("version", component.getVersion());
+        }
+        if (!component.getClassifier().isBlank()) {
+            try {
+                filters.add("classifier == :classifier");
+                params.put("classifier", Classifier.valueOf(component.getClassifier()));
+            } catch (IllegalArgumentException e) {
+                LOGGER.warn("\"%s\" is not a valid classifier; Skipping".formatted(component.getClassifier()), e);
+            }
+        }
+        if (!component.getCpe().isBlank()) {
+            filters.add("cpe == :cpe");
+            params.put("cpe", component.getCpe());
+        }
+        if (!component.getPurl().isBlank()) {
+            filters.add("purl == :purl");
+            params.put("purl", component.getPurl());
+        }
+        if (!component.getSwidTagId().isBlank()) {
+            filters.add("swidTagId == :swidTagId");
+            params.put("swidTagId", component.getSwidTagId());
+        }
+        if (component.hasIsInternal()) {
+            if (component.getIsInternal()) {
+                filters.add("internal");
+            } else {
+                filters.add("(internal == null || !internal)");
+            }
         }
 
         // TODO: Add more fields
