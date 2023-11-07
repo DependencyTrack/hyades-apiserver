@@ -18,22 +18,26 @@
  */
 package org.dependencytrack.util;
 
+import alpine.common.logging.Logger;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.model.PolicyCondition;
+import org.json.JSONObject;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * A version distance consists of four parts for each of the difference in epoch,
  * major, minor or patch numbers between two versions.
- *
+ * <p>
  * Each part is computed by calculating the difference of each number found in the
  * two versions. Since only the most significant part found is of any interest, only the
  * first difference found will be set, all others will be zero. This makes it easy to
  * compare two versions. For example the distence between 1.0.2 and 2.0.0 equals 1.0.0,
  * meaning the major number differs by one.
- *
+ * <p>
  * Epoch is also support, so the distance will look like <epoch>:<major>.<minor>.<patch>:
  * <ul>
  *   <li>1:0.0.0/li>
@@ -43,16 +47,18 @@ import org.apache.commons.lang3.StringUtils;
  *   <li>0:0.0.1/li>
  * </ul>
  * N.B. Optional build numbers, as fourtth number, are neglected
- *
+ * <p>
  * VersionDistances can be compared to each other, but makes no sense to do math with
  * them: the difference between 1.6.0 and 1.2.3 is 0.4.0, but the sum of 1.6.0 and
  * 0.4.0 is not equal to 1.6.3.
- *
+ * <p>
  * VersionDistances are absolute, negative distances are not allowed.
  *
  * @since 4.9.0
  */
-public class VersionDistance implements Comparable<VersionDistance>,  Serializable {
+public class VersionDistance implements Comparable<VersionDistance>, Serializable {
+    private static final Logger LOGGER = Logger.getLogger(VersionDistance.class);
+
 
     private static final long serialVersionUID = 1L;
 
@@ -63,18 +69,18 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
 
     private static final Pattern DISTANCE_PATTERN = Pattern.compile(
             // Optional epoch part: numbers before the first : sign.
-            "^(?:(?<"+GROUP_EPOCH+">\\d+):)?" +
-                    "(?<"+GROUP_MAJOR+">\\?|\\d+)"+
-                    "(?:\\.(?<"+GROUP_MINOR+">\\?|\\d+))?"+
-                    "(?:\\.(?<"+GROUP_PATCH+">\\?|\\d+))?"+
+            "^(?:(?<" + GROUP_EPOCH + ">\\d+):)?" +
+                    "(?<" + GROUP_MAJOR + ">\\?|\\d+)" +
+                    "(?:\\.(?<" + GROUP_MINOR + ">\\?|\\d+))?" +
+                    "(?:\\.(?<" + GROUP_PATCH + ">\\?|\\d+))?" +
                     "$"
     );
 
     // Semver-like version:any numbers parts without characters appended, with optial leading v.
     // Optionally appended with label and/or build metadata
     protected static final Pattern VERSION_PATTERN = Pattern.compile(
-            "^(?:(?<"+GROUP_EPOCH+">.*):)?" + // Optional epoch part: number before the first : sign. Match any characters here so we can fail on incorrect values
-                    "v?(?<"+GROUP_MAJOR+">\\d+[a-z]*)?(?:\\.(?<"+GROUP_MINOR+">\\d+[a-z]*))?(?:\\.(?<"+GROUP_PATCH+">\\d+[a-z]*))?" + // version part, at least major version (numeric), optinali minor (numeric) or patch (numeric) version. Ignore the rest
+            "^(?:(?<" + GROUP_EPOCH + ">.*):)?" + // Optional epoch part: number before the first : sign. Match any characters here so we can fail on incorrect values
+                    "v?(?<" + GROUP_MAJOR + ">\\d+[a-z]*)?(?:\\.(?<" + GROUP_MINOR + ">\\d+[a-z]*))?(?:\\.(?<" + GROUP_PATCH + ">\\d+[a-z]*))?" + // version part, at least major version (numeric), optinali minor (numeric) or patch (numeric) version. Ignore the rest
                     ".*$", // build numbers, labels and build metadata
             Pattern.CASE_INSENSITIVE
     );
@@ -107,7 +113,7 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
     }
 
     public VersionDistance(int major, int minor, int patch) throws IllegalArgumentException {
-        this (0, major, minor, patch);
+        this(0, major, minor, patch);
     }
 
     public VersionDistance(int epoch, int major, int minor, int patch) throws IllegalArgumentException {
@@ -115,7 +121,7 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
         this.major = major;
         this.minor = minor;
         this.patch = patch;
-        validate ();
+        validate();
     }
 
     public VersionDistance(String distance) throws NumberFormatException, IllegalArgumentException {
@@ -158,6 +164,7 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
 
     /**
      * Parse a string of combined {@link VersionDistance}s and return tham as a {@link VersionDistance} {@link List}
+     *
      * @param combinedDistances combined version distance string, e.g 1:1.?.? -> (1:?.?.?, 0:1.?.?)
      * @return List of separate {@link VersionDistance}s
      * @throws NumberFormatException in case a version distance cannot be parsed
@@ -295,7 +302,7 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
      * difference in the epoch numbers, major version numbers, the minor version
      * numbers or the patch version numbers. When a number is not foud in the
      * version string, 0 is assumed.
-     *
+     * <p>
      * Only the first (most significant) difference number will be set, all
      * others will be 0. So the distance will look like <epoch>:<major>.<minor>.<patch>:
      * 1:?.?.?
@@ -306,7 +313,6 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
      *
      * @param version1 the first version
      * @param version2 the second version
-     *
      * @return VersionDistance distance between version1 and version2
      */
     public static VersionDistance getVersionDistance(String version1, String version2) {
@@ -350,5 +356,61 @@ public class VersionDistance implements Comparable<VersionDistance>,  Serializab
         }
         throw new NumberFormatException("Incompatible versions: " + version1 + ", " + version2);
     }
+
+    public static boolean matches(final PolicyCondition.Operator operator, final VersionDistance policyDistance, final VersionDistance versionDistance) {
+        return switch (operator) {
+            case NUMERIC_GREATER_THAN -> versionDistance.compareTo(policyDistance) > 0;
+            case NUMERIC_GREATER_THAN_OR_EQUAL -> versionDistance.compareTo(policyDistance) >= 0;
+            case NUMERIC_EQUAL -> versionDistance.compareTo(policyDistance) == 0;
+            case NUMERIC_NOT_EQUAL -> versionDistance.compareTo(policyDistance) != 0;
+            case NUMERIC_LESSER_THAN_OR_EQUAL -> versionDistance.compareTo(policyDistance) <= 0;
+            case NUMERIC_LESS_THAN -> versionDistance.compareTo(policyDistance) < 0;
+            default -> {
+                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(operator));
+                yield false;
+            }
+        };
+    }
+
+    /**
+     * Evaluate VersionDistance conditions for a given versionDistance. A condition
+     *
+     * @param policyConditionValue    condition value {@link VersionDistance}
+     * @param policyConditionOperator condition operator
+     * @param versionDistance         the {@link VersionDistance} to evalue
+     * @return true if the condition is true for the components versionDistance, false otherwise
+     */
+    public static boolean evaluate(final String policyConditionValue, final String policyConditionOperator, final VersionDistance versionDistance) {
+        final var operator = PolicyCondition.Operator.valueOf(policyConditionOperator);
+        final var value = policyConditionValue;
+
+        if (!StringUtils.isEmpty(value)) {
+            final var json = new JSONObject(value);
+            final var epoch = json.optString("epoch", "0");
+            final var major = json.optString("major", "?");
+            final var minor = json.optString("minor", "?");
+            final var patch = json.optString("patch", "?");
+
+            final List<VersionDistance> versionDistanceList;
+            try {
+                versionDistanceList = VersionDistance.parse(epoch + ":" + major + "." + minor + "." + patch);
+            } catch (IllegalArgumentException e) {
+                LOGGER.error("Invalid version distance format", e);
+                return false;
+            }
+            if (versionDistanceList.isEmpty()) {
+                versionDistanceList.add(new VersionDistance(0, 0, 0));
+            }
+            return versionDistanceList.stream().reduce(
+                    false,
+                    (latest, current) -> latest || matches(operator, current, versionDistance),
+                    Boolean::logicalOr
+            );
+        }
+        return false;
+
+
+    }
+
 
 }

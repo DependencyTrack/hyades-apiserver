@@ -37,6 +37,7 @@ import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuil
 import org.dependencytrack.policy.cel.compat.SeverityCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.SwidTagIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.VersionCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.VersionDistanceCelScriptBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
@@ -103,6 +104,7 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder());
+        SCRIPT_BUILDERS.put(Subject.VERSION_DISTANCE, new VersionDistanceCelScriptBuilder());
     }
 
     private final CelPolicyScriptHost scriptHost;
@@ -153,7 +155,6 @@ public class CelPolicyEngine {
             } else {
                 protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }
-
             // Preload components for the entire project, to avoid excessive queries.
             final List<ComponentProjection> components = celQm.fetchAllComponents(project.getId(), requirements.get(TYPE_COMPONENT));
 
@@ -454,8 +455,8 @@ public class CelPolicyEngine {
                         .setBlake2B384(trimToEmpty(projection.blake2b_384))
                         .setBlake2B512(trimToEmpty(projection.blake2b_512))
                         .setBlake3(trimToEmpty(projection.blake3));
+        Optional.ofNullable(projection.latestVersion).ifPresent(componentBuilder::setLatestVersion);
         Optional.ofNullable(projection.publishedAt).map(Timestamps::fromDate).ifPresent(componentBuilder::setPublishedAt);
-
         if (projection.resolvedLicenseId != null && projection.resolvedLicenseId > 0) {
             final org.dependencytrack.proto.policy.v1.License protoLicense = protoLicenseById.get(projection.resolvedLicenseId);
             if (protoLicense != null) {
