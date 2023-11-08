@@ -23,6 +23,7 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
+import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
@@ -38,6 +39,7 @@ import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
@@ -1069,12 +1071,16 @@ public class BomUploadProcessingTask implements Subscriber {
         if (integrityMetaComponent == null) {
             qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(event.purlCoordinates()));
             return true;
-        } else if (integrityMetaComponent.getStatus() == null || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+        } else if (integrityMetaComponent.getStatus() == null
+                || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
+                && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             return true;
+        } else if (integrityMetaComponent.getStatus() == FetchStatus.PROCESSED || integrityMetaComponent.getStatus() == FetchStatus.NOT_AVAILABLE) {
+            EventService.getInstance().publish(new IntegrityAnalysisEvent(event.componentUuid(), integrityMetaComponent));
+            return false;
         }
-        //don't send event because integrity metadata would be in db already in Processed state or sent recently
-        //and don't want to send again
+        //don't send event because integrity metadata would be sent recently and don't want to send again
         return false;
     }
 }

@@ -70,6 +70,10 @@ import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
+import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
+import static org.dependencytrack.model.FetchStatus.PROCESSED;
+
 /**
  * JAX-RS resources for processing components.
  *
@@ -413,7 +417,10 @@ public class ComponentResource extends AlpineResource {
                             component.isInternal(), component.getPurl());
             try {
                 Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                repoMetaHandler.handle();
+                IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                if(integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                    calculateIntegrityResult(integrityMetaComponent, component, qm);
+                }
             } catch (MalformedPackageURLException ex) {
                 LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
             }
@@ -524,7 +531,10 @@ public class ComponentResource extends AlpineResource {
                 try {
 
                     Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                    repoMetaHandler.handle();
+                    IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                    if(integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                        calculateIntegrityResult(integrityMetaComponent, component, qm);
+                    }
                 } catch (MalformedPackageURLException ex) {
                     LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
                 }

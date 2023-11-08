@@ -75,4 +75,33 @@ public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
         Assertions.assertEquals(FetchStatus.IN_PROGRESS, integrityMetaComponent.getStatus());
         assertThat(integrityMetaComponent.getLastFetch()).isAfter(Date.from(Instant.now().minus(2, ChronoUnit.MINUTES)));
     }
+
+    @Test
+    public void testHandleIntegrityWhenMetadataExists() throws MalformedPackageURLException {
+        Handler handler;
+        UUID uuid = UUID.randomUUID();
+        KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
+        PackageURL packageUrl = new PackageURL("pkg:maven/org.http4s/blaze-core_2.12");
+        ComponentProjection componentProjection = new ComponentProjection(uuid, PurlUtil.silentPurlCoordinatesOnly(packageUrl).toString(), false, packageUrl);
+        var integrityMeta = new IntegrityMetaComponent();
+        integrityMeta.setPurl("pkg:maven/org.http4s/blaze-core_2.12");
+        integrityMeta.setMd5("md5hash");
+        integrityMeta.setStatus(FetchStatus.PROCESSED);
+        integrityMeta.setLastFetch(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
+        qm.createIntegrityMetaComponent(integrityMeta);
+        handler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+        IntegrityMetaComponent integrityMetaComponent = handler.handle();
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
+                    assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                    assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_LATEST_VERSION);
+                }
+
+        );
+        Assertions.assertEquals(FetchStatus.PROCESSED, integrityMetaComponent.getStatus());
+    }
 }

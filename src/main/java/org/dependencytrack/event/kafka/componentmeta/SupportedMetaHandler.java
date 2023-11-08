@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.Date;
 
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
+import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
+import static org.dependencytrack.model.FetchStatus.PROCESSED;
 
 public class SupportedMetaHandler extends AbstractMetaHandler {
 
@@ -30,6 +32,11 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
             kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(),componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return integrityMetaComponent;
         }
+        if(persistentIntegrityMetaComponent.getStatus() == PROCESSED || persistentIntegrityMetaComponent.getStatus() == NOT_AVAILABLE) {
+            //only fetch the latest version because integrity data (hashes) is present
+            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
+            return persistentIntegrityMetaComponent;
+        }
         if (persistentIntegrityMetaComponent.getStatus() == null || (persistentIntegrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - persistentIntegrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
             persistentIntegrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             IntegrityMetaComponent updateIntegrityMetaComponent = queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
@@ -40,5 +47,4 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
             return persistentIntegrityMetaComponent;
         }
     }
-
 }
