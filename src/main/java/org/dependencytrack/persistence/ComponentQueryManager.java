@@ -42,6 +42,10 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import java.io.StringReader;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -142,7 +146,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
      * @return a List of Dependency objects
      */
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
+    public ResultSet getComponents(final Project project, final boolean includeMetrics) {
         return getComponents(project, includeMetrics, false, false);
     }
 
@@ -155,57 +159,154 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param onlyDirect     Optionally exclude transitive dependencies so only direct dependencies are shown
      * @return a List of Dependency objects
      */
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
-        final PaginatedResult result;
-        String querySring = "SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
-        if (filter != null) {
-            querySring += " && (project == :project) && name.toLowerCase().matches(:name)";
+    public ResultSet getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+//        final PaginatedResult result;
+//        Connection connection = null;
+//        PreparedStatement preparedStatement = null;
+        String queryString = """
+                SELECT DISTINCT 'org.dependencytrack.model.Component' AS "DN_TYPE",
+                "A0"."AUTHOR",
+                "A0"."BLAKE2B_256",
+                "A0"."BLAKE2B_384",
+                "A0"."BLAKE2B_512",
+                "A0"."BLAKE3",
+                "A0"."CLASSIFIER",
+                "A0"."COPYRIGHT",
+                "A0"."CPE",
+                "A0"."DESCRIPTION",
+                "A0"."DIRECT_DEPENDENCIES",
+                "A0"."EXTENSION",
+                "A0"."EXTERNAL_REFERENCES",
+                "A0"."FILENAME",
+                "A0"."GROUP",
+                "A0"."ID",
+                "A0"."INTERNAL",
+                "A0"."LAST_RISKSCORE",
+                "A0"."LICENSE",
+                "A0"."LICENSE_EXPRESSION",
+                "A0"."LICENSE_URL",
+                "A0"."MD5",
+                "A0"."NAME" AS "NUCORDER0",
+                "A0"."TEXT",
+                "C0"."ACTIVE",
+                "C0"."AUTHOR",
+                "C0"."CLASSIFIER",
+                "C0"."CPE",
+                "C0"."DESCRIPTION",
+                "C0"."DIRECT_DEPENDENCIES",
+                "C0"."EXTERNAL_REFERENCES",
+                "C0"."GROUP",
+                "C0"."ID",
+                "C0"."LAST_BOM_IMPORTED",
+                "C0"."LAST_BOM_IMPORTED_FORMAT",
+                "C0"."LAST_RISKSCORE",
+                "C0"."NAME",
+                "C0"."PUBLISHER",
+                "C0"."PURL",
+                "C0"."SWIDTAGID",
+                "C0"."UUID",
+                "C0"."VERSION",
+                "A0"."PUBLISHER",
+                "A0"."PURL",
+                "A0"."PURLCOORDINATES",
+                "D0"."ISCUSTOMLICENSE",
+                "D0"."FSFLIBRE",
+                "D0"."ID",
+                "D0"."LICENSEID",
+                "D0"."NAME",
+                "D0"."ISOSIAPPROVED",
+                "D0"."UUID",
+                "A0"."SHA1",
+                "A0"."SHA_256",
+                "A0"."SHA_384",
+                "A0"."SHA3_256",
+                "A0"."SHA3_384",
+                "A0"."SHA3_512",
+                "A0"."SHA_512",
+                "A0"."SWIDTAGID",
+                "A0"."UUID",
+                "A0"."VERSION" AS "NUCORDER1",
+                "I0"."LAST_FETCH",
+                "I0"."PUBLISHED_AT",
+                "IA"."INTEGRITY_CHECK_STATUS"
+        FROM "COMPONENT" "A0"
+        INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
+        INNER JOIN "PROJECT" "C0" ON "A0"."PROJECT_ID" = "C0"."ID"
+        INNER JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
+        INNER JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
+        LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
+        WHERE "A0"."PROJECT_ID" = 2
+        AND NOT (NOT EXISTS (
+                SELECT "M"."ID" AS "DN_APPID"
+                FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
+                AND "M"."NAMESPACE" = "A0"."GROUP"
+                AND "M"."LATEST_VERSION" <> "A0"."VERSION"
+        AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\'))
+        AND "B0"."DIRECT_DEPENDENCIES" LIKE ((' % "uuid":"' || "A0"."UUID") || '" % ') ESCAPE E'\\'
+        ORDER BY "NUCORDER0",
+                "NUCORDER1" DESC FETCH NEXT 100 ROWS ONLY;
+        """;
+//        String querySring = "SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
+//        if (filter != null) {
+//            querySring += " && (project == :project) && name.toLowerCase().matches(:name)";
+//        }
+//        if (onlyOutdated) {
+//            // Components are considered outdated when metadata does exists, but the version is different than latestVersion
+//            // Different should always mean version < latestVersion
+//            // Hack JDO using % instead of .* to get the SQL LIKE clause working:
+//            querySring +=
+//                    " && !(" +
+//                            " SELECT FROM org.dependencytrack.model.RepositoryMetaComponent m " +
+//                            " WHERE m.name == this.name " +
+//                            " && m.namespace == this.group " +
+//                            " && m.latestVersion != this.version " +
+//                            " && this.purl.matches('pkg:' + m.repositoryType.toString().toLowerCase() + '/%') " +
+//                            " ).isEmpty()";
+//        }
+//        if (onlyDirect) {
+//            querySring +=
+//                    " && this.project.directDependencies.matches('%\"uuid\":\"'+this.uuid+'\"%') "; // only direct dependencies
+//        }
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+//        final Query<Component> query = pm.newQuery(queryString);
+//        query.getFetchPlan().setMaxFetchDepth(2);
+
+        try {
+            connection = (Connection) pm.getDataStoreConnection();
+            preparedStatement = connection.prepareStatement(queryString);
+//            preparedStatement.setString(1, uuid.toString());
+            ResultSet resultSet = preparedStatement.executeQuery();
+            return resultSet;
+//        if (orderBy == null)
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        if (onlyOutdated) {
-            // Components are considered outdated when metadata does exists, but the version is different than latestVersion
-            // Different should always mean version < latestVersion
-            // Hack JDO using % instead of .* to get the SQL LIKE clause working:
-            querySring +=
-                    " && !(" +
-                            " SELECT FROM org.dependencytrack.model.RepositoryMetaComponent m " +
-                            " WHERE m.name == this.name " +
-                            " && m.namespace == this.group " +
-                            " && m.latestVersion != this.version " +
-                            " && this.purl.matches('pkg:' + m.repositoryType.toString().toLowerCase() + '/%') " +
-                            " ).isEmpty()";
-        }
-        if (onlyDirect) {
-            querySring +=
-                    " && this.project.directDependencies.matches('%\"uuid\":\"'+this.uuid+'\"%') "; // only direct dependencies
-        }
-        final Query<Component> query = pm.newQuery(querySring);
-        query.getFetchPlan().setMaxFetchDepth(2);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
-        }
-        if (filter != null) {
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            result = execute(query, project, filterString);
-        } else {
-            result = execute(query, project);
-        }
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                component.setMetrics(getMostRecentDependencyMetrics(component));
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
-                    }
-                }
-            }
-        }
-        return result;
+//        {
+//            query.setOrdering("name asc, version desc");
+//        }
+//        if (filter != null) {
+//            final String filterString = ".*" + filter.toLowerCase() + ".*";
+//            result = execute(query, project, filterString);
+//        } else {
+//            result = execute(query, project);
+//        }
+//        if (includeMetrics) {
+//            // Populate each Component object in the paginated result with transitive related
+//            // data to minimize the number of round trips a client needs to make, process, and render.
+//            for (Component component : result.getList(Component.class)) {
+//                component.setMetrics(getMostRecentDependencyMetrics(component));
+//                final PackageURL purl = component.getPurl();
+//                if (purl != null) {
+//                    final RepositoryType type = RepositoryType.resolve(purl);
+//                    if (RepositoryType.UNSUPPORTED != type) {
+//                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
+//                        component.setRepositoryMeta(repoMetaComponent);
+////                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
+//                    }
+//                }
+//            }
+//        }
     }
 
     /**

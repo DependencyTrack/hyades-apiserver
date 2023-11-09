@@ -1000,11 +1000,11 @@ public class QueryManager extends AlpineQueryManager {
         return getComponentQueryManager().getAllComponents(project);
     }
 
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
+    public ResultSet getComponents(final Project project, final boolean includeMetrics) {
         return getComponentQueryManager().getComponents(project, includeMetrics);
     }
 
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+    public ResultSet getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         return getComponentQueryManager().getComponents(project, includeMetrics, onlyOutdated, onlyDirect);
     }
 
@@ -1852,7 +1852,7 @@ public class QueryManager extends AlpineQueryManager {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         String queryString = """
-                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
+                SELECT "C"."ID", "C"."PURL", "IMC"."REPOSITORY_URL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
                 JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
