@@ -32,7 +32,7 @@ public class IntegrityCheck {
         //if integritymeta is in result with hashses but component uuid is not present, result has integrity data for existing
         // components. Get components from database and perform integrity check
         if (StringUtils.isBlank(result.getComponent().getUuid())) {
-            integrityAnalysisOfExistingComponents(integrityMetaComponent, result, qm);
+            integrityAnalysisOfExistingComponents(integrityMetaComponent, qm);
             return;
         }
         //check if the object is not null
@@ -44,9 +44,9 @@ public class IntegrityCheck {
         calculateIntegrityResult(integrityMetaComponent, component, qm);
     }
 
-    private static void integrityAnalysisOfExistingComponents(final IntegrityMetaComponent integrityMetaComponent, final AnalysisResult result, final QueryManager qm) {
+    private static void integrityAnalysisOfExistingComponents(final IntegrityMetaComponent integrityMetaComponent, final QueryManager qm) {
         if (integrityMetaComponent != null) {
-            List<Component> componentList = qm.getComponentsByPurl(result.getComponent().getPurl());
+            List<Component> componentList = qm.getComponentsByPurl(integrityMetaComponent.getPurl());
             for (Component component : componentList) {
                 LOGGER.debug("calculate integrity for component : " + component.getUuid());
                 calculateIntegrityResult(integrityMetaComponent, component, qm);
@@ -67,7 +67,7 @@ public class IntegrityCheck {
         return componentHash.equals(metadataHash) ? HASH_MATCH_PASSED : HASH_MATCH_FAILED;
     }
 
-    private static void calculateIntegrityResult(final IntegrityMetaComponent integrityMetaComponent, final Component component, final QueryManager qm) {
+    public static void calculateIntegrityResult(final IntegrityMetaComponent integrityMetaComponent, final Component component, final QueryManager qm) {
         //if integritymetacomponent is  null, try to get it from db
         //it could be that integrity metadata is already in db
         IntegrityMetaComponent metadata = integrityMetaComponent == null ? qm.getIntegrityMetaComponent(component.getPurl().toString()) : integrityMetaComponent;
