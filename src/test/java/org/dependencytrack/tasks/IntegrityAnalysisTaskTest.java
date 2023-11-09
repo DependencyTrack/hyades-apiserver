@@ -26,7 +26,7 @@ public class IntegrityAnalysisTaskTest extends AbstractPostgresEnabledTest {
 
     @Before
     public void before() {
-        environmentVariables.set("INTEGRITY_INITIALIZER_ENABLED", "true");
+        environmentVariables.set("INTEGRITY_CHECK_ENABLED", "true");
     }
 
     @Test
