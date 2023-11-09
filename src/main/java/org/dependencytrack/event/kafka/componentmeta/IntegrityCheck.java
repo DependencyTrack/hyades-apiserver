@@ -107,10 +107,11 @@ public class IntegrityCheck {
                 && (sha256Status == HASH_MATCH_UNKNOWN || sha256Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
                 && (sha512Status == HASH_MATCH_UNKNOWN || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)) {
             return HASH_MATCH_UNKNOWN;
-        } else if (md5Status == HASH_MATCH_PASSED || sha1Status == HASH_MATCH_PASSED || sha256Status == HASH_MATCH_PASSED || sha512Status == HASH_MATCH_PASSED) {
-            return HASH_MATCH_PASSED;
-        } else {
+        }
+        else if (md5Status == HASH_MATCH_FAILED || sha1Status == HASH_MATCH_FAILED || sha256Status == HASH_MATCH_FAILED || sha512Status == HASH_MATCH_FAILED) {
             return HASH_MATCH_FAILED;
+        } else {
+            return HASH_MATCH_PASSED;
         }
     }
 }
