@@ -8,13 +8,14 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Date;
 
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class QueryManagerTest extends PersistenceCapableTest {
     @Test
@@ -24,6 +25,12 @@ public class QueryManagerTest extends PersistenceCapableTest {
         component.setProject(project);
         component.setName("ABC");
         component.setPurl("pkg:maven/org.acme/abc");
+        //add another component for better testing
+        Component component2 = new Component();
+        component2.setProject(project);
+        component2.setName("ABC");
+        component2.setPurl("pkg:maven/org.acme/abc");
+
         IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
         integrityAnalysis.setComponent(component);
         integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
@@ -44,9 +51,53 @@ public class QueryManagerTest extends PersistenceCapableTest {
         qm.createIntegrityMetaComponent(integrityMetaComponent);
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
-        Assert.assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
-        Assert.assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
-        Assert.assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());
-        Assert.assertEquals(integrityMetaComponent.getRepositoryUrl(), componentMetaInformation.integritySourceUrl());
+        assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
+        assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
+        assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());
+    }
+
+    @Test
+    public void testGetMetaInformationWhenPublishedAtIsMissing() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        integrityAnalysis.setUpdatedAt(new Date());
+        integrityAnalysis.setId(component.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
+        qm.persist(integrityAnalysis);
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component = qm.createComponent(component, false);
+        ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
+        assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
+        assertNull(componentMetaInformation.publishedDate());
+        assertNull(componentMetaInformation.lastFetched());
+    }
+
+    @Test
+    public void testGetMetaInformationWhenIntregrityAnalysisIsMissing() {
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Component component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component = qm.createComponent(component, false);
+        ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
+        assertNull(componentMetaInformation.publishedDate());
+        assertNull(componentMetaInformation.lastFetched());
     }
 }

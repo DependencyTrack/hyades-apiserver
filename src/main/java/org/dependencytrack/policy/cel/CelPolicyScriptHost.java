@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_AGE;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_VERSION_DISTANCE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;
@@ -168,6 +170,11 @@ public class CelPolicyScriptHost {
                         requirements.put(TYPE_COMPONENT, "version");
                     }
                 }
+                case FUNC_COMPARE_VERSION_DISTANCE ->
+                        requirements.putAll(TYPE_COMPONENT, List.of("purl", "uuid", "version", "latest_version"));
+
+                case FUNC_COMPARE_AGE -> requirements.putAll(TYPE_COMPONENT, List.of("purl", "published_at"));
+
             }
         }
 

@@ -109,7 +109,11 @@ jobs:
 
       - name: Run Trivy Vulnerability Scanner
         if: ${{ inputs.publish-container }}
+<<<<<<< HEAD
         uses: aquasecurity/trivy-action@0.13.0
+=======
+        uses: aquasecurity/trivy-action@0.13.1
+>>>>>>> a7020826dd7b28165d5dab2b74a966ffceaf927a
         with:
           image-ref: ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}
           format: 'sarif'

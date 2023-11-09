@@ -84,7 +84,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final PaginatedResult result;
         final Query<Component> query = pm.newQuery(Component.class);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
+            query.setOrdering("name asc, version desc, id asc");
         }
         if (filter != null) {
             query.setFilter("name.toLowerCase().matches(:name)");
@@ -232,17 +232,17 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         FROM "COMPONENT" "A0"
         INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
         INNER JOIN "PROJECT" "C0" ON "A0"."PROJECT_ID" = "C0"."ID"
-        INNER JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
-        INNER JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
+        LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
+        LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
         LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
-        WHERE "A0"."PROJECT_ID" = 2
+        WHERE "A0"."PROJECT_ID" = 1
         AND NOT (NOT EXISTS (
                 SELECT "M"."ID" AS "DN_APPID"
                 FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
                 AND "M"."NAMESPACE" = "A0"."GROUP"
                 AND "M"."LATEST_VERSION" <> "A0"."VERSION"
         AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\'))
-        AND "B0"."DIRECT_DEPENDENCIES" LIKE ((' % "uuid":"' || "A0"."UUID") || '" % ') ESCAPE E'\\'
+        AND "B0"."DIRECT_DEPENDENCIES" LIKE (' % "uuid":"' || "A0"."UUID" || '" % ') ESCAPE E'\\'
         ORDER BY "NUCORDER0",
                 "NUCORDER1" DESC FETCH NEXT 100 ROWS ONLY;
         """;
@@ -537,6 +537,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setParent(transientComponent.getParent());
         component.setCpe(transientComponent.getCpe());
         component.setPurl(transientComponent.getPurl());
+        component.setPurlCoordinates(component.getPurl());
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         final Component result = persist(component);
@@ -552,11 +553,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     protected void deleteComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        query.setParameters(project);
-        List<Component> components = query.executeList();
-        for (Component component : components) {
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
-        }
         try {
             query.deletePersistentAll(project);
         } finally {

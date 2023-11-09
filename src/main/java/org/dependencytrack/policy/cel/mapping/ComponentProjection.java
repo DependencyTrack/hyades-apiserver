@@ -4,8 +4,6 @@ import java.util.Date;
 
 public class ComponentProjection {
     public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
-
-
     public long id;
 
     @MappedField(sqlColumnName = "UUID")
@@ -70,24 +68,15 @@ public class ComponentProjection {
 
     @MappedField(sqlColumnName = "BLAKE3")
     public String blake3;
-
     @MappedField(protoFieldName = "resolved_license", sqlColumnName = "LICENSE_ID")
     public Long resolvedLicenseId;
 
     @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
     public String licenseName;
 
-    public Date getPublishedAt() {
-        return publishedAt;
-    }
-
-    public void setPublishedAt(Date currentVersionLastModified) {
-        this.publishedAt = currentVersionLastModified;
-    }
-
-    @MappedField(protoFieldName = "published_at", sqlColumnName = "PUBLISHED_AT")
     public Date publishedAt;
 
+    public String latestVersion;
     @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
     public String licenseExpression;
 

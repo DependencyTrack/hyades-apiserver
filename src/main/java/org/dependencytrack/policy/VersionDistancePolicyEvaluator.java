@@ -18,28 +18,24 @@
  */
 package org.dependencytrack.policy;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
+import alpine.common.logging.Logger;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
-import org.dependencytrack.model.PolicyCondition.Operator;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VersionDistance;
-import org.json.JSONObject;
 
-import alpine.common.logging.Logger;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Evaluates the {@link VersionDistance} between a {@link Component}'s current and it's latest
  * version against a {@link Policy}. This makes it possible to add a policy for checking outdated
  * components. The policy "greater than 0:1.?.?" for example means, a difference of only one
  * between the curren version's major number and the latest version's major number is allowed.
- *
+ * <p>
  * VersionDistances can be combined in a policy. For example "greater than 1:1.?.?" means a
  * difference of only one epoch number or one major number is allowed. Or "greater than 1.1.?"
  * means a difference of only one majr number or one minor number is allowed
@@ -100,67 +96,12 @@ public class VersionDistancePolicyEvaluator extends AbstractPolicyEvaluator {
         }
 
         for (final PolicyCondition condition : conditions) {
-            if (isDirectDependency(component) && evaluate(condition, versionDistance)) {
+            if (isDirectDependency(component) && VersionDistance.evaluate(condition.getValue(), condition.getOperator().name(), versionDistance)) {
                 violations.add(new PolicyConditionViolation(condition, component));
             }
         }
 
         return violations;
-    }
-
-    /**
-     * Evaluate VersionDistance conditions for a given versionDistance. A condition
-     *
-     * @param condition operator and value containing combined {@link VersionDistance} values
-     * @param versionDistance the {@link VersionDistance} to evalue
-     * @return true if the condition is true for the components versionDistance, false otherwise
-     */
-    private boolean evaluate(final PolicyCondition condition, final VersionDistance versionDistance) {
-        final var operator = condition.getOperator();
-        final var value = condition.getValue();
-
-        if (!StringUtils.isEmpty(value)) {
-            final var json = new JSONObject(value);
-            final var epoch = json.optString("epoch", "0");
-            final var major = json.optString("major", "?");
-            final var minor = json.optString("minor", "?");
-            final var patch = json.optString("patch", "?");
-
-            final List<VersionDistance> versionDistanceList;
-            try {
-                versionDistanceList = VersionDistance.parse(epoch+":"+major+"."+minor+"."+patch);
-            } catch (IllegalArgumentException e) {
-                LOGGER.error("Invalid version distance format", e);
-                return false;
-            }
-            if (versionDistanceList.isEmpty()) {
-                versionDistanceList.add(new VersionDistance(0,0,0));
-            }
-            return versionDistanceList.stream().reduce(
-                    false,
-                    (latest, current) -> latest || matches(operator, current, versionDistance),
-                    Boolean::logicalOr
-            );
-        }
-        return false;
-
-
-
-    }
-
-    private boolean matches(final Operator operator, final VersionDistance policyDistance, final VersionDistance versionDistance) {
-        return switch (operator) {
-            case NUMERIC_GREATER_THAN -> versionDistance.compareTo(policyDistance) > 0;
-            case NUMERIC_GREATER_THAN_OR_EQUAL -> versionDistance.compareTo(policyDistance) >= 0;
-            case NUMERIC_EQUAL -> versionDistance.compareTo(policyDistance) == 0;
-            case NUMERIC_NOT_EQUAL -> versionDistance.compareTo(policyDistance) != 0;
-            case NUMERIC_LESSER_THAN_OR_EQUAL -> versionDistance.compareTo(policyDistance) <= 0;
-            case NUMERIC_LESS_THAN -> versionDistance.compareTo(policyDistance) < 0;
-            default -> {
-                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(operator));
-                yield false;
-            }
-        };
     }
 
     /**

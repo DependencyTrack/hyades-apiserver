@@ -144,11 +144,27 @@ class CelPolicyQueryManager implements AutoCloseable {
                 )
                 .map(mapping -> "\"C\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
                 .collect(Collectors.joining(", "));
-
+        if (protoFieldNames.contains("published_at")) {
+            sqlSelectColumns += ", \"publishedAt\"";
+        }
+        if (protoFieldNames.contains("latest_version")) {
+            sqlSelectColumns += ", \"latestVersion\"";
+        }
         final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT %s , "IMC"."PUBLISHED_AT" AS "publishedAt" FROM "COMPONENT" "C" LEFT JOIN "INTEGRITY_META_COMPONENT" "IMC" ON  "C"."PURL"="IMC"."PURL" WHERE "PROJECT_ID" = ?
-                """.formatted(sqlSelectColumns));
-        query.setParameters(projectId);
+                SELECT %s, "latestVersion", "publishedAt"
+                from
+                "COMPONENT" "C"
+                LEFT JOIN LATERAL (SELECT "IMC"."PUBLISHED_AT" AS "publishedAt" FROM "INTEGRITY_META_COMPONENT" "IMC" WHERE
+                "C"."PURL" = "IMC"."PURL") AS "publishedAt" ON :shouldJoinIntegrityMeta
+                LEFT JOIN LATERAL (SELECT "RMC"."LATEST_VERSION" AS "latestVersion" FROM "REPOSITORY_META_COMPONENT" "RMC" WHERE
+                "C"."NAME" = "RMC"."NAME") AS "latestVersion" ON :shouldJoinRepoMeta
+                WHERE
+                "PROJECT_ID" = :projectId
+                """.formatted(sqlSelectColumns, protoFieldNames));
+        query.setNamedParameters(Map.of(
+                "shouldJoinIntegrityMeta", protoFieldNames.contains("publishedAt") || protoFieldNames.contains("published_at"),
+                "shouldJoinRepoMeta", protoFieldNames.contains("latestVersion") || protoFieldNames.contains("latest_version"),
+                "projectId", projectId));
         try {
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         } finally {
@@ -590,6 +606,24 @@ class CelPolicyQueryManager implements AutoCloseable {
 
         parents.add(parentUuid);
         return getParents(parentUuid, parents);
+    }
+
+    boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
+        String queryString = """
+                SELECT COUNT(*) FROM "COMPONENT" "C" 
+                INNER JOIN "PROJECT" "P" ON "P"."ID"="C"."PROJECT_ID" 
+                AND "P"."DIRECT_DEPENDENCIES" LIKE :wildcard WHERE "C"."UUID"= :uuid;
+                """;
+        final Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setNamedParameters(Map.of("uuid", component.getUuid(),
+                "wildcard", "%" + component.getUuid() + "%"));
+        long result;
+        try {
+            result = query.executeResultUnique(Long.class);
+        } finally {
+            query.closeAll();
+        }
+        return result == 1;
     }
 
     @Override
