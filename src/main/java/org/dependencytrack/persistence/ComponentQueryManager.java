@@ -187,7 +187,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."MD5",
                         "A0"."NAME" AS "NUCORDER0",
                         "A0"."TEXT",
-                        "B0"."ACTIVE" AS "P_ACTIVE,
+                        "B0"."ACTIVE" AS "P_ACTIVE",
                         "B0"."AUTHOR" AS "P_AUTHOR",
                         "B0"."CLASSIFIER" AS "P_CLASSIFIER",
                         "B0"."CPE" AS "P_CPE",
