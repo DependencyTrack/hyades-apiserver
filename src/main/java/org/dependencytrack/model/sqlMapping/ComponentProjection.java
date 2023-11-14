@@ -167,8 +167,8 @@ public class ComponentProjection {
     @MappedField(sqlColumnName = "LAST_BOM_IMPORTED_FORMAT")
     public Date lastBomImportFormat;
 
-    @MappedField(sqlColumnName = "LAST_RISKSCORE")
-    private Double lastInheritedRiskScore;
+    @MappedField(sqlColumnName = "P_LAST_RISKSCORE")
+    private Double projectLastInheritedRiskScore;
 
     @MappedField(sqlColumnName = "P_DIRECT_DEPENDENCIES")
     public String projectDirectDependencies;

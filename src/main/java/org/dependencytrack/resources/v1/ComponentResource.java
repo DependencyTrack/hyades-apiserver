@@ -69,6 +69,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -115,16 +116,14 @@ public class ComponentResource extends AlpineResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ResultSet result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
-                    return Response.ok(result).header(TOTAL_COUNT_HEADER, result.getFetchSize()).build();
+                    final List<Component> result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
+                    return Response.ok(result).header(TOTAL_COUNT_HEADER, result.size()).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 

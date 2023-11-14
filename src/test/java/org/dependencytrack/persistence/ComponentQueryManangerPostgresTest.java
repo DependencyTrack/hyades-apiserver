@@ -1,0 +1,70 @@
+package org.dependencytrack.persistence;
+
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
+import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledTest {
+
+    @Test
+    public void testGetComponents() throws MalformedPackageURLException {
+
+        final Project project = prepareProject();
+        List<Component> components = qm.getComponents(project, false, true, true);
+
+    }
+
+    private Project prepareProject() throws MalformedPackageURLException {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final List<String> directDepencencies = new ArrayList<>();
+        // Generate 1000 dependencies
+        for (int i = 0; i < 1000; i++) {
+            Component component = new Component();
+            component.setProject(project);
+            component.setGroup("component-group");
+            component.setName("component-name-" + i);
+            component.setVersion(String.valueOf(i) + ".0");
+            component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-" + i, String.valueOf(i) + ".0", null, null));
+            component = qm.createComponent(component, false);
+            // direct depencencies
+            if (i < 100) {
+                // 100 direct depencencies, 900 transitive depencencies
+                directDepencencies.add("{\"uuid\":\"" + component.getUuid() + "\"}");
+            }
+            // Recent & Outdated
+            if ((i >= 25) && (i < 225)) {
+                // 100 outdated components, 75 of these are direct dependencies, 25 transitive
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.MAVEN);
+                metaComponent.setNamespace("component-group");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            } else if (i < 500) {
+                // 300 recent components, 25 of these are direct dependencies
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.MAVEN);
+                metaComponent.setNamespace("component-group");
+                metaComponent.setName("component-name-" + i);
+                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            } else {
+                // 500 components with no RepositoryMetaComponent containing version
+                // metadata, all transitive dependencies
+            }
+        }
+        project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
+        return project;
+    }
+}

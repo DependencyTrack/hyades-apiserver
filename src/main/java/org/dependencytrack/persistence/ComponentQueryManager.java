@@ -33,9 +33,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlMapping.ComponentProjection;
-import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
+import org.dependencytrack.util.ComponentUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -44,10 +44,6 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import java.io.StringReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -148,7 +144,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
      * @return a List of Dependency objects
      */
-    public ResultSet getComponents(final Project project, final boolean includeMetrics) {
+    public List<Component> getComponents(final Project project, final boolean includeMetrics) {
         return getComponents(project, includeMetrics, false, false);
     }
 
@@ -161,7 +157,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param onlyDirect     Optionally exclude transitive dependencies so only direct dependencies are shown
      * @return a List of Dependency objects
      */
-    public ResultSet getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+    public List<Component> getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         String queryString = """
                         SELECT DISTINCT 'org.dependencytrack.model.Component' AS "DN_TYPE",
                         "A0"."AUTHOR",
@@ -198,7 +194,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "B0"."ID" AS "P_ID",
                         "B0"."LAST_BOM_IMPORTED",
                         "B0"."LAST_BOM_IMPORTED_FORMAT",
-                        "B0"."LAST_RISKSCORE",
+                        "B0"."LAST_RISKSCORE" AS "P_LAST_RISKSCORE",
                         "B0"."NAME" AS "P_NAME",
                         "B0"."PUBLISHER" AS "P_PUBLISHER",
                         "B0"."PURL" AS "P_PURL",
@@ -232,7 +228,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                 LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
                 LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
                 LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
-                WHERE "A0"."PROJECT_ID" = ?
+                WHERE "A0"."PROJECT_ID" = 1
                 """;
 
         if (onlyOutdated) {
@@ -259,43 +255,35 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             queryString +=
                     """
                         ORDER BY "NUCORDER0",
-                        "NUCORDER1" DESC FETCH NEXT 100 ROWS ONLY;
+                        "NUCORDER1" DESC;
                     """;
         }
-//        Connection connection = null;
-//        PreparedStatement preparedStatement = null;
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
+        List<ComponentProjection> resultSet;
         try {
-//            connection = (Connection) pm.getDataStoreConnection();
-//            preparedStatement = connection.prepareStatement(queryString);
-//            preparedStatement.setLong(1, project.getId());
             query.setParameters(project.getId());
-//            ResultSet resultSet = preparedStatement.executeQuery();
-            List.copyOf(query.executeResultList(ComponentProjection.class));
-            return null;
+            resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
         }
-//        catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
         finally {
             query.closeAll();
         }
-//        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-//            for (Component component : result.getList(Component.class)) {
-//                component.setMetrics(getMostRecentDependencyMetrics(component));
-//                final PackageURL purl = component.getPurl();
-//                if (purl != null) {
-//                    final RepositoryType type = RepositoryType.resolve(purl);
-//                    if (RepositoryType.UNSUPPORTED != type) {
-//                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-//                        component.setRepositoryMeta(repoMetaComponent);
-////                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
-//                    }
-//                }
-//            }
-//        }
+        for (final var result : resultSet) {
+            final org.dependencytrack.model.Component component = ComponentUtil.mapToComponent(result);
+            if (includeMetrics) {
+//             Populate each Component object in the paginated result with transitive related
+//             data to minimize the number of round trips a client needs to make, process, and render.
+                component.setMetrics(getMostRecentDependencyMetrics(component));
+                final PackageURL purl = component.getPurl();
+                if (purl != null) {
+                    final RepositoryType type = RepositoryType.resolve(purl);
+                    if (RepositoryType.UNSUPPORTED != type) {
+                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
+                        component.setRepositoryMeta(repoMetaComponent);
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**
