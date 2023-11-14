@@ -13,14 +13,40 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledTest {
 
     @Test
-    public void testGetComponents() throws MalformedPackageURLException {
+    public void testGetAllComponents() throws MalformedPackageURLException {
 
         final Project project = prepareProject();
-        List<Component> components = qm.getComponents(project, false, true, true);
+        var components = qm.getComponents(project, false, false, false);
+        assertThat(components.size()).isEqualTo(100);
+    }
 
+    @Test
+    public void testGetOutdatedComponents() throws MalformedPackageURLException {
+
+        final Project project = prepareProject();
+        var components = qm.getComponents(project, false, true, false);
+        assertThat(components.size()).isEqualTo(100);
+    }
+
+    @Test
+    public void testGetDirectComponents() throws MalformedPackageURLException {
+
+        final Project project = prepareProject();
+        var components = qm.getComponents(project, false, false, true);
+        assertThat(components.size()).isEqualTo(100);
+    }
+
+    @Test
+    public void testGetOutdatedDirectComponents() throws MalformedPackageURLException {
+
+        final Project project = prepareProject();
+        var components = qm.getComponents(project, false, true, true);
+        assertThat(components.size()).isEqualTo(75);
     }
 
     private Project prepareProject() throws MalformedPackageURLException {

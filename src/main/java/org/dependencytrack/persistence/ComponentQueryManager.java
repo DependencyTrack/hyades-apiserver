@@ -158,6 +158,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return a List of Dependency objects
      */
     public List<Component> getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+        List<Component> componentsResult = new ArrayList<>();
         String queryString = """
                         SELECT DISTINCT 'org.dependencytrack.model.Component' AS "DN_TYPE",
                         "A0"."AUTHOR",
@@ -242,27 +243,33 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
                         AND "M"."NAMESPACE" = "A0"."GROUP"
                         AND "M"."LATEST_VERSION" <> "A0"."VERSION"
-                        AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\'))
+                        AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
                     """;
         }
         if (onlyDirect) {
             queryString +=
                     """
-                       AND "B0"."DIRECT_DEPENDENCIES" LIKE (('%"uuid":"' || "A0"."UUID") || '"%') ESCAPE E'\\' 
+                       AND "B0"."DIRECT_DEPENDENCIES" LIKE (('%' || "A0"."UUID") || '%') ESCAPE E'\\\\'
                     """;
         }
         if (orderBy == null) {
             queryString +=
                     """
                         ORDER BY "NUCORDER0",
-                        "NUCORDER1" DESC;
+                        "NUCORDER1" DESC FETCH NEXT 100 ROWS ONLY;
                     """;
         }
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
         List<ComponentProjection> resultSet;
         try {
+            if (pagination != null && pagination.isPaginated()) {
+                final long begin = pagination.getOffset();
+                final long end = begin + pagination.getLimit();
+                query.setRange(begin, end);
+            }
             query.setParameters(project.getId());
             resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
+            System.out.println(resultSet.size());
         }
         finally {
             query.closeAll();
@@ -282,8 +289,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     }
                 }
             }
+            componentsResult.add(component);
         }
-        return null;
+        return componentsResult;
     }
 
     /**
