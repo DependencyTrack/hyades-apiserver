@@ -1,12 +1,12 @@
 package org.dependencytrack.model.sqlMapping;
 
-import org.dependencytrack.policy.cel.mapping.FieldMapping;
 import org.dependencytrack.policy.cel.mapping.MappedField;
 
 import java.util.Date;
 
 public class ComponentProjection {
-    public static FieldMapping ID_FIELD_MAPPING = new FieldMapping("id", /* protoFieldName */ null, "ID");
+
+    @MappedField(sqlColumnName = "ID")
     public long id;
 
     @MappedField(sqlColumnName = "UUID")
@@ -193,4 +193,7 @@ public class ComponentProjection {
 
     @MappedField(sqlColumnName = "ISCUSTOMLICENSE")
     public Boolean isCustomLicense;
+
+    @MappedField(sqlColumnName = "TOTAL_COUNT")
+    public Long totalCount;
 }

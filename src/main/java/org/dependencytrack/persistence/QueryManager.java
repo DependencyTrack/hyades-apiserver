@@ -1030,11 +1030,11 @@ public class QueryManager extends AlpineQueryManager {
         return getComponentQueryManager().getAllComponents(project);
     }
 
-    public List<Component> getComponents(final Project project, final boolean includeMetrics) {
+    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
         return getComponentQueryManager().getComponents(project, includeMetrics);
     }
 
-    public List<Component> getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+    public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         return getComponentQueryManager().getComponents(project, includeMetrics, onlyOutdated, onlyDirect);
     }
 

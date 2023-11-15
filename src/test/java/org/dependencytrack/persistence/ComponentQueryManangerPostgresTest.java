@@ -22,7 +22,7 @@ public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledT
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, false, false);
-        assertThat(components.size()).isEqualTo(100);
+        assertThat(components.getTotal()).isEqualTo(1000);
     }
 
     @Test
@@ -30,7 +30,7 @@ public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledT
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, true, false);
-        assertThat(components.size()).isEqualTo(100);
+        assertThat(components.getTotal()).isEqualTo(200);
     }
 
     @Test
@@ -38,7 +38,7 @@ public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledT
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, false, true);
-        assertThat(components.size()).isEqualTo(100);
+        assertThat(components.getTotal()).isEqualTo(100);
     }
 
     @Test
@@ -46,7 +46,7 @@ public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledT
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, true, true);
-        assertThat(components.size()).isEqualTo(75);
+        assertThat(components.getTotal()).isEqualTo(75);
     }
 
     private Project prepareProject() throws MalformedPackageURLException {

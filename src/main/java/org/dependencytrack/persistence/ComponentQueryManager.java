@@ -144,7 +144,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
      * @return a List of Dependency objects
      */
-    public List<Component> getComponents(final Project project, final boolean includeMetrics) {
+    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
         return getComponents(project, includeMetrics, false, false);
     }
 
@@ -157,7 +157,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @param onlyDirect     Optionally exclude transitive dependencies so only direct dependencies are shown
      * @return a List of Dependency objects
      */
-    public List<Component> getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
+    public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         List<Component> componentsResult = new ArrayList<>();
         String queryString = """
                         SELECT DISTINCT 'org.dependencytrack.model.Component' AS "DN_TYPE",
@@ -184,24 +184,24 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."MD5",
                         "A0"."NAME",
                         "A0"."TEXT",
-                        "B0"."ACTIVE" AS "P_ACTIVE",
-                        "B0"."AUTHOR" AS "P_AUTHOR",
-                        "B0"."CLASSIFIER" AS "P_CLASSIFIER",
-                        "B0"."CPE" AS "P_CPE",
-                        "B0"."DESCRIPTION" as "P_DESCRIPTION",
-                        "B0"."DIRECT_DEPENDENCIES" AS "P_DIRECT_DEPENDENCIES",
-                        "B0"."EXTERNAL_REFERENCES" AS "P_EXTERNAL_REFERENCES",
-                        "B0"."GROUP" AS "P_GROUP",
-                        "B0"."ID" AS "P_ID",
+                        "B0"."ACTIVE" AS "projectActive",
+                        "B0"."AUTHOR" AS "projectAuthor",
+                        "B0"."CLASSIFIER" AS "projectClassifier",
+                        "B0"."CPE" AS "projectCpe",
+                        "B0"."DESCRIPTION" as "projectDescription",
+                        "B0"."DIRECT_DEPENDENCIES" AS "projectDirectDependencies",
+                        "B0"."EXTERNAL_REFERENCES" AS "projectExternalReferences",
+                        "B0"."GROUP" AS "projectGroup",
+                        "B0"."ID" AS "projectId",
                         "B0"."LAST_BOM_IMPORTED",
                         "B0"."LAST_BOM_IMPORTED_FORMAT",
-                        "B0"."LAST_RISKSCORE" AS "P_LAST_RISKSCORE",
-                        "B0"."NAME" AS "P_NAME",
-                        "B0"."PUBLISHER" AS "P_PUBLISHER",
-                        "B0"."PURL" AS "P_PURL",
-                        "B0"."SWIDTAGID" AS "P_SWIDTAGID",
-                        "B0"."UUID" AS "P_UUID",
-                        "B0"."VERSION" AS "P_VERSION",
+                        "B0"."LAST_RISKSCORE" AS "projectLastInheritedRiskScore",
+                        "B0"."NAME" AS "projectName",
+                        "B0"."PUBLISHER" AS "projectPublisher",
+                        "B0"."PURL" AS "projectPurl",
+                        "B0"."SWIDTAGID" AS "projectSwidTagId",
+                        "B0"."UUID" AS "projectUuid",
+                        "B0"."VERSION" AS "projectVersion",
                         "A0"."PUBLISHER",
                         "A0"."PURL",
                         "A0"."PURLCOORDINATES",
@@ -209,7 +209,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "D0"."FSFLIBRE",
                         "D0"."LICENSEID",
                         "D0"."ISOSIAPPROVED",
-                        "D0"."UUID" AS "L_UUID",
+                        "D0"."UUID" AS "licenseUuid",
                         "A0"."SHA1",
                         "A0"."SHA_256",
                         "A0"."SHA_384",
@@ -223,7 +223,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "I0"."LAST_FETCH",
                         "I0"."PUBLISHED_AT",
                         "IA"."INTEGRITY_CHECK_STATUS",
-                        "I0"."REPOSITORY_URL"
+                        "I0"."REPOSITORY_URL",
+                        COUNT(*) OVER() AS "totalCount"
                 FROM "COMPONENT" "A0"
                 INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
                 LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
@@ -256,7 +257,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             queryString +=
                     """
                         ORDER BY "NAME",
-                        "VERSION" DESC FETCH NEXT 100 ROWS ONLY;
+                        "VERSION" DESC;
                     """;
         }
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
@@ -290,7 +291,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
             componentsResult.add(component);
         }
-        return componentsResult;
+        return (new PaginatedResult()).objects(componentsResult).total(resultSet.get(0).totalCount);
     }
 
     /**
