@@ -182,7 +182,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."LICENSE_EXPRESSION",
                         "A0"."LICENSE_URL",
                         "A0"."MD5",
-                        "A0"."NAME" AS "NUCORDER0",
+                        "A0"."NAME",
                         "A0"."TEXT",
                         "B0"."ACTIVE" AS "P_ACTIVE",
                         "B0"."AUTHOR" AS "P_AUTHOR",
@@ -219,7 +219,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."SHA_512",
                         "A0"."SWIDTAGID",
                         "A0"."UUID",
-                        "A0"."VERSION" AS "NUCORDER1",
+                        "A0"."VERSION",
                         "I0"."LAST_FETCH",
                         "I0"."PUBLISHED_AT",
                         "IA"."INTEGRITY_CHECK_STATUS",
@@ -229,7 +229,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                 LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
                 LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
                 LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
-                WHERE "A0"."PROJECT_ID" = 1
+                WHERE "A0"."PROJECT_ID" = ?
                 """;
 
         if (onlyOutdated) {
@@ -255,8 +255,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (orderBy == null) {
             queryString +=
                     """
-                        ORDER BY "NUCORDER0",
-                        "NUCORDER1" DESC FETCH NEXT 100 ROWS ONLY;
+                        ORDER BY "NAME",
+                        "VERSION" DESC FETCH NEXT 100 ROWS ONLY;
                     """;
         }
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
@@ -269,7 +269,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
             query.setParameters(project.getId());
             resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
-            System.out.println(resultSet.size());
         }
         finally {
             query.closeAll();

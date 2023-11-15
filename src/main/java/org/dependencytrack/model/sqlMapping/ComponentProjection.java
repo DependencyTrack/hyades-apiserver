@@ -60,10 +60,10 @@ public class ComponentProjection {
     @MappedField(sqlColumnName = "PURLCOORDINATES")
     public String purlCoordinates;
 
-    @MappedField(protoFieldName = "swid_tag_id", sqlColumnName = "SWIDTAGID")
+    @MappedField(sqlColumnName = "SWIDTAGID")
     public String swidTagId;
 
-    @MappedField(protoFieldName = "is_internal", sqlColumnName = "INTERNAL")
+    @MappedField(sqlColumnName = "INTERNAL")
     public Boolean internal;
 
     @MappedField(sqlColumnName = "LAST_RISKSCORE")
@@ -107,10 +107,10 @@ public class ComponentProjection {
     @MappedField(sqlColumnName = "LICENSE_URL")
     public String licenseUrl;
 
-    @MappedField(protoFieldName = "license_name", sqlColumnName = "LICENSE")
+    @MappedField(sqlColumnName = "LICENSE")
     public String licenseName;
 
-    @MappedField(protoFieldName = "license_expression", sqlColumnName = "LICENSE_EXPRESSION")
+    @MappedField(sqlColumnName = "LICENSE_EXPRESSION")
     public String licenseExpression;
 
     @MappedField(sqlColumnName = "PUBLISHED_AT")
@@ -158,17 +158,17 @@ public class ComponentProjection {
     @MappedField(sqlColumnName = "P_PURL")
     public String projectPurl;
 
-    @MappedField(protoFieldName = "swid_tag_id", sqlColumnName = "P_SWIDTAGID")
+    @MappedField(sqlColumnName = "P_SWIDTAGID")
     public String projectSwidTagId;
 
-    @MappedField(protoFieldName = "last_bom_import", sqlColumnName = "LAST_BOM_IMPORTED")
+    @MappedField(sqlColumnName = "LAST_BOM_IMPORTED")
     public Date lastBomImport;
 
     @MappedField(sqlColumnName = "LAST_BOM_IMPORTED_FORMAT")
-    public Date lastBomImportFormat;
+    public String lastBomImportFormat;
 
     @MappedField(sqlColumnName = "P_LAST_RISKSCORE")
-    private Double projectLastInheritedRiskScore;
+    public Double projectLastInheritedRiskScore;
 
     @MappedField(sqlColumnName = "P_DIRECT_DEPENDENCIES")
     public String projectDirectDependencies;
@@ -185,12 +185,12 @@ public class ComponentProjection {
     @MappedField(sqlColumnName = "LICENSEID")
     public String licenseId;
 
-    @MappedField(protoFieldName = "is_osi_approved", sqlColumnName = "ISOSIAPPROVED")
+    @MappedField(sqlColumnName = "ISOSIAPPROVED")
     public Boolean isOsiApproved;
 
-    @MappedField(protoFieldName = "is_fsf_libre", sqlColumnName = "FSFLIBRE")
+    @MappedField(sqlColumnName = "FSFLIBRE")
     public Boolean isFsfLibre;
 
-    @MappedField(protoFieldName = "is_custom", sqlColumnName = "ISCUSTOMLICENSE")
+    @MappedField(sqlColumnName = "ISCUSTOMLICENSE")
     public Boolean isCustomLicense;
 }

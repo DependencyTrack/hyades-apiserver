@@ -54,6 +54,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
         assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
         assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
         assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());
+        assertEquals(integrityMetaComponent.getRepositoryUrl(), componentMetaInformation.integrityRepoUrl());
     }
 
     @Test
