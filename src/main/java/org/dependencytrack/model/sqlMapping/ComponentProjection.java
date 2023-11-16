@@ -46,7 +46,7 @@ public class ComponentProjection {
     public String filename;
 
     @MappedField(sqlColumnName = "EXTERNAL_REFERENCES")
-    public String externalReferences;
+    public byte[] externalReferences;
 
     @MappedField(sqlColumnName = "DIRECT_DEPENDENCIES")
     public String directDependencies;
@@ -174,7 +174,7 @@ public class ComponentProjection {
     public String projectDirectDependencies;
 
     @MappedField(sqlColumnName = "P_EXTERNAL_REFERENCES")
-    public String projectExternalReferences;
+    public byte[] projectExternalReferences;
 
     @MappedField(sqlColumnName = "P_PUBLISHER")
     public String projectPublisher;

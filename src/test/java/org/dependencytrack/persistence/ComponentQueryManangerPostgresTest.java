@@ -4,6 +4,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -59,6 +60,11 @@ public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledT
             component.setGroup("component-group");
             component.setName("component-name-" + i);
             component.setVersion(String.valueOf(i) + ".0");
+            if (i == 0) {
+                var er = new ExternalReference();
+                er.setUrl("https://github.com/thinkcmf/thinkcmf/issues/736");
+                component.setExternalReferences(List.of(er));
+            }
             component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-" + i, String.valueOf(i) + ".0", null, null));
             component = qm.createComponent(component, false);
             // direct depencencies

@@ -1,16 +1,25 @@
 package org.dependencytrack.util;
 
+import alpine.common.logging.Logger;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
+import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.sqlMapping.ComponentProjection;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class ComponentUtil {
+
+    private static final Logger LOGGER = Logger.getLogger(ComponentUtil.class);
 
     public static final Component mapToComponent(ComponentProjection result) {
         Component componentPersistent = new Component();
@@ -41,7 +50,7 @@ public class ComponentUtil {
         if (result.uuid != null) {
             componentPersistent.setUuid(UUID.fromString(result.uuid));
         }
-//        componentPersistent.setExternalReferences();
+        componentPersistent.setExternalReferences(readByteArray(result.externalReferences));
         componentPersistent.setPurl(result.purl);
         componentPersistent.setPurlCoordinates(result.purlCoordinates);
         componentPersistent.setVersion(result.version);
@@ -67,7 +76,7 @@ public class ComponentUtil {
         project.setPurl(result.projectPurl);
         project.setSwidTagId(result.projectSwidTagId);
         project.setPublisher(result.projectPublisher);
-//        project.setExternalReferences();
+        project.setExternalReferences(readByteArray(result.projectExternalReferences));
         project.setLastInheritedRiskScore(result.projectLastInheritedRiskScore);
         if (result.projectClassifier != null) {
             project.setClassifier(Classifier.valueOf(result.projectClassifier));
@@ -105,5 +114,17 @@ public class ComponentUtil {
         componentPersistent.setComponentMetaInformation(componentMetaInformation);
 
         return componentPersistent;
+    }
+
+    private static List<ExternalReference> readByteArray(byte[] byteArrayInput) {
+        if (byteArrayInput != null) {
+            try {
+                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(byteArrayInput));
+                return (List<ExternalReference>) ois.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                LOGGER.debug("Exception while parsing component external references.", e);
+            }
+        }
+        return Collections.emptyList();
     }
 }

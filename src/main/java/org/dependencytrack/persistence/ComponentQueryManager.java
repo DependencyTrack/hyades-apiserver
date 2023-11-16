@@ -174,7 +174,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."DESCRIPTION",
                         "A0"."DIRECT_DEPENDENCIES",
                         "A0"."EXTENSION",
-                        "A0"."EXTERNAL_REFERENCES",
+                        "A0"."EXTERNAL_REFERENCES" AS "externalReferences",
                         "A0"."FILENAME",
                         "A0"."GROUP",
                         "A0"."ID",
