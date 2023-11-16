@@ -21,6 +21,7 @@ package org.dependencytrack.persistence;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
+import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
@@ -159,8 +160,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         List<Component> componentsResult = new ArrayList<>();
+        final var params = new HashMap<String, Object>();
         String queryString = """
-                        SELECT DISTINCT 'org.dependencytrack.model.Component' AS "DN_TYPE",
+                        SELECT 'org.dependencytrack.model.Component' AS "DN_TYPE",
                         "A0"."AUTHOR",
                         "A0"."BLAKE2B_256",
                         "A0"."BLAKE2B_384",
@@ -257,18 +259,54 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             queryString +=
                     """
                         ORDER BY "NAME",
-                        "VERSION" DESC;
+                        "VERSION" DESC
                     """;
+        } else {
+            if (orderBy.equalsIgnoreCase("componentMetaInformation.publishedDate")) {
+                queryString +=
+                        """
+                            ORDER BY "PUBLISHED_AT"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("version")) {
+                queryString +=
+                        """
+                            ORDER BY "VERSION"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("name")) {
+                queryString +=
+                        """
+                            ORDER BY "NAME"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("componentMetaInformation.integrityMatchStatus")) {
+                queryString +=
+                        """
+                            ORDER BY "INTEGRITY_CHECK_STATUS"
+                        """;
+            }
+            if (queryString.contains("ORDER BY")) {
+                if (orderDirection == OrderDirection.ASCENDING) {
+                    queryString += " ASC ";
+                } else if (orderDirection == OrderDirection.DESCENDING) {
+                    queryString += " DESC ";
+                }
+            }
         }
-        final Query<?> query = pm.newQuery(Query.SQL, queryString);
+
+        if (pagination != null && pagination.isPaginated()) {
+            queryString +=
+                    """
+                        OFFSET %d
+                        LIMIT %d;
+                    """.formatted(pagination.getOffset(), pagination.getLimit());
+        }
+
+        Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setParameters(project.getId());
         List<ComponentProjection> resultSet;
         try {
-            if (pagination != null && pagination.isPaginated()) {
-                final long begin = pagination.getOffset();
-                final long end = begin + pagination.getLimit();
-                query.setRange(begin, end);
-            }
-            query.setParameters(project.getId());
             resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
         }
         finally {
@@ -291,7 +329,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             }
             componentsResult.add(component);
         }
-        return (new PaginatedResult()).objects(componentsResult).total(resultSet.get(0).totalCount);
+        return (new PaginatedResult()).objects(componentsResult).total(resultSet.isEmpty() ? 0 : resultSet.get(0).totalCount);
     }
 
     /**
