@@ -133,7 +133,6 @@
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
         <lib.liquibase.version>4.25.0</lib.liquibase.version>
-        <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
     </properties>
 
     <repositories>
