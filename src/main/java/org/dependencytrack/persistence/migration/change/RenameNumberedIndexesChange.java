@@ -314,8 +314,7 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
     @Override
     public void execute(final Database database) throws CustomChangeException {
         final var connection = (JdbcConnection) database.getConnection();
-        if (!"H2".equals(database.getDatabaseProductName())
-                && !"PostgreSQL".equals(database.getDatabaseProductName())) {
+        if (!"PostgreSQL".equals(database.getDatabaseProductName())) {
             throw new CustomChangeException("Database %s is not supported".formatted(database.getDatabaseProductName()));
         }
 
@@ -359,38 +358,9 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
 
     private static List<IndexNameMapping> getIndexNameMappings(final JdbcConnection connection) throws DatabaseException, SQLException {
         return switch (connection.getDatabaseProductName()) {
-            case "H2" -> getIndexNameMappingsFromH2(connection);
             case "PostgreSQL" -> getIndexNameMappingsFromPostgres(connection);
             default -> throw new IllegalStateException();
         };
-    }
-
-    private static List<IndexNameMapping> getIndexNameMappingsFromH2(final JdbcConnection connection) throws DatabaseException, SQLException {
-        final var indexNameMapping = new ArrayList<IndexNameMapping>();
-
-        try (final var stmt = connection.createStatement()) {
-            final ResultSet rs = stmt.executeQuery("""
-                    SELECT
-                      "IDX"."TABLE_NAME",
-                      "IDX"."INDEX_NAME",
-                      "IDX_C"."COLUMN_NAME"
-                    FROM
-                      "INFORMATION_SCHEMA"."INDEXES" AS "IDX"
-                    INNER JOIN
-                      "INFORMATION_SCHEMA"."INDEX_COLUMNS" AS "IDX_C" ON "IDX_C"."INDEX_NAME" = "IDX"."INDEX_NAME"
-                    WHERE
-                      "IDX"."TABLE_SCHEMA" = 'PUBLIC' AND "IDX"."INDEX_NAME" REGEXP '_N[0-9]+$';
-                    """);
-            while (rs.next()) {
-                final String tableName = rs.getString("TABLE_NAME");
-                final String oldIndexName = rs.getString("INDEX_NAME");
-                final String[] columnNames = rs.getString("COLUMN_NAME").split(",");
-                final String newIndexName = INDEX_NAMES.get(indexDef(tableName, columnNames));
-                indexNameMapping.add(new IndexNameMapping(oldIndexName, newIndexName));
-            }
-        }
-
-        return indexNameMapping;
     }
 
     private static List<IndexNameMapping> getIndexNameMappingsFromPostgres(final JdbcConnection connection) throws DatabaseException, SQLException {
@@ -436,7 +406,7 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
 
     private static List<IndexNameMapping> renameIndexes(final JdbcConnection connection, final List<IndexNameMapping> indexNameMappings) throws DatabaseException, SQLException {
         return switch (connection.getDatabaseProductName()) {
-            case "H2", "PostgreSQL" -> renameIndexesForPostgres(connection, indexNameMappings);
+            case "PostgreSQL" -> renameIndexesForPostgres(connection, indexNameMappings);
             default -> throw new IllegalStateException();
         };
     }
@@ -456,10 +426,8 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
                         """.formatted(nameMapping.oldName(), nameMapping.newName));
                 renamedIndexes.add(nameMapping);
             }
-
             stmt.executeBatch();
         }
-
         return renamedIndexes;
     }
 }
