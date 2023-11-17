@@ -393,19 +393,6 @@
             <version>${lib.liquibase.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <version>${lib.testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${lib.testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <!-- Xerces -->
         <dependency>
             <groupId>xerces</groupId>
