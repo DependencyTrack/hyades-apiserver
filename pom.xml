@@ -132,6 +132,8 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+        <lib.liquibase.version>4.25.0</lib.liquibase.version>
+        <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
     </properties>
 
     <repositories>
@@ -384,6 +386,26 @@
             <artifactId>postgres-socket-factory</artifactId>
             <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${lib.liquibase.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${lib.testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${lib.testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Xerces -->
         <dependency>
             <groupId>xerces</groupId>
@@ -650,6 +672,15 @@
                     <webApp>
                         <contextPath>/</contextPath>
                     </webApp>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <version>${lib.liquibase.version}</version>
+                <configuration>
+                    <propertyFile>src/main/resources/liquibase.properties</propertyFile>
+                    <outputChangeLogFile>src/main/resources/migration/changelog.xml</outputChangeLogFile>
                 </configuration>
             </plugin>
         </plugins>
