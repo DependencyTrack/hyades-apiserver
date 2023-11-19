@@ -18,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.Collections;
 
-public class RenameNumberedIndexesChangeTest {
+public class RenameForeignKeysChangeTest {
 
     private PostgreSQLContainer<?> postgresContainer;
 
@@ -45,7 +45,7 @@ public class RenameNumberedIndexesChangeTest {
 
         Scope.child(Collections.emptyMap(), () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/custom/RenameNumberedIndexesChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
+            final var liquibase = new Liquibase("migration/custom/RenameForeignKeysChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
 
             final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
             updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());

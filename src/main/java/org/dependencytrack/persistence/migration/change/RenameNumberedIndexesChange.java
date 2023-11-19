@@ -296,6 +296,14 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
             Map.entry(
                     indexDef("VULNERABLESOFTWARE_VULNERABILITIES", "VULNERABLESOFTWARE_ID"),
                     "VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX"
+            ),
+            Map.entry(
+                    indexDef("WORKFLOW_STATE", "PARENT_STEP_ID"),
+                    "WORKFLOW_STATE_PARENT_STEP_ID_IDX"
+            ),
+            Map.entry(
+                    indexDef("INTEGRITY_ANALYSIS", "COMPONENT_ID"),
+                    "INTEGRITY_ANALYSIS_COMPONENT_ID_IDX"
             )
     );
 
