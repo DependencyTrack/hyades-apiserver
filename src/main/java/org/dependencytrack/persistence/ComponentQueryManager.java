@@ -160,10 +160,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         List<Component> componentsResult = new ArrayList<>();
-        final var params = new HashMap<String, Object>();
         String queryString = """
-                        SELECT 'org.dependencytrack.model.Component' AS "DN_TYPE",
-                        "A0"."AUTHOR",
+                        SELECT "A0"."AUTHOR",
                         "A0"."BLAKE2B_256",
                         "A0"."BLAKE2B_384",
                         "A0"."BLAKE2B_512",
@@ -292,6 +290,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                 } else if (orderDirection == OrderDirection.DESCENDING) {
                     queryString += " DESC ";
                 }
+                queryString += """
+                        , "ID"
+                        """;
             }
         }
 
