@@ -132,6 +132,7 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+        <lib.liquibase.version>4.25.0</lib.liquibase.version>
     </properties>
 
     <repositories>
@@ -384,6 +385,13 @@
             <artifactId>postgres-socket-factory</artifactId>
             <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${lib.liquibase.version}</version>
+        </dependency>
+
         <!-- Xerces -->
         <dependency>
             <groupId>xerces</groupId>
@@ -650,6 +658,18 @@
                     <webApp>
                         <contextPath>/</contextPath>
                     </webApp>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <version>${lib.liquibase.version}</version>
+                <configuration>
+                    <outputChangeLogFile>src/main/resources/migration/changelog.xml</outputChangeLogFile>
+                    <url>jdbc:postgresql://localhost:5432/dtrack</url>
+                    <driver>org.postgresql.Driver</driver>
+                    <username></username>
+                    <password></password>
                 </configuration>
             </plugin>
         </plugins>
