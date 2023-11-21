@@ -2293,13 +2293,13 @@
             <tableExists tableName="SCHEMAVERSION"/>
         </preConditions>
 
-        <customChange class="org.dependencytrack.persistence.migration.change.RenameNumberedIndexesChange"/>
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameNumberedIndexesChange"/>
     </changeSet>
     <changeSet id="v5.3.0-3" author="VithikaS">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="SCHEMAVERSION"/>
         </preConditions>
 
-        <customChange class="org.dependencytrack.persistence.migration.change.RenameForeignKeysChange"/>
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
     </changeSet>
 </databaseChangeLog>

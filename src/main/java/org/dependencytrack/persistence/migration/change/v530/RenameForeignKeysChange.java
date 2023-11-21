@@ -1,4 +1,4 @@
-package org.dependencytrack.persistence.migration.change;
+package org.dependencytrack.persistence.migration.change.v530;
 
 import liquibase.change.custom.CustomTaskChange;
 import liquibase.database.Database;

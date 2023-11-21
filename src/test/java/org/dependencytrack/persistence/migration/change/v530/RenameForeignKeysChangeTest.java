@@ -1,4 +1,4 @@
-package org.dependencytrack.persistence.migration.change;
+package org.dependencytrack.persistence.migration.change.v530;
 
 import liquibase.Liquibase;
 import liquibase.Scope;
@@ -19,9 +19,9 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.migration.change.RenameNumberedIndexesChange.getIndexNameMappingsFromPostgres;
+import static org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange.getForeignNameMappings;
 
-public class RenameNumberedIndexesChangeTest {
+public class RenameForeignKeysChangeTest {
 
     private PostgreSQLContainer<?> postgresContainer;
 
@@ -49,7 +49,7 @@ public class RenameNumberedIndexesChangeTest {
 
         Scope.child(Collections.emptyMap(), () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/custom/RenameNumberedIndexesChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
+            final var liquibase = new Liquibase("migration/custom/RenameForeignKeysChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
 
             final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
             updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
@@ -57,6 +57,6 @@ public class RenameNumberedIndexesChangeTest {
             updateCommand.execute();
         });
 
-        assertThat(getIndexNameMappingsFromPostgres(new JdbcConnection(dataSource.getConnection()))).isEmpty();
+        assertThat(getForeignNameMappings(new JdbcConnection(dataSource.getConnection()))).isEmpty();
     }
 }
