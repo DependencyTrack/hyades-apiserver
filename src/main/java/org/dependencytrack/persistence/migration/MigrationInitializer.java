@@ -17,6 +17,7 @@ import org.dependencytrack.common.ConfigKey;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.sql.DataSource;
 import java.util.Collections;
 
 public class MigrationInitializer implements ServletContextListener {
@@ -42,18 +43,22 @@ public class MigrationInitializer implements ServletContextListener {
 
         LOGGER.info("Running migrations");
         try (final HikariDataSource dataSource = createDataSource()) {
-            Scope.child(Collections.emptyMap(), () -> {
-                final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-                final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
-
-                final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-                updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
-                updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-                updateCommand.execute();
-            });
+            runMigration(dataSource);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }
+    }
+
+    public static void runMigration(final DataSource dataSource) throws Exception {
+        Scope.child(Collections.emptyMap(), () -> {
+            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
+            final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
+
+            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
+            updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
+            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+            updateCommand.execute();
+        });
     }
 
     private HikariDataSource createDataSource() {

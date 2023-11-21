@@ -1715,8 +1715,8 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
 
-        <createIndex indexName="BOM_N49" tableName="BOM">
-            <column name="BOM_PROJECT_ID_IDX"/>
+        <createIndex indexName="BOM_PROJECT_ID_IDX" tableName="BOM">
+            <column name="PROJECT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="BOM_UUID_IDX" tableName="BOM"/>
