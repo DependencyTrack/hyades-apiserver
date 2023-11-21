@@ -87,7 +87,7 @@
         </createTable>
 
         <createTable tableName="LICENSEGROUP">
-            <column autoIncrement="true" name="ID" startWith="5" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSEGROUP_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(255)">
@@ -102,7 +102,7 @@
         </createTable>
 
         <createTable tableName="LICENSE">
-            <column autoIncrement="true" name="ID" startWith="614" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSE_PK"/>
             </column>
             <column name="COMMENT" type="TEXT"/>
@@ -160,7 +160,7 @@
         </createTable>
 
         <createTable tableName="REPOSITORY">
-            <column autoIncrement="true" name="ID" startWith="15" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_PK"/>
             </column>
             <column name="AUTHENTICATIONREQUIRED" type="BOOLEAN"/>
@@ -256,7 +256,7 @@
         </createTable>
 
         <createTable tableName="NOTIFICATIONPUBLISHER">
-            <column autoIncrement="true" name="ID" startWith="9" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONPUBLISHER_PK"/>
             </column>
             <column name="DEFAULT_PUBLISHER" type="BOOLEAN">
@@ -343,7 +343,7 @@
         </createTable>
 
         <createTable tableName="CWE">
-            <column autoIncrement="true" name="ID" startWith="1421" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CWE_PK"/>
             </column>
             <column name="CWEID" type="INTEGER">
@@ -569,7 +569,7 @@
         </createTable>
 
         <createTable tableName="TEAM">
-            <column autoIncrement="true" name="ID" startWith="4" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="TEAM_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(50)">
@@ -592,7 +592,7 @@
         </createTable>
 
         <createTable tableName="MANAGEDUSER">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="MANAGEDUSER_PK"/>
             </column>
             <column name="EMAIL" type="VARCHAR(255)"/>
@@ -699,7 +699,7 @@
         </createTable>
 
         <createTable tableName="PERMISSION">
-            <column autoIncrement="true" name="ID" startWith="13" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PERMISSION_PK"/>
             </column>
             <column name="DESCRIPTION" type="TEXT"/>
@@ -726,7 +726,7 @@
         </createTable>
 
         <createTable tableName="APIKEY">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="APIKEY_PK"/>
             </column>
             <column name="APIKEY" type="VARCHAR(255)">
@@ -1212,7 +1212,7 @@
         </createTable>
 
         <createTable tableName="SCHEMAVERSION">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="SCHEMAVERSION_PK"/>
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
@@ -1228,7 +1228,7 @@
         </createTable>
 
         <createTable tableName="CONFIGPROPERTY">
-            <column autoIncrement="true" name="ID" startWith="71" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CONFIGPROPERTY_PK"/>
             </column>
             <column name="DESCRIPTION" type="VARCHAR(255)"/>
