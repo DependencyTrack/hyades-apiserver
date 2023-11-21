@@ -1942,351 +1942,351 @@
         </createTable>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_FK1" deferrable="true"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_FK2" deferrable="true"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
-                                 constraintName="ANALYSISCOMMENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="ANALYSIS" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_FK1"
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_FK2"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
-                                 constraintName="ANALYSIS_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="APIKEY" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_FK1"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT"
-                                 constraintName="COMPONENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_FK2"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_FK3"
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS"
-                                 constraintName="INTEGRITY_ANALYSIS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LDAPUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LDAPUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LICENSEGROUP" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LICENSE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_FK1" deferrable="true"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_FK2" deferrable="true"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="MANAGEDUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP"
-                                 constraintName="MAPPEDLDAPGROUP_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCGROUP" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE"
-                                 constraintName="NOTIFICATIONRULE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_FK1" deferrable="true"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_FK2" deferrable="true"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="NOTIFICATIONRULE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION"
-                                 constraintName="POLICYCONDITION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICYCONDITION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS"
-                                 constraintName="POLICY_TAGS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_FK2"
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
-                                 constraintName="PROJECTMETRICS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TAG" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT"
-                                 constraintName="PROJECT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY"
-                                 constraintName="PROJECT_PROPERTY_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="SERVICECOMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_FK1"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT"
-                                 constraintName="VIOLATIONANALYSISCOMMENT_FK1" deferrable="true"
+                                 constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICYVIOLATION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID"
                                  baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE"
-                                 constraintName="WORKFLOW_STATE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
