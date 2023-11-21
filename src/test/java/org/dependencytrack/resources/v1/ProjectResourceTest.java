@@ -67,10 +67,10 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
-import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
-import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 public class ProjectResourceTest extends ResourceTest {
 
@@ -198,10 +198,10 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectLookupTest() {
-        for (int i=0; i<500; i++) {
+        for (int i = 0; i < 500; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, false, false);
         }
-        Response response = target(V1_PROJECT+"/lookup")
+        Response response = target(V1_PROJECT + "/lookup")
                 .queryParam("name", "Acme Example")
                 .queryParam("version", "10")
                 .request()
@@ -357,7 +357,7 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.hyades.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
         assertThat(projectNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
         assertThat(projectNotification.getGroup()).isEqualTo(GROUP_PROJECT_CREATED);

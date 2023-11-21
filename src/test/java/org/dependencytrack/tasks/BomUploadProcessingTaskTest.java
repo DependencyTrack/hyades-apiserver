@@ -35,9 +35,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
-import org.hyades.proto.notification.v1.Group;
-import org.hyades.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -69,11 +69,11 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
-import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 public class BomUploadProcessingTaskTest extends AbstractPostgresEnabledTest {
 

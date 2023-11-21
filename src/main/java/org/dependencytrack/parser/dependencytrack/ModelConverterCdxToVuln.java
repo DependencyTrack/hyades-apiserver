@@ -1,4 +1,4 @@
-package org.dependencytrack.parser.hyades;
+package org.dependencytrack.parser.dependencytrack;
 
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.proto.v1_4.Bom;
@@ -11,7 +11,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.vulnanalysis.v1.Scanner;
+import org.dependencytrack.proto.vulnanalysis.v1.Scanner;
 import us.springett.cvss.Cvss;
 import us.springett.cvss.Score;
 import us.springett.owasp.riskrating.MissingFactorException;

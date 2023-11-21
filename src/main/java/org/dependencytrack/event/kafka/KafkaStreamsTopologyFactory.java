@@ -31,16 +31,16 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 
 import java.time.Instant;
 import java.util.Date;
 import java.util.Properties;
 import java.util.UUID;
 
-import static org.dependencytrack.parser.hyades.NotificationModelConverter.convert;
+import static org.dependencytrack.parser.dependencytrack.NotificationModelConverter.convert;
 import static org.dependencytrack.util.NotificationUtil.createProjectVulnerabilityAnalysisCompleteNotification;
 
 class KafkaStreamsTopologyFactory {

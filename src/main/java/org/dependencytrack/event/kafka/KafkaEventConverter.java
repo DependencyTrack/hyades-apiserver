@@ -3,11 +3,11 @@ package org.dependencytrack.event.kafka;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
-import org.dependencytrack.parser.hyades.NotificationModelConverter;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
-import org.hyades.proto.vulnanalysis.v1.ScanCommand;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
+import org.dependencytrack.parser.dependencytrack.NotificationModelConverter;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
 
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +23,7 @@ final class KafkaEventConverter {
     }
 
     static KafkaEvent<ScanKey, ScanCommand> convert(final ComponentVulnerabilityAnalysisEvent event) {
-        final var componentBuilder = org.hyades.proto.vulnanalysis.v1.Component.newBuilder()
+        final var componentBuilder = org.dependencytrack.proto.vulnanalysis.v1.Component.newBuilder()
                 .setUuid(event.uuid().toString());
         Optional.ofNullable(event.cpe()).ifPresent(componentBuilder::setCpe);
         Optional.ofNullable(event.purl()).ifPresent(componentBuilder::setPurl);
@@ -52,7 +52,7 @@ final class KafkaEventConverter {
             return null;
         }
 
-        final var componentBuilder = org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+        final var componentBuilder = org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                 .setPurl(event.purlCoordinates());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
         Optional.ofNullable(event.componentUuid()).map(uuid -> uuid.toString()).ifPresent(componentBuilder::setUuid);

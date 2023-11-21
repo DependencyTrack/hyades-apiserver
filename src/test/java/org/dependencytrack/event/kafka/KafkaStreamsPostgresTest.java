@@ -7,7 +7,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
-import org.hyades.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

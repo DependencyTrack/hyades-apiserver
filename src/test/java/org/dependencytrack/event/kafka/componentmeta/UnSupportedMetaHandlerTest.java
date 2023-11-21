@@ -6,12 +6,10 @@ import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.PurlUtil;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;

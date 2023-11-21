@@ -1,7 +1,7 @@
 package org.dependencytrack.notification.vo;
 
 import org.dependencytrack.model.Project;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class ProjectVulnAnalysisComplete {
         return findingsList;
     }
 
-    public Project getProject(){
+    public Project getProject() {
         return this.project;
     }
 

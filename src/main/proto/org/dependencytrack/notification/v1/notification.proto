@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package org.hyades.notification.v1;
+package org.dependencytrack.notification.v1;
 
 import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
-option java_package = "org.hyades.proto.notification.v1";
+option java_package = "org.dependencytrack.proto.notification.v1";
 
 message Notification {
   Level level = 1;

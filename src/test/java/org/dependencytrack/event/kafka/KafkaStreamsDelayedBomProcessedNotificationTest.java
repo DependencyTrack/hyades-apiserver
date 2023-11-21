@@ -12,12 +12,12 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
-import org.hyades.proto.vulnanalysis.v1.ScannerResult;
+import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
+import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
 import org.junit.Test;
 
 import java.time.Duration;
@@ -27,9 +27,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
+import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
+import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
+import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
 
 public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStreamsPostgresTest {
 

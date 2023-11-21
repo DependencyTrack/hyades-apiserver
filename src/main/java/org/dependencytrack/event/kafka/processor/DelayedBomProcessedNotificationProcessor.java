@@ -15,12 +15,12 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.Notification;
 
 import javax.jdo.Query;
 import java.util.UUID;
 
-import static org.dependencytrack.parser.hyades.NotificationModelConverter.convert;
+import static org.dependencytrack.parser.dependencytrack.NotificationModelConverter.convert;
 
 /**
  * A {@link Processor} responsible for dispatching {@link NotificationGroup#BOM_PROCESSED} notifications

@@ -2,7 +2,7 @@ package org.dependencytrack.event;
 
 import alpine.event.framework.Event;
 import org.dependencytrack.model.Component;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 
 import java.util.UUID;
 
