@@ -1,10 +1,13 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog
         objectQuotingStrategy="QUOTE_ALL_OBJECTS"
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
-        xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <property dbms="postgresql" name="textType" value="TEXT"/>
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="nscuro@protonmail.com" id="v5.3.0-1">
         <preConditions onFail="MARK_RAN">
             <not>
@@ -1241,7 +1244,7 @@
             <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
         </createTable>
 
-        <createIndex indexName="WORKFLOW_STATE_N49" tableName="WORKFLOW_STATE">
+        <createIndex indexName="WORKFLOW_STATE_PARENT_STEP_ID_IDX" tableName="WORKFLOW_STATE">
             <column name="PARENT_STEP_ID"/>
         </createIndex>
 
@@ -1252,7 +1255,7 @@
             <column name="GROUP"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENT_N50" tableName="COMPONENT">
+        <createIndex indexName="COMPONENT_PARENT_COMPONENT_ID_IDX" tableName="COMPONENT">
             <column name="PARENT_COMPONENT_ID"/>
         </createIndex>
 
@@ -1312,7 +1315,7 @@
             <column name="BLAKE2B_512"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENT_N49" tableName="COMPONENT">
+        <createIndex indexName="COMPONENT_LICENSE_ID_IDX" tableName="COMPONENT">
             <column name="LICENSE_ID"/>
         </createIndex>
 
@@ -1358,11 +1361,11 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="LICENSE_UUID_IDX" tableName="LICENSE"/>
 
-        <createIndex indexName="ANALYSISCOMMENT_N49" tableName="ANALYSISCOMMENT">
+        <createIndex indexName="ANALYSISCOMMENT_ANALYSIS_ID_IDX" tableName="ANALYSISCOMMENT">
             <column name="ANALYSIS_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSISCOMMENT_N49" tableName="VIOLATIONANALYSISCOMMENT">
+        <createIndex indexName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_ID_IDX" tableName="VIOLATIONANALYSISCOMMENT">
             <column name="VIOLATIONANALYSIS_ID"/>
         </createIndex>
 
@@ -1376,7 +1379,7 @@
         <addUniqueConstraint columnNames="TOKEN" constraintName="VULNERABILITY_SCAN_TOKEN_IDX"
                              tableName="VULNERABILITYSCAN"/>
 
-        <createIndex indexName="PROJECT_PROPERTY_N49" tableName="PROJECT_PROPERTY">
+        <createIndex indexName="PROJECT_PROPERTY_PROJECT_ID_IDX" tableName="PROJECT_PROPERTY">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1396,11 +1399,11 @@
 
         <addUniqueConstraint columnNames="CWEID" constraintName="CWE_CWEID_IDX" tableName="CWE"/>
 
-        <createIndex indexName="INTEGRITY_ANALYSIS_N49" tableName="INTEGRITY_ANALYSIS">
+        <createIndex indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" tableName="INTEGRITY_ANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="DEPENDENCYMETRICS_N49" tableName="DEPENDENCYMETRICS">
+        <createIndex indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX" tableName="DEPENDENCYMETRICS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1408,7 +1411,7 @@
             <column name="FIRST_OCCURRENCE"/>
         </createIndex>
 
-        <createIndex indexName="DEPENDENCYMETRICS_N50" tableName="DEPENDENCYMETRICS">
+        <createIndex indexName="DEPENDENCYMETRICS_COMPONENT_ID_IDX" tableName="DEPENDENCYMETRICS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
@@ -1469,28 +1472,28 @@
         <addUniqueConstraint columnNames="UUID" constraintName="VULNERABLESOFTWARE_UUID_IDX"
                              tableName="VULNERABLESOFTWARE"/>
 
-        <createIndex indexName="ANALYSIS_N51" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_VULNERABILITY_ID_IDX" tableName="ANALYSIS">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="ANALYSIS_N50" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_PROJECT_ID_IDX" tableName="ANALYSIS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="ANALYSIS_N49" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_COMPONENT_ID_IDX" tableName="ANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, VULNERABILITY_ID"
                              constraintName="ANALYSIS_COMPOSITE_IDX" tableName="ANALYSIS"/>
 
-        <createIndex indexName="VEX_N49" tableName="VEX">
+        <createIndex indexName="VEX_PROJECT_ID_IDX" tableName="VEX">
             <column name="PROJECT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="VEX_UUID_IDX" tableName="VEX"/>
 
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_N50" tableName="AFFECTEDVERSIONATTRIBUTION">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABLE_SOFTWARE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
             <column name="VULNERABLE_SOFTWARE"/>
         </createIndex>
 
@@ -1499,7 +1502,7 @@
             <column name="VULNERABLE_SOFTWARE"/>
         </createIndex>
 
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_N49" tableName="AFFECTEDVERSIONATTRIBUTION">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
             <column name="VULNERABILITY"/>
         </createIndex>
 
@@ -1581,15 +1584,15 @@
 
         <addUniqueConstraint columnNames="NAME" constraintName="PERMISSION_IDX" tableName="PERMISSION"/>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N49" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_COMPONENT_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N51" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_PROJECT_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N50" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_POLICYVIOLATION_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="POLICYVIOLATION_ID"/>
         </createIndex>
 
@@ -1598,11 +1601,11 @@
 
         <addUniqueConstraint columnNames="APIKEY" constraintName="APIKEY_IDX" tableName="APIKEY"/>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N50" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_PROJECT_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N51" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_COMPONENT_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
@@ -1611,7 +1614,7 @@
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N49" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_VULNERABILITY_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
@@ -1633,7 +1636,7 @@
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICYVIOLATION_N49" tableName="POLICYVIOLATION">
+        <createIndex indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX" tableName="POLICYVIOLATION">
             <column name="POLICYCONDITION_ID"/>
         </createIndex>
 
@@ -1643,13 +1646,13 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="POLICYVIOLATION_UUID_IDX" tableName="POLICYVIOLATION"/>
 
-        <createIndex indexName="POLICYCONDITION_N49" tableName="POLICYCONDITION">
+        <createIndex indexName="POLICYCONDITION_POLICY_ID_IDX" tableName="POLICYCONDITION">
             <column name="POLICY_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="POLICYCONDITION_UUID_IDX" tableName="POLICYCONDITION"/>
 
-        <createIndex indexName="NOTIFICATIONRULE_N49" tableName="NOTIFICATIONRULE">
+        <createIndex indexName="NOTIFICATIONRULE_PUBLISHER_IDX" tableName="NOTIFICATIONRULE">
             <column name="PUBLISHER"/>
         </createIndex>
 
@@ -1660,22 +1663,22 @@
             <column defaultValueNumeric="0.0" name="LAST_RISKSCORE"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENT_N50" tableName="SERVICECOMPONENT">
+        <createIndex indexName="SERVICECOMPONENT_PROJECT_ID_IDX" tableName="SERVICECOMPONENT">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENT_N49" tableName="SERVICECOMPONENT">
+        <createIndex indexName="SERVICECOMPONENT_PARENT_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENT">
             <column name="PARENT_SERVICECOMPONENT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="SERVICECOMPONENT_UUID_IDX"
                              tableName="SERVICECOMPONENT"/>
 
-        <createIndex indexName="MAPPEDOIDCGROUP_N50" tableName="MAPPEDOIDCGROUP">
+        <createIndex indexName="MAPPEDOIDCGROUP_TEAM_ID_IDX" tableName="MAPPEDOIDCGROUP">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MAPPEDOIDCGROUP_N49" tableName="MAPPEDOIDCGROUP">
+        <createIndex indexName="MAPPEDOIDCGROUP_GROUP_ID_IDX" tableName="MAPPEDOIDCGROUP">
             <column name="GROUP_ID"/>
         </createIndex>
 
@@ -1684,7 +1687,7 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDOIDCGROUP_UUID_IDX" tableName="MAPPEDOIDCGROUP"/>
 
-        <createIndex indexName="MAPPEDLDAPGROUP_N49" tableName="MAPPEDLDAPGROUP">
+        <createIndex indexName="MAPPEDLDAPGROUP_TEAM_ID_IDX" tableName="MAPPEDLDAPGROUP">
             <column name="TEAM_ID"/>
         </createIndex>
 
@@ -1713,7 +1716,7 @@
         <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
 
         <createIndex indexName="BOM_N49" tableName="BOM">
-            <column name="PROJECT_ID"/>
+            <column name="BOM_PROJECT_ID_IDX"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="BOM_UUID_IDX" tableName="BOM"/>
@@ -1758,13 +1761,13 @@
             <column name="VERSION"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_N49" tableName="PROJECT">
+        <createIndex indexName="PROJECT_PARENT_PROJECT_ID_IDX" tableName="PROJECT">
             <column name="PARENT_PROJECT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="PROJECT_UUID_IDX" tableName="PROJECT"/>
 
-        <createIndex indexName="PROJECTMETRICS_N49" tableName="PROJECTMETRICS">
+        <createIndex indexName="PROJECTMETRICS_PROJECT_ID_IDX" tableName="PROJECTMETRICS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1776,147 +1779,147 @@
             <column name="LAST_OCCURRENCE"/>
         </createIndex>
 
-        <createIndex indexName="LICENSEGROUP_LICENSE_N49" tableName="LICENSEGROUP_LICENSE">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSE_ID_IDX" tableName="LICENSEGROUP_LICENSE">
             <column name="LICENSE_ID"/>
         </createIndex>
 
-        <createIndex indexName="LICENSEGROUP_LICENSE_N50" tableName="LICENSEGROUP_LICENSE">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX" tableName="LICENSEGROUP_LICENSE">
             <column name="LICENSEGROUP_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_N49" tableName="OIDCUSERS_PERMISSIONS">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
             <column name="OIDCUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_N50" tableName="OIDCUSERS_PERMISSIONS">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_N50" tableName="COMPONENTS_VULNERABILITIES">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_N49" tableName="COMPONENTS_VULNERABILITIES">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPONENT_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_TEAMS_N49" tableName="OIDCUSERS_TEAMS">
+        <createIndex indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" tableName="OIDCUSERS_TEAMS">
             <column name="OIDCUSERS_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_TEAMS_N50" tableName="OIDCUSERS_TEAMS">
+        <createIndex indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" tableName="OIDCUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_N50" tableName="LDAPUSERS_PERMISSIONS">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
             <column name="LDAPUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_N49" tableName="LDAPUSERS_PERMISSIONS">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_N49" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
             <column name="SERVICECOMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_N50" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_N49" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_N50" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
             <column name="VULNERABLESOFTWARE_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_N50" tableName="NOTIFICATIONRULE_TEAMS">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
             <column name="NOTIFICATIONRULE_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_N49" tableName="NOTIFICATIONRULE_TEAMS">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECTS_TAGS_N50" tableName="PROJECTS_TAGS">
+        <createIndex indexName="PROJECTS_TAGS_PROJECT_ID_IDX" tableName="PROJECTS_TAGS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECTS_TAGS_N49" tableName="PROJECTS_TAGS">
+        <createIndex indexName="PROJECTS_TAGS_TAG_ID_IDX" tableName="PROJECTS_TAGS">
             <column name="TAG_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_TEAMS_N49" tableName="LDAPUSERS_TEAMS">
+        <createIndex indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_TEAMS">
             <column name="LDAPUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_TEAMS_N50" tableName="LDAPUSERS_TEAMS">
+        <createIndex indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" tableName="LDAPUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_N50" tableName="MANAGEDUSERS_PERMISSIONS">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
             <column name="MANAGEDUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_N49" tableName="MANAGEDUSERS_PERMISSIONS">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="TEAMS_PERMISSIONS_N50" tableName="TEAMS_PERMISSIONS">
+        <createIndex indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" tableName="TEAMS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="TEAMS_PERMISSIONS_N49" tableName="TEAMS_PERMISSIONS">
+        <createIndex indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" tableName="TEAMS_PERMISSIONS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_N50" tableName="NOTIFICATIONRULE_PROJECTS">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_N49" tableName="NOTIFICATIONRULE_PROJECTS">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
             <column name="NOTIFICATIONRULE_ID"/>
         </createIndex>
 
-        <createIndex indexName="APIKEYS_TEAMS_N49" tableName="APIKEYS_TEAMS">
+        <createIndex indexName="APIKEYS_TEAMS_TEAM_ID_IDX" tableName="APIKEYS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="APIKEYS_TEAMS_N50" tableName="APIKEYS_TEAMS">
+        <createIndex indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" tableName="APIKEYS_TEAMS">
             <column name="APIKEY_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_N50" tableName="PROJECT_ACCESS_TEAMS">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_N49" tableName="PROJECT_ACCESS_TEAMS">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_TEAMS_N50" tableName="MANAGEDUSERS_TEAMS">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_TEAMS_N49" tableName="MANAGEDUSERS_TEAMS">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
             <column name="MANAGEDUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_PROJECTS_N49" tableName="POLICY_PROJECTS">
+        <createIndex indexName="POLICY_PROJECTS_POLICY_ID_IDX" tableName="POLICY_PROJECTS">
             <column name="POLICY_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_PROJECTS_N50" tableName="POLICY_PROJECTS">
+        <createIndex indexName="POLICY_PROJECTS_PROJECT_ID_IDX" tableName="POLICY_PROJECTS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_TAGS_N50" tableName="POLICY_TAGS">
+        <createIndex indexName="POLICY_TAGS_TAG_ID_IDX" tableName="POLICY_TAGS">
             <column name="TAG_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_TAGS_N49" tableName="POLICY_TAGS">
+        <createIndex indexName="POLICY_TAGS_POLICY_ID_IDX" tableName="POLICY_TAGS">
             <column name="POLICY_ID"/>
         </createIndex>
 
