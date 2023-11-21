@@ -1,25 +1,146 @@
-package org.dependencytrack.util;
+package org.dependencytrack.model.sqlmapping;
 
-import alpine.common.logging.Logger;
+import org.apache.commons.lang3.SerializationUtils;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
-import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.sqlMapping.ComponentProjection;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.util.Collections;
-import java.util.List;
+import java.util.Date;
 import java.util.UUID;
 
-public class ComponentUtil {
+public class ComponentProjection {
 
-    private static final Logger LOGGER = Logger.getLogger(ComponentUtil.class);
+    public long id;
+
+    public String uuid;
+
+    public String author;
+
+    public String group;
+
+    public String name;
+
+    public String text;
+
+    public String publisher;
+
+    public String version;
+
+    public String classifier;
+
+    public String copyright;
+
+    public String description;
+
+    public String extension;
+
+    public String filename;
+
+    public byte[] externalReferences;
+
+    public String directDependencies;
+
+    public String cpe;
+
+    public String purl;
+
+    public String purlCoordinates;
+
+    public String swidTagId;
+
+    public Boolean internal;
+
+    public Double lastInheritedRiskScore;
+
+    public String md5;
+
+    public String sha1;
+
+    public String sha256;
+
+    public String sha384;
+
+    public String sha512;
+
+    public String sha3_256;
+
+    public String sha3_384;
+
+    public String sha3_512;
+
+    public String blake2b_256;
+
+    public String blake2b_384;
+
+    public String blake2b_512;
+
+    public String blake3;
+
+    public String licenseUrl;
+
+    public String componentLicenseName;
+
+    public String licenseExpression;
+
+    public Date publishedAt;
+
+    public Date lastFetch;
+
+    public String integrityCheckStatus;
+
+    public String integrityRepoUrl;
+
+    public Long projectId;
+
+    public String projectUuid;
+
+    public String projectGroup;
+
+    public String projectName;
+
+    public String projectVersion;
+
+    public String projectClassifier;
+
+    public Boolean projectActive;
+
+    public String projectAuthor;
+
+    public String projectCpe;
+
+    public String projectDescription;
+
+    public String projectPurl;
+
+    public String projectSwidTagId;
+
+    public Date lastBomImport;
+
+    public String lastBomImportFormat;
+
+    public Double projectLastInheritedRiskScore;
+
+    public String projectDirectDependencies;
+
+    public byte[] projectExternalReferences;
+
+    public String projectPublisher;
+
+    public String licenseUuid;
+
+    public String licenseId;
+    public String licenseName;
+
+    public Boolean isOsiApproved;
+
+    public Boolean isFsfLibre;
+
+    public Boolean isCustomLicense;
+
+    public Long totalCount;
 
     public static final Component mapToComponent(ComponentProjection result) {
         Component componentPersistent = new Component();
@@ -41,16 +162,19 @@ public class ComponentUtil {
         if (result.internal != null) {
             componentPersistent.setInternal(result.internal);
         }
+        componentPersistent.setNotes(result.text);
         componentPersistent.setSwidTagId(result.swidTagId);
-        componentPersistent.setLastInheritedRiskScore(result.lastInheritedRiskscore);
-        componentPersistent.setLicense(result.licenseName);
+        componentPersistent.setLastInheritedRiskScore(result.lastInheritedRiskScore);
+        componentPersistent.setLicense(result.componentLicenseName);
         componentPersistent.setLicenseUrl(result.licenseUrl);
         componentPersistent.setLicenseExpression(result.licenseExpression);
         componentPersistent.setName(result.name);
         if (result.uuid != null) {
             componentPersistent.setUuid(UUID.fromString(result.uuid));
         }
-        componentPersistent.setExternalReferences(readByteArray(result.externalReferences));
+        if (result.externalReferences != null) {
+            componentPersistent.setExternalReferences(SerializationUtils.deserialize(result.externalReferences));
+        }
         componentPersistent.setPurl(result.purl);
         componentPersistent.setPurlCoordinates(result.purlCoordinates);
         componentPersistent.setVersion(result.version);
@@ -76,7 +200,9 @@ public class ComponentUtil {
         project.setPurl(result.projectPurl);
         project.setSwidTagId(result.projectSwidTagId);
         project.setPublisher(result.projectPublisher);
-        project.setExternalReferences(readByteArray(result.projectExternalReferences));
+        if (result.projectExternalReferences != null) {
+            project.setExternalReferences(SerializationUtils.deserialize(result.projectExternalReferences));
+        }
         project.setLastInheritedRiskScore(result.projectLastInheritedRiskScore);
         if (result.projectClassifier != null) {
             project.setClassifier(Classifier.valueOf(result.projectClassifier));
@@ -92,6 +218,7 @@ public class ComponentUtil {
         componentPersistent.setProject(project);
 
         var license = new License();
+        license.setName(result.licenseName);
         if (result.licenseUuid != null) {
             license.setUuid(UUID.fromString(result.licenseUuid));
         }
@@ -114,17 +241,5 @@ public class ComponentUtil {
         componentPersistent.setComponentMetaInformation(componentMetaInformation);
 
         return componentPersistent;
-    }
-
-    private static List<ExternalReference> readByteArray(byte[] byteArrayInput) {
-        if (byteArrayInput != null) {
-            try {
-                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(byteArrayInput));
-                return (List<ExternalReference>) ois.readObject();
-            } catch (IOException | ClassNotFoundException e) {
-                LOGGER.debug("Exception while parsing component external references.", e);
-            }
-        }
-        return Collections.emptyList();
     }
 }

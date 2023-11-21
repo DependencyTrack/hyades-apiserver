@@ -33,10 +33,9 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.sqlMapping.ComponentProjection;
+import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
-import org.dependencytrack.util.ComponentUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -52,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.dependencytrack.model.sqlmapping.ComponentProjection.mapToComponent;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -161,29 +162,42 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         List<Component> componentsResult = new ArrayList<>();
         String queryString = """
-                        SELECT "A0"."AUTHOR",
-                        "A0"."BLAKE2B_256",
-                        "A0"."BLAKE2B_384",
-                        "A0"."BLAKE2B_512",
-                        "A0"."BLAKE3",
-                        "A0"."CLASSIFIER",
-                        "A0"."COPYRIGHT",
-                        "A0"."CPE",
-                        "A0"."DESCRIPTION",
-                        "A0"."DIRECT_DEPENDENCIES",
-                        "A0"."EXTENSION",
+                        SELECT "A0"."ID" AS "id",
+                        "A0"."NAME" AS "name",
+                        "A0"."AUTHOR" AS "author",
+                        "A0"."BLAKE2B_256" AS "blake2b_256",
+                        "A0"."BLAKE2B_384" AS "blake2b_384",
+                        "A0"."BLAKE2B_512" AS "blake2b_512",
+                        "A0"."BLAKE3" AS "blake3",
+                        "A0"."CLASSIFIER" AS "classifier",
+                        "A0"."COPYRIGHT" AS "copyright",
+                        "A0"."CPE" AS "cpe",
+                        "A0"."PUBLISHER" AS "publisher",
+                        "A0"."PURL" AS "purl",
+                        "A0"."PURLCOORDINATES" AS "purlCoordinates",
+                        "A0"."DESCRIPTION" AS "description",
+                        "A0"."DIRECT_DEPENDENCIES" AS "directDependencies",
+                        "A0"."EXTENSION" AS "extension",
                         "A0"."EXTERNAL_REFERENCES" AS "externalReferences",
-                        "A0"."FILENAME",
-                        "A0"."GROUP",
-                        "A0"."ID",
-                        "A0"."INTERNAL",
-                        "A0"."LAST_RISKSCORE",
-                        "A0"."LICENSE",
-                        "A0"."LICENSE_EXPRESSION",
-                        "A0"."LICENSE_URL",
-                        "A0"."MD5",
-                        "A0"."NAME",
-                        "A0"."TEXT",
+                        "A0"."FILENAME" AS "filename",
+                        "A0"."GROUP" AS "group",
+                        "A0"."INTERNAL" AS "internal",
+                        "A0"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
+                        "A0"."LICENSE" AS "componentLicenseName",
+                        "A0"."LICENSE_EXPRESSION" AS "licenseExpression",
+                        "A0"."LICENSE_URL" AS "licenseUrl",
+                        "A0"."TEXT" AS "text",
+                        "A0"."MD5" AS "md5",
+                        "A0"."SHA1" AS "sha1",
+                        "A0"."SHA_256" AS "sha256",
+                        "A0"."SHA_384" AS "sha384",
+                        "A0"."SHA_512" AS "sha512",
+                        "A0"."SHA3_256" AS "sha3_256",
+                        "A0"."SHA3_384" AS "sha3_384",
+                        "A0"."SHA3_512" AS "sha3_512",
+                        "A0"."SWIDTAGID" AS "swidTagId",
+                        "A0"."UUID" AS "uuid",
+                        "A0"."VERSION" AS "version",
                         "B0"."ACTIVE" AS "projectActive",
                         "B0"."AUTHOR" AS "projectAuthor",
                         "B0"."CLASSIFIER" AS "projectClassifier",
@@ -202,24 +216,12 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "B0"."SWIDTAGID" AS "projectSwidTagId",
                         "B0"."UUID" AS "projectUuid",
                         "B0"."VERSION" AS "projectVersion",
-                        "A0"."PUBLISHER",
-                        "A0"."PURL",
-                        "A0"."PURLCOORDINATES",
                         "D0"."ISCUSTOMLICENSE" AS "isCustomLicense",
                         "D0"."FSFLIBRE" AS "isFsfLibre",
                         "D0"."LICENSEID" AS "licenseId",
                         "D0"."ISOSIAPPROVED" AS "isOsiApproved",
                         "D0"."UUID" AS "licenseUuid",
-                        "A0"."SHA1",
-                        "A0"."SHA_256",
-                        "A0"."SHA_384",
-                        "A0"."SHA3_256",
-                        "A0"."SHA3_384",
-                        "A0"."SHA3_512",
-                        "A0"."SHA_512",
-                        "A0"."SWIDTAGID",
-                        "A0"."UUID",
-                        "A0"."VERSION",
+                        "D0"."NAME" AS "licenseName",
                         "I0"."LAST_FETCH" AS "lastFetch",
                         "I0"."PUBLISHED_AT" AS "publishedAt",
                         "IA"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
@@ -240,7 +242,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             queryString +=
                     """
                         AND NOT (NOT EXISTS (
-                        SELECT "M"."ID" AS "DN_APPID"
+                        SELECT "M"."ID"
                         FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
                         AND "M"."NAMESPACE" = "A0"."GROUP"
                         AND "M"."LATEST_VERSION" <> "A0"."VERSION"
@@ -256,32 +258,44 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (orderBy == null) {
             queryString +=
                     """
-                        ORDER BY "NAME",
-                        "VERSION" DESC
+                        ORDER BY "name",
+                        "version" DESC
                     """;
         } else {
             if (orderBy.equalsIgnoreCase("componentMetaInformation.publishedDate")) {
                 queryString +=
                         """
-                            ORDER BY "PUBLISHED_AT"
+                            ORDER BY "publishedAt"
                         """;
             }
             if (orderBy.equalsIgnoreCase("version")) {
                 queryString +=
                         """
-                            ORDER BY "VERSION"
+                            ORDER BY "version"
                         """;
             }
             if (orderBy.equalsIgnoreCase("name")) {
                 queryString +=
                         """
-                            ORDER BY "NAME"
+                            ORDER BY "name"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("group")) {
+                queryString +=
+                        """
+                            ORDER BY "group"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("lastInheritedRiskScore")) {
+                queryString +=
+                        """
+                            ORDER BY "lastInheritedRiskScore"
                         """;
             }
             if (orderBy.equalsIgnoreCase("componentMetaInformation.integrityMatchStatus")) {
                 queryString +=
                         """
-                            ORDER BY "INTEGRITY_CHECK_STATUS"
+                            ORDER BY "integrityCheckStatus"
                         """;
             }
             if (queryString.contains("ORDER BY")) {
@@ -291,7 +305,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     queryString += " DESC ";
                 }
                 queryString += """
-                        , "ID"
+                        , "id"
                         """;
             }
         }
@@ -314,7 +328,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             query.closeAll();
         }
         for (final var result : resultSet) {
-            final org.dependencytrack.model.Component component = ComponentUtil.mapToComponent(result);
+            final org.dependencytrack.model.Component component = mapToComponent(result);
             if (includeMetrics) {
 //             Populate each Component object in the paginated result with transitive related
 //             data to minimize the number of round trips a client needs to make, process, and render.
