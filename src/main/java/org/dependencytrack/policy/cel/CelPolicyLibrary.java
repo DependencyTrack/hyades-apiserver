@@ -46,6 +46,7 @@ class CelPolicyLibrary implements Library {
     private static final Logger LOGGER = Logger.getLogger(CelPolicyLibrary.class);
 
     static final String VAR_COMPONENT = "component";
+    static final String VAR_NOW = "now";
     static final String VAR_PROJECT = "project";
     static final String VAR_VULNERABILITIES = "vulns";
 
@@ -62,7 +63,6 @@ class CelPolicyLibrary implements Library {
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
-
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
 
     @Override
@@ -72,6 +72,10 @@ class CelPolicyLibrary implements Library {
                         Decls.newVar(
                                 VAR_COMPONENT,
                                 TYPE_COMPONENT
+                        ),
+                        Decls.newVar(
+                                VAR_NOW,
+                                Decls.Timestamp
                         ),
                         Decls.newVar(
                                 VAR_PROJECT,
@@ -203,9 +207,9 @@ class CelPolicyLibrary implements Library {
             versionDistance = VersionDistance.getVersionDistance(component.getVersion(), component.getLatestVersion());
         } catch (RuntimeException e) {
             LOGGER.warn("""
-                    Failed to compute version distance for component %s (UUID: %s), \
+                    %s: Failed to compute version distance for component %s (UUID: %s), \
                     between component version %s and latest version %s; Skipping\
-                    """.formatted(component, component.getUuid(), component.getVersion(), component.getLatestVersion(), e));
+                    """.formatted(FUNC_COMPARE_VERSION_DISTANCE, component, component.getUuid(), component.getVersion(), component.getLatestVersion()), e);
             return false;
         }
         CelPolicyQueryManager celPolicyQueryManager = new CelPolicyQueryManager(new QueryManager());
@@ -497,11 +501,11 @@ class CelPolicyLibrary implements Library {
         try {
             agePeriod = Period.parse(age);
         } catch (DateTimeParseException e) {
-            LOGGER.error("Invalid age duration format", e);
+            LOGGER.error("%s: Invalid age duration format \"%s\"".formatted(FUNC_COMPARE_AGE, age), e);
             return false;
         }
         if (agePeriod.isZero() || agePeriod.isNegative()) {
-            LOGGER.warn("Age durations must not be zero or negative");
+            LOGGER.warn("%s: Age durations must not be zero or negative, but was %s".formatted(FUNC_COMPARE_AGE, agePeriod));
             return false;
         }
         if (!component.hasPublishedAt()) {
@@ -519,7 +523,7 @@ class CelPolicyLibrary implements Library {
             case "NUMERIC_LESSER_THAN_OR_EQUAL", "<=" -> ageDate.isEqual(today) || ageDate.isAfter(today);
             case "NUMERIC_LESS_THAN", "<" -> ageDate.isAfter(LocalDate.now(ZoneId.systemDefault()));
             default -> {
-                LOGGER.warn("Operator %s is not supported for component age conditions".formatted(comparator));
+                LOGGER.warn("%s: Operator %s is not supported for component age conditions".formatted(FUNC_COMPARE_AGE, comparator));
                 yield false;
             }
         };
