@@ -44,7 +44,7 @@ public abstract class AbstractPostgresEnabledTest {
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
-        MigrationInitializer.runMigration(dataSource);
+        MigrationInitializer.runMigration(dataSource, /* silent */ true);
 
         final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
                 postgresContainer.getDriverClassName(),

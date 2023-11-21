@@ -12,13 +12,14 @@ import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
+import liquibase.logging.core.NoOpLogService;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.dependencytrack.common.ConfigKey;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.sql.DataSource;
-import java.util.Collections;
+import java.util.HashMap;
 
 public class MigrationInitializer implements ServletContextListener {
     private static final Logger LOGGER = Logger.getLogger(MigrationInitializer.class);
@@ -43,14 +44,19 @@ public class MigrationInitializer implements ServletContextListener {
 
         LOGGER.info("Running migrations");
         try (final HikariDataSource dataSource = createDataSource()) {
-            runMigration(dataSource);
+            runMigration(dataSource, false);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }
     }
 
-    public static void runMigration(final DataSource dataSource) throws Exception {
-        Scope.child(Collections.emptyMap(), () -> {
+    public static void runMigration(final DataSource dataSource, final boolean silent) throws Exception {
+        final var scopeAttributes = new HashMap<String, Object>();
+        if (silent) {
+            scopeAttributes.put(Scope.Attr.logService.name(), new NoOpLogService());
+        }
+
+        Scope.child(scopeAttributes, () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
             final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
 
