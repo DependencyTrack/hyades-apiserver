@@ -23,7 +23,7 @@ public class RenameForeignKeysChange implements CustomTaskChange {
     private record ForeignKeyDefinition(String targetTable, String referencedTable) {
     }
 
-    private record ForeignKeyNameMapping(String table, String oldName, String newName) {
+    record ForeignKeyNameMapping(String table, String oldName, String newName) {
     }
 
     private static ForeignKeyDefinition foreignKeyDef(final String targetTable, final String referencedTale) {
@@ -374,7 +374,7 @@ public class RenameForeignKeysChange implements CustomTaskChange {
         return null;
     }
 
-    private static List<ForeignKeyNameMapping> getForeignNameMappings(final JdbcConnection connection) throws DatabaseException, SQLException {
+    static List<ForeignKeyNameMapping> getForeignNameMappings(final JdbcConnection connection) throws DatabaseException, SQLException {
         return switch (connection.getDatabaseProductName()) {
             case "PostgreSQL" -> getForeignKeyNameMappingsFromPostgres(connection);
             default -> throw new IllegalStateException();
@@ -386,7 +386,7 @@ public class RenameForeignKeysChange implements CustomTaskChange {
 
         try (final var stmt = connection.createStatement()) {
             final ResultSet rs = stmt.executeQuery("""
-                    SELECT  
+                    SELECT
                         tc.constraint_name AS foreign_key_name,
                         tc.table_name AS target_table_name,
                         kcu.column_name,
@@ -399,6 +399,7 @@ public class RenameForeignKeysChange implements CustomTaskChange {
                     JOIN information_schema.constraint_column_usage AS ccu
                         ON ccu.constraint_name = tc.constraint_name
                     WHERE tc.constraint_type = 'FOREIGN KEY'
+                        AND tc.constraint_name ~ '_FK[0-9]+$'
                     """);
             while (rs.next()) {
                 final String tableName = rs.getString("target_table_name");
@@ -419,6 +420,7 @@ public class RenameForeignKeysChange implements CustomTaskChange {
     }
 
 
+    @SuppressWarnings("SqlSourceToSinkFlow")
     private static List<ForeignKeyNameMapping> renameForeignKeysForPostgres(final JdbcConnection connection, final List<ForeignKeyNameMapping> foreignKeyNameMappings) throws DatabaseException, SQLException {
         final var renamedForeignKeys = new ArrayList<ForeignKeyNameMapping>();
 

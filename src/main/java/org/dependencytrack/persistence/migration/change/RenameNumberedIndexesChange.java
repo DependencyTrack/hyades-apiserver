@@ -25,7 +25,7 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
     private record IndexDefinition(String table, Set<String> columns) {
     }
 
-    private record IndexNameMapping(String oldName, String newName) {
+    record IndexNameMapping(String oldName, String newName) {
     }
 
     private static IndexDefinition indexDef(final String table, final String... columns) {
@@ -371,7 +371,7 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
         };
     }
 
-    private static List<IndexNameMapping> getIndexNameMappingsFromPostgres(final JdbcConnection connection) throws DatabaseException, SQLException {
+    static List<IndexNameMapping> getIndexNameMappingsFromPostgres(final JdbcConnection connection) throws DatabaseException, SQLException {
         final var indexNameMapping = new ArrayList<IndexNameMapping>();
 
         try (final var stmt = connection.createStatement()) {

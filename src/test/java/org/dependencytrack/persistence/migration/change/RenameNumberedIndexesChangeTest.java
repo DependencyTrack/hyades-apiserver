@@ -18,11 +18,15 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.Collections;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.migration.change.RenameNumberedIndexesChange.getIndexNameMappingsFromPostgres;
+
 public class RenameNumberedIndexesChangeTest {
 
     private PostgreSQLContainer<?> postgresContainer;
 
     @Before
+    @SuppressWarnings("resource")
     public void setUp() {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
                 .withInitScript("migration/custom/schema-v5.2.0-postgresql.sql");
@@ -52,5 +56,7 @@ public class RenameNumberedIndexesChangeTest {
             updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
             updateCommand.execute();
         });
+
+        assertThat(getIndexNameMappingsFromPostgres(new JdbcConnection(dataSource.getConnection()))).isEmpty();
     }
 }
