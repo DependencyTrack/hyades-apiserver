@@ -12,12 +12,14 @@ import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
+import liquibase.logging.core.NoOpLogService;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.dependencytrack.common.ConfigKey;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import java.util.Collections;
+import javax.sql.DataSource;
+import java.util.HashMap;
 
 public class MigrationInitializer implements ServletContextListener {
     private static final Logger LOGGER = Logger.getLogger(MigrationInitializer.class);
@@ -42,18 +44,27 @@ public class MigrationInitializer implements ServletContextListener {
 
         LOGGER.info("Running migrations");
         try (final HikariDataSource dataSource = createDataSource()) {
-            Scope.child(Collections.emptyMap(), () -> {
-                final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-                final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
-
-                final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-                updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
-                updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-                updateCommand.execute();
-            });
+            runMigration(dataSource, false);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }
+    }
+
+    public static void runMigration(final DataSource dataSource, final boolean silent) throws Exception {
+        final var scopeAttributes = new HashMap<String, Object>();
+        if (silent) {
+            scopeAttributes.put(Scope.Attr.logService.name(), new NoOpLogService());
+        }
+
+        Scope.child(scopeAttributes, () -> {
+            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
+            final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
+
+            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
+            updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
+            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+            updateCommand.execute();
+        });
     }
 
     private HikariDataSource createDataSource() {

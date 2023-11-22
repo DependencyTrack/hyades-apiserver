@@ -1,10 +1,13 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog
         objectQuotingStrategy="QUOTE_ALL_OBJECTS"
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
-        xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <property dbms="postgresql" name="textType" value="TEXT"/>
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="nscuro@protonmail.com" id="v5.3.0-1">
         <preConditions onFail="MARK_RAN">
             <not>
@@ -83,8 +86,19 @@
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
 
+        <createTable tableName="EVENTSERVICELOG">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="EVENTSERVICELOG_PK"/>
+            </column>
+            <column name="SUBSCRIBERCLASS" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="STARTED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="COMPLETED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
         <createTable tableName="LICENSEGROUP">
-            <column autoIncrement="true" name="ID" startWith="5" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSEGROUP_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(255)">
@@ -99,7 +113,7 @@
         </createTable>
 
         <createTable tableName="LICENSE">
-            <column autoIncrement="true" name="ID" startWith="614" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSE_PK"/>
             </column>
             <column name="COMMENT" type="TEXT"/>
@@ -157,7 +171,7 @@
         </createTable>
 
         <createTable tableName="REPOSITORY">
-            <column autoIncrement="true" name="ID" startWith="15" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_PK"/>
             </column>
             <column name="AUTHENTICATIONREQUIRED" type="BOOLEAN"/>
@@ -253,7 +267,7 @@
         </createTable>
 
         <createTable tableName="NOTIFICATIONPUBLISHER">
-            <column autoIncrement="true" name="ID" startWith="9" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONPUBLISHER_PK"/>
             </column>
             <column name="DEFAULT_PUBLISHER" type="BOOLEAN">
@@ -340,7 +354,7 @@
         </createTable>
 
         <createTable tableName="CWE">
-            <column autoIncrement="true" name="ID" startWith="1421" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CWE_PK"/>
             </column>
             <column name="CWEID" type="INTEGER">
@@ -566,7 +580,7 @@
         </createTable>
 
         <createTable tableName="TEAM">
-            <column autoIncrement="true" name="ID" startWith="4" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="TEAM_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(50)">
@@ -589,7 +603,7 @@
         </createTable>
 
         <createTable tableName="MANAGEDUSER">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="MANAGEDUSER_PK"/>
             </column>
             <column name="EMAIL" type="VARCHAR(255)"/>
@@ -696,7 +710,7 @@
         </createTable>
 
         <createTable tableName="PERMISSION">
-            <column autoIncrement="true" name="ID" startWith="13" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PERMISSION_PK"/>
             </column>
             <column name="DESCRIPTION" type="TEXT"/>
@@ -723,7 +737,7 @@
         </createTable>
 
         <createTable tableName="APIKEY">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="APIKEY_PK"/>
             </column>
             <column name="APIKEY" type="VARCHAR(255)">
@@ -1209,7 +1223,7 @@
         </createTable>
 
         <createTable tableName="SCHEMAVERSION">
-            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="SCHEMAVERSION_PK"/>
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
@@ -1225,7 +1239,7 @@
         </createTable>
 
         <createTable tableName="CONFIGPROPERTY">
-            <column autoIncrement="true" name="ID" startWith="71" type="BIGINT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CONFIGPROPERTY_PK"/>
             </column>
             <column name="DESCRIPTION" type="VARCHAR(255)"/>
@@ -1241,7 +1255,7 @@
             <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
         </createTable>
 
-        <createIndex indexName="WORKFLOW_STATE_N49" tableName="WORKFLOW_STATE">
+        <createIndex indexName="WORKFLOW_STATE_PARENT_STEP_ID_IDX" tableName="WORKFLOW_STATE">
             <column name="PARENT_STEP_ID"/>
         </createIndex>
 
@@ -1252,7 +1266,7 @@
             <column name="GROUP"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENT_N50" tableName="COMPONENT">
+        <createIndex indexName="COMPONENT_PARENT_COMPONENT_ID_IDX" tableName="COMPONENT">
             <column name="PARENT_COMPONENT_ID"/>
         </createIndex>
 
@@ -1312,7 +1326,7 @@
             <column name="BLAKE2B_512"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENT_N49" tableName="COMPONENT">
+        <createIndex indexName="COMPONENT_LICENSE_ID_IDX" tableName="COMPONENT">
             <column name="LICENSE_ID"/>
         </createIndex>
 
@@ -1342,6 +1356,14 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="COMPONENT_UUID_IDX" tableName="COMPONENT"/>
 
+        <!--
+          Note: The original index as defined in Alpine is not prefixed with the table name.
+          https://github.com/stevespringett/Alpine/blob/92fdb7de7e5623b8c986de08997480036af5f472/alpine-model/src/main/java/alpine/model/EventServiceLog.java#L50C27-L50C27
+        -->
+        <createIndex tableName="EVENTSERVICELOG" indexName="SUBSCRIBERCLASS_IDX">
+            <column name="SUBSCRIBERCLASS"/>
+        </createIndex>
+
         <createIndex indexName="LICENSEGROUP_NAME_IDX" tableName="LICENSEGROUP">
             <column name="NAME"/>
         </createIndex>
@@ -1358,11 +1380,11 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="LICENSE_UUID_IDX" tableName="LICENSE"/>
 
-        <createIndex indexName="ANALYSISCOMMENT_N49" tableName="ANALYSISCOMMENT">
+        <createIndex indexName="ANALYSISCOMMENT_ANALYSIS_ID_IDX" tableName="ANALYSISCOMMENT">
             <column name="ANALYSIS_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSISCOMMENT_N49" tableName="VIOLATIONANALYSISCOMMENT">
+        <createIndex indexName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_ID_IDX" tableName="VIOLATIONANALYSISCOMMENT">
             <column name="VIOLATIONANALYSIS_ID"/>
         </createIndex>
 
@@ -1376,7 +1398,7 @@
         <addUniqueConstraint columnNames="TOKEN" constraintName="VULNERABILITY_SCAN_TOKEN_IDX"
                              tableName="VULNERABILITYSCAN"/>
 
-        <createIndex indexName="PROJECT_PROPERTY_N49" tableName="PROJECT_PROPERTY">
+        <createIndex indexName="PROJECT_PROPERTY_PROJECT_ID_IDX" tableName="PROJECT_PROPERTY">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1396,11 +1418,11 @@
 
         <addUniqueConstraint columnNames="CWEID" constraintName="CWE_CWEID_IDX" tableName="CWE"/>
 
-        <createIndex indexName="INTEGRITY_ANALYSIS_N49" tableName="INTEGRITY_ANALYSIS">
+        <createIndex indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" tableName="INTEGRITY_ANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="DEPENDENCYMETRICS_N49" tableName="DEPENDENCYMETRICS">
+        <createIndex indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX" tableName="DEPENDENCYMETRICS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1408,7 +1430,7 @@
             <column name="FIRST_OCCURRENCE"/>
         </createIndex>
 
-        <createIndex indexName="DEPENDENCYMETRICS_N50" tableName="DEPENDENCYMETRICS">
+        <createIndex indexName="DEPENDENCYMETRICS_COMPONENT_ID_IDX" tableName="DEPENDENCYMETRICS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
@@ -1469,28 +1491,28 @@
         <addUniqueConstraint columnNames="UUID" constraintName="VULNERABLESOFTWARE_UUID_IDX"
                              tableName="VULNERABLESOFTWARE"/>
 
-        <createIndex indexName="ANALYSIS_N51" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_VULNERABILITY_ID_IDX" tableName="ANALYSIS">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="ANALYSIS_N50" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_PROJECT_ID_IDX" tableName="ANALYSIS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="ANALYSIS_N49" tableName="ANALYSIS">
+        <createIndex indexName="ANALYSIS_COMPONENT_ID_IDX" tableName="ANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, VULNERABILITY_ID"
                              constraintName="ANALYSIS_COMPOSITE_IDX" tableName="ANALYSIS"/>
 
-        <createIndex indexName="VEX_N49" tableName="VEX">
+        <createIndex indexName="VEX_PROJECT_ID_IDX" tableName="VEX">
             <column name="PROJECT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="VEX_UUID_IDX" tableName="VEX"/>
 
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_N50" tableName="AFFECTEDVERSIONATTRIBUTION">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABLE_SOFTWARE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
             <column name="VULNERABLE_SOFTWARE"/>
         </createIndex>
 
@@ -1499,7 +1521,7 @@
             <column name="VULNERABLE_SOFTWARE"/>
         </createIndex>
 
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_N49" tableName="AFFECTEDVERSIONATTRIBUTION">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
             <column name="VULNERABILITY"/>
         </createIndex>
 
@@ -1581,15 +1603,15 @@
 
         <addUniqueConstraint columnNames="NAME" constraintName="PERMISSION_IDX" tableName="PERMISSION"/>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N49" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_COMPONENT_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N51" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_PROJECT_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="VIOLATIONANALYSIS_N50" tableName="VIOLATIONANALYSIS">
+        <createIndex indexName="VIOLATIONANALYSIS_POLICYVIOLATION_ID_IDX" tableName="VIOLATIONANALYSIS">
             <column name="POLICYVIOLATION_ID"/>
         </createIndex>
 
@@ -1598,11 +1620,11 @@
 
         <addUniqueConstraint columnNames="APIKEY" constraintName="APIKEY_IDX" tableName="APIKEY"/>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N50" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_PROJECT_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N51" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_COMPONENT_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
@@ -1611,7 +1633,7 @@
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="FINDINGATTRIBUTION_N49" tableName="FINDINGATTRIBUTION">
+        <createIndex indexName="FINDINGATTRIBUTION_VULNERABILITY_ID_IDX" tableName="FINDINGATTRIBUTION">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
@@ -1633,7 +1655,7 @@
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICYVIOLATION_N49" tableName="POLICYVIOLATION">
+        <createIndex indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX" tableName="POLICYVIOLATION">
             <column name="POLICYCONDITION_ID"/>
         </createIndex>
 
@@ -1643,13 +1665,13 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="POLICYVIOLATION_UUID_IDX" tableName="POLICYVIOLATION"/>
 
-        <createIndex indexName="POLICYCONDITION_N49" tableName="POLICYCONDITION">
+        <createIndex indexName="POLICYCONDITION_POLICY_ID_IDX" tableName="POLICYCONDITION">
             <column name="POLICY_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="POLICYCONDITION_UUID_IDX" tableName="POLICYCONDITION"/>
 
-        <createIndex indexName="NOTIFICATIONRULE_N49" tableName="NOTIFICATIONRULE">
+        <createIndex indexName="NOTIFICATIONRULE_PUBLISHER_IDX" tableName="NOTIFICATIONRULE">
             <column name="PUBLISHER"/>
         </createIndex>
 
@@ -1660,22 +1682,22 @@
             <column defaultValueNumeric="0.0" name="LAST_RISKSCORE"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENT_N50" tableName="SERVICECOMPONENT">
+        <createIndex indexName="SERVICECOMPONENT_PROJECT_ID_IDX" tableName="SERVICECOMPONENT">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENT_N49" tableName="SERVICECOMPONENT">
+        <createIndex indexName="SERVICECOMPONENT_PARENT_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENT">
             <column name="PARENT_SERVICECOMPONENT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="SERVICECOMPONENT_UUID_IDX"
                              tableName="SERVICECOMPONENT"/>
 
-        <createIndex indexName="MAPPEDOIDCGROUP_N50" tableName="MAPPEDOIDCGROUP">
+        <createIndex indexName="MAPPEDOIDCGROUP_TEAM_ID_IDX" tableName="MAPPEDOIDCGROUP">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MAPPEDOIDCGROUP_N49" tableName="MAPPEDOIDCGROUP">
+        <createIndex indexName="MAPPEDOIDCGROUP_GROUP_ID_IDX" tableName="MAPPEDOIDCGROUP">
             <column name="GROUP_ID"/>
         </createIndex>
 
@@ -1684,7 +1706,7 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDOIDCGROUP_UUID_IDX" tableName="MAPPEDOIDCGROUP"/>
 
-        <createIndex indexName="MAPPEDLDAPGROUP_N49" tableName="MAPPEDLDAPGROUP">
+        <createIndex indexName="MAPPEDLDAPGROUP_TEAM_ID_IDX" tableName="MAPPEDLDAPGROUP">
             <column name="TEAM_ID"/>
         </createIndex>
 
@@ -1712,7 +1734,7 @@
 
         <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
 
-        <createIndex indexName="BOM_N49" tableName="BOM">
+        <createIndex indexName="BOM_PROJECT_ID_IDX" tableName="BOM">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1758,13 +1780,13 @@
             <column name="VERSION"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_N49" tableName="PROJECT">
+        <createIndex indexName="PROJECT_PARENT_PROJECT_ID_IDX" tableName="PROJECT">
             <column name="PARENT_PROJECT_ID"/>
         </createIndex>
 
         <addUniqueConstraint columnNames="UUID" constraintName="PROJECT_UUID_IDX" tableName="PROJECT"/>
 
-        <createIndex indexName="PROJECTMETRICS_N49" tableName="PROJECTMETRICS">
+        <createIndex indexName="PROJECTMETRICS_PROJECT_ID_IDX" tableName="PROJECTMETRICS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
@@ -1776,147 +1798,147 @@
             <column name="LAST_OCCURRENCE"/>
         </createIndex>
 
-        <createIndex indexName="LICENSEGROUP_LICENSE_N49" tableName="LICENSEGROUP_LICENSE">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSE_ID_IDX" tableName="LICENSEGROUP_LICENSE">
             <column name="LICENSE_ID"/>
         </createIndex>
 
-        <createIndex indexName="LICENSEGROUP_LICENSE_N50" tableName="LICENSEGROUP_LICENSE">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX" tableName="LICENSEGROUP_LICENSE">
             <column name="LICENSEGROUP_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_N49" tableName="OIDCUSERS_PERMISSIONS">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
             <column name="OIDCUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_N50" tableName="OIDCUSERS_PERMISSIONS">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_N50" tableName="COMPONENTS_VULNERABILITIES">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_N49" tableName="COMPONENTS_VULNERABILITIES">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPONENT_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
             <column name="COMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_TEAMS_N49" tableName="OIDCUSERS_TEAMS">
+        <createIndex indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" tableName="OIDCUSERS_TEAMS">
             <column name="OIDCUSERS_ID"/>
         </createIndex>
 
-        <createIndex indexName="OIDCUSERS_TEAMS_N50" tableName="OIDCUSERS_TEAMS">
+        <createIndex indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" tableName="OIDCUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_N50" tableName="LDAPUSERS_PERMISSIONS">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
             <column name="LDAPUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_N49" tableName="LDAPUSERS_PERMISSIONS">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_N49" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
             <column name="SERVICECOMPONENT_ID"/>
         </createIndex>
 
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_N50" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_N49" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
 
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_N50" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
             <column name="VULNERABLESOFTWARE_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_N50" tableName="NOTIFICATIONRULE_TEAMS">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
             <column name="NOTIFICATIONRULE_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_N49" tableName="NOTIFICATIONRULE_TEAMS">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECTS_TAGS_N50" tableName="PROJECTS_TAGS">
+        <createIndex indexName="PROJECTS_TAGS_PROJECT_ID_IDX" tableName="PROJECTS_TAGS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECTS_TAGS_N49" tableName="PROJECTS_TAGS">
+        <createIndex indexName="PROJECTS_TAGS_TAG_ID_IDX" tableName="PROJECTS_TAGS">
             <column name="TAG_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_TEAMS_N49" tableName="LDAPUSERS_TEAMS">
+        <createIndex indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_TEAMS">
             <column name="LDAPUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_TEAMS_N50" tableName="LDAPUSERS_TEAMS">
+        <createIndex indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" tableName="LDAPUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_N50" tableName="MANAGEDUSERS_PERMISSIONS">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
             <column name="MANAGEDUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_N49" tableName="MANAGEDUSERS_PERMISSIONS">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="TEAMS_PERMISSIONS_N50" tableName="TEAMS_PERMISSIONS">
+        <createIndex indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" tableName="TEAMS_PERMISSIONS">
             <column name="PERMISSION_ID"/>
         </createIndex>
 
-        <createIndex indexName="TEAMS_PERMISSIONS_N49" tableName="TEAMS_PERMISSIONS">
+        <createIndex indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" tableName="TEAMS_PERMISSIONS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_N50" tableName="NOTIFICATIONRULE_PROJECTS">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_N49" tableName="NOTIFICATIONRULE_PROJECTS">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
             <column name="NOTIFICATIONRULE_ID"/>
         </createIndex>
 
-        <createIndex indexName="APIKEYS_TEAMS_N49" tableName="APIKEYS_TEAMS">
+        <createIndex indexName="APIKEYS_TEAMS_TEAM_ID_IDX" tableName="APIKEYS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="APIKEYS_TEAMS_N50" tableName="APIKEYS_TEAMS">
+        <createIndex indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" tableName="APIKEYS_TEAMS">
             <column name="APIKEY_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_N50" tableName="PROJECT_ACCESS_TEAMS">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_N49" tableName="PROJECT_ACCESS_TEAMS">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_TEAMS_N50" tableName="MANAGEDUSERS_TEAMS">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
             <column name="TEAM_ID"/>
         </createIndex>
 
-        <createIndex indexName="MANAGEDUSERS_TEAMS_N49" tableName="MANAGEDUSERS_TEAMS">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
             <column name="MANAGEDUSER_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_PROJECTS_N49" tableName="POLICY_PROJECTS">
+        <createIndex indexName="POLICY_PROJECTS_POLICY_ID_IDX" tableName="POLICY_PROJECTS">
             <column name="POLICY_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_PROJECTS_N50" tableName="POLICY_PROJECTS">
+        <createIndex indexName="POLICY_PROJECTS_PROJECT_ID_IDX" tableName="POLICY_PROJECTS">
             <column name="PROJECT_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_TAGS_N50" tableName="POLICY_TAGS">
+        <createIndex indexName="POLICY_TAGS_TAG_ID_IDX" tableName="POLICY_TAGS">
             <column name="TAG_ID"/>
         </createIndex>
 
-        <createIndex indexName="POLICY_TAGS_N49" tableName="POLICY_TAGS">
+        <createIndex indexName="POLICY_TAGS_POLICY_ID_IDX" tableName="POLICY_TAGS">
             <column name="POLICY_ID"/>
         </createIndex>
 
@@ -1939,351 +1961,351 @@
         </createTable>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_FK1" deferrable="true"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_FK2" deferrable="true"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
-                                 constraintName="ANALYSISCOMMENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="ANALYSIS" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_FK1"
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_FK2"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
-                                 constraintName="ANALYSIS_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="APIKEY" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_FK1"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT"
-                                 constraintName="COMPONENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_FK2"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_FK3"
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS"
-                                 constraintName="INTEGRITY_ANALYSIS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LDAPUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LDAPUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LICENSEGROUP" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="LICENSE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_FK1" deferrable="true"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_FK2" deferrable="true"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="MANAGEDUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP"
-                                 constraintName="MAPPEDLDAPGROUP_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCGROUP" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE"
-                                 constraintName="NOTIFICATIONRULE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_FK1" deferrable="true"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_FK2" deferrable="true"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="NOTIFICATIONRULE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="OIDCUSER" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION"
-                                 constraintName="POLICYCONDITION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICYCONDITION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS"
-                                 constraintName="POLICY_TAGS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICY" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_FK2"
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
-                                 constraintName="PROJECTMETRICS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TAG" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT"
-                                 constraintName="PROJECT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY"
-                                 constraintName="PROJECT_PROPERTY_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="SERVICECOMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PERMISSION" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_FK1"
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT"
-                                 constraintName="VIOLATIONANALYSISCOMMENT_FK1" deferrable="true"
+                                 constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK2" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="POLICYVIOLATION" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_FK3" deferrable="true" initiallyDeferred="true"
+                                 constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="PROJECT" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_FK1" deferrable="true"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID"
                                  baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_FK2" deferrable="true"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true"
                                  initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
 
         <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE"
-                                 constraintName="WORKFLOW_STATE_FK1" deferrable="true" initiallyDeferred="true"
+                                 constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
@@ -2293,13 +2315,13 @@
             <tableExists tableName="SCHEMAVERSION"/>
         </preConditions>
 
-        <customChange class="org.dependencytrack.persistence.migration.change.RenameNumberedIndexesChange"/>
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameNumberedIndexesChange"/>
     </changeSet>
     <changeSet id="v5.3.0-3" author="VithikaS">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="SCHEMAVERSION"/>
         </preConditions>
 
-        <customChange class="org.dependencytrack.persistence.migration.change.RenameForeignKeysChange"/>
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
     </changeSet>
 </databaseChangeLog>
