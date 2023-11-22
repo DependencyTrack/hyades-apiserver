@@ -406,6 +406,126 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
+    public void testEvaluateProjectWithPublishedAtComparisonGreaterThan() throws Exception {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                (now - component.published_at) > duration("365d")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+
+        final var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.persist(integrityMetaComponent);
+
+        final var policyEngine = new CelPolicyEngine();
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithPublishedAtComparisonLessThan() throws Exception {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                (now - component.published_at) < duration("365d")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+
+        final var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.persist(integrityMetaComponent);
+
+        final var policyEngine = new CelPolicyEngine();
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithPublishedAtComparisonUnknown() throws Exception {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                (now - component.published_at) > duration("365d")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+
+        final var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        // Omitted; Publish date is unknown.
+        // integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.persist(integrityMetaComponent);
+
+        final var policyEngine = new CelPolicyEngine();
+        policyEngine.evaluateProject(project.getUuid());
+
+        // This matches because the default value of Timestamp is 1970-01-01T00:00:00Z.
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithPublishedAtComparisonUnknownAndHasCheck() throws Exception {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                has(component.published_at) && (now - component.published_at) > duration("365d")
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
+        qm.persist(component);
+
+        final var integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component.getPurl().toString());
+        // Omitted; Publish date is unknown.
+        // integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setLastFetch(new Date());
+        qm.persist(integrityMetaComponent);
+
+        final var policyEngine = new CelPolicyEngine();
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).isEmpty();
+    }
+
+    @Test
     public void testEvaluateProjectWithPolicyOperatorAnyAndNotAllConditionsMatching() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
