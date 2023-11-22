@@ -182,10 +182,10 @@ class CelPolicyLibrary implements Library {
         if (!component.hasLatestVersion()) {
             return Err.newErr("Requested component does not have latest version information", component);
         }
-        return Types.boolOf(matchesVersionDIstance(component, comparator, value));
+        return Types.boolOf(matchesVersionDistance(component, comparator, value));
     }
 
-    private static boolean matchesVersionDIstance(Component component, String comparator, String value) {
+    private static boolean matchesVersionDistance(Component component, String comparator, String value) {
         String comparatorComputed = switch (comparator) {
             case "NUMERIC_GREATER_THAN", ">" -> "NUMERIC_GREATER_THAN";
             case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
@@ -195,8 +195,7 @@ class CelPolicyLibrary implements Library {
             case "NUMERIC_LESS_THAN", "<" -> "NUMERIC_LESS_THAN";
             default -> "";
         };
-        if (comparatorComputed.equals("")) {
-
+        if (comparatorComputed.isEmpty()) {
             LOGGER.warn("""
                     %s: Was passed a not supported operator : %s for version distance policy;
                     Unable to resolve, returning false""".formatted(FUNC_COMPARE_VERSION_DISTANCE, comparator));
@@ -212,8 +211,12 @@ class CelPolicyLibrary implements Library {
                     """.formatted(FUNC_COMPARE_VERSION_DISTANCE, component, component.getUuid(), component.getVersion(), component.getLatestVersion()), e);
             return false;
         }
-        CelPolicyQueryManager celPolicyQueryManager = new CelPolicyQueryManager(new QueryManager());
-        return celPolicyQueryManager.isDirectDependency(component) && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
+        final boolean isDirectDependency;
+        try (final var qm = new QueryManager();
+             final var celQm = new CelPolicyQueryManager(qm)) {
+            isDirectDependency = celQm.isDirectDependency(component);
+        }
+        return isDirectDependency && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
     }
 
     private static Val dependsOnFunc(final Val lhs, final Val rhs) {
