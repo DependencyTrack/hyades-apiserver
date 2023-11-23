@@ -5,6 +5,7 @@ import com.google.api.expr.v1alpha1.Type;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.junit.Test;
+import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collection;
 import java.util.Map;
@@ -16,6 +17,8 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE_GROUP;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class CelPolicyScriptHostTest {
 
@@ -81,4 +84,16 @@ public class CelPolicyScriptHostTest {
                 "severity");
     }
 
+    @Test
+
+    public void testVisitVersRangeCheck() {
+        var exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance().compile("""
+                project.matches_range("vers:generic<1")
+                """, CacheMode.NO_CACHE));
+        assertThat(exception.getMessage()).contains("Failed to parse the vers range");
+
+        assertDoesNotThrow(() -> CelPolicyScriptHost.getInstance().compile("""
+                project.matches_range("vers:generic/<1")
+                """, CacheMode.NO_CACHE));
+    }
 }

@@ -118,7 +118,14 @@ public class CelPolicyScriptHost {
 
             final Ast ast = astIssuesTuple.getAst();
             final Program program = environment.program(ast);
-            final MultiValuedMap<Type, String> requirements = analyzeRequirements(CEL.astToCheckedExpr(ast));
+            final var expr = CEL.astToCheckedExpr(ast);
+            final MultiValuedMap<Type, String> requirements = analyzeRequirements(expr);
+
+            // perform vers range validity
+            if (requirements.get(TYPE_PROJECT).contains("version") || requirements.get(TYPE_COMPONENT).contains("version")) {
+                final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
+                visitor.visitVersRangeCheck(expr.getExpr());
+            }
 
             script = new CelPolicyScript(program, requirements);
             if (cacheMode == CacheMode.CACHE) {
