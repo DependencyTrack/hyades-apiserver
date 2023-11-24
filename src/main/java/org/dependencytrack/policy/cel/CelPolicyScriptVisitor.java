@@ -119,7 +119,8 @@ class CelPolicyScriptVisitor {
 
     public void visitVersRangeCheck(final Expr expr) throws ScriptCreateException {
         final var callExpr = expr.getCallExpr();
-        if (!callExpr.getArgsList().isEmpty()
+        if (callExpr.getFunction().equals("matches_range")
+                && !callExpr.getArgsList().isEmpty()
                 && callExpr.getArgsList().get(0).getExprKindCase() == CONST_EXPR) {
             var versArg = callExpr.getArgsList().get(0).getConstExpr().getStringValue();
             try {
