@@ -41,7 +41,6 @@ import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
-import org.dependencytrack.tasks.VulnDbSyncTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.VulnerabilityScanCleanupTask;
 import org.dependencytrack.tasks.WorkflowStateCleanupTask;
@@ -80,7 +79,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvDownloadTask.class);
-        EVENT_SERVICE.subscribe(VulnDbSyncEvent.class, VulnDbSyncTask.class);
         EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalyzerTask.class);
@@ -119,7 +117,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.unsubscribe(OsvDownloadTask.class);
-        EVENT_SERVICE.unsubscribe(VulnDbSyncTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(RepositoryMetaAnalyzerTask.class);
         EVENT_SERVICE.unsubscribe(ProjectMetricsUpdateTask.class);
