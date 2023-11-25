@@ -7,8 +7,8 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.PurlUtil;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 

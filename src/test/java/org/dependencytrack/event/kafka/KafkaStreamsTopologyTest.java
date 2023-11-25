@@ -29,13 +29,13 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
+import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
-import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -56,13 +56,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
-import static org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
-import static org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
-import static org.hyades.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
+import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
+import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
+import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
+import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
+import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
+import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
+import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
 public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
 
@@ -127,7 +127,7 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
         final Date beforeTestTimestamp = Date.from(Instant.now());
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:golang/github.com/foo/bar@1.2.3"))
                 .setLatestVersion("1.2.4")
                 .build();

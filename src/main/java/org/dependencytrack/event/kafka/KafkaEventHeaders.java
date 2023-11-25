@@ -1,7 +1,7 @@
 package org.dependencytrack.event.kafka;
 
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.hyades.proto.vulnanalysis.v1.ScanCommand;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
 
 /**
  * Well-known headers for Kafka events published and / or consumed by Dependency-Track.

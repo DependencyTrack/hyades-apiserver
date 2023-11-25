@@ -36,13 +36,13 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
-import org.hyades.proto.notification.v1.Notification;
 import org.junit.Test;
 
 import javax.json.Json;
@@ -57,10 +57,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
-import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
-import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
@@ -349,7 +349,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisUpdateExistingNoChangesTest() throws Exception{
+    public void updateAnalysisUpdateExistingNoChangesTest() throws Exception {
         initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);

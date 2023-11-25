@@ -1,4 +1,4 @@
-package org.dependencytrack.parser.hyades;
+package org.dependencytrack.parser.dependencytrack;
 
 import com.google.protobuf.Timestamp;
 import org.cyclonedx.proto.v1_4.Advisory;

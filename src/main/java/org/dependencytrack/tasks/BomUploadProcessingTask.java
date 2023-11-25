@@ -63,7 +63,7 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.FlushHelper;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.json.JSONArray;
 
 import javax.jdo.PersistenceManager;

@@ -9,7 +9,7 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 
 import java.util.Date;
 import java.util.List;
@@ -107,8 +107,7 @@ public class IntegrityCheck {
                 && (sha256Status == HASH_MATCH_UNKNOWN || sha256Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)
                 && (sha512Status == HASH_MATCH_UNKNOWN || sha512Status == COMPONENT_MISSING_HASH_AND_MATCH_UNKNOWN)) {
             return HASH_MATCH_UNKNOWN;
-        }
-        else if (md5Status == HASH_MATCH_FAILED || sha1Status == HASH_MATCH_FAILED || sha256Status == HASH_MATCH_FAILED || sha512Status == HASH_MATCH_FAILED) {
+        } else if (md5Status == HASH_MATCH_FAILED || sha1Status == HASH_MATCH_FAILED || sha256Status == HASH_MATCH_FAILED || sha512Status == HASH_MATCH_FAILED) {
             return HASH_MATCH_FAILED;
         } else {
             return HASH_MATCH_PASSED;

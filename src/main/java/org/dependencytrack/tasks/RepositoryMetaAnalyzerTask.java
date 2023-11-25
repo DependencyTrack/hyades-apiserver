@@ -31,8 +31,8 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.LockProvider;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
