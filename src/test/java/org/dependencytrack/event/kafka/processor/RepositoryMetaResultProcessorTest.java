@@ -17,8 +17,8 @@ import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
-import org.hyades.proto.repometaanalysis.v1.IntegrityMeta;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.repometaanalysis.v1.IntegrityMeta;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,7 +68,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setLatestVersion("1.2.4")
                 .setPublished(Timestamp.newBuilder()
@@ -117,7 +117,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         final var published = Instant.now();
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setLatestVersion("1.2.4")
                 .setPublished(Timestamp.newBuilder()
@@ -151,7 +151,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         final var published = Instant.now();
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setLatestVersion("1.2.4")
                 .setPublished(Timestamp.newBuilder()
@@ -196,7 +196,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
@@ -249,7 +249,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder()
@@ -301,7 +301,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .build();
@@ -339,7 +339,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 //component uuid has not been set
                 .build();
@@ -374,12 +374,12 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder()
                         .setMd5("098f6bcd4621d373cade4e832627b4f6")
-                                .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
-                                .build())
+                        .setSha1("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+                        .build())
                 //component uuid has not been set
                 .build();
 
@@ -407,7 +407,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(uuid.toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
 
@@ -442,7 +442,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
@@ -491,7 +491,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder()
@@ -539,7 +539,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setUuid(c.getUuid().toString())
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder()
@@ -577,7 +577,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMetaSourceUrl("test").build())
                 .build();
@@ -607,7 +607,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMd5("098f6bcd4621d373cade4e832627b4f6")
                         .setSha1("a94a8fe5ccb19ba61c4c0873d391e587982fbbd3").setMetaSourceUrl("test2").build())
@@ -636,7 +636,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
         qm.persist(integrityMetaComponent);
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .setLatestVersion("1.2.4")
                 .setPublished(Timestamp.newBuilder()
@@ -676,7 +676,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
 
         final var result = AnalysisResult.newBuilder()
-                .setComponent(org.hyades.proto.repometaanalysis.v1.Component.newBuilder()
+                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .build();
 

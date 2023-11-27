@@ -89,11 +89,11 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
+import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
-import org.hyades.proto.vulnanalysis.v1.ScanStatus;
-import org.hyades.proto.vulnanalysis.v1.ScannerResult;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -117,7 +117,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static org.hyades.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
+import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -206,7 +206,7 @@ public class QueryManager extends AlpineQueryManager {
             boolean found = false;
             final org.datanucleus.store.query.Query iq = ((JDOQuery) query).getInternalQuery();
             final String candidateField = orderBy.contains(".") ? orderBy.substring(0, orderBy.indexOf('.')) : orderBy;
-            for (final Field field: iq.getCandidateClass().getDeclaredFields()) {
+            for (final Field field : iq.getCandidateClass().getDeclaredFields()) {
                 if (candidateField.equals(field.getName())) {
                     found = true;
                     break;
@@ -1896,13 +1896,13 @@ public class QueryManager extends AlpineQueryManager {
                 Date lastFetch = null;
                 IntegrityMatchStatus integrityMatchStatus = null;
                 String integrityRepoUrl = null;
-                if(resultSet.getTimestamp("PUBLISHED_AT") != null) {
+                if (resultSet.getTimestamp("PUBLISHED_AT") != null) {
                     publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
                 }
-                if(resultSet.getTimestamp("LAST_FETCH") != null) {
+                if (resultSet.getTimestamp("LAST_FETCH") != null) {
                     lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
                 }
-                if(resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
+                if (resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
                     integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
                 }
                 if(resultSet.getString("REPOSITORY_URL") != null) {

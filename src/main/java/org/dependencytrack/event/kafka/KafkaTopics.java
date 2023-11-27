@@ -6,12 +6,12 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.cyclonedx.proto.v1_4.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.repometaanalysis.v1.AnalysisCommand;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
-import org.hyades.proto.vulnanalysis.v1.ScanCommand;
-import org.hyades.proto.vulnanalysis.v1.ScanKey;
-import org.hyades.proto.vulnanalysis.v1.ScanResult;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
+import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 
 public final class KafkaTopics {
 

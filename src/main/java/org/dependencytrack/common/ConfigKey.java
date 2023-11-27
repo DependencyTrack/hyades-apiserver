@@ -76,7 +76,8 @@ public enum ConfigKey implements Config.Key {
     INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR("integrityMetaInitializer.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(15).toMillis())),
     INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
-    INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false");
+    INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
+    RUN_MIGRATIONS("run.migrations", true);
 
     private final String propertyName;
     private final Object defaultValue;

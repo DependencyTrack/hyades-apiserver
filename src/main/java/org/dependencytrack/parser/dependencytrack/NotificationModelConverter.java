@@ -1,4 +1,4 @@
-package org.dependencytrack.parser.hyades;
+package org.dependencytrack.parser.dependencytrack;
 
 import alpine.notification.NotificationLevel;
 import com.github.packageurl.PackageURL;
@@ -20,30 +20,30 @@ import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
+import org.dependencytrack.proto.notification.v1.BackReference;
+import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Component;
+import org.dependencytrack.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Level;
+import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
+import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.Policy;
+import org.dependencytrack.proto.notification.v1.PolicyCondition;
+import org.dependencytrack.proto.notification.v1.PolicyViolation;
+import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysis;
+import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
+import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
+import org.dependencytrack.proto.notification.v1.Project;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
+import org.dependencytrack.proto.notification.v1.Vulnerability;
+import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
+import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.util.VulnerabilityUtil;
-import org.hyades.proto.notification.v1.BackReference;
-import org.hyades.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.hyades.proto.notification.v1.BomProcessingFailedSubject;
-import org.hyades.proto.notification.v1.Component;
-import org.hyades.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
-import org.hyades.proto.notification.v1.Group;
-import org.hyades.proto.notification.v1.Level;
-import org.hyades.proto.notification.v1.NewVulnerabilitySubject;
-import org.hyades.proto.notification.v1.NewVulnerableDependencySubject;
-import org.hyades.proto.notification.v1.Notification;
-import org.hyades.proto.notification.v1.Policy;
-import org.hyades.proto.notification.v1.PolicyCondition;
-import org.hyades.proto.notification.v1.PolicyViolation;
-import org.hyades.proto.notification.v1.PolicyViolationAnalysis;
-import org.hyades.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
-import org.hyades.proto.notification.v1.PolicyViolationSubject;
-import org.hyades.proto.notification.v1.Project;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.hyades.proto.notification.v1.Scope;
-import org.hyades.proto.notification.v1.VexConsumedOrProcessedSubject;
-import org.hyades.proto.notification.v1.Vulnerability;
-import org.hyades.proto.notification.v1.VulnerabilityAnalysis;
-import org.hyades.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 
 import java.math.BigDecimal;
 import java.time.ZoneOffset;
@@ -52,30 +52,30 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static org.hyades.proto.notification.v1.Group.GROUP_ANALYZER;
-import static org.hyades.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
-import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
-import static org.hyades.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.hyades.proto.notification.v1.Group.GROUP_CONFIGURATION;
-import static org.hyades.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
-import static org.hyades.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
-import static org.hyades.proto.notification.v1.Group.GROUP_INTEGRATION;
-import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABILITY;
-import static org.hyades.proto.notification.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
-import static org.hyades.proto.notification.v1.Group.GROUP_POLICY_VIOLATION;
-import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
-import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
-import static org.hyades.proto.notification.v1.Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
-import static org.hyades.proto.notification.v1.Group.GROUP_REPOSITORY;
-import static org.hyades.proto.notification.v1.Group.GROUP_UNSPECIFIED;
-import static org.hyades.proto.notification.v1.Group.GROUP_VEX_CONSUMED;
-import static org.hyades.proto.notification.v1.Group.GROUP_VEX_PROCESSED;
-import static org.hyades.proto.notification.v1.Level.LEVEL_ERROR;
-import static org.hyades.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.hyades.proto.notification.v1.Level.LEVEL_WARNING;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_SYSTEM;
-import static org.hyades.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_ANALYZER;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_CONFIGURATION;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_INTEGRATION;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_NEW_VULNERABILITY;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_POLICY_VIOLATION;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_REPOSITORY;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_CONSUMED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_PROCESSED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_WARNING;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_SYSTEM;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
 
 public final class NotificationModelConverter {
 
@@ -228,7 +228,7 @@ public final class NotificationModelConverter {
 
     private static BomConsumedOrProcessedSubject convert(final BomConsumedOrProcessed subject) {
 
-        org.hyades.proto.notification.v1.Bom bom = org.hyades.proto.notification.v1.Bom.newBuilder()
+        org.dependencytrack.proto.notification.v1.Bom bom = org.dependencytrack.proto.notification.v1.Bom.newBuilder()
                 .setSpecVersion(subject.getSpecVersion())
                 .setFormat(subject.getFormat().getFormatShortName())
                 .setContent(subject.getBom())
@@ -243,7 +243,7 @@ public final class NotificationModelConverter {
 
     private static BomProcessingFailedSubject convert(final BomProcessingFailed subject) {
 
-        org.hyades.proto.notification.v1.Bom.Builder bomBuilder = org.hyades.proto.notification.v1.Bom.newBuilder();
+        org.dependencytrack.proto.notification.v1.Bom.Builder bomBuilder = org.dependencytrack.proto.notification.v1.Bom.newBuilder();
         Optional.ofNullable(subject.getBom()).ifPresent(bomBuilder::setContent);
         Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(bomBuilder::setFormat);
         Optional.ofNullable(subject.getSpecVersion()).ifPresent(bomBuilder::setSpecVersion);

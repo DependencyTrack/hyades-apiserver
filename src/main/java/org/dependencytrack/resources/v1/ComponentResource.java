@@ -51,9 +51,9 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.InternalComponentIdentificationUtil;
 import org.dependencytrack.util.PurlUtil;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -418,7 +418,7 @@ public class ComponentResource extends AlpineResource {
             try {
                 Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
                 IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                if(integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
                     calculateIntegrityResult(integrityMetaComponent, component, qm);
                 }
             } catch (MalformedPackageURLException ex) {
@@ -532,7 +532,7 @@ public class ComponentResource extends AlpineResource {
 
                     Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
                     IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                    if(integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                    if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
                         calculateIntegrityResult(integrityMetaComponent, component, qm);
                     }
                 } catch (MalformedPackageURLException ex) {

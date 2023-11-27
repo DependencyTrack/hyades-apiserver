@@ -30,16 +30,10 @@
         <listener-class>alpine.server.persistence.PersistenceInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.upgrade.UpgradeInitializer</listener-class>
+        <listener-class>org.dependencytrack.persistence.migration.MigrationInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
-    </listener>
-    <listener>
-        <listener-class>org.dependencytrack.persistence.StoredProcedureInitializer</listener-class>
-    </listener>
-    <listener>
-        <listener-class>org.dependencytrack.persistence.ShedlockInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>

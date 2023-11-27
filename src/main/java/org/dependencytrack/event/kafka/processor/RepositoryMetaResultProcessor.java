@@ -13,7 +13,7 @@ import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDODataStoreException;
@@ -39,13 +39,13 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
     @Override
     public void process(final Record<String, AnalysisResult> record) {
         final Timer.Sample timerSample = Timer.start();
-        if(!isRecordValid(record)) {
+        if (!isRecordValid(record)) {
             return;
         }
         try (final var qm = new QueryManager()) {
             synchronizeRepositoryMetadata(qm, record);
             IntegrityMetaComponent integrityMetaComponent = synchronizeIntegrityMetadata(qm, record);
-            if(integrityMetaComponent != null) {
+            if (integrityMetaComponent != null) {
                 performIntegrityCheck(integrityMetaComponent, record.value(), qm);
             }
         } catch (Exception e) {

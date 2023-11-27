@@ -31,7 +31,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track</artifactId>
     <packaging>war</packaging>
-    <version>5.2.2-SNAPSHOT</version>
+    <version>5.2.2</version>
 
     <name>Dependency-Track</name>
     <url>https://dependencytrack.org/</url>
@@ -83,7 +83,7 @@
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
-        <lib.cel-tools.version>0.3.21</lib.cel-tools.version>
+        <lib.cel-tools.version>0.4.3</lib.cel-tools.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.14.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
@@ -99,12 +99,12 @@
         -->
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.kafka.version>3.6.0</lib.kafka.version>
-        <lib.kafka-junit.version>3.4.0</lib.kafka-junit.version>
+        <lib.kafka-junit.version>3.5.1</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
-        <lib.protobuf-java.version>3.25.0</lib.protobuf-java.version>
+        <lib.protobuf-java.version>3.25.1</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.0.1</lib.resilience4j.version>
         <lib.snappy-java.version>1.1.10.5</lib.snappy-java.version>
@@ -132,6 +132,7 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+        <lib.liquibase.version>4.25.0</lib.liquibase.version>
     </properties>
 
     <repositories>
@@ -384,6 +385,13 @@
             <artifactId>postgres-socket-factory</artifactId>
             <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${lib.liquibase.version}</version>
+        </dependency>
+
         <!-- Xerces -->
         <dependency>
             <groupId>xerces</groupId>
@@ -400,7 +408,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.24.0</version>
+            <version>1.25.0</version>
         </dependency>
         <!-- Resilience4J -->
         <dependency>
@@ -650,6 +658,18 @@
                     <webApp>
                         <contextPath>/</contextPath>
                     </webApp>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <version>${lib.liquibase.version}</version>
+                <configuration>
+                    <outputChangeLogFile>src/main/resources/migration/changelog.xml</outputChangeLogFile>
+                    <url>jdbc:postgresql://localhost:5432/dtrack</url>
+                    <driver>org.postgresql.Driver</driver>
+                    <username></username>
+                    <password></password>
                 </configuration>
             </plugin>
         </plugins>

@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-// Public API for Hyades repository meta analysis.
-package org.hyades.repometaanalysis.v1;
+// Public API for DependencyTrack repository meta analysis.
+package org.dependencytrack.repometaanalysis.v1;
 
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
-option java_package = "org.hyades.proto.repometaanalysis.v1";
+option java_package = "org.dependencytrack.proto.repometaanalysis.v1";
 
 message AnalysisCommand {
   // The component that shall be analyzed.

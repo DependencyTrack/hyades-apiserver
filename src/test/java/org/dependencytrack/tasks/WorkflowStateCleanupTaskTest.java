@@ -1,19 +1,13 @@
 package org.dependencytrack.tasks;
 
-import alpine.server.util.DbUtil;
-import org.apache.commons.io.IOUtils;
 import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.junit.Before;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
-import javax.jdo.datastore.JDOConnection;
-import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
 import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,17 +19,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class WorkflowStateCleanupTaskTest extends AbstractPostgresEnabledTest {
-
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
-
-        final String shedlockSql = IOUtils.resourceToString("/shedlock.sql", StandardCharsets.UTF_8);
-        final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
-        final Connection connection = (Connection) jdoConnection.getNativeConnection();
-        DbUtil.executeUpdate(connection, shedlockSql);
-        jdoConnection.close();
-    }
 
     @Test
     public void testTransitionToTimedOut() {

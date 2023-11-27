@@ -5,8 +5,8 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.PurlUtil;
-import org.hyades.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Test;
 
 import java.util.UUID;

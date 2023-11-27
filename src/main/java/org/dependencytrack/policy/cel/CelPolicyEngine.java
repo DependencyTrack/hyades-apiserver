@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.api.expr.v1alpha1.Type;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
@@ -75,6 +76,7 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_NOW;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
 import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
 
@@ -192,6 +194,7 @@ public class CelPolicyEngine {
 
             // Evaluate all policy conditions against all components.
             final var conditionsViolated = new HashSetValuedHashMap<Long, PolicyCondition>();
+            final Timestamp protoNow = Timestamps.now(); // Use consistent now timestamp for all evaluations.
             for (final ComponentProjection component : components) {
                 final org.dependencytrack.proto.policy.v1.Component protoComponent = mapToProto(component, licenseById);
                 final List<org.dependencytrack.proto.policy.v1.Vulnerability> protoVulns =
@@ -201,6 +204,7 @@ public class CelPolicyEngine {
 
                 conditionsViolated.putAll(component.id, evaluateConditions(conditionScriptPairs, Map.of(
                         VAR_COMPONENT, protoComponent,
+                        VAR_NOW, protoNow,
                         VAR_PROJECT, protoProject,
                         VAR_VULNERABILITIES, protoVulns
                 )));

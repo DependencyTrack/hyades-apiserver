@@ -9,7 +9,7 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.repometaanalysis.v1.AnalysisResult;
+import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 
 import java.util.Date;
 import java.util.List;

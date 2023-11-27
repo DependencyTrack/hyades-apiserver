@@ -16,7 +16,7 @@ import org.dependencytrack.persistence.QueryManager;
 import java.util.List;
 
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
-import static org.hyades.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA;
+import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA;
 
 public class IntegrityMetaInitializerTask implements Subscriber {
 
@@ -52,14 +52,14 @@ public class IntegrityMetaInitializerTask implements Subscriber {
             try {
                 PackageURL purl = new PackageURL(integrityMetaPurl.getPurl());
                 //dispatch for integrity metadata only if purl type is supported
-                if(SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(purl.getType())) {
+                if (SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(purl.getType())) {
                     IntegrityMetaInitializerTask.ComponentProjection componentProjection = qm.getComponentByPurl(integrityMetaPurl.getPurl());
                     LOGGER.debug("Dispatching purl for integrity metadata: " + integrityMetaPurl.getPurl());
                     //Initializer will not trigger Integrity Check on component so component uuid is not required
                     kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, integrityMetaPurl.getPurl(), componentProjection.internal(), FETCH_META_INTEGRITY_DATA));
                 }
             } catch (MalformedPackageURLException packageURLException) {
-                LOGGER.warn("Initializer cannot dispatch for integrity because purl cannot be parse: "+ integrityMetaPurl.getPurl());
+                LOGGER.warn("Initializer cannot dispatch for integrity because purl cannot be parse: " + integrityMetaPurl.getPurl());
                 //skip malformed url
             }
         }

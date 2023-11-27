@@ -49,7 +49,7 @@ import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
-import org.hyades.proto.notification.v1.ProjectVulnAnalysisStatus;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.Query;
