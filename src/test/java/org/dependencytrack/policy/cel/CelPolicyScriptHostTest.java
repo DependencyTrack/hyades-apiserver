@@ -85,7 +85,6 @@ public class CelPolicyScriptHostTest {
     }
 
     @Test
-
     public void testVisitVersRangeCheck() {
         var exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance().compile("""
                 project.name == "foo" && project.matches_range("vers:generic<1")

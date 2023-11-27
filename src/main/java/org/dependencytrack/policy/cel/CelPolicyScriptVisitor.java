@@ -120,25 +120,25 @@ class CelPolicyScriptVisitor {
     public void visitVersRangeCheck(final Expr expr) throws ScriptCreateException {
         for (Expr argExpr : expr.getCallExpr().getArgsList()) {
             if (argExpr.hasCallExpr()) {
-                checkVersRange(argExpr.getCallExpr());
+                validateVersRange(argExpr.getCallExpr());
                 visitVersRangeCheck(argExpr);
             }
             if (argExpr.hasComprehensionExpr()) {
                 var argCallExpr = argExpr.getComprehensionExpr();
                 if (argCallExpr.hasLoopStep()) {
-                    checkVersRange(argCallExpr.getLoopStep().getCallExpr());
+                    validateVersRange(argCallExpr.getLoopStep().getCallExpr());
                     visitVersRangeCheck(argCallExpr.getLoopStep());
                 }
             }
         }
     }
 
-    private static void checkVersRange(Expr.Call callExpr) throws ScriptCreateException {
+    private static void validateVersRange(Expr.Call callExpr) throws ScriptCreateException {
         if (callExpr.getFunction().equals("matches_range") && !callExpr.getArgsList().isEmpty()
             && callExpr.getArgsList().get(0).getExprKindCase() == CONST_EXPR) {
             var versArg = callExpr.getArgsList().get(0).getConstExpr().getStringValue();
             try {
-                Vers.parse(versArg);
+                Vers.parse(versArg).validate();
             } catch (VersException e) {
                 throw new ScriptCreateException("Failed to parse the vers range ", newIssues(new Errors(newTextSource(versArg))
                         .append(Collections.singletonList(
