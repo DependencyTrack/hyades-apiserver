@@ -118,10 +118,24 @@ class CelPolicyScriptVisitor {
     }
 
     public void visitVersRangeCheck(final Expr expr) throws ScriptCreateException {
-        final var callExpr = expr.getCallExpr();
-        if (callExpr.getFunction().equals("matches_range")
-                && !callExpr.getArgsList().isEmpty()
-                && callExpr.getArgsList().get(0).getExprKindCase() == CONST_EXPR) {
+        for (Expr argExpr : expr.getCallExpr().getArgsList()) {
+            if (argExpr.hasCallExpr()) {
+                checkVersRange(argExpr.getCallExpr());
+                visitVersRangeCheck(argExpr);
+            }
+            if (argExpr.hasComprehensionExpr()) {
+                var argCallExpr = argExpr.getComprehensionExpr();
+                if (argCallExpr.hasLoopStep()) {
+                    checkVersRange(argCallExpr.getLoopStep().getCallExpr());
+                    visitVersRangeCheck(argCallExpr.getLoopStep());
+                }
+            }
+        }
+    }
+
+    private static void checkVersRange(Expr.Call callExpr) throws ScriptCreateException {
+        if (callExpr.getFunction().equals("matches_range") && !callExpr.getArgsList().isEmpty()
+            && callExpr.getArgsList().get(0).getExprKindCase() == CONST_EXPR) {
             var versArg = callExpr.getArgsList().get(0).getConstExpr().getStringValue();
             try {
                 Vers.parse(versArg);

@@ -88,9 +88,18 @@ public class CelPolicyScriptHostTest {
 
     public void testVisitVersRangeCheck() {
         var exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance().compile("""
-                project.matches_range("vers:generic<1")
+                project.name == "foo" && project.matches_range("vers:generic<1")
                 """, CacheMode.NO_CACHE));
         assertThat(exception.getMessage()).contains("Failed to parse the vers range");
+
+        assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance().compile("""
+                component.matches_range("vers:generic<1") == "foo" && project.matches_range("vers:generic<1")
+                """, CacheMode.NO_CACHE));
+
+        exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance().compile("""
+                component.name == "foo" || vulns.exists(vuln, vuln.id == "foo" && component.matches_range("versgeneric/<1"))
+                """, CacheMode.NO_CACHE));
+        assertThat(exception.getMessage()).contains("vers string does not contain a URI scheme separator");
 
         assertDoesNotThrow(() -> CelPolicyScriptHost.getInstance().compile("""
                 project.matches_range("vers:generic/<1")
