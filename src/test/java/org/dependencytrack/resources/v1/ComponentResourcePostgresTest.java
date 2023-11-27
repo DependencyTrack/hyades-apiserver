@@ -3,10 +3,8 @@ package org.dependencytrack.resources.v1;
 import alpine.Config;
 import alpine.server.filters.ApiFilter;
 import alpine.server.persistence.PersistenceManagerFactory;
-import alpine.server.util.DbUtil;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
@@ -18,6 +16,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
@@ -28,18 +27,16 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import javax.jdo.JDOHelper;
-import javax.jdo.datastore.JDOConnection;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonReader;
 import javax.ws.rs.core.Response;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -77,6 +74,12 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                 .withDatabaseName("dtrack");
         postgresContainer.start();
 
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        MigrationInitializer.runMigration(dataSource, /* silent */ true);
+
         final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
                 postgresContainer.getDriverClassName(),
                 postgresContainer.getUsername(),
@@ -88,11 +91,6 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
         qm = new QueryManager();
 
-        final String shedlockSql = IOUtils.resourceToString("/shedlock.sql", StandardCharsets.UTF_8);
-        final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
-        final Connection connection = (Connection) jdoConnection.getNativeConnection();
-        DbUtil.executeUpdate(connection, shedlockSql);
-        jdoConnection.close();
         environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
     }
