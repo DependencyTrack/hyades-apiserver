@@ -38,7 +38,6 @@ import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.VulnDbSyncEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
 import org.dependencytrack.event.WorkflowStateCleanupEvent;
@@ -58,7 +57,6 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_NIST_MIRR
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
@@ -92,7 +90,6 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new PortfolioMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
                     Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
                     Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
-                    Map.entry(new VulnDbSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNDB_SYNC_TASK))),
                     Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
                     Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
                     Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK))),
