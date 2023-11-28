@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-class CelPolicyLibrary implements Library {
+public class CelPolicyLibrary implements Library {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyLibrary.class);
 
@@ -50,12 +50,12 @@ class CelPolicyLibrary implements Library {
     static final String VAR_PROJECT = "project";
     static final String VAR_VULNERABILITIES = "vulns";
 
-    static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
+    public static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
     static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
     static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
-    static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
+    public static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
     static final Type TYPE_PROJECT_PROPERTY = Decls.newObjectType(Project.Property.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
+    public static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
     static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
     static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 

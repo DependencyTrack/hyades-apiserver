@@ -131,4 +131,8 @@ public final class PersistenceUtil {
         }
     }
 
+    public static void assertNonPersistent(final Object object, final String message) {
+        // TODO
+    }
+
 }

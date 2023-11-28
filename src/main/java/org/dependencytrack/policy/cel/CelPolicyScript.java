@@ -19,11 +19,11 @@ public class CelPolicyScript {
         this.requirements = requirements;
     }
 
-    MultiValuedMap<Type, String> getRequirements() {
+    public MultiValuedMap<Type, String> getRequirements() {
         return requirements;
     }
 
-    boolean execute(final Map<String, Object> arguments) throws ScriptExecutionException {
+    public boolean execute(final Map<String, Object> arguments) throws ScriptExecutionException {
         final Val result = program.eval(arguments).getVal();
 
         if (Err.isError(result)) {

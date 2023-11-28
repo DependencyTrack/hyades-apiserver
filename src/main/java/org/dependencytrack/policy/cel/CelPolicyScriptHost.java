@@ -52,7 +52,7 @@ public class CelPolicyScriptHost {
     private final AbstractCacheManager cacheManager;
     private final Env environment;
 
-    CelPolicyScriptHost(final AbstractCacheManager cacheManager) {
+    public CelPolicyScriptHost(final AbstractCacheManager cacheManager) {
         this.locks = Striped.lock(128);
         this.cacheManager = cacheManager;
         this.environment = Env.newCustomEnv(
