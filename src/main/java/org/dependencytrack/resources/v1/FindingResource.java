@@ -88,7 +88,6 @@ public class FindingResource extends AlpineResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
-                    //final long totalCount = qm.getVulnerabilityCount(project, suppressed);
                     final List<Finding> findings = qm.getFindings(project, suppressed);
                     if (source != null) {
                         final List<Finding> filteredList = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
