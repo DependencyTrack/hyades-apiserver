@@ -1228,6 +1228,10 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getMostRecentDependencyMetrics(component);
     }
 
+    public DependencyMetrics getMostRecentDependencyMetricsById(long component) {
+        return getMetricsQueryManager().getMostRecentDependencyMetricsById(component);
+    }
+
     public PaginatedResult getDependencyMetrics(Component component) {
         return getMetricsQueryManager().getDependencyMetrics(component);
     }

@@ -142,7 +142,7 @@ public class ComponentProjection {
 
     public Long totalCount;
 
-    public static final Component mapToComponent(ComponentProjection result) {
+    public static Component mapToComponent(ComponentProjection result) {
         Component componentPersistent = new Component();
         componentPersistent.setAuthor(result.author);
         componentPersistent.setBlake2b_256(result.blake2b_256);
