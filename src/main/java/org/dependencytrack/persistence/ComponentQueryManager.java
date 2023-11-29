@@ -21,6 +21,7 @@ package org.dependencytrack.persistence;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
+import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
@@ -32,6 +33,7 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -49,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.dependencytrack.model.sqlmapping.ComponentProjection.mapToComponent;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -156,56 +160,191 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      * @return a List of Dependency objects
      */
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
-        final PaginatedResult result;
-        String querySring = "SELECT FROM org.dependencytrack.model.Component WHERE project == :project ";
-        if (filter != null) {
-            querySring += " && (project == :project) && name.toLowerCase().matches(:name)";
-        }
+        List<Component> componentsResult = new ArrayList<>();
+        String queryString = """
+                        SELECT "A0"."ID" AS "id",
+                        "A0"."NAME" AS "name",
+                        "A0"."AUTHOR" AS "author",
+                        "A0"."BLAKE2B_256" AS "blake2b_256",
+                        "A0"."BLAKE2B_384" AS "blake2b_384",
+                        "A0"."BLAKE2B_512" AS "blake2b_512",
+                        "A0"."BLAKE3" AS "blake3",
+                        "A0"."CLASSIFIER" AS "classifier",
+                        "A0"."COPYRIGHT" AS "copyright",
+                        "A0"."CPE" AS "cpe",
+                        "A0"."PUBLISHER" AS "publisher",
+                        "A0"."PURL" AS "purl",
+                        "A0"."PURLCOORDINATES" AS "purlCoordinates",
+                        "A0"."DESCRIPTION" AS "description",
+                        "A0"."DIRECT_DEPENDENCIES" AS "directDependencies",
+                        "A0"."EXTENSION" AS "extension",
+                        "A0"."EXTERNAL_REFERENCES" AS "externalReferences",
+                        "A0"."FILENAME" AS "filename",
+                        "A0"."GROUP" AS "group",
+                        "A0"."INTERNAL" AS "internal",
+                        "A0"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
+                        "A0"."LICENSE" AS "componentLicenseName",
+                        "A0"."LICENSE_EXPRESSION" AS "licenseExpression",
+                        "A0"."LICENSE_URL" AS "licenseUrl",
+                        "A0"."TEXT" AS "text",
+                        "A0"."MD5" AS "md5",
+                        "A0"."SHA1" AS "sha1",
+                        "A0"."SHA_256" AS "sha256",
+                        "A0"."SHA_384" AS "sha384",
+                        "A0"."SHA_512" AS "sha512",
+                        "A0"."SHA3_256" AS "sha3_256",
+                        "A0"."SHA3_384" AS "sha3_384",
+                        "A0"."SHA3_512" AS "sha3_512",
+                        "A0"."SWIDTAGID" AS "swidTagId",
+                        "A0"."UUID" AS "uuid",
+                        "A0"."VERSION" AS "version",
+                        "B0"."ACTIVE" AS "projectActive",
+                        "B0"."AUTHOR" AS "projectAuthor",
+                        "B0"."CLASSIFIER" AS "projectClassifier",
+                        "B0"."CPE" AS "projectCpe",
+                        "B0"."DESCRIPTION" AS "projectDescription",
+                        "B0"."DIRECT_DEPENDENCIES" AS "projectDirectDependencies",
+                        "B0"."EXTERNAL_REFERENCES" AS "projectExternalReferences",
+                        "B0"."GROUP" AS "projectGroup",
+                        "B0"."ID" AS "projectId",
+                        "B0"."LAST_BOM_IMPORTED" AS "lastBomImport",
+                        "B0"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat",
+                        "B0"."LAST_RISKSCORE" AS "projectLastInheritedRiskScore",
+                        "B0"."NAME" AS "projectName",
+                        "B0"."PUBLISHER" AS "projectPublisher",
+                        "B0"."PURL" AS "projectPurl",
+                        "B0"."SWIDTAGID" AS "projectSwidTagId",
+                        "B0"."UUID" AS "projectUuid",
+                        "B0"."VERSION" AS "projectVersion",
+                        "D0"."ISCUSTOMLICENSE" AS "isCustomLicense",
+                        "D0"."FSFLIBRE" AS "isFsfLibre",
+                        "D0"."LICENSEID" AS "licenseId",
+                        "D0"."ISOSIAPPROVED" AS "isOsiApproved",
+                        "D0"."UUID" AS "licenseUuid",
+                        "D0"."NAME" AS "licenseName",
+                        "I0"."LAST_FETCH" AS "lastFetch",
+                        "I0"."PUBLISHED_AT" AS "publishedAt",
+                        "IA"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
+                        "I0"."REPOSITORY_URL" AS "integrityRepoUrl",
+                        COUNT(*) OVER() AS "totalCount"
+                FROM "COMPONENT" "A0"
+                INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
+                LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
+                LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
+                LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
+                WHERE "A0"."PROJECT_ID" = ?
+                """;
+
         if (onlyOutdated) {
             // Components are considered outdated when metadata does exists, but the version is different than latestVersion
             // Different should always mean version < latestVersion
             // Hack JDO using % instead of .* to get the SQL LIKE clause working:
-            querySring +=
-                    " && !(" +
-                            " SELECT FROM org.dependencytrack.model.RepositoryMetaComponent m " +
-                            " WHERE m.name == this.name " +
-                            " && m.namespace == this.group " +
-                            " && m.latestVersion != this.version " +
-                            " && this.purl.matches('pkg:' + m.repositoryType.toString().toLowerCase() + '/%') " +
-                            " ).isEmpty()";
+            queryString +=
+                    """
+                        AND NOT (NOT EXISTS (
+                        SELECT "M"."ID"
+                        FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
+                        AND "M"."NAMESPACE" = "A0"."GROUP"
+                        AND "M"."LATEST_VERSION" <> "A0"."VERSION"
+                        AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
+                    """;
         }
         if (onlyDirect) {
-            querySring +=
-                    " && this.project.directDependencies.matches('%\"uuid\":\"'+this.uuid+'\"%') "; // only direct dependencies
+            queryString +=
+                    """
+                       AND "B0"."DIRECT_DEPENDENCIES" LIKE (('%' || "A0"."UUID") || '%') ESCAPE E'\\\\'
+                    """;
         }
-        final Query<Component> query = pm.newQuery(querySring);
-        query.getFetchPlan().setMaxFetchDepth(2);
         if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-        if (filter != null) {
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            result = execute(query, project, filterString);
+            queryString +=
+                    """
+                        ORDER BY "name",
+                        "version" DESC
+                    """;
         } else {
-            result = execute(query, project);
+            if (orderBy.equalsIgnoreCase("componentMetaInformation.publishedDate")) {
+                queryString +=
+                        """
+                            ORDER BY "publishedAt"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("version")) {
+                queryString +=
+                        """
+                            ORDER BY "version"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("name")) {
+                queryString +=
+                        """
+                            ORDER BY "name"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("group")) {
+                queryString +=
+                        """
+                            ORDER BY "group"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("lastInheritedRiskScore")) {
+                queryString +=
+                        """
+                            ORDER BY "lastInheritedRiskScore"
+                        """;
+            }
+            if (orderBy.equalsIgnoreCase("componentMetaInformation.integrityMatchStatus")) {
+                queryString +=
+                        """
+                            ORDER BY "integrityCheckStatus"
+                        """;
+            }
+            if (queryString.contains("ORDER BY")) {
+                if (orderDirection == OrderDirection.ASCENDING) {
+                    queryString += " ASC ";
+                } else if (orderDirection == OrderDirection.DESCENDING) {
+                    queryString += " DESC ";
+                }
+                queryString += """
+                        , "id"
+                        """;
+            }
         }
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                component.setMetrics(getMostRecentDependencyMetrics(component));
+
+        if (pagination != null && pagination.isPaginated()) {
+            queryString +=
+                    """
+                        OFFSET %d
+                        LIMIT %d;
+                    """.formatted(pagination.getOffset(), pagination.getLimit());
+        }
+
+        Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setParameters(project.getId());
+        List<ComponentProjection> resultSet;
+        try {
+            resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
+        }
+        finally {
+            query.closeAll();
+        }
+        for (final var result : resultSet) {
+            final org.dependencytrack.model.Component component = mapToComponent(result);
+            if (includeMetrics) {
+//             Populate each Component object in the paginated result with transitive related
+//             data to minimize the number of round trips a client needs to make, process, and render.
+                component.setMetrics(getMostRecentDependencyMetricsById(component.getId()));
                 final PackageURL purl = component.getPurl();
                 if (purl != null) {
                     final RepositoryType type = RepositoryType.resolve(purl);
                     if (RepositoryType.UNSUPPORTED != type) {
                         final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
                         component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
                     }
                 }
             }
+            componentsResult.add(component);
         }
-        return result;
+        return (new PaginatedResult()).objects(componentsResult).total(resultSet.isEmpty() ? 0 : resultSet.get(0).totalCount);
     }
 
     /**

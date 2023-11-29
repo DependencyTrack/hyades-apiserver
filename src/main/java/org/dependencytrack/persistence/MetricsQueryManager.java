@@ -151,6 +151,20 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
+     * Retrieves the most recent DependencyMetrics by component ID.
+     *
+     * @param componentId the Component ID to retrieve metrics for
+     * @return a DependencyMetrics object
+     */
+    public DependencyMetrics getMostRecentDependencyMetricsById(long componentId) {
+        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component.id == :componentId");
+        query.setOrdering("lastOccurrence desc");
+        query.setRange(0, 1);
+        return singleResult(query.execute(componentId));
+
+    }
+
+    /**
      * Retrieves DependencyMetrics in descending order starting with the most recent.
      *
      * @param component the Component to retrieve metrics for

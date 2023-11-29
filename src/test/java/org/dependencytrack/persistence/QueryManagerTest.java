@@ -47,12 +47,14 @@ public class QueryManagerTest extends PersistenceCapableTest {
         integrityMetaComponent.setPublishedAt(published);
         integrityMetaComponent.setLastFetch(published);
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        integrityMetaComponent.setRepositoryUrl("repo.url.com");
         qm.createIntegrityMetaComponent(integrityMetaComponent);
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
         assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
         assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());
+        assertEquals(integrityMetaComponent.getRepositoryUrl(), componentMetaInformation.integrityRepoUrl());
     }
 
     @Test

@@ -1228,6 +1228,10 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getMostRecentDependencyMetrics(component);
     }
 
+    public DependencyMetrics getMostRecentDependencyMetricsById(long component) {
+        return getMetricsQueryManager().getMostRecentDependencyMetricsById(component);
+    }
+
     public PaginatedResult getDependencyMetrics(Component component) {
         return getMetricsQueryManager().getDependencyMetrics(component);
     }
@@ -1882,7 +1886,7 @@ public class QueryManager extends AlpineQueryManager {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         String queryString = """
-                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS" FROM "COMPONENT" "C"
+                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS", "IMC"."REPOSITORY_URL" FROM "COMPONENT" "C"
                 JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
                 """;
         try {
@@ -1895,6 +1899,7 @@ public class QueryManager extends AlpineQueryManager {
                 Date publishedDate = null;
                 Date lastFetch = null;
                 IntegrityMatchStatus integrityMatchStatus = null;
+                String integrityRepoUrl = null;
                 if (resultSet.getTimestamp("PUBLISHED_AT") != null) {
                     publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
                 }
@@ -1904,7 +1909,10 @@ public class QueryManager extends AlpineQueryManager {
                 if (resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
                     integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
                 }
-                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch);
+                if(resultSet.getString("REPOSITORY_URL") != null) {
+                    integrityRepoUrl = String.valueOf(resultSet.getString("REPOSITORY_URL"));
+                }
+                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch, integrityRepoUrl);
 
             }
         } catch (Exception ex) {
