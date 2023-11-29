@@ -48,6 +48,7 @@ public class CelPolicyLibrary implements Library {
     static final String VAR_COMPONENT = "component";
     static final String VAR_NOW = "now";
     static final String VAR_PROJECT = "project";
+    static final String VAR_VULNERABILITY = "vuln";
     static final String VAR_VULNERABILITIES = "vulns";
 
     public static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
@@ -80,6 +81,12 @@ public class CelPolicyLibrary implements Library {
                         Decls.newVar(
                                 VAR_PROJECT,
                                 TYPE_PROJECT
+                        ),
+                        // TODO: Define separate context for VulnerabilityPolicy, we don't want to
+                        //   poison the component policy context.
+                        Decls.newVar(
+                                VAR_VULNERABILITY,
+                                TYPE_VULNERABILITY
                         ),
                         Decls.newVar(
                                 VAR_VULNERABILITIES,
