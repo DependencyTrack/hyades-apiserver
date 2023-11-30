@@ -30,6 +30,8 @@ public final class PolicyProtoMapper {
             return org.dependencytrack.proto.policy.v1.Component.getDefaultInstance();
         }
 
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
         assertNonPersistent(component, "component must not be persistent");
 
         final org.dependencytrack.proto.policy.v1.Component.Builder protoBuilder =
@@ -69,6 +71,8 @@ public final class PolicyProtoMapper {
             return org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
         }
 
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
         assertNonPersistent(project, "project must not be persistent");
 
         final org.dependencytrack.proto.policy.v1.Project.Builder protoBuilder =
@@ -94,6 +98,8 @@ public final class PolicyProtoMapper {
             return org.dependencytrack.proto.policy.v1.Vulnerability.getDefaultInstance();
         }
 
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
         assertNonPersistent(vuln, "vuln must not be persistent");
 
         final org.dependencytrack.proto.policy.v1.Vulnerability.Builder protoBuilder =
