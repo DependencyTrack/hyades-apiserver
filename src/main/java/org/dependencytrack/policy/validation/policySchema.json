@@ -101,11 +101,7 @@
         "vector": {
           "description": "Vector of the method.",
           "type": "string",
-          "pattern": ["SL:\\d/M:\\d/O:\\d/S:\\d/ED:\\d/EE:\\d/A:\\d/ID:\\d/LC:\\d/LI:\\d/LAV:\\d/LAC:\\d/FD:\\d/RD:\\d/NC:\\d/PV:\\d",
-            "AV:(N|A|L)\\/AC:(L|M|H)\\/A[Uu]:(N|S|M)\\/C:(N|P|C)\\/I:(N|P|C)\\/A:(N|P|C)",
-            "AV:(N|A|L|P)\\/AC:(L|H)\\/PR:(N|L|H)\\/UI:(N|R)\\/S:(U|C)\\/C:(N|L|H)\\/I:(N|L|H)\\/A:(N|L|H)",
-            "AV:(N|A|L|P)\\/AC:(L|H)\\/PR:(N|L|H)\\/UI:(N|R)\\/S:(U|C)\\/C:(N|L|H)\\/I:(N|L|H)\\/A:(N|L|H)\\/E:(F|H|U|P|X)\\/RL:(W|U|T|O|X)\\/RC:(C|R|U|X)\\/CR:(X|L|M|H)\\/IR:(X|L|M|H)\\/AR:(X|L|M|H)\\/MAV:(X|N|A|L|P)\\/MAC:(X|L|H)\\/MPR:(X|N|L|H)\\/MUI:(X|N|R)\\/MS:(X|U|C)\\/MC:(X|N|L|H)\\/MI:(X|N|L|H)\\/MA:(X|N|L|H)"
-          ]
+          "pattern": "(SL:\\d/M:\\d/O:\\d/S:\\d/ED:\\d/EE:\\d/A:\\d/ID:\\d/LC:\\d/LI:\\d/LAV:\\d/LAC:\\d/FD:\\d/RD:\\d/NC:\\d/PV:\\d)|(AV:(N|A|L)\\/AC:(L|M|H)\\/A[Uu]:(N|S|M)\\/C:(N|P|C)\\/I:(N|P|C)\\/A:(N|P|C)|AV:(N|A|L|P)\\/AC:(L|H)\\/PR:(N|L|H)\\/UI:(N|R)\\/S:(U|C)\\/C:(N|L|H)\\/I:(N|L|H)\\/A:(N|L|H))|(AV:(N|A|L|P)\\/AC:(L|H)\\/PR:(N|L|H)\\/UI:(N|R)\\/S:(U|C)\\/C:(N|L|H)\\/I:(N|L|H)\\/A:(N|L|H)\\/E:(F|H|U|P|X)\\/RL:(W|U|T|O|X)\\/RC:(C|R|U|X)\\/CR:(X|L|M|H)\\/IR:(X|L|M|H)\\/AR:(X|L|M|H)\\/MAV:(X|N|A|L|P)\\/MAC:(X|L|H)\\/MPR:(X|N|L|H)\\/MUI:(X|N|R)\\/MS:(X|U|C)\\/MC:(X|N|L|H)\\/MI:(X|N|L|H)\\/MA:(X|N|L|H))"
         },
         "score": {
           "description": "Numeric score for the method.",
