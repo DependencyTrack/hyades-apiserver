@@ -2317,11 +2317,25 @@
 
         <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameNumberedIndexesChange"/>
     </changeSet>
+
     <changeSet id="v5.3.0-3" author="VithikaS">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="SCHEMAVERSION"/>
         </preConditions>
 
         <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
+    </changeSet>
+
+    <changeSet id="v5.3.0-4" author="nscuro@protonmail.com">
+        <dropIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX"/>
+        <createIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPOSITE_IDX" tableName="COMPONENTS_VULNERABILITIES" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>
