@@ -3,9 +3,13 @@ package org.dependencytrack.model.mapping;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -13,6 +17,7 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
 
@@ -59,9 +64,51 @@ public final class PolicyProtoMapper {
         maybeSet(component::getBlake3, protoBuilder::setBlake3);
         maybeSet(component::getLicense, protoBuilder::setLicenseName);
         maybeSet(component::getLicenseExpression, protoBuilder::setLicenseExpression);
-        // TODO: Resolved license
+        maybeSet(() -> component.getResolvedLicense() != null
+                ? mapToProto(component.getResolvedLicense())
+                : null, protoBuilder::setResolvedLicense);
         maybeSet(() -> (component.getRepositoryMeta() != null && component.getRepositoryMeta().getLatestVersion() != null)
-                ? component.getRepositoryMeta().getLatestVersion() : null, protoBuilder::setLatestVersion);
+                ? component.getRepositoryMeta().getLatestVersion()
+                : null, protoBuilder::setLatestVersion);
+
+        return protoBuilder.build();
+    }
+
+    private static org.dependencytrack.proto.policy.v1.License mapToProto(final License license) {
+        if (license == null) {
+            return org.dependencytrack.proto.policy.v1.License.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(license, "license must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.License.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.License.newBuilder();
+        maybeSet(asString(license.getUuid()), protoBuilder::setUuid);
+        maybeSet(license::getLicenseId, protoBuilder::setId);
+        maybeSet(license::getName, protoBuilder::setName);
+        maybeSet(license::isCustomLicense, protoBuilder::setIsCustom);
+        maybeSet(license::isDeprecatedLicenseId, protoBuilder::setIsDeprecatedId);
+        maybeSet(license::isFsfLibre, protoBuilder::setIsFsfLibre);
+        maybeSet(license::isOsiApproved, protoBuilder::setIsOsiApproved);
+
+        return protoBuilder.build();
+    }
+
+    private static org.dependencytrack.proto.policy.v1.License.Group mapToProto(final LicenseGroup licenseGroup) {
+        if (licenseGroup == null) {
+            return org.dependencytrack.proto.policy.v1.License.Group.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(licenseGroup, "licenseGroup must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.License.Group.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.License.Group.newBuilder();
+        maybeSet(asString(licenseGroup.getUuid()), protoBuilder::setUuid);
+        maybeSet(licenseGroup::getName, protoBuilder::setName);
 
         return protoBuilder.build();
     }
@@ -83,12 +130,35 @@ public final class PolicyProtoMapper {
         maybeSet(project::getVersion, protoBuilder::setVersion);
         maybeSet(asString(project.getClassifier()), protoBuilder::setClassifier);
         maybeSet(() -> project.isActive() != null ? project.isActive() : true, protoBuilder::setIsActive);
-        maybeSet(() -> project.getTags() != null ? project.getTags().stream().map(Tag::getName).toList() : Collections.emptyList(), protoBuilder::addAllTags);
-        // TODO: Properties
+        maybeSet(() -> project.getTags() != null
+                ? project.getTags().stream().map(Tag::getName).toList()
+                : Collections.emptyList(), protoBuilder::addAllTags);
+        maybeSet(() -> project.getProperties() != null
+                ? project.getProperties().stream().map(PolicyProtoMapper::mapToProto).toList()
+                : Collections.emptyList(), protoBuilder::addAllProperties);
         maybeSet(project::getCpe, protoBuilder::setCpe);
         maybeSet(() -> project.getPurl() != null ? project.getPurl().canonicalize() : null, protoBuilder::setPurl);
         maybeSet(project::getSwidTagId, protoBuilder::setSwidTagId);
         maybeSet(asTimestamp(project.getLastBomImport()), protoBuilder::setLastBomImport);
+
+        return protoBuilder.build();
+    }
+
+    private static org.dependencytrack.proto.policy.v1.Project.Property mapToProto(final ProjectProperty property) {
+        if (property == null) {
+            return org.dependencytrack.proto.policy.v1.Project.Property.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(property, "property must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.Project.Property.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.Project.Property.newBuilder();
+        maybeSet(property::getGroupName, protoBuilder::setGroup);
+        maybeSet(property::getPropertyName, protoBuilder::setName);
+        maybeSet(asString(property.getPropertyType()), protoBuilder::setType);
+        maybeSet(property::getPropertyValue, protoBuilder::setValue);
 
         return protoBuilder.build();
     }
@@ -107,7 +177,9 @@ public final class PolicyProtoMapper {
         maybeSet(asString(vuln.getUuid()), protoBuilder::setUuid);
         maybeSet(vuln::getVulnId, protoBuilder::setId);
         maybeSet(vuln::getSource, protoBuilder::setSource);
-        // TODO: Aliases
+        maybeSet(() -> vuln.getAliases() != null
+                ? vuln.getAliases().stream().flatMap(PolicyProtoMapper::mapToProtos).distinct().toList()
+                : Collections.emptyList(), protoBuilder::addAllAliases);
         maybeSet(vuln::getCwes, protoBuilder::addAllCwes);
         maybeSet(asTimestamp(vuln.getCreated()), protoBuilder::setCreated);
         maybeSet(asTimestamp(vuln.getPublished()), protoBuilder::setPublished);
@@ -129,6 +201,22 @@ public final class PolicyProtoMapper {
         maybeSet(asDouble(vuln.getEpssPercentile()), protoBuilder::setEpssPercentile);
 
         return protoBuilder.build();
+    }
+
+    private static Stream<org.dependencytrack.proto.policy.v1.Vulnerability.Alias> mapToProtos(final VulnerabilityAlias alias) {
+        if (alias == null) {
+            return Stream.empty();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(alias, "alias must not be persistent");
+
+        return alias.getAllBySource().entrySet().stream()
+                .map(aliasEntry -> org.dependencytrack.proto.policy.v1.Vulnerability.Alias.newBuilder()
+                        .setSource(aliasEntry.getKey().name())
+                        .setId(aliasEntry.getValue())
+                        .build());
     }
 
     private static <V> void maybeSet(final Supplier<V> getter, final Consumer<V> setter) {
