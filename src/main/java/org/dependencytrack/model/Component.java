@@ -76,6 +76,9 @@ import java.util.UUID;
                 @Persistent(name = "id"),
                 @Persistent(name = "uuid")
         }),
+        @FetchGroup(name = "COMPONENT_PROJECT", members = {
+                @Persistent(name = "project")
+        }),
         @FetchGroup(name = "INTERNAL_IDENTIFICATION", members = {
                 @Persistent(name = "id"),
                 @Persistent(name = "group"),
@@ -101,7 +104,8 @@ public class Component implements Serializable {
         ALL,
         IDENTITY,
         INTERNAL_IDENTIFICATION,
-        METRICS_UPDATE
+        METRICS_UPDATE,
+        COMPONENT_PROJECT
     }
 
     @PrimaryKey
