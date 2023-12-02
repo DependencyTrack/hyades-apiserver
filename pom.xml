@@ -92,6 +92,7 @@
         <lib.jackson.version>2.15.2</lib.jackson.version>
         <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
+        <lib.jdbi.version>3.42.0</lib.jdbi.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
         <!--
           Overriding logstash-logback-encoder version as a temporary workaround until
@@ -216,6 +217,21 @@
             <groupId>us.springett</groupId>
             <artifactId>cvss-calculator</artifactId>
             <version>${lib.cvss-calculator.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-core</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-sqlobject</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-postgres</artifactId>
+            <version>${lib.jdbi.version}</version>
         </dependency>
         <!-- OWASP Risk Rating calculator -->
         <dependency>
