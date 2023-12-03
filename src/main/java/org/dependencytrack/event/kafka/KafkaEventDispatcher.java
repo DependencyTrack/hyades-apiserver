@@ -121,7 +121,11 @@ public class KafkaEventDispatcher {
         return dispatchAsyncInternal(KafkaEventConverter.convert(projectUuid, alpineNotification), null);
     }
 
-    private <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
+    public Future<RecordMetadata> dispatchAsync(final String key, final org.dependencytrack.proto.notification.v1.Notification notification) {
+        return dispatchAsyncInternal(KafkaEventConverter.convert(key, notification), null);
+    }
+
+    public <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
         if (event == null) {
             if (callback != null) {
                 // Callers are expecting that their callback will be executed,

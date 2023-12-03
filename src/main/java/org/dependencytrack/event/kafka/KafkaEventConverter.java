@@ -65,9 +65,7 @@ final class KafkaEventConverter {
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
-    static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
-        final Notification notification = NotificationModelConverter.convert(alpineNotification);
-
+    static KafkaEvent<String, Notification> convert(final String key, final Notification notification) {
         final Topic<String, Notification> topic = switch (notification.getGroup()) {
             case GROUP_CONFIGURATION -> KafkaTopics.NOTIFICATION_CONFIGURATION;
             case GROUP_DATASOURCE_MIRRORING -> KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING;
@@ -92,10 +90,12 @@ final class KafkaEventConverter {
             return null;
         }
 
-        return new KafkaEvent<>(topic,
-                projectUuid != null ? projectUuid.toString() : null,
-                notification,
-                null);
+        return new KafkaEvent<>(topic, key, notification, null);
+    }
+
+    static KafkaEvent<String, Notification> convert(final UUID projectUuid, final alpine.notification.Notification alpineNotification) {
+        final Notification notification = NotificationModelConverter.convert(alpineNotification);
+        return convert(projectUuid != null ? projectUuid.toString() : null, notification);
     }
 
 }
