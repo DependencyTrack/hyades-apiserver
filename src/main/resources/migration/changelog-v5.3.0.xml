@@ -2349,10 +2349,8 @@
         </createTable>
     </changeSet>
     <changeSet id="v5.3.0-5" author="VithikaS">
-        <createIndex indexName="VULNERABILITY_POLICY_NAME_IDX" tableName="VULNERABILITY_POLICY">
+        <createIndex indexName="VULNERABILITY_POLICY_NAME_IDX" tableName="VULNERABILITY_POLICY" unique="true">
             <column name="NAME"/>
         </createIndex>
-        <addUniqueConstraint columnNames="NAME" constraintName="VULNERABILITY_POLICY_NAME_UNQ"
-                             tableName="VULNERABILITY_POLICY"/>
     </changeSet>
 </databaseChangeLog>
