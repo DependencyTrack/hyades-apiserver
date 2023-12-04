@@ -2324,4 +2324,33 @@
 
         <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
     </changeSet>
+
+    <changeSet id="v5.3.0-4" author="VithikaS">
+        <createTable tableName="VULNERABILITY_POLICY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYPOLICY_PK"/>
+            </column>
+            <column name="ANALYSIS" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="AUTHOR" type="VARCHAR(255)"/>
+            <column name="CONDITIONS" type="TEXT[]">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RATINGS" type="JSONB"/>
+            <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="VALID_FROM" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="VALID_UNTIL" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="v5.3.0-5" author="VithikaS">
+        <createIndex indexName="VULNERABILITY_POLICY_NAME_IDX" tableName="VULNERABILITY_POLICY" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
