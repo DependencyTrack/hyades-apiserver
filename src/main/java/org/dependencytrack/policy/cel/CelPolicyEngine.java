@@ -69,16 +69,12 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_LICENSE_GROUP;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT_PROPERTY;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_COMPONENT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_NOW;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_PROJECT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.VAR_VULNERABILITIES;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_LICENSE;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_LICENSE_GROUP;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_VULNERABILITY;
 
 /**
  * A policy engine powered by the Common Expression Language (CEL).
@@ -112,7 +108,7 @@ public class CelPolicyEngine {
     private final CelPolicyScriptHost scriptHost;
 
     public CelPolicyEngine() {
-        this(CelPolicyScriptHost.getInstance());
+        this(CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT));
     }
 
     CelPolicyEngine(final CelPolicyScriptHost scriptHost) {
@@ -203,10 +199,10 @@ public class CelPolicyEngine {
                                 .toList();
 
                 conditionsViolated.putAll(component.id, evaluateConditions(conditionScriptPairs, Map.of(
-                        VAR_COMPONENT, protoComponent,
-                        VAR_NOW, protoNow,
-                        VAR_PROJECT, protoProject,
-                        VAR_VULNERABILITIES, protoVulns
+                        CelPolicyVariable.COMPONENT.variableName(), protoComponent,
+                        CelPolicyVariable.PROJECT.variableName(), protoProject,
+                        CelPolicyVariable.VULNS.variableName(), protoVulns,
+                        CelPolicyVariable.NOW.variableName(), protoNow
                 )));
             }
 

@@ -41,14 +41,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-class CelPolicyLibrary implements Library {
+class CelCommonPolicyLibrary implements Library {
 
-    private static final Logger LOGGER = Logger.getLogger(CelPolicyLibrary.class);
-
-    static final String VAR_COMPONENT = "component";
-    static final String VAR_NOW = "now";
-    static final String VAR_PROJECT = "project";
-    static final String VAR_VULNERABILITIES = "vulns";
+    private static final Logger LOGGER = Logger.getLogger(CelCommonPolicyLibrary.class);
 
     static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
     static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
@@ -56,7 +51,6 @@ class CelPolicyLibrary implements Library {
     static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
     static final Type TYPE_PROJECT_PROPERTY = Decls.newObjectType(Project.Property.getDescriptor().getFullName());
     static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
     static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 
     static final String FUNC_DEPENDS_ON = "depends_on";
@@ -69,22 +63,6 @@ class CelPolicyLibrary implements Library {
     public List<EnvOption> getCompileOptions() {
         return List.of(
                 EnvOption.declarations(
-                        Decls.newVar(
-                                VAR_COMPONENT,
-                                TYPE_COMPONENT
-                        ),
-                        Decls.newVar(
-                                VAR_NOW,
-                                Decls.Timestamp
-                        ),
-                        Decls.newVar(
-                                VAR_PROJECT,
-                                TYPE_PROJECT
-                        ),
-                        Decls.newVar(
-                                VAR_VULNERABILITIES,
-                                TYPE_VULNERABILITIES
-                        ),
                         Decls.newFunction(
                                 FUNC_DEPENDS_ON,
                                 // project.depends_on(org.dependencytrack.policy.v1.Component{name: "foo"})
@@ -153,20 +131,20 @@ class CelPolicyLibrary implements Library {
                 ProgramOption.functions(
                         Overload.binary(
                                 FUNC_DEPENDS_ON,
-                                CelPolicyLibrary::dependsOnFunc
+                                CelCommonPolicyLibrary::dependsOnFunc
                         ),
                         Overload.binary(
                                 FUNC_IS_DEPENDENCY_OF,
-                                CelPolicyLibrary::isDependencyOfFunc
+                                CelCommonPolicyLibrary::isDependencyOfFunc
                         ),
                         Overload.binary(
                                 FUNC_MATCHES_RANGE,
-                                CelPolicyLibrary::matchesRangeFunc
+                                CelCommonPolicyLibrary::matchesRangeFunc
                         ),
                         Overload.function(FUNC_COMPARE_AGE,
-                                CelPolicyLibrary::isComponentOldFunc),
+                                CelCommonPolicyLibrary::isComponentOldFunc),
                         Overload.function(FUNC_COMPARE_VERSION_DISTANCE,
-                                CelPolicyLibrary::matchesVersionDistanceFunc)
+                                CelCommonPolicyLibrary::matchesVersionDistanceFunc)
                 )
         );
     }
