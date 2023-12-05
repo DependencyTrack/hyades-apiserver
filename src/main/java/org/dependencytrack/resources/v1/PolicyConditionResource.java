@@ -34,6 +34,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
+import org.dependencytrack.policy.cel.CelPolicyType;
 import org.dependencytrack.resources.v1.vo.CelExpressionError;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.tools.ScriptCreateException;
@@ -166,7 +167,7 @@ public class PolicyConditionResource extends AlpineResource {
         }
 
         try {
-            CelPolicyScriptHost.getInstance().compile(policyCondition.getValue(), CacheMode.NO_CACHE);
+            CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile(policyCondition.getValue(), CacheMode.NO_CACHE);
         } catch (ScriptCreateException e) {
             final var celErrors = new ArrayList<CelExpressionError>();
             for (final CELError error : e.getIssues().getErrors()) {

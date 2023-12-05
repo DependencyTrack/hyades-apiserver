@@ -13,28 +13,28 @@ import org.projectnessie.cel.Ast;
 import org.projectnessie.cel.CEL;
 import org.projectnessie.cel.Env;
 import org.projectnessie.cel.Env.AstIssuesTuple;
-import org.projectnessie.cel.Library;
+import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Program;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.common.Errors;
 import org.projectnessie.cel.common.Location;
 import org.projectnessie.cel.common.types.Err.ErrException;
 import org.projectnessie.cel.common.types.pb.ProtoTypeRegistry;
-import org.projectnessie.cel.extension.StringsLib;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_AGE;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_COMPARE_VERSION_DISTANCE;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_DEPENDS_ON;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.FUNC_MATCHES_RANGE;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.CelPolicyLibrary.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE_AGE;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE_VERSION_DISTANCE;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_VULNERABILITY;
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
 
@@ -46,31 +46,23 @@ public class CelPolicyScriptHost {
     }
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptHost.class);
-    private static CelPolicyScriptHost INSTANCE;
+    private static final ConcurrentHashMap<CelPolicyType, CelPolicyScriptHost> INSTANCES = new ConcurrentHashMap<>();
 
     private final Striped<Lock> locks;
     private final AbstractCacheManager cacheManager;
     private final Env environment;
 
-    CelPolicyScriptHost(final AbstractCacheManager cacheManager) {
+    CelPolicyScriptHost(final AbstractCacheManager cacheManager, final List<EnvOption> envOptions) {
         this.locks = Striped.lock(128);
         this.cacheManager = cacheManager;
         this.environment = Env.newCustomEnv(
                 ProtoTypeRegistry.newRegistry(),
-                List.of(
-                        Library.StdLib(),
-                        Library.Lib(new StringsLib()),
-                        Library.Lib(new CelPolicyLibrary())
-                )
+                envOptions
         );
     }
 
-    public static synchronized CelPolicyScriptHost getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new CelPolicyScriptHost(CacheManager.getInstance());
-        }
-
-        return INSTANCE;
+    public static synchronized CelPolicyScriptHost getInstance(final CelPolicyType policyType) {
+        return INSTANCES.computeIfAbsent(policyType, ignored -> new CelPolicyScriptHost(CacheManager.getInstance(), policyType.envOptions()));
     }
 
     /**
