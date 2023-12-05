@@ -3,7 +3,6 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
@@ -41,17 +40,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-class CelCommonPolicyLibrary implements Library {
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+
+public class CelCommonPolicyLibrary implements Library {
 
     private static final Logger LOGGER = Logger.getLogger(CelCommonPolicyLibrary.class);
-
-    static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
-    static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
-    static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
-    static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
-    static final Type TYPE_PROJECT_PROPERTY = Decls.newObjectType(Project.Property.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";

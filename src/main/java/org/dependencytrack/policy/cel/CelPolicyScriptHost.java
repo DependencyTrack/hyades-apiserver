@@ -32,9 +32,9 @@ import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
 

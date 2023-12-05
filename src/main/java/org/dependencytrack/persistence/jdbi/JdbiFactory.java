@@ -6,6 +6,7 @@ import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
 import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.freemarker.FreemarkerEngine;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
@@ -91,7 +92,8 @@ public class JdbiFactory {
         return Jdbi
                 .create(new JdoConnectionFactory(pm))
                 .installPlugin(new SqlObjectPlugin())
-                .installPlugin(new PostgresPlugin());
+                .installPlugin(new PostgresPlugin())
+                .setTemplateEngine(FreemarkerEngine.instance());
     }
 
     private record GlobalInstanceHolder(Jdbi jdbi, PersistenceManagerFactory pmf) {
@@ -107,7 +109,8 @@ public class JdbiFactory {
                 return Jdbi
                         .create(dataSource)
                         .installPlugin(new SqlObjectPlugin())
-                        .installPlugin(new PostgresPlugin());
+                        .installPlugin(new PostgresPlugin())
+                        .setTemplateEngine(FreemarkerEngine.instance());
             }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
