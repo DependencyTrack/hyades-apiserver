@@ -8,6 +8,7 @@ import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -17,23 +18,22 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import javax.jdo.JDOHelper;
+import java.sql.Connection;
+import java.sql.Statement;
 
 public abstract class AbstractPostgresEnabledTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
-    protected PostgreSQLContainer<?> postgresContainer;
+    protected static PostgreSQLContainer<?> postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected QueryManager qm;
 
     @BeforeClass
-    public static void init() {
+    public static void init() throws Exception {
         Config.enableUnitTests();
-    }
 
-    @Before
-    public void setUp() throws Exception {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
                 .withUsername("dtrack")
                 .withPassword("dtrack")
@@ -45,6 +45,24 @@ public abstract class AbstractPostgresEnabledTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
         MigrationInitializer.runMigration(dataSource, /* silent */ true);
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        // Truncate all tables to ensure each test starts from a clean slate.
+        // https://stackoverflow.com/a/63227261
+        try (final Connection connection = postgresContainer.createConnection("");
+             final Statement statement = connection.createStatement()) {
+            statement.execute("""
+                    DO $$ DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema()) LOOP
+                            EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+                        END LOOP;
+                    END $$;
+                    """);
+        }
 
         final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
                 postgresContainer.getDriverClassName(),
@@ -72,9 +90,14 @@ public abstract class AbstractPostgresEnabledTest {
         }
 
         PersistenceManagerFactory.tearDown();
+        KafkaProducerInitializer.tearDown();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
         if (postgresContainer != null) {
             postgresContainer.stop();
         }
-        KafkaProducerInitializer.tearDown();
     }
+
 }
