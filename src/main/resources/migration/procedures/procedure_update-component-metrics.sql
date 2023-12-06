@@ -49,10 +49,11 @@ BEGIN
                                   INNER JOIN "COMPONENTS_VULNERABILITIES" AS "CV"
                                              ON "CV"."COMPONENT_ID" = "v_component"."ID"
                                                AND "CV"."VULNERABILITY_ID" = "V"."ID"
-                                  LEFT JOIN "ANALYSIS" AS "A"
+                                  LEFT OUTER JOIN "ANALYSIS" AS "A"
                                         ON "A"."COMPONENT_ID" = "v_component"."ID"
+                                            AND "A"."COMPONENT_ID" = "CV"."COMPONENT_ID"
                                             AND "A"."VULNERABILITY_ID" = "V"."ID"
-                                            AND "A"."SUPPRESSED" != TRUE
+                                        WHERE "A"."SUPPRESSED" != TRUE OR "A"."SUPPRESSED" IS NULL
     LOOP
       CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
 
