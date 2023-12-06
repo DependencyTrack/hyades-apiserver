@@ -64,13 +64,7 @@ public abstract class AbstractPostgresEnabledTest {
                     """);
         }
 
-        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
-                postgresContainer.getDriverClassName(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
+        PersistenceManagerFactory.setJdoPersistenceManagerFactory(createPmf());
 
         qm = new QueryManager();
 
@@ -98,6 +92,15 @@ public abstract class AbstractPostgresEnabledTest {
         if (postgresContainer != null) {
             postgresContainer.stop();
         }
+    }
+
+    protected JDOPersistenceManagerFactory createPmf() {
+        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
+                postgresContainer.getDriverClassName(),
+                postgresContainer.getUsername(),
+                postgresContainer.getPassword());
+
+        return (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
     }
 
 }

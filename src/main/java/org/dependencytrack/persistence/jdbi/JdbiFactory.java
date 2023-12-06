@@ -6,6 +6,7 @@ import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
 import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.postgres.PostgresPlugin;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
 import javax.jdo.PersistenceManager;
@@ -87,7 +88,10 @@ public class JdbiFactory {
                     Use the global instance instead if combining JDBI with JDO transactions is not needed.""");
         }
 
-        return Jdbi.create(new JdoConnectionFactory(pm));
+        return Jdbi
+                .create(new JdoConnectionFactory(pm))
+                .installPlugin(new SqlObjectPlugin())
+                .installPlugin(new PostgresPlugin());
     }
 
     private record GlobalInstanceHolder(Jdbi jdbi, PersistenceManagerFactory pmf) {
@@ -102,7 +106,8 @@ public class JdbiFactory {
                     && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
                 return Jdbi
                         .create(dataSource)
-                        .installPlugin(new SqlObjectPlugin());
+                        .installPlugin(new SqlObjectPlugin())
+                        .installPlugin(new PostgresPlugin());
             }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
