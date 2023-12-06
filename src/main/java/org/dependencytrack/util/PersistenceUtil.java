@@ -121,14 +121,24 @@ public final class PersistenceUtil {
      * @see <a href="https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle">Object Lifecycle</a>
      */
     public static void assertPersistent(final Object object, final String message) {
-        final ObjectState objectState = JDOHelper.getObjectState(object);
-        if (objectState != PERSISTENT_CLEAN
-                && objectState != PERSISTENT_DIRTY
-                && objectState != PERSISTENT_NEW
-                && objectState != PERSISTENT_NONTRANSACTIONAL_DIRTY
-                && objectState != HOLLOW_PERSISTENT_NONTRANSACTIONAL) {
+        if (!isPersistent(object)) {
             throw new IllegalStateException(message != null ? message : "Object must be persistent");
         }
+    }
+
+    public static void assertNonPersistent(final Object object, final String message) {
+        if (isPersistent(object)) {
+            throw new IllegalStateException(message != null ? message : "Object must not be persistent");
+        }
+    }
+
+    private static boolean isPersistent(final Object object) {
+        final ObjectState objectState = JDOHelper.getObjectState(object);
+        return objectState == PERSISTENT_CLEAN
+                || objectState == PERSISTENT_DIRTY
+                || objectState == PERSISTENT_NEW
+                || objectState == PERSISTENT_NONTRANSACTIONAL_DIRTY
+                || objectState == HOLLOW_PERSISTENT_NONTRANSACTIONAL;
     }
 
 }

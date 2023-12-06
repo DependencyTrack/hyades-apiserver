@@ -121,6 +121,18 @@ public class KafkaEventDispatcher {
         return dispatchAsyncInternal(KafkaEventConverter.convert(projectUuid, alpineNotification), null);
     }
 
+    /**
+     * Asynchronously dispatch a given {@link org.dependencytrack.proto.notification.v1.Notification} to Kafka.
+     *
+     * @param key          The event key to use
+     * @param notification The {@link org.dependencytrack.proto.notification.v1.Notification} to dispatch
+     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched notification,
+     * or {@code null} when the event was not dispatched
+     */
+    public Future<RecordMetadata> dispatchAsync(final String key, final org.dependencytrack.proto.notification.v1.Notification notification) {
+        return dispatchAsyncInternal(KafkaEventConverter.convert(key, notification), null);
+    }
+
     private <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
         if (event == null) {
             if (callback != null) {

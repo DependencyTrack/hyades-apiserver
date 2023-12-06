@@ -82,7 +82,8 @@ public enum ConfigKey implements Config.Key {
     VULNERABILITY_POLICY_BUNDLE_SOURCE_TYPE("vulnerability.policy.bundle.source.type", "NGINX"),
     VULNERABILITY_POLICY_BUNDLE_AUTH_USERNAME( "vulnerability.policy.bundle.auth.username", null),
     VULNERABILITY_POLICY_BUNDLE_AUTH_PASSWORD( "vulnerability.policy.bundle.auth.password", null),
-    RUN_MIGRATIONS("run.migrations", true);
+    RUN_MIGRATIONS("run.migrations", true),
+    VULNERABILITY_POLICY_ENABLED("vulnerability.policy.enabled", "false");
 
     private final String propertyName;
     private final Object defaultValue;
