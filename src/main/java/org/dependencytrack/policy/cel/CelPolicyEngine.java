@@ -45,6 +45,7 @@ import org.dependencytrack.policy.cel.mapping.LicenseProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
+import org.dependencytrack.policy.cel.persistence.CelPolicyDao;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
@@ -69,6 +70,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
@@ -148,7 +150,7 @@ public class CelPolicyEngine {
 
             final org.dependencytrack.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
-                protoProject = JdbiFactory.jdbi(qm).withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build(), requirements));
+                protoProject = jdbi(qm).withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build(), requirements));
             } else {
                 protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }
