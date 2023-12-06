@@ -52,11 +52,7 @@ BEGIN
                                   LEFT JOIN "ANALYSIS" AS "A"
                                         ON "A"."COMPONENT_ID" = "v_component"."ID"
                                             AND "A"."VULNERABILITY_ID" = "V"."ID"
-                           WHERE NOT EXISTS(SELECT 1
-                                            FROM "ANALYSIS" AS "A"
-                                            WHERE "A"."COMPONENT_ID" = "v_component"."ID"
-                                              AND "A"."VULNERABILITY_ID" = "CV"."VULNERABILITY_ID"
-                                              AND "A"."SUPPRESSED" = TRUE)
+                                            AND "A"."SUPPRESSED" != TRUE
     LOOP
       CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
 
