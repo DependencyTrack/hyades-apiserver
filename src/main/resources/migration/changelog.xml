@@ -1,22 +1,8 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
-<databaseChangeLog
-        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
-            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
-            http://www.liquibase.org/xml/ns/dbchangelog
-            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet author="nscuro@protonmail.com" id="v5.3.0-1">
-        <preConditions onFail="MARK_RAN">
-            <not>
-                <tableExists tableName="SCHEMAVERSION"/>
-            </not>
-        </preConditions>
-
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="sahibamittal (generated)" id="1701862332371-1">
         <createTable tableName="WORKFLOW_STATE">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="35" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_STATE_PK"/>
             </column>
             <column name="FAILURE_REASON" type="TEXT"/>
@@ -35,9 +21,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-2">
         <createTable tableName="COMPONENT">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="18118" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="COMPONENT_PK"/>
             </column>
             <column name="AUTHOR" type="TEXT"/>
@@ -85,20 +72,10 @@
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
-
-        <createTable tableName="EVENTSERVICELOG">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="EVENTSERVICELOG_PK"/>
-            </column>
-            <column name="SUBSCRIBERCLASS" type="VARCHAR(255)">
-                <constraints nullable="false" />
-            </column>
-            <column name="STARTED" type="TIMESTAMP WITH TIME ZONE"/>
-            <column name="COMPLETED" type="TIMESTAMP WITH TIME ZONE"/>
-        </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-3">
         <createTable tableName="LICENSEGROUP">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="5" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSEGROUP_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(255)">
@@ -111,9 +88,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-4">
         <createTable tableName="LICENSE">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="614" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSE_PK"/>
             </column>
             <column name="COMMENT" type="TEXT"/>
@@ -137,7 +115,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-5">
         <createTable tableName="ANALYSISCOMMENT">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ANALYSISCOMMENT_PK"/>
@@ -153,7 +132,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-6">
         <createTable tableName="VIOLATIONANALYSISCOMMENT">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VIOLATIONANALYSISCOMMENT_PK"/>
@@ -169,9 +149,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-7">
         <createTable tableName="REPOSITORY">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="15" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_PK"/>
             </column>
             <column name="AUTHENTICATIONREQUIRED" type="BOOLEAN"/>
@@ -193,9 +174,10 @@
             <column name="USERNAME" type="VARCHAR(255)"/>
             <column name="UUID" type="VARCHAR(36)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-8">
         <createTable tableName="VULNERABILITYSCAN">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="9" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYSCAN_PK"/>
             </column>
             <column name="EXPECTED_RESULTS" type="INTEGER">
@@ -229,7 +211,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-9">
         <createTable tableName="VULNERABILITYMETRICS">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYMETRICS_PK"/>
@@ -245,7 +228,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-10">
         <createTable tableName="PROJECT_PROPERTY">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_PROPERTY_PK"/>
@@ -265,9 +249,10 @@
             </column>
             <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-11">
         <createTable tableName="NOTIFICATIONPUBLISHER">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="9" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONPUBLISHER_PK"/>
             </column>
             <column name="DEFAULT_PUBLISHER" type="BOOLEAN">
@@ -288,9 +273,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-12">
         <createTable tableName="PORTFOLIOMETRICS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="3" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PORTFOLIOMETRICS_PK"/>
             </column>
             <column name="COMPONENTS" type="INTEGER">
@@ -352,9 +338,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-13">
         <createTable tableName="CWE">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="1421" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CWE_PK"/>
             </column>
             <column name="CWEID" type="INTEGER">
@@ -364,9 +351,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-14">
         <createTable tableName="INTEGRITY_ANALYSIS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="INTEGRITY_ANALYSIS_PK"/>
             </column>
             <column name="COMPONENT_ID" type="BIGINT">
@@ -391,9 +379,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-15">
         <createTable tableName="DEPENDENCYMETRICS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="18117" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="DEPENDENCYMETRICS_PK"/>
             </column>
             <column name="COMPONENT_ID" type="BIGINT">
@@ -449,7 +438,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-16">
         <createTable tableName="POLICY">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="POLICY_PK"/>
@@ -468,7 +458,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-17">
         <createTable tableName="LDAPUSER">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="LDAPUSER_PK"/>
@@ -479,7 +470,8 @@
             <column name="EMAIL" type="VARCHAR(255)"/>
             <column name="USERNAME" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-18">
         <createTable tableName="VULNERABLESOFTWARE">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABLESOFTWARE_PK"/>
@@ -515,7 +507,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-19">
         <createTable tableName="ANALYSIS">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ANALYSIS_PK"/>
@@ -534,8 +527,16 @@
             <column name="VULNERABILITY_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
+            <column name="CVSSV2VECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3SCORE" type="numeric"/>
+            <column name="OWASPSCORE" type="numeric"/>
+            <column name="CVSSV2SCORE" type="numeric"/>
+            <column name="OWASPVECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3VECTOR" type="VARCHAR(255)"/>
+            <column name="SEVERITY" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-20">
         <createTable tableName="VEX">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VEX_PK"/>
@@ -554,7 +555,8 @@
             <column name="VEX_FORMAT" type="VARCHAR(255)"/>
             <column name="VEX_VERSION" type="INTEGER"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-21">
         <createTable tableName="AFFECTEDVERSIONATTRIBUTION">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="AFFECTEDVERSIONATTRIBUTION_PK"/>
@@ -578,9 +580,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-22">
         <createTable tableName="TEAM">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="4" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="TEAM_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(50)">
@@ -590,7 +593,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-23">
         <createTable tableName="OIDCUSER">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="OIDCUSER_PK"/>
@@ -601,9 +605,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-24">
         <createTable tableName="MANAGEDUSER">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="MANAGEDUSER_PK"/>
             </column>
             <column name="EMAIL" type="VARCHAR(255)"/>
@@ -625,7 +630,8 @@
             </column>
             <column name="USERNAME" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-25">
         <createTable tableName="OIDCGROUP">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="OIDCGROUP_PK"/>
@@ -637,7 +643,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-26">
         <createTable tableName="VULNERABILITYALIAS">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYALIAS_PK"/>
@@ -654,7 +661,8 @@
             </column>
             <column name="VULNDB_ID" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-27">
         <createTable tableName="CPE">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CPE_PK"/>
@@ -679,7 +687,8 @@
             <column name="VENDOR" type="VARCHAR(255)"/>
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-28">
         <createTable tableName="TAG">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="TAG_PK"/>
@@ -688,9 +697,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-29">
         <createTable tableName="REPOSITORY_META_COMPONENT">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_META_COMPONENT_PK"/>
             </column>
             <column name="LAST_CHECK" type="TIMESTAMP WITH TIME ZONE">
@@ -708,9 +718,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-30">
         <createTable tableName="PERMISSION">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="13" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PERMISSION_PK"/>
             </column>
             <column name="DESCRIPTION" type="TEXT"/>
@@ -718,7 +729,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-31">
         <createTable tableName="VIOLATIONANALYSIS">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VIOLATIONANALYSIS_PK"/>
@@ -735,16 +747,18 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-32">
         <createTable tableName="APIKEY">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="APIKEY_PK"/>
             </column>
             <column name="APIKEY" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-33">
         <createTable tableName="FINDINGATTRIBUTION">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="FINDINGATTRIBUTION_PK"/>
@@ -770,9 +784,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-34">
         <createTable tableName="INTEGRITY_META_COMPONENT">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="3" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="INTEGRITY_META_COMPONENT_PK"/>
             </column>
             <column name="LAST_FETCH" type="TIMESTAMP WITH TIME ZONE"/>
@@ -787,7 +802,8 @@
             <column name="SHA512" type="VARCHAR(128)"/>
             <column name="STATUS" type="VARCHAR(64)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-35">
         <createTable tableName="POLICYVIOLATION">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="POLICYVIOLATION_PK"/>
@@ -812,7 +828,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-36">
         <createTable tableName="POLICYCONDITION">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="POLICYCONDITION_PK"/>
@@ -834,7 +851,8 @@
             </column>
             <column name="VIOLATIONTYPE" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-37">
         <createTable tableName="NOTIFICATIONRULE">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONRULE_PK"/>
@@ -858,7 +876,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-38">
         <createTable tableName="SERVICECOMPONENT">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="SERVICECOMPONENT_PK"/>
@@ -887,7 +906,8 @@
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-39">
         <createTable tableName="MAPPEDOIDCGROUP">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="MAPPEDOIDCGROUP_PK"/>
@@ -902,7 +922,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-40">
         <createTable tableName="MAPPEDLDAPGROUP">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="MAPPEDLDAPGROUP_PK"/>
@@ -917,7 +938,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-41">
         <createTable tableName="VULNERABILITY">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITY_PK"/>
@@ -961,9 +983,10 @@
             </column>
             <column name="VULNERABLEVERSIONS" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-42">
         <createTable tableName="BOM">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="7" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="BOM_PK"/>
             </column>
             <column name="BOM_FORMAT" type="VARCHAR(255)"/>
@@ -980,9 +1003,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-43">
         <createTable tableName="PROJECT">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="6" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_PK"/>
             </column>
             <column name="ACTIVE" type="BOOLEAN"/>
@@ -1008,9 +1032,10 @@
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-44">
         <createTable tableName="PROJECTMETRICS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="6" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECTMETRICS_PK"/>
             </column>
             <column name="COMPONENTS" type="INTEGER">
@@ -1069,7 +1094,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-45">
         <createTable tableName="LICENSEGROUP_LICENSE">
             <column name="LICENSEGROUP_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1078,7 +1104,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-46">
         <createTable tableName="OIDCUSERS_PERMISSIONS">
             <column name="PERMISSION_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1087,7 +1114,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-47">
         <createTable tableName="COMPONENTS_VULNERABILITIES">
             <column name="COMPONENT_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1096,7 +1124,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-48">
         <createTable tableName="OIDCUSERS_TEAMS">
             <column name="OIDCUSERS_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1105,7 +1134,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-49">
         <createTable tableName="LDAPUSERS_PERMISSIONS">
             <column name="LDAPUSER_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1114,7 +1144,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-50">
         <createTable tableName="SERVICECOMPONENTS_VULNERABILITIES">
             <column name="VULNERABILITY_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1123,7 +1154,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-51">
         <createTable tableName="VULNERABLESOFTWARE_VULNERABILITIES">
             <column name="VULNERABILITY_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1132,14 +1164,16 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-52">
         <createTable tableName="NOTIFICATIONRULE_TEAMS">
             <column name="NOTIFICATIONRULE_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="TEAM_ID" type="BIGINT"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-53">
         <createTable tableName="PROJECTS_TAGS">
             <column name="TAG_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1148,7 +1182,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-54">
         <createTable tableName="LDAPUSERS_TEAMS">
             <column name="TEAM_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1157,7 +1192,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-55">
         <createTable tableName="MANAGEDUSERS_PERMISSIONS">
             <column name="MANAGEDUSER_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1166,7 +1202,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-56">
         <createTable tableName="TEAMS_PERMISSIONS">
             <column name="TEAM_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1175,14 +1212,16 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-57">
         <createTable tableName="NOTIFICATIONRULE_PROJECTS">
             <column name="NOTIFICATIONRULE_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="PROJECT_ID" type="BIGINT"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-58">
         <createTable tableName="APIKEYS_TEAMS">
             <column name="TEAM_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1191,14 +1230,16 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-59">
         <createTable tableName="PROJECT_ACCESS_TEAMS">
             <column name="PROJECT_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="TEAM_ID" type="BIGINT"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-60">
         <createTable tableName="MANAGEDUSERS_TEAMS">
             <column name="TEAM_ID" type="BIGINT">
                 <constraints nullable="false"/>
@@ -1207,28 +1248,32 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-61">
         <createTable tableName="POLICY_PROJECTS">
             <column name="POLICY_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="PROJECT_ID" type="BIGINT"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-62">
         <createTable tableName="POLICY_TAGS">
             <column name="POLICY_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="TAG_ID" type="BIGINT"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-63">
         <createTable tableName="SCHEMAVERSION">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="2" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="SCHEMAVERSION_PK"/>
             </column>
             <column name="VERSION" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-64">
         <createTable tableName="INSTALLEDUPGRADES">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="INSTALLEDUPGRADES_PK"/>
@@ -1237,9 +1282,10 @@
             <column name="STARTTIME" type="TIMESTAMP WITH TIME ZONE"/>
             <column name="UPGRADECLASS" type="VARCHAR(255)"/>
         </createTable>
-
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-65">
         <createTable tableName="CONFIGPROPERTY">
-            <column autoIncrement="true" name="ID" type="BIGINT">
+            <column autoIncrement="true" name="ID" startWith="71" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CONFIGPROPERTY_PK"/>
             </column>
             <column name="DESCRIPTION" type="VARCHAR(255)"/>
@@ -1254,1078 +1300,8 @@
             </column>
             <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
         </createTable>
-
-        <createIndex indexName="WORKFLOW_STATE_PARENT_STEP_ID_IDX" tableName="WORKFLOW_STATE">
-            <column name="PARENT_STEP_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="TOKEN, STEP" constraintName="WORKFLOW_STATE_COMPOSITE_IDX"
-                             tableName="WORKFLOW_STATE"/>
-
-        <createIndex indexName="COMPONENT_GROUP_IDX" tableName="COMPONENT">
-            <column name="GROUP"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_PARENT_COMPONENT_ID_IDX" tableName="COMPONENT">
-            <column name="PARENT_COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_BLAKE3_IDX" tableName="COMPONENT">
-            <column name="BLAKE3"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_PURL_IDX" tableName="COMPONENT">
-            <column name="PURL"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA3_512_IDX" tableName="COMPONENT">
-            <column name="SHA3_512"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_CPE_IDX" tableName="COMPONENT">
-            <column name="CPE"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_LAST_RISKSCORE_IDX" tableName="COMPONENT">
-            <column name="LAST_RISKSCORE"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA512_IDX" tableName="COMPONENT">
-            <column name="SHA_512"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA3_256_IDX" tableName="COMPONENT">
-            <column name="SHA3_256"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_MD5_IDX" tableName="COMPONENT">
-            <column name="MD5"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA384_IDX" tableName="COMPONENT">
-            <column name="SHA_384"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_BLAKE2B_384_IDX" tableName="COMPONENT">
-            <column name="BLAKE2B_384"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_CLASSIFIER_IDX" tableName="COMPONENT">
-            <column name="CLASSIFIER"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SWID_TAGID_IDX" tableName="COMPONENT">
-            <column name="SWIDTAGID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_PURL_COORDINATES_IDX" tableName="COMPONENT">
-            <column name="PURLCOORDINATES"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_BLAKE2B_512_IDX" tableName="COMPONENT">
-            <column name="BLAKE2B_512"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_LICENSE_ID_IDX" tableName="COMPONENT">
-            <column name="LICENSE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_NAME_IDX" tableName="COMPONENT">
-            <column name="NAME"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA1_IDX" tableName="COMPONENT">
-            <column name="SHA1"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_PROJECT_ID_IDX" tableName="COMPONENT">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA3_384_IDX" tableName="COMPONENT">
-            <column name="SHA3_384"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_BLAKE2B_256_IDX" tableName="COMPONENT">
-            <column name="BLAKE2B_256"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENT_SHA256_IDX" tableName="COMPONENT">
-            <column name="SHA_256"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="COMPONENT_UUID_IDX" tableName="COMPONENT"/>
-
-        <!--
-          Note: The original index as defined in Alpine is not prefixed with the table name.
-          https://github.com/stevespringett/Alpine/blob/92fdb7de7e5623b8c986de08997480036af5f472/alpine-model/src/main/java/alpine/model/EventServiceLog.java#L50C27-L50C27
-        -->
-        <createIndex tableName="EVENTSERVICELOG" indexName="SUBSCRIBERCLASS_IDX">
-            <column name="SUBSCRIBERCLASS"/>
-        </createIndex>
-
-        <createIndex indexName="LICENSEGROUP_NAME_IDX" tableName="LICENSEGROUP">
-            <column name="NAME"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="LICENSEGROUP_UUID_IDX" tableName="LICENSEGROUP"/>
-
-        <createIndex indexName="LICENSE_LICENSEID_IDX" tableName="LICENSE" unique="true">
-            <column name="LICENSEID"/>
-        </createIndex>
-
-        <createIndex indexName="LICENSE_NAME_IDX" tableName="LICENSE">
-            <column name="NAME"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="LICENSE_UUID_IDX" tableName="LICENSE"/>
-
-        <createIndex indexName="ANALYSISCOMMENT_ANALYSIS_ID_IDX" tableName="ANALYSISCOMMENT">
-            <column name="ANALYSIS_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_ID_IDX" tableName="VIOLATIONANALYSISCOMMENT">
-            <column name="VIOLATIONANALYSIS_ID"/>
-        </createIndex>
-
-        <createIndex indexName="REPOSITORY_UUID_IDX" tableName="REPOSITORY">
-            <column name="UUID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="TYPE, IDENTIFIER" constraintName="REPOSITORY_COMPOUND_IDX"
-                             tableName="REPOSITORY"/>
-
-        <addUniqueConstraint columnNames="TOKEN" constraintName="VULNERABILITY_SCAN_TOKEN_IDX"
-                             tableName="VULNERABILITYSCAN"/>
-
-        <createIndex indexName="PROJECT_PROPERTY_PROJECT_ID_IDX" tableName="PROJECT_PROPERTY">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="PROJECT_ID, GROUPNAME, PROPERTYNAME"
-                             constraintName="PROJECT_PROPERTY_KEYS_IDX" tableName="PROJECT_PROPERTY"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONPUBLISHER_UUID_IDX"
-                             tableName="NOTIFICATIONPUBLISHER"/>
-
-        <createIndex indexName="PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
-            <column name="FIRST_OCCURRENCE"/>
-        </createIndex>
-
-        <createIndex indexName="PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
-            <column name="LAST_OCCURRENCE"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="CWEID" constraintName="CWE_CWEID_IDX" tableName="CWE"/>
-
-        <createIndex indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" tableName="INTEGRITY_ANALYSIS">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX" tableName="DEPENDENCYMETRICS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
-            <column name="FIRST_OCCURRENCE"/>
-        </createIndex>
-
-        <createIndex indexName="DEPENDENCYMETRICS_COMPONENT_ID_IDX" tableName="DEPENDENCYMETRICS">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="DEPENDENCYMETRICS_COMPOSITE_IDX" tableName="DEPENDENCYMETRICS">
-            <column name="PROJECT_ID"/>
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
-            <column name="LAST_OCCURRENCE"/>
-        </createIndex>
-
-        <createIndex indexName="POLICY_NAME_IDX" tableName="POLICY">
-            <column name="NAME"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="POLICY_UUID_IDX" tableName="POLICY"/>
-
-        <addUniqueConstraint columnNames="USERNAME" constraintName="LDAPUSER_USERNAME_IDX" tableName="LDAPUSER"/>
-
-        <createIndex indexName="VULNERABLESOFTWARE_PART_VENDOR_PRODUCT_IDX" tableName="VULNERABLESOFTWARE">
-            <column name="PART"/>
-            <column name="VENDOR"/>
-            <column name="PRODUCT"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_CPE_PURL_PARTS_IDX" tableName="VULNERABLESOFTWARE">
-            <column name="PART"/>
-            <column name="VENDOR"/>
-            <column name="PRODUCT"/>
-            <column name="PURL_TYPE"/>
-            <column name="PURL_NAMESPACE"/>
-            <column name="PURL_NAME"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_PURL_TYPE_NS_NAME_IDX" tableName="VULNERABLESOFTWARE">
-            <column name="PURL_TYPE"/>
-            <column name="PURL_NAMESPACE"/>
-            <column name="PURL_NAME"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_PURL_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
-            <column name="PURL"/>
-            <column name="VERSIONENDEXCLUDING"/>
-            <column name="VERSIONENDINCLUDING"/>
-            <column name="VERSIONSTARTEXCLUDING"/>
-            <column name="VERSIONSTARTINCLUDING"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_CPE23_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
-            <column name="CPE23"/>
-            <column name="VERSIONENDEXCLUDING"/>
-            <column name="VERSIONENDINCLUDING"/>
-            <column name="VERSIONSTARTEXCLUDING"/>
-            <column name="VERSIONSTARTINCLUDING"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABLESOFTWARE_UUID_IDX"
-                             tableName="VULNERABLESOFTWARE"/>
-
-        <createIndex indexName="ANALYSIS_VULNERABILITY_ID_IDX" tableName="ANALYSIS">
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="ANALYSIS_PROJECT_ID_IDX" tableName="ANALYSIS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="ANALYSIS_COMPONENT_ID_IDX" tableName="ANALYSIS">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, VULNERABILITY_ID"
-                             constraintName="ANALYSIS_COMPOSITE_IDX" tableName="ANALYSIS"/>
-
-        <createIndex indexName="VEX_PROJECT_ID_IDX" tableName="VEX">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="VEX_UUID_IDX" tableName="VEX"/>
-
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABLE_SOFTWARE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
-            <column name="VULNERABLE_SOFTWARE"/>
-        </createIndex>
-
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_KEYS_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
-            <column name="VULNERABILITY"/>
-            <column name="VULNERABLE_SOFTWARE"/>
-        </createIndex>
-
-        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
-            <column name="VULNERABILITY"/>
-        </createIndex>
-
-
-        <addUniqueConstraint columnNames="UUID" constraintName="AFFECTEDVERSIONATTRIBUTION_UUID_IDX"
-                             tableName="AFFECTEDVERSIONATTRIBUTION"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="TEAM_UUID_IDX" tableName="TEAM"/>
-
-        <addUniqueConstraint columnNames="USERNAME" constraintName="OIDCUSER_USERNAME_IDX" tableName="OIDCUSER"/>
-
-        <addUniqueConstraint columnNames="USERNAME" constraintName="MANAGEDUSER_USERNAME_IDX" tableName="MANAGEDUSER"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="OIDCGROUP_UUID_IDX" tableName="OIDCGROUP"/>
-
-        <createIndex indexName="VULNERABILITYALIAS_INTERNAL_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="INTERNAL_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_SONATYPE_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="SONATYPE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_OSV_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="OSV_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_GSD_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="GSD_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_VULNDB_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="VULNDB_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_GHSA_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="GHSA_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_CVE_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="CVE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITYALIAS_SNYK_ID_IDX" tableName="VULNERABILITYALIAS">
-            <column name="SNYK_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITYALIAS_UUID_IDX"
-                             tableName="VULNERABILITYALIAS"/>
-
-        <createIndex indexName="CPE_CPE22_IDX" tableName="CPE">
-            <column name="CPE22"/>
-        </createIndex>
-
-        <createIndex indexName="CPE_PRODUCT_IDX" tableName="CPE">
-            <column name="PRODUCT"/>
-        </createIndex>
-
-        <createIndex indexName="CPE_VENDOR_IDX" tableName="CPE">
-            <column name="VENDOR"/>
-        </createIndex>
-
-        <createIndex indexName="CPE_CPE23_IDX" tableName="CPE" unique="true">
-            <column name="CPE23"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="CPE_UUID_IDX" tableName="CPE"/>
-
-        <createIndex indexName="REPOSITORY_META_COMPONENT_COMPOUND_IDX" tableName="REPOSITORY_META_COMPONENT"
-                     unique="true">
-            <column name="REPOSITORY_TYPE"/>
-            <column name="NAMESPACE"/>
-            <column name="NAME"/>
-        </createIndex>
-
-        <createIndex indexName="REPOSITORY_META_COMPONENT_LASTCHECK_IDX" tableName="REPOSITORY_META_COMPONENT">
-            <column name="LAST_CHECK"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="NAME" constraintName="PERMISSION_IDX" tableName="PERMISSION"/>
-
-        <createIndex indexName="VIOLATIONANALYSIS_COMPONENT_ID_IDX" tableName="VIOLATIONANALYSIS">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VIOLATIONANALYSIS_PROJECT_ID_IDX" tableName="VIOLATIONANALYSIS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VIOLATIONANALYSIS_POLICYVIOLATION_ID_IDX" tableName="VIOLATIONANALYSIS">
-            <column name="POLICYVIOLATION_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, POLICYVIOLATION_ID"
-                             constraintName="VIOLATIONANALYSIS_COMPOSITE_IDX" tableName="VIOLATIONANALYSIS"/>
-
-        <addUniqueConstraint columnNames="APIKEY" constraintName="APIKEY_IDX" tableName="APIKEY"/>
-
-        <createIndex indexName="FINDINGATTRIBUTION_PROJECT_ID_IDX" tableName="FINDINGATTRIBUTION">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="FINDINGATTRIBUTION_COMPONENT_ID_IDX" tableName="FINDINGATTRIBUTION">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="FINDINGATTRIBUTION_COMPOUND_IDX" tableName="FINDINGATTRIBUTION">
-            <column name="COMPONENT_ID"/>
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="FINDINGATTRIBUTION_VULNERABILITY_ID_IDX" tableName="FINDINGATTRIBUTION">
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="FINDINGATTRIBUTION_UUID_IDX"
-                             tableName="FINDINGATTRIBUTION"/>
-
-        <createIndex indexName="PURL_IDX" tableName="INTEGRITY_META_COMPONENT">
-            <column name="PURL"/>
-        </createIndex>
-
-        <createIndex indexName="LAST_FETCH_IDX" tableName="INTEGRITY_META_COMPONENT">
-            <column name="LAST_FETCH"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="PURL" constraintName="INTEGRITY_META_COMPONENT_U1"
-                             tableName="INTEGRITY_META_COMPONENT"/>
-
-        <createIndex indexName="POLICYVIOLATION_PROJECT_IDX" tableName="POLICYVIOLATION">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX" tableName="POLICYVIOLATION">
-            <column name="POLICYCONDITION_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICYVIOLATION_COMPONENT_IDX" tableName="POLICYVIOLATION">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="POLICYVIOLATION_UUID_IDX" tableName="POLICYVIOLATION"/>
-
-        <createIndex indexName="POLICYCONDITION_POLICY_ID_IDX" tableName="POLICYCONDITION">
-            <column name="POLICY_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="POLICYCONDITION_UUID_IDX" tableName="POLICYCONDITION"/>
-
-        <createIndex indexName="NOTIFICATIONRULE_PUBLISHER_IDX" tableName="NOTIFICATIONRULE">
-            <column name="PUBLISHER"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONRULE_UUID_IDX"
-                             tableName="NOTIFICATIONRULE"/>
-
-        <createIndex indexName="SERVICECOMPONENT_LAST_RISKSCORE_IDX" tableName="SERVICECOMPONENT">
-            <column defaultValueNumeric="0.0" name="LAST_RISKSCORE"/>
-        </createIndex>
-
-        <createIndex indexName="SERVICECOMPONENT_PROJECT_ID_IDX" tableName="SERVICECOMPONENT">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="SERVICECOMPONENT_PARENT_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENT">
-            <column name="PARENT_SERVICECOMPONENT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="SERVICECOMPONENT_UUID_IDX"
-                             tableName="SERVICECOMPONENT"/>
-
-        <createIndex indexName="MAPPEDOIDCGROUP_TEAM_ID_IDX" tableName="MAPPEDOIDCGROUP">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="MAPPEDOIDCGROUP_GROUP_ID_IDX" tableName="MAPPEDOIDCGROUP">
-            <column name="GROUP_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="TEAM_ID, GROUP_ID" constraintName="MAPPEDOIDCGROUP_U1"
-                             tableName="MAPPEDOIDCGROUP"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDOIDCGROUP_UUID_IDX" tableName="MAPPEDOIDCGROUP"/>
-
-        <createIndex indexName="MAPPEDLDAPGROUP_TEAM_ID_IDX" tableName="MAPPEDLDAPGROUP">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="TEAM_ID, DN" constraintName="MAPPEDLDAPGROUP_U1" tableName="MAPPEDLDAPGROUP"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDLDAPGROUP_UUID_IDX" tableName="MAPPEDLDAPGROUP"/>
-
-        <createIndex indexName="VULNERABILITY_VULNID_IDX" tableName="VULNERABILITY">
-            <column name="VULNID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITY_PUBLISHED_IDX" tableName="VULNERABILITY">
-            <column name="PUBLISHED"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITY_UPDATED_IDX" tableName="VULNERABILITY">
-            <column name="UPDATED"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABILITY_CREATED_IDX" tableName="VULNERABILITY">
-            <column name="CREATED"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="VULNID, SOURCE" constraintName="VULNERABILITY_U1" tableName="VULNERABILITY"/>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
-
-        <createIndex indexName="BOM_PROJECT_ID_IDX" tableName="BOM">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="BOM_UUID_IDX" tableName="BOM"/>
-
-        <createIndex indexName="PROJECT_SWID_TAGID_IDX" tableName="PROJECT">
-            <column name="SWIDTAGID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_CPE_IDX" tableName="PROJECT">
-            <column name="CPE"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_PURL_IDX" tableName="PROJECT">
-            <column name="PURL"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_CLASSIFIER_IDX" tableName="PROJECT">
-            <column name="CLASSIFIER"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_GROUP_IDX" tableName="PROJECT">
-            <column name="GROUP"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_LAST_RISKSCORE_IDX" tableName="PROJECT">
-            <column name="LAST_RISKSCORE"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_LASTBOMIMPORT_IDX" tableName="PROJECT">
-            <column name="LAST_BOM_IMPORTED"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_LASTBOMIMPORT_FORMAT_IDX" tableName="PROJECT">
-            <column name="LAST_BOM_IMPORTED_FORMAT"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_NAME_IDX" tableName="PROJECT">
-            <column name="NAME"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_VERSION_IDX" tableName="PROJECT">
-            <column name="VERSION"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_PARENT_PROJECT_ID_IDX" tableName="PROJECT">
-            <column name="PARENT_PROJECT_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="UUID" constraintName="PROJECT_UUID_IDX" tableName="PROJECT"/>
-
-        <createIndex indexName="PROJECTMETRICS_PROJECT_ID_IDX" tableName="PROJECTMETRICS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECTMETRICS_FIRST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
-            <column name="FIRST_OCCURRENCE"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECTMETRICS_LAST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
-            <column name="LAST_OCCURRENCE"/>
-        </createIndex>
-
-        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSE_ID_IDX" tableName="LICENSEGROUP_LICENSE">
-            <column name="LICENSE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX" tableName="LICENSEGROUP_LICENSE">
-            <column name="LICENSEGROUP_ID"/>
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
-            <column name="OIDCUSER_ID"/>
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
-            <column name="PERMISSION_ID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPONENT_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
-            <column name="COMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" tableName="OIDCUSERS_TEAMS">
-            <column name="OIDCUSERS_ID"/>
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" tableName="OIDCUSERS_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
-            <column name="LDAPUSER_ID"/>
-        </createIndex>
-
-        <createIndex indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
-            <column name="PERMISSION_ID"/>
-        </createIndex>
-
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
-            <column name="SERVICECOMPONENT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
-            <column name="VULNERABILITY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
-            <column name="VULNERABLESOFTWARE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
-            <column name="NOTIFICATIONRULE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECTS_TAGS_PROJECT_ID_IDX" tableName="PROJECTS_TAGS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECTS_TAGS_TAG_ID_IDX" tableName="PROJECTS_TAGS">
-            <column name="TAG_ID"/>
-        </createIndex>
-
-        <createIndex indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_TEAMS">
-            <column name="LDAPUSER_ID"/>
-        </createIndex>
-
-        <createIndex indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" tableName="LDAPUSERS_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
-            <column name="MANAGEDUSER_ID"/>
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
-            <column name="PERMISSION_ID"/>
-        </createIndex>
-
-        <createIndex indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" tableName="TEAMS_PERMISSIONS">
-            <column name="PERMISSION_ID"/>
-        </createIndex>
-
-        <createIndex indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" tableName="TEAMS_PERMISSIONS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
-            <column name="NOTIFICATIONRULE_ID"/>
-        </createIndex>
-
-        <createIndex indexName="APIKEYS_TEAMS_TEAM_ID_IDX" tableName="APIKEYS_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" tableName="APIKEYS_TEAMS">
-            <column name="APIKEY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
-            <column name="TEAM_ID"/>
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
-            <column name="MANAGEDUSER_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICY_PROJECTS_POLICY_ID_IDX" tableName="POLICY_PROJECTS">
-            <column name="POLICY_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICY_PROJECTS_PROJECT_ID_IDX" tableName="POLICY_PROJECTS">
-            <column name="PROJECT_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICY_TAGS_TAG_ID_IDX" tableName="POLICY_TAGS">
-            <column name="TAG_ID"/>
-        </createIndex>
-
-        <createIndex indexName="POLICY_TAGS_POLICY_ID_IDX" tableName="POLICY_TAGS">
-            <column name="POLICY_ID"/>
-        </createIndex>
-
-        <addUniqueConstraint columnNames="GROUPNAME, PROPERTYNAME" constraintName="CONFIGPROPERTY_U1"
-                             tableName="CONFIGPROPERTY"/>
-
-        <createTable tableName="shedlock">
-            <column name="name" type="VARCHAR(64)">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="shedlock_pk"/>
-            </column>
-            <column name="lock_until" type="TIMESTAMP WITHOUT TIME ZONE">
-                <constraints nullable="false"/>
-            </column>
-            <column name="locked_at" type="TIMESTAMP WITHOUT TIME ZONE">
-                <constraints nullable="false"/>
-            </column>
-            <column name="locked_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION"
-                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
-                                 constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="ANALYSIS" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
-                                 constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
-                                 constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="APIKEY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES"
-                                 constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT"
-                                 constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
-                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION"
-                                 constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS"
-                                 constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="LDAPUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS"
-                                 constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PERMISSION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS"
-                                 constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="LDAPUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="LICENSEGROUP" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE"
-                                 constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="LICENSE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
-                                 constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS"
-                                 constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="MANAGEDUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP"
-                                 constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="OIDCGROUP" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP"
-                                 constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE"
-                                 constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
-                                 constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
-                                 constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PERMISSION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS"
-                                 constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="OIDCUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="OIDCUSER" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS"
-                                 constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION"
-                                 constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="POLICY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="POLICYCONDITION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION"
-                                 constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="POLICY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS"
-                                 constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS"
-                                 constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="POLICY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
-                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TAG" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS"
-                                 constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS"
-                                 constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT"
-                                 constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY"
-                                 constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
-                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="SERVICECOMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT"
-                                 constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="TEAM" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS"
-                                 constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PERMISSION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT"
-                                 constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="COMPONENT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="POLICYVIOLATION" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS"
-                                 constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="PROJECT" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID"
-                                 baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
-                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
-
-        <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE"
-                                 constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
-                                 referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
-
-    <changeSet id="v5.3.0-2" author="nscuro@protonmail.com">
-        <preConditions onFail="MARK_RAN">
-            <tableExists tableName="SCHEMAVERSION"/>
-        </preConditions>
-
-        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameNumberedIndexesChange"/>
-    </changeSet>
-    <changeSet id="v5.3.0-3" author="VithikaS">
-        <preConditions onFail="MARK_RAN">
-            <tableExists tableName="SCHEMAVERSION"/>
-        </preConditions>
-
-        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
-    </changeSet>
-
-    <changeSet id="v5.3.0-4" author="VithikaS">
+    <changeSet author="sahibamittal (generated)" id="1701862332371-66">
         <createTable tableName="VULNERABILITY_POLICY">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYPOLICY_PK"/>
@@ -2348,23 +1324,1092 @@
             <column name="VALID_UNTIL" type="TIMESTAMP WITH TIME ZONE"/>
         </createTable>
     </changeSet>
-    <changeSet id="v5.3.0-5" author="VithikaS">
+    <changeSet author="sahibamittal (generated)" id="1701862332371-67">
+        <createIndex indexName="WORKFLOW_STATE_PARENT_STEP_ID_IDX" tableName="WORKFLOW_STATE">
+            <column name="PARENT_STEP_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-68">
+        <addUniqueConstraint columnNames="TOKEN, STEP" constraintName="WORKFLOW_STATE_COMPOSITE_IDX" tableName="WORKFLOW_STATE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-69">
+        <createIndex indexName="COMPONENT_PARENT_COMPONENT_ID_IDX" tableName="COMPONENT">
+            <column name="PARENT_COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-70">
+        <createIndex indexName="COMPONENT_GROUP_IDX" tableName="COMPONENT">
+            <column name="GROUP"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-71">
+        <createIndex indexName="COMPONENT_BLAKE3_IDX" tableName="COMPONENT">
+            <column name="BLAKE3"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-72">
+        <createIndex indexName="COMPONENT_PURL_IDX" tableName="COMPONENT">
+            <column name="PURL"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-73">
+        <createIndex indexName="COMPONENT_SHA3_512_IDX" tableName="COMPONENT">
+            <column name="SHA3_512"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-74">
+        <createIndex indexName="COMPONENT_CPE_IDX" tableName="COMPONENT">
+            <column name="CPE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-75">
+        <createIndex indexName="COMPONENT_LAST_RISKSCORE_IDX" tableName="COMPONENT">
+            <column name="LAST_RISKSCORE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-76">
+        <createIndex indexName="COMPONENT_SHA512_IDX" tableName="COMPONENT">
+            <column name="SHA_512"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-77">
+        <createIndex indexName="COMPONENT_SHA3_256_IDX" tableName="COMPONENT">
+            <column name="SHA3_256"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-78">
+        <createIndex indexName="COMPONENT_SHA384_IDX" tableName="COMPONENT">
+            <column name="SHA_384"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-79">
+        <createIndex indexName="COMPONENT_MD5_IDX" tableName="COMPONENT">
+            <column name="MD5"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-80">
+        <createIndex indexName="COMPONENT_BLAKE2B_384_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_384"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-81">
+        <createIndex indexName="COMPONENT_CLASSIFIER_IDX" tableName="COMPONENT">
+            <column name="CLASSIFIER"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-82">
+        <createIndex indexName="COMPONENT_SWID_TAGID_IDX" tableName="COMPONENT">
+            <column name="SWIDTAGID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-83">
+        <createIndex indexName="COMPONENT_BLAKE2B_512_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_512"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-84">
+        <createIndex indexName="COMPONENT_PURL_COORDINATES_IDX" tableName="COMPONENT">
+            <column name="PURLCOORDINATES"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-85">
+        <createIndex indexName="COMPONENT_LICENSE_ID_IDX" tableName="COMPONENT">
+            <column name="LICENSE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-86">
+        <createIndex indexName="COMPONENT_NAME_IDX" tableName="COMPONENT">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-87">
+        <createIndex indexName="COMPONENT_SHA1_IDX" tableName="COMPONENT">
+            <column name="SHA1"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-88">
+        <createIndex indexName="COMPONENT_PROJECT_ID_IDX" tableName="COMPONENT">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-89">
+        <createIndex indexName="COMPONENT_SHA3_384_IDX" tableName="COMPONENT">
+            <column name="SHA3_384"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-90">
+        <createIndex indexName="COMPONENT_BLAKE2B_256_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_256"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-91">
+        <createIndex indexName="COMPONENT_SHA256_IDX" tableName="COMPONENT">
+            <column name="SHA_256"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-92">
+        <addUniqueConstraint columnNames="UUID" constraintName="COMPONENT_UUID_IDX" tableName="COMPONENT"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-93">
+        <createIndex indexName="LICENSEGROUP_NAME_IDX" tableName="LICENSEGROUP">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-94">
+        <addUniqueConstraint columnNames="UUID" constraintName="LICENSEGROUP_UUID_IDX" tableName="LICENSEGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-95">
+        <createIndex indexName="LICENSE_LICENSEID_IDX" tableName="LICENSE" unique="true">
+            <column name="LICENSEID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-96">
+        <createIndex indexName="LICENSE_NAME_IDX" tableName="LICENSE">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-97">
+        <addUniqueConstraint columnNames="UUID" constraintName="LICENSE_UUID_IDX" tableName="LICENSE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-98">
+        <createIndex indexName="ANALYSISCOMMENT_ANALYSIS_ID_IDX" tableName="ANALYSISCOMMENT">
+            <column name="ANALYSIS_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-99">
+        <createIndex indexName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_ID_IDX" tableName="VIOLATIONANALYSISCOMMENT">
+            <column name="VIOLATIONANALYSIS_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-100">
+        <createIndex indexName="REPOSITORY_UUID_IDX" tableName="REPOSITORY">
+            <column name="UUID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-101">
+        <addUniqueConstraint columnNames="TYPE, IDENTIFIER" constraintName="REPOSITORY_COMPOUND_IDX" tableName="REPOSITORY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-102">
+        <addUniqueConstraint columnNames="TOKEN" constraintName="VULNERABILITY_SCAN_TOKEN_IDX" tableName="VULNERABILITYSCAN"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-103">
+        <createIndex indexName="PROJECT_PROPERTY_PROJECT_ID_IDX" tableName="PROJECT_PROPERTY">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-104">
+        <addUniqueConstraint columnNames="PROJECT_ID, GROUPNAME, PROPERTYNAME" constraintName="PROJECT_PROPERTY_KEYS_IDX" tableName="PROJECT_PROPERTY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-105">
+        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONPUBLISHER_UUID_IDX" tableName="NOTIFICATIONPUBLISHER"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-106">
+        <createIndex indexName="PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-107">
+        <createIndex indexName="PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-108">
+        <addUniqueConstraint columnNames="CWEID" constraintName="CWE_CWEID_IDX" tableName="CWE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-109">
+        <createIndex indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" tableName="INTEGRITY_ANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-110">
+        <createIndex indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-111">
+        <createIndex indexName="DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-112">
+        <createIndex indexName="DEPENDENCYMETRICS_COMPOSITE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="PROJECT_ID"/>
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-113">
+        <createIndex indexName="DEPENDENCYMETRICS_COMPONENT_ID_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-114">
+        <createIndex indexName="DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-115">
+        <createIndex indexName="POLICY_NAME_IDX" tableName="POLICY">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-116">
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICY_UUID_IDX" tableName="POLICY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-117">
+        <addUniqueConstraint columnNames="USERNAME" constraintName="LDAPUSER_USERNAME_IDX" tableName="LDAPUSER"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-118">
+        <createIndex indexName="VULNERABLESOFTWARE_PART_VENDOR_PRODUCT_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PART"/>
+            <column name="VENDOR"/>
+            <column name="PRODUCT"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-119">
+        <createIndex indexName="VULNERABLESOFTWARE_CPE_PURL_PARTS_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PART"/>
+            <column name="VENDOR"/>
+            <column name="PRODUCT"/>
+            <column name="PURL_TYPE"/>
+            <column name="PURL_NAMESPACE"/>
+            <column name="PURL_NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-120">
+        <createIndex indexName="VULNERABLESOFTWARE_PURL_TYPE_NS_NAME_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PURL_TYPE"/>
+            <column name="PURL_NAMESPACE"/>
+            <column name="PURL_NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-121">
+        <createIndex indexName="VULNERABLESOFTWARE_PURL_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PURL"/>
+            <column name="VERSIONENDEXCLUDING"/>
+            <column name="VERSIONENDINCLUDING"/>
+            <column name="VERSIONSTARTEXCLUDING"/>
+            <column name="VERSIONSTARTINCLUDING"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-122">
+        <createIndex indexName="VULNERABLESOFTWARE_CPE23_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="CPE23"/>
+            <column name="VERSIONENDEXCLUDING"/>
+            <column name="VERSIONENDINCLUDING"/>
+            <column name="VERSIONSTARTEXCLUDING"/>
+            <column name="VERSIONSTARTINCLUDING"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-123">
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABLESOFTWARE_UUID_IDX" tableName="VULNERABLESOFTWARE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-124">
+        <createIndex indexName="ANALYSIS_VULNERABILITY_ID_IDX" tableName="ANALYSIS">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-125">
+        <createIndex indexName="ANALYSIS_PROJECT_ID_IDX" tableName="ANALYSIS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-126">
+        <createIndex indexName="ANALYSIS_COMPONENT_ID_IDX" tableName="ANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-127">
+        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, VULNERABILITY_ID" constraintName="ANALYSIS_COMPOSITE_IDX" tableName="ANALYSIS"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-128">
+        <createIndex indexName="VEX_PROJECT_ID_IDX" tableName="VEX">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-129">
+        <addUniqueConstraint columnNames="UUID" constraintName="VEX_UUID_IDX" tableName="VEX"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-130">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABLE_SOFTWARE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABLE_SOFTWARE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-131">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_KEYS_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABILITY"/>
+            <column name="VULNERABLE_SOFTWARE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-132">
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABILITY"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-133">
+        <addUniqueConstraint columnNames="SOURCE, VULNERABILITY, VULNERABLE_SOFTWARE" constraintName="AFFECTEDVERSIONATTRIBUTION_COMPOSITE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-134">
+        <addUniqueConstraint columnNames="UUID" constraintName="AFFECTEDVERSIONATTRIBUTION_UUID_IDX" tableName="AFFECTEDVERSIONATTRIBUTION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-135">
+        <addUniqueConstraint columnNames="UUID" constraintName="TEAM_UUID_IDX" tableName="TEAM"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-136">
+        <addUniqueConstraint columnNames="USERNAME" constraintName="OIDCUSER_USERNAME_IDX" tableName="OIDCUSER"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-137">
+        <addUniqueConstraint columnNames="USERNAME" constraintName="MANAGEDUSER_USERNAME_IDX" tableName="MANAGEDUSER"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-138">
+        <addUniqueConstraint columnNames="UUID" constraintName="OIDCGROUP_UUID_IDX" tableName="OIDCGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-139">
+        <createIndex indexName="VULNERABILITYALIAS_INTERNAL_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="INTERNAL_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-140">
+        <createIndex indexName="VULNERABILITYALIAS_SONATYPE_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="SONATYPE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-141">
+        <createIndex indexName="VULNERABILITYALIAS_OSV_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="OSV_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-142">
+        <createIndex indexName="VULNERABILITYALIAS_GSD_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="GSD_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-143">
+        <createIndex indexName="VULNERABILITYALIAS_VULNDB_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="VULNDB_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-144">
+        <createIndex indexName="VULNERABILITYALIAS_GHSA_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="GHSA_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-145">
+        <createIndex indexName="VULNERABILITYALIAS_SNYK_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="SNYK_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-146">
+        <createIndex indexName="VULNERABILITYALIAS_CVE_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="CVE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-147">
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITYALIAS_UUID_IDX" tableName="VULNERABILITYALIAS"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-148">
+        <createIndex indexName="CPE_CPE22_IDX" tableName="CPE">
+            <column name="CPE22"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-149">
+        <createIndex indexName="CPE_PRODUCT_IDX" tableName="CPE">
+            <column name="PRODUCT"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-150">
+        <createIndex indexName="CPE_VENDOR_IDX" tableName="CPE">
+            <column name="VENDOR"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-151">
+        <createIndex indexName="CPE_CPE23_IDX" tableName="CPE" unique="true">
+            <column name="CPE23"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-152">
+        <addUniqueConstraint columnNames="UUID" constraintName="CPE_UUID_IDX" tableName="CPE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-153">
+        <createIndex indexName="REPOSITORY_META_COMPONENT_COMPOUND_IDX" tableName="REPOSITORY_META_COMPONENT" unique="true">
+            <column name="REPOSITORY_TYPE"/>
+            <column name="NAMESPACE"/>
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-154">
+        <createIndex indexName="REPOSITORY_META_COMPONENT_LASTCHECK_IDX" tableName="REPOSITORY_META_COMPONENT">
+            <column name="LAST_CHECK"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-155">
+        <addUniqueConstraint columnNames="NAME" constraintName="PERMISSION_IDX" tableName="PERMISSION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-156">
+        <createIndex indexName="VIOLATIONANALYSIS_COMPONENT_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-157">
+        <createIndex indexName="VIOLATIONANALYSIS_PROJECT_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-158">
+        <createIndex indexName="VIOLATIONANALYSIS_POLICYVIOLATION_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="POLICYVIOLATION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-159">
+        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, POLICYVIOLATION_ID" constraintName="VIOLATIONANALYSIS_COMPOSITE_IDX" tableName="VIOLATIONANALYSIS"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-160">
+        <addUniqueConstraint columnNames="APIKEY" constraintName="APIKEY_IDX" tableName="APIKEY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-161">
+        <createIndex indexName="FINDINGATTRIBUTION_PROJECT_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-162">
+        <createIndex indexName="FINDINGATTRIBUTION_COMPONENT_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-163">
+        <createIndex indexName="FINDINGATTRIBUTION_COMPOUND_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-164">
+        <createIndex indexName="FINDINGATTRIBUTION_VULNERABILITY_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-165">
+        <addUniqueConstraint columnNames="UUID" constraintName="FINDINGATTRIBUTION_UUID_IDX" tableName="FINDINGATTRIBUTION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-166">
+        <createIndex indexName="PURL_IDX" tableName="INTEGRITY_META_COMPONENT">
+            <column name="PURL"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-167">
+        <createIndex indexName="LAST_FETCH_IDX" tableName="INTEGRITY_META_COMPONENT">
+            <column name="LAST_FETCH"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-168">
+        <addUniqueConstraint columnNames="PURL" constraintName="INTEGRITY_META_COMPONENT_U1" tableName="INTEGRITY_META_COMPONENT"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-169">
+        <createIndex indexName="POLICYVIOLATION_PROJECT_IDX" tableName="POLICYVIOLATION">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-170">
+        <createIndex indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX" tableName="POLICYVIOLATION">
+            <column name="POLICYCONDITION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-171">
+        <createIndex indexName="POLICYVIOLATION_COMPONENT_IDX" tableName="POLICYVIOLATION">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-172">
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICYVIOLATION_UUID_IDX" tableName="POLICYVIOLATION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-173">
+        <createIndex indexName="POLICYCONDITION_POLICY_ID_IDX" tableName="POLICYCONDITION">
+            <column name="POLICY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-174">
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICYCONDITION_UUID_IDX" tableName="POLICYCONDITION"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-175">
+        <createIndex indexName="NOTIFICATIONRULE_PUBLISHER_IDX" tableName="NOTIFICATIONRULE">
+            <column name="PUBLISHER"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-176">
+        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONRULE_UUID_IDX" tableName="NOTIFICATIONRULE"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-177">
+        <createIndex indexName="SERVICECOMPONENT_LAST_RISKSCORE_IDX" tableName="SERVICECOMPONENT">
+            <column defaultValueNumeric="0.0" name="LAST_RISKSCORE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-178">
+        <createIndex indexName="SERVICECOMPONENT_PROJECT_ID_IDX" tableName="SERVICECOMPONENT">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-179">
+        <createIndex indexName="SERVICECOMPONENT_PARENT_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENT">
+            <column name="PARENT_SERVICECOMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-180">
+        <addUniqueConstraint columnNames="UUID" constraintName="SERVICECOMPONENT_UUID_IDX" tableName="SERVICECOMPONENT"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-181">
+        <createIndex indexName="MAPPEDOIDCGROUP_TEAM_ID_IDX" tableName="MAPPEDOIDCGROUP">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-182">
+        <createIndex indexName="MAPPEDOIDCGROUP_GROUP_ID_IDX" tableName="MAPPEDOIDCGROUP">
+            <column name="GROUP_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-183">
+        <addUniqueConstraint columnNames="TEAM_ID, GROUP_ID" constraintName="MAPPEDOIDCGROUP_U1" tableName="MAPPEDOIDCGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-184">
+        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDOIDCGROUP_UUID_IDX" tableName="MAPPEDOIDCGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-185">
+        <createIndex indexName="MAPPEDLDAPGROUP_TEAM_ID_IDX" tableName="MAPPEDLDAPGROUP">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-186">
+        <addUniqueConstraint columnNames="TEAM_ID, DN" constraintName="MAPPEDLDAPGROUP_U1" tableName="MAPPEDLDAPGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-187">
+        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDLDAPGROUP_UUID_IDX" tableName="MAPPEDLDAPGROUP"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-188">
+        <createIndex indexName="VULNERABILITY_VULNID_IDX" tableName="VULNERABILITY">
+            <column name="VULNID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-189">
+        <createIndex indexName="VULNERABILITY_PUBLISHED_IDX" tableName="VULNERABILITY">
+            <column name="PUBLISHED"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-190">
+        <createIndex indexName="VULNERABILITY_UPDATED_IDX" tableName="VULNERABILITY">
+            <column name="UPDATED"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-191">
+        <createIndex indexName="VULNERABILITY_CREATED_IDX" tableName="VULNERABILITY">
+            <column name="CREATED"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-192">
+        <addUniqueConstraint columnNames="VULNID, SOURCE" constraintName="VULNERABILITY_U1" tableName="VULNERABILITY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-193">
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-194">
+        <createIndex indexName="BOM_PROJECT_ID_IDX" tableName="BOM">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-195">
+        <addUniqueConstraint columnNames="UUID" constraintName="BOM_UUID_IDX" tableName="BOM"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-196">
+        <createIndex indexName="PROJECT_SWID_TAGID_IDX" tableName="PROJECT">
+            <column name="SWIDTAGID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-197">
+        <createIndex indexName="PROJECT_CPE_IDX" tableName="PROJECT">
+            <column name="CPE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-198">
+        <createIndex indexName="PROJECT_PURL_IDX" tableName="PROJECT">
+            <column name="PURL"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-199">
+        <createIndex indexName="PROJECT_CLASSIFIER_IDX" tableName="PROJECT">
+            <column name="CLASSIFIER"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-200">
+        <createIndex indexName="PROJECT_GROUP_IDX" tableName="PROJECT">
+            <column name="GROUP"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-201">
+        <createIndex indexName="PROJECT_LASTBOMIMPORT_IDX" tableName="PROJECT">
+            <column name="LAST_BOM_IMPORTED"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-202">
+        <createIndex indexName="PROJECT_LAST_RISKSCORE_IDX" tableName="PROJECT">
+            <column name="LAST_RISKSCORE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-203">
+        <createIndex indexName="PROJECT_LASTBOMIMPORT_FORMAT_IDX" tableName="PROJECT">
+            <column name="LAST_BOM_IMPORTED_FORMAT"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-204">
+        <createIndex indexName="PROJECT_NAME_IDX" tableName="PROJECT">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-205">
+        <createIndex indexName="PROJECT_VERSION_IDX" tableName="PROJECT">
+            <column name="VERSION"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-206">
+        <createIndex indexName="PROJECT_PARENT_PROJECT_ID_IDX" tableName="PROJECT">
+            <column name="PARENT_PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-207">
+        <addUniqueConstraint columnNames="UUID" constraintName="PROJECT_UUID_IDX" tableName="PROJECT"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-208">
+        <createIndex indexName="PROJECTMETRICS_PROJECT_ID_IDX" tableName="PROJECTMETRICS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-209">
+        <createIndex indexName="PROJECTMETRICS_FIRST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-210">
+        <createIndex indexName="PROJECTMETRICS_LAST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-211">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX" tableName="LICENSEGROUP_LICENSE">
+            <column name="LICENSEGROUP_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-212">
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSE_ID_IDX" tableName="LICENSEGROUP_LICENSE">
+            <column name="LICENSE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-213">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
+            <column name="OIDCUSER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-214">
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-215">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-216">
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPONENT_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-217">
+        <createIndex indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" tableName="OIDCUSERS_TEAMS">
+            <column name="OIDCUSERS_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-218">
+        <createIndex indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" tableName="OIDCUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-219">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
+            <column name="LDAPUSER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-220">
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-221">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+            <column name="SERVICECOMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-222">
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-223">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-224">
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+            <column name="VULNERABLESOFTWARE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-225">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-226">
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-227">
+        <createIndex indexName="PROJECTS_TAGS_PROJECT_ID_IDX" tableName="PROJECTS_TAGS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-228">
+        <createIndex indexName="PROJECTS_TAGS_TAG_ID_IDX" tableName="PROJECTS_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-229">
+        <createIndex indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_TEAMS">
+            <column name="LDAPUSER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-230">
+        <createIndex indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" tableName="LDAPUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-231">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
+            <column name="MANAGEDUSER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-232">
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-233">
+        <createIndex indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" tableName="TEAMS_PERMISSIONS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-234">
+        <createIndex indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" tableName="TEAMS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-235">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-236">
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-237">
+        <createIndex indexName="APIKEYS_TEAMS_TEAM_ID_IDX" tableName="APIKEYS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-238">
+        <createIndex indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" tableName="APIKEYS_TEAMS">
+            <column name="APIKEY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-239">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-240">
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-241">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-242">
+        <createIndex indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
+            <column name="MANAGEDUSER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-243">
+        <createIndex indexName="POLICY_PROJECTS_POLICY_ID_IDX" tableName="POLICY_PROJECTS">
+            <column name="POLICY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-244">
+        <createIndex indexName="POLICY_PROJECTS_PROJECT_ID_IDX" tableName="POLICY_PROJECTS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-245">
+        <createIndex indexName="POLICY_TAGS_TAG_ID_IDX" tableName="POLICY_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-246">
+        <createIndex indexName="POLICY_TAGS_POLICY_ID_IDX" tableName="POLICY_TAGS">
+            <column name="POLICY_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-247">
+        <addUniqueConstraint columnNames="GROUPNAME, PROPERTYNAME" constraintName="CONFIGPROPERTY_U1" tableName="CONFIGPROPERTY"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-248">
         <createIndex indexName="VULNERABILITY_POLICY_NAME_IDX" tableName="VULNERABILITY_POLICY" unique="true">
             <column name="NAME"/>
         </createIndex>
     </changeSet>
-    <changeSet id="v5.3.0-6" author="sahibamittal">
-        <preConditions onFail="MARK_RAN">
-                <tableExists tableName="ANALYSIS"/>
-        </preConditions>
-        <addColumn tableName="ANALYSIS">
-            <column name="CVSSV2VECTOR" type="VARCHAR(255)"/>
-            <column name="CVSSV3SCORE" type="numeric"/>
-            <column name="OWASPSCORE" type="numeric"/>
-            <column name="CVSSV2SCORE" type="numeric"/>
-            <column name="OWASPVECTOR" type="VARCHAR(255)"/>
-            <column name="CVSSV3VECTOR" type="VARCHAR(255)"/>
-            <column name="SEVERITY" type="VARCHAR(255)"/>
-        </addColumn>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-249">
+        <createTable tableName="DELETEME1700058621852">
+            <column name="UNUSED" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-250">
+        <createTable tableName="shedlock">
+            <column name="name" type="VARCHAR(64)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="shedlock_pk"/>
+            </column>
+            <column name="lock_until" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-251">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION" constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-252">
+        <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION" constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-253">
+        <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT" constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="ANALYSIS" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-254">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-255">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-256">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-257">
+        <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="APIKEY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-258">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-259">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-260">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES" constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-261">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES" constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-262">
+        <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-263">
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-264">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-265">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS" constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-266">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS" constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-267">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-268">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-269">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-270">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS" constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-271">
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS" constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="LDAPUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-272">
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS" constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-273">
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS" constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="LDAPUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-274">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS" constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-275">
+        <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE" constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="LICENSEGROUP" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-276">
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE" constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-277">
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS" constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-278">
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS" constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-279">
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS" constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-280">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS" constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-281">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP" constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-282">
+        <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP" constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="OIDCGROUP" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-283">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP" constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-284">
+        <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE" constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-285">
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS" constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-286">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS" constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-287">
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS" constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-288">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS" constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-289">
+        <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS" constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="OIDCUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-290">
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS" constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-291">
+        <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS" constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="OIDCUSER" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-292">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS" constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-293">
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION" constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="POLICY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-294">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-295">
+        <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="POLICYCONDITION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-296">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-297">
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS" constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="POLICY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-298">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS" constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-299">
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="POLICY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-300">
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-301">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS" constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-302">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS" constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-303">
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS" constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-304">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS" constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-305">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS" constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-306">
+        <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT" constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-307">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY" constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-308">
+        <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES" constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-309">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES" constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-310">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT" constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-311">
+        <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT" constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-312">
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS" constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-313">
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS" constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="TEAM" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-314">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-315">
+        <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT" constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-316">
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-317">
+        <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="POLICYVIOLATION" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-318">
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-319">
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES" constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-320">
+        <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES" constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+    </changeSet>
+    <changeSet author="sahibamittal (generated)" id="1701862332371-321">
+        <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE" constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID" referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
 </databaseChangeLog>
