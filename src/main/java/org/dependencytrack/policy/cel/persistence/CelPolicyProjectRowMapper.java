@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -46,7 +47,10 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "cpe", rs::getString, builder::setCpe);
         maybeSet(rs, "purl", rs::getString, builder::setPurl);
         maybeSet(rs, "swid_tag_id", rs::getString, builder::setSwidTagId);
-        maybeSet(rs, "last_bom_import", columnName -> Timestamps.fromDate(rs.getDate(columnName)), builder::setLastBomImport);
+        maybeSet(rs, "last_bom_import", columnName -> {
+            final Date lastBomImport = rs.getDate(columnName);
+            return lastBomImport != null ? Timestamps.fromDate(lastBomImport) : null;
+        }, builder::setLastBomImport);
         return builder.build();
     }
 

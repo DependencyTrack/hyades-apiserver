@@ -148,7 +148,7 @@ public class CelPolicyEngine {
 
             final org.dependencytrack.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
-                protoProject = JdbiFactory.jdbi(qm).withHandle(handle -> new CelPolicyDao().loadRequiredFields(handle, org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build(), requirements));
+                protoProject = JdbiFactory.jdbi(qm).withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build(), requirements));
             } else {
                 protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }

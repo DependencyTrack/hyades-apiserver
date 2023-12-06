@@ -11,14 +11,17 @@ import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.Project;
-import org.dependencytrack.proto.policy.v1.Vulnerability;
-import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
+import org.jdbi.v3.sqlobject.customizer.Define;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
@@ -26,11 +29,75 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJ
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
 
-public class CelPolicyDao {
+public interface CelPolicyDao {
 
-    private static final Logger LOGGER = Logger.getLogger(CelPolicyDao.class);
+    Logger LOGGER = Logger.getLogger(CelPolicyDao.class);
 
-    public Project loadRequiredFields(final Handle jdbiHandle, final Project project, final MultiValuedMap<Type, String> requirements) {
+    @SqlQuery("""
+            SELECT
+              ${fetchColumns?join(", ")}
+            FROM
+              "PROJECT" AS "P"
+            <#if fetchPropertyColumns?size gt 0>
+            LEFT JOIN LATERAL (
+              SELECT
+                CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(${fetchPropertyColumns?join(", ")})) AS TEXT) AS "properties"
+              FROM
+                "PROJECT_PROPERTY" AS "PP"
+              WHERE
+                "PP"."PROJECT_ID" = "P"."ID"
+            ) AS "properties" ON TRUE
+            </#if>
+            <#if fetchColumns?seq_contains("\\"tags\\"")>
+            LEFT JOIN LATERAL (
+              SELECT
+                CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
+              FROM
+                "TAG" AS "T"
+              INNER JOIN
+                "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
+              WHERE
+                "PT"."PROJECT_ID" = "P"."ID"
+            ) AS "tags" ON TRUE
+            </#if>
+            WHERE
+              "P"."UUID" = (:uuid)::TEXT
+            """)
+    @RegisterRowMapper(CelPolicyProjectRowMapper.class)
+    Project getProject(@Define List<String> fetchColumns, @Define List<String> fetchPropertyColumns, UUID uuid);
+
+    @SqlQuery("""
+            SELECT
+              ${fetchColumns?join(", ")}
+            FROM
+              "COMPONENT" AS "C"
+            <#if fetchColumns?seq_contains(\\"publishedAt\\")>
+            LEFT JOIN LATERAL (
+              SELECT
+                "IMC"."PUBLISHED_AT" AS "publishedAt"
+              FROM
+                "INTEGRITY_META_COMPONENT" AS "IMC"
+              WHERE
+                "IMC"."PURL" = "C"."PURL"
+            ) AS "integrityMeta"
+            </#if>
+            <#if fetchColumns?seq_contains(\\"latestVersion\\")>
+            LEFT JOIN LATERAL (
+              SELECT
+                "RMC"."LATEST_VERSION" AS "latestVersion"
+              FROM
+                "REPOSITORY_META_COMPONENT" AS "RMC"
+              WHERE
+                "RMC"."NAME" = "C"."NAME"
+            ) AS "repoMeta"
+            </#if>
+            WHERE
+              "C"."UUID" = (:uuid)::TEXT
+            """)
+    @RegisterRowMapper(CelPolicyComponentRowMapper.class)
+    Component getComponent(@Define List<String> fetchColumns, UUID uuid);
+
+    default Project loadRequiredFields(final Project project, final MultiValuedMap<Type, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_PROJECT);
         if (projectRequirements == null || projectRequirements.isEmpty()) {
             return project;
@@ -60,46 +127,15 @@ public class CelPolicyDao {
             sqlSelectColumns.add("\"tags\"");
         }
 
-        return jdbiHandle.createQuery("""
-                        SELECT
-                          <selectColumns>
-                        FROM
-                          "PROJECT" AS "P"
-                        <if(shouldFetchProperties)>
-                        LEFT JOIN LATERAL (
-                          SELECT
-                            CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(<propertySelectColumns>)) AS TEXT) AS "properties"
-                          FROM
-                            "PROJECT_PROPERTY" AS "PP"
-                          WHERE
-                            "PP"."PROJECT_ID" = "P"."ID"
-                        ) AS "properties" ON TRUE
-                        <endif>
-                        <if(shouldFetchTags)>
-                        LEFT JOIN LATERAL (
-                          SELECT
-                            CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
-                          FROM
-                            "TAG" AS "T"
-                          INNER JOIN
-                            "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
-                          WHERE
-                            "PT"."PROJECT_ID" = "P"."ID"
-                        ) AS "tags" ON TRUE
-                        <endif>
-                        WHERE
-                          "P"."UUID" = :uuid
-                        """)
-                .defineList("selectColumns", sqlSelectColumns)
-                .defineList("propertySelectColumns", sqlPropertySelectColumns)
-                .define("shouldFetchProperties", sqlSelectColumns.contains("\"properties\""))
-                .define("shouldFetchTags", sqlSelectColumns.contains("\"tags\""))
-                .bind("uuid", project.getUuid())
-                .map(new CelPolicyProjectRowMapper(project.toBuilder()))
-                .one();
+        final Project fetchedProject = getProject(sqlSelectColumns, sqlPropertySelectColumns, UUID.fromString(project.getUuid()));
+        if (fetchedProject == null) {
+            throw new NoSuchElementException();
+        }
+
+        return project.toBuilder().mergeFrom(fetchedProject).build();
     }
 
-    public Component loadRequiredFields(final Handle jdbiHandle, final Component component, final MultiValuedMap<Type, String> requirements) {
+    default Component loadRequiredFields(final Component component, final MultiValuedMap<Type, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_COMPONENT);
         if (projectRequirements == null || projectRequirements.isEmpty()) {
             return component;
@@ -123,47 +159,12 @@ public class CelPolicyDao {
             sqlSelectColumns.add("\"publishedAt\"");
         }
 
-        return jdbiHandle.createQuery("""
-                        SELECT
-                          <selectColumns>
-                        FROM
-                          "COMPONENT" AS "C"
-                        <if(shouldFetchPublishedAt)>
-                        LEFT JOIN LATERAL (
-                          SELECT
-                            "IMC"."PUBLISHED_AT" AS "publishedAt"
-                          FROM
-                            "INTEGRITY_META_COMPONENT" AS "IMC"
-                          WHERE
-                            "IMC"."PURL" = "C"."PURL"
-                        ) AS "integrityMeta"
-                        <endif>
-                        <if(shouldFetchLatestVersion)>
-                        LEFT JOIN LATERAL (
-                          SELECT
-                            "RMC"."LATEST_VERSION" AS "latestVersion"
-                          FROM
-                            "REPOSITORY_META_COMPONENT" AS "RMC"
-                          WHERE
-                            "RMC"."NAME" = "C"."NAME"
-                        ) AS "repoMeta"
-                        <endif>
-                        WHERE
-                          "C"."UUID" = :uuid
-                        """)
-                .defineList("selectColumns", sqlSelectColumns)
-                .define("shouldFetchLatestVersion", sqlSelectColumns.contains("\"latestVersion\""))
-                .define("shouldFetchPublishedAt", sqlSelectColumns.contains("\"publishedAt\""))
-                .bind("uuid", component.getUuid())
-                .map(new CelPolicyComponentRowMapper(component.toBuilder()))
-                .one();
-    }
+        final Component fetchedComponent = getComponent(sqlSelectColumns, UUID.fromString(component.getUuid()));
+        if (fetchedComponent == null) {
+            throw new NoSuchElementException();
+        }
 
-    public Vulnerability loadRequiredFields(final Handle jdbiHandle, final Vulnerability vuln, final MultiValuedMap<Type, String> requirements) {
-        return jdbiHandle.createQuery("""
-                        """)
-                .map(new CelPolicyVulnerabilityRowMapper(vuln.toBuilder()))
-                .one();
+        return component.toBuilder().mergeFrom(fetchedComponent).build();
     }
 
     private static Set<String> determineFieldsToLoad(final Descriptor typeDescriptor, final Message typeInstance, final Collection<String> requiredFields) {
