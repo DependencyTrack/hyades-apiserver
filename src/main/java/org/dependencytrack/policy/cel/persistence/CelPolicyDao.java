@@ -74,8 +74,7 @@ public interface CelPolicyDao {
               ${fetchColumns?join(", ")}
             FROM
               "COMPONENT" AS "C"
-            -- TODO: Add license, license groups
-            <#if fetchColumns?seq_contains("\\"publishedAt\\"")>
+            <#if fetchColumns?seq_contains("\\"published_at\\"")>
               LEFT JOIN LATERAL (
                 SELECT
                   "IMC"."PUBLISHED_AT" AS "published_at"
@@ -83,9 +82,9 @@ public interface CelPolicyDao {
                   "INTEGRITY_META_COMPONENT" AS "IMC"
                 WHERE
                   "IMC"."PURL" = "C"."PURL"
-              ) AS "integrityMeta"
+              ) AS "integrityMeta" ON TRUE
             </#if>
-            <#if fetchColumns?seq_contains("\\"latestVersion\\"")>
+            <#if fetchColumns?seq_contains("\\"latest_version\\"")>
               LEFT JOIN LATERAL (
                 SELECT
                   "RMC"."LATEST_VERSION" AS "latest_version"
@@ -93,7 +92,7 @@ public interface CelPolicyDao {
                   "REPOSITORY_META_COMPONENT" AS "RMC"
                 WHERE
                   "RMC"."NAME" = "C"."NAME"
-              ) AS "repoMeta"
+              ) AS "repoMeta" ON TRUE
             </#if>
             WHERE
               "C"."UUID" = (:uuid)::TEXT

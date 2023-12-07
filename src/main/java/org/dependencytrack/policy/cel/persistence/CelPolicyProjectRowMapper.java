@@ -59,8 +59,13 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
             return;
         }
 
+        final String tagsJson = rs.getString("tags");
+        if (tagsJson == null) {
+            return;
+        }
+
         try {
-            final List<String> tags = OBJECT_MAPPER.readValue(rs.getString("tags"), new TypeReference<>() {
+            final List<String> tags = OBJECT_MAPPER.readValue(tagsJson, new TypeReference<>() {
             });
             setter.accept(tags);
         } catch (JacksonException e) {
