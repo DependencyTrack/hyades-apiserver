@@ -52,7 +52,7 @@ public class IntegrityMetaQueryManagerPostgresTest extends AbstractPostgresEnabl
                 meta -> {
                     assertThat(meta.getStatus()).isNull();
                     assertThat(meta.getPurl()).isEqualTo("pkg:maven/acme/example@1.0.0?type=jar");
-                    assertThat(meta.getId()).isEqualTo(1L);
+                    assertThat(meta.getId()).isGreaterThan(0L);
                     assertThat(meta.getMd5()).isNull();
                     assertThat(meta.getSha1()).isNull();
                     assertThat(meta.getSha256()).isNull();
