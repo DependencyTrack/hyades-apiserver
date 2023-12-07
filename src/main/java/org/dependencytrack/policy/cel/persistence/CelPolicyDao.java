@@ -9,8 +9,10 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
+import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
 
 public interface CelPolicyDao {
@@ -39,26 +42,26 @@ public interface CelPolicyDao {
             FROM
               "PROJECT" AS "P"
             <#if fetchPropertyColumns?size gt 0>
-            LEFT JOIN LATERAL (
-              SELECT
-                CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(${fetchPropertyColumns?join(", ")})) AS TEXT) AS "properties"
-              FROM
-                "PROJECT_PROPERTY" AS "PP"
-              WHERE
-                "PP"."PROJECT_ID" = "P"."ID"
-            ) AS "properties" ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT
+                  CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(${fetchPropertyColumns?join(", ")})) AS TEXT) AS "properties"
+                FROM
+                  "PROJECT_PROPERTY" AS "PP"
+                WHERE
+                  "PP"."PROJECT_ID" = "P"."ID"
+              ) AS "properties" ON TRUE
             </#if>
             <#if fetchColumns?seq_contains("\\"tags\\"")>
-            LEFT JOIN LATERAL (
-              SELECT
-                CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
-              FROM
-                "TAG" AS "T"
-              INNER JOIN
-                "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
-              WHERE
-                "PT"."PROJECT_ID" = "P"."ID"
-            ) AS "tags" ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT
+                  CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
+                FROM
+                  "TAG" AS "T"
+                INNER JOIN
+                  "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
+                WHERE
+                  "PT"."PROJECT_ID" = "P"."ID"
+              ) AS "tags" ON TRUE
             </#if>
             WHERE
               "P"."UUID" = (:uuid)::TEXT
@@ -71,31 +74,69 @@ public interface CelPolicyDao {
               ${fetchColumns?join(", ")}
             FROM
               "COMPONENT" AS "C"
-            <#if fetchColumns?seq_contains(\\"publishedAt\\")>
-            LEFT JOIN LATERAL (
-              SELECT
-                "IMC"."PUBLISHED_AT" AS "publishedAt"
-              FROM
-                "INTEGRITY_META_COMPONENT" AS "IMC"
-              WHERE
-                "IMC"."PURL" = "C"."PURL"
-            ) AS "integrityMeta"
+            -- TODO: Add license, license groups
+            <#if fetchColumns?seq_contains("\\"publishedAt\\"")>
+              LEFT JOIN LATERAL (
+                SELECT
+                  "IMC"."PUBLISHED_AT" AS "published_at"
+                FROM
+                  "INTEGRITY_META_COMPONENT" AS "IMC"
+                WHERE
+                  "IMC"."PURL" = "C"."PURL"
+              ) AS "integrityMeta"
             </#if>
-            <#if fetchColumns?seq_contains(\\"latestVersion\\")>
-            LEFT JOIN LATERAL (
-              SELECT
-                "RMC"."LATEST_VERSION" AS "latestVersion"
-              FROM
-                "REPOSITORY_META_COMPONENT" AS "RMC"
-              WHERE
-                "RMC"."NAME" = "C"."NAME"
-            ) AS "repoMeta"
+            <#if fetchColumns?seq_contains("\\"latestVersion\\"")>
+              LEFT JOIN LATERAL (
+                SELECT
+                  "RMC"."LATEST_VERSION" AS "latest_version"
+                FROM
+                  "REPOSITORY_META_COMPONENT" AS "RMC"
+                WHERE
+                  "RMC"."NAME" = "C"."NAME"
+              ) AS "repoMeta"
             </#if>
             WHERE
               "C"."UUID" = (:uuid)::TEXT
             """)
     @RegisterRowMapper(CelPolicyComponentRowMapper.class)
     Component getComponent(@Define List<String> fetchColumns, UUID uuid);
+
+    @SqlQuery("""
+            SELECT DISTINCT
+              ${fetchColumns?join(", ")}
+            FROM
+              "VULNERABILITY" AS "V"
+            <#if fetchColumns?seq_contains("\\"aliases\\"")>
+              LEFT JOIN LATERAL (
+                SELECT
+                  CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
+                    'cveId',      "VA"."CVE_ID",
+                    'ghsaId',     "VA"."GHSA_ID",
+                    'gsdId',      "VA"."GSD_ID",
+                    'internalId', "VA"."INTERNAL_ID",
+                    'osvId',      "VA"."OSV_ID",
+                    'sonatypeId', "VA"."SONATYPE_ID",
+                    'snykId',     "VA"."SNYK_ID",
+                    'vulnDbId',   "VA"."VULNDB_ID"
+                  ))) AS TEXT) AS "aliases"
+                FROM
+                  "VULNERABILITYALIAS" AS "VA"
+                WHERE
+                  ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
+                    OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
+              ) AS "aliases" ON TRUE
+            </#if>
+            WHERE
+              "V"."UUID" = (:uuid)::TEXT
+            """)
+    @RegisterRowMapper(CelPolicyVulnerabilityRowMapper.class)
+    Vulnerability getVulnerability(@Define List<String> fetchColumns, UUID uuid);
 
     default Project loadRequiredFields(final Project project, final MultiValuedMap<Type, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_PROJECT);
@@ -136,12 +177,12 @@ public interface CelPolicyDao {
     }
 
     default Component loadRequiredFields(final Component component, final MultiValuedMap<Type, String> requirements) {
-        final Collection<String> projectRequirements = requirements.get(TYPE_COMPONENT);
-        if (projectRequirements == null || projectRequirements.isEmpty()) {
+        final Collection<String> componentRequirements = requirements.get(TYPE_COMPONENT);
+        if (componentRequirements == null || componentRequirements.isEmpty()) {
             return component;
         }
 
-        final Set<String> fieldsToLoad = determineFieldsToLoad(Component.getDescriptor(), component, projectRequirements);
+        final Set<String> fieldsToLoad = determineFieldsToLoad(Component.getDescriptor(), component, componentRequirements);
         if (fieldsToLoad.isEmpty()) {
             LOGGER.debug("All required fields are already loaded for message of type %s"
                     .formatted(Component.getDescriptor().getFullName()));
@@ -150,13 +191,13 @@ public interface CelPolicyDao {
 
         final List<String> sqlSelectColumns = getFieldMappings(ComponentProjection.class).stream()
                 .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
-                .map(fieldMapping -> "\"C\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.javaFieldName()))
+                .map(fieldMapping -> "\"C\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
                 .collect(Collectors.toList());
         if (fieldsToLoad.contains("latest_version")) {
-            sqlSelectColumns.add("\"latestVersion\"");
+            sqlSelectColumns.add("\"latest_version\"");
         }
         if (fieldsToLoad.contains("published_at")) {
-            sqlSelectColumns.add("\"publishedAt\"");
+            sqlSelectColumns.add("\"published_at\"");
         }
 
         final Component fetchedComponent = getComponent(sqlSelectColumns, UUID.fromString(component.getUuid()));
@@ -167,10 +208,39 @@ public interface CelPolicyDao {
         return component.toBuilder().mergeFrom(fetchedComponent).build();
     }
 
+    default Vulnerability loadRequiredFields(final Vulnerability vuln, final MultiValuedMap<Type, String> requirements) {
+        final Collection<String> vulnRequirements = requirements.get(TYPE_VULNERABILITY);
+        if (vulnRequirements == null || vulnRequirements.isEmpty()) {
+            return vuln;
+        }
+
+        final Set<String> fieldsToLoad = determineFieldsToLoad(Vulnerability.getDescriptor(), vuln, vulnRequirements);
+        if (fieldsToLoad.isEmpty()) {
+            LOGGER.debug("All required fields are already loaded for message of type %s"
+                    .formatted(Vulnerability.getDescriptor().getFullName()));
+            return vuln;
+        }
+
+        final List<String> sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
+                .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
+                .map(fieldMapping -> "\"V\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
+                .collect(Collectors.toList());
+        if (fieldsToLoad.contains("aliases")) {
+            sqlSelectColumns.add("\"aliases\"");
+        }
+
+        final Vulnerability fetchedVuln = getVulnerability(sqlSelectColumns, UUID.fromString(vuln.getUuid()));
+        if (fetchedVuln == null) {
+            throw new NoSuchElementException();
+        }
+
+        return vuln.toBuilder().mergeFrom(fetchedVuln).build();
+    }
+
     private static Set<String> determineFieldsToLoad(final Descriptor typeDescriptor, final Message typeInstance, final Collection<String> requiredFields) {
         final var fieldsToLoad = new HashSet<String>();
         for (final String fieldName : requiredFields) {
-            final FieldDescriptor fieldDescriptor = Project.getDescriptor().findFieldByName(fieldName);
+            final FieldDescriptor fieldDescriptor = typeDescriptor.findFieldByName(fieldName);
             if (fieldDescriptor == null) {
                 LOGGER.warn("Field %s is required but does not exist for type %s"
                         .formatted(fieldName, typeDescriptor.getFullName()));
