@@ -42,7 +42,7 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK("task.cron.mirror.nist", "0 4 * * *"),
     CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_FETCH_TASK("task.cron.vulnerability.policy.fetch", "0 */6 * * *"),
     VULNERABILITY_POLICY_FETCH_URL("vulnerability.policy.fetch.url", ""),
-    VULNERABIITY_POLICY_FETCH_SOURCE_NAME("vulnerability.policy.fetch.source.name", "NGINX"),
+    VULNERABILITY_POLICY_FETCH_SOURCE_NAME("vulnerability.policy.fetch.source.name", "NGINX"),
     CRON_EXPRESSION_FOR_LDAP_SYNC_TASK("task.cron.ldapSync", "0 */6 * * *"),
     CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK("task.cron.repoMetaAnalysis", "0 1 * * *"),
     CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK("task.cron.vulnAnalysis", "0 6 * * *"),
