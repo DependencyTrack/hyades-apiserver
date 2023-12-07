@@ -40,6 +40,9 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK("task.cron.mirror.github", "0 2 * * *"),
     CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK("task.cron.mirror.osv", "0 3 * * *"),
     CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK("task.cron.mirror.nist", "0 4 * * *"),
+    CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_FETCH_TASK("task.cron.vulnerability.policy.fetch", "0 */6 * * *"),
+    VULNERABILITY_POLICY_FETCH_URL("vulnerability.policy.fetch.url", ""),
+    VULNERABIITY_POLICY_FETCH_SOURCE_NAME("vulnerability.policy.fetch.source.name", "NGINX"),
     CRON_EXPRESSION_FOR_LDAP_SYNC_TASK("task.cron.ldapSync", "0 */6 * * *"),
     CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK("task.cron.repoMetaAnalysis", "0 1 * * *"),
     CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK("task.cron.vulnAnalysis", "0 6 * * *"),
@@ -76,6 +79,11 @@ public enum ConfigKey implements Config.Key {
     INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR("integrityMetaInitializer.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
+    VULNERABILITY_POLICY_ANALYSIS_ENABLED("vulnerability.policy.analysis.enabled", false),
+    VULNERABILITY_POLICY_FILE_FETCH_USERNAME( "vulnerability.policy.file.fetch.username", null),
+    VULNERABILITY_POLICY_FILE_FETCH_PASSWORD( "vulnerability.policy.file.fetch.password", null),
+
+    VULNERABILITY_POLICY_FILE_FETCH_URL("vulnerability.policy.file.fetch.url", null),
     RUN_MIGRATIONS("run.migrations", true);
 
     private final String propertyName;
