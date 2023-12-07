@@ -442,6 +442,12 @@
             <artifactId>log4j-over-slf4j</artifactId>
             <version>${lib.log4j-over-slf4j.version}</version>
         </dependency>
+        <!-- YAML -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${lib.jackson.version}</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
