@@ -7,6 +7,7 @@ import org.jdbi.v3.core.statement.StatementContext;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 
 import static org.dependencytrack.policy.cel.persistence.CelPolicyRowMapperUtil.maybeSet;
 
@@ -43,7 +44,10 @@ public class CelPolicyComponentRowMapper implements RowMapper<Component> {
         maybeSet(rs, "sha3_512", rs::getString, builder::setSha3512);
         maybeSet(rs, "license_name", rs::getString, builder::setLicenseName);
         maybeSet(rs, "license_expression", rs::getString, builder::setLicenseExpression);
-        maybeSet(rs, "published_at", columnName -> Timestamps.fromDate(rs.getDate(columnName)), builder::setPublishedAt);
+        maybeSet(rs, "published_at", columnName -> {
+            final Date lastBomImport = rs.getDate(columnName);
+            return lastBomImport != null ? Timestamps.fromDate(lastBomImport) : null;
+        }, builder::setPublishedAt);
         maybeSet(rs, "latest_version", rs::getString, builder::setLatestVersion);
         return builder.build();
     }
