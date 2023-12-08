@@ -1185,6 +1185,10 @@ public class QueryManager extends AlpineQueryManager {
         return getFindingsQueryManager().makeAnalysis(component, vulnerability, analysisState, analysisJustification, analysisResponse, analysisDetails, isSuppressed);
     }
 
+    public Analysis makeAnalysis(Component component, Vulnerability vulnerability, Analysis analysis) {
+        return getFindingsQueryManager().makeAnalysis(component, vulnerability, analysis);
+    }
+
     public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
         return getFindingsQueryManager().makeAnalysisComment(analysis, comment, commenter);
     }
@@ -1918,7 +1922,7 @@ public class QueryManager extends AlpineQueryManager {
                 if (resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
                     integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
                 }
-                if(resultSet.getString("REPOSITORY_URL") != null) {
+                if (resultSet.getString("REPOSITORY_URL") != null) {
                     integrityRepoUrl = String.valueOf(resultSet.getString("REPOSITORY_URL"));
                 }
                 return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch, integrityRepoUrl);
