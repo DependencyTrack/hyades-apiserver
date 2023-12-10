@@ -45,7 +45,7 @@ public class CelPolicyComponentRowMapper implements RowMapper<Component> {
         maybeSet(rs, "license_name", rs::getString, builder::setLicenseName);
         maybeSet(rs, "license_expression", rs::getString, builder::setLicenseExpression);
         maybeSet(rs, "published_at", columnName -> {
-            final Date lastBomImport = rs.getDate(columnName);
+            final Date lastBomImport = rs.getTimestamp(columnName);
             return lastBomImport != null ? Timestamps.fromDate(lastBomImport) : null;
         }, builder::setPublishedAt);
         maybeSet(rs, "latest_version", rs::getString, builder::setLatestVersion);
