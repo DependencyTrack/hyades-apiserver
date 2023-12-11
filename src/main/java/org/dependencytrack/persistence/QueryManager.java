@@ -1942,10 +1942,6 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityPolicyQueryManager().createVulnerabilityPolicy(vulnerabilityPolicy, connection);
     }
 
-    public int createVulnerabilityPolicies(List<VulnerabilityPolicy> vulnerabilityPolicies) {
-        return getVulnerabilityPolicyQueryManager().createVulnerabilityPolicies(vulnerabilityPolicies);
-    }
-
     public List<VulnerabilityPolicy> getAllVulnerabilityPolicies() {
         return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies();
     }
