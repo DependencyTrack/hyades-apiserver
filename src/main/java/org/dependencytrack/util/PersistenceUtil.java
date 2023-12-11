@@ -84,19 +84,6 @@ public final class PersistenceUtil {
         return false;
     }
 
-    public static <T, V> boolean applyIfNonNullAndChanged(final T existingObject, final T newObject,
-                                                          final Function<T, V> getter, final Consumer<V> setter) {
-        final V existingValue = getter.apply(existingObject);
-        final V newValue = getter.apply(newObject);
-
-        if (newValue != null && !Objects.equals(existingValue, newValue)) {
-            setter.accept(newValue);
-            return true;
-        }
-
-        return false;
-    }
-
     public static boolean isUniqueConstraintViolation(final Throwable throwable) {
         // TODO: DataNucleus doesn't map constraint violation exceptions very well,
         // so we have to depend on the exception of the underlying JDBC driver to
@@ -126,6 +113,13 @@ public final class PersistenceUtil {
         }
     }
 
+    /**
+     * Utility method to ensure that a given object is <strong>not</strong> in a persistent state.
+     *
+     * @param object  The object to check the state of
+     * @param message Message to use for the exception, if object is persistent
+     * @see #assertPersistent(Object, String)
+     */
     public static void assertNonPersistent(final Object object, final String message) {
         if (isPersistent(object)) {
             throw new IllegalStateException(message != null ? message : "Object must not be persistent");
