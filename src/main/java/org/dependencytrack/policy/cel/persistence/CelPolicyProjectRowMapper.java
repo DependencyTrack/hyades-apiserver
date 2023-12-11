@@ -26,6 +26,7 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
 
     private final Project.Builder builder;
 
+    @SuppressWarnings("unused") // Used by JDBI
     public CelPolicyProjectRowMapper() {
         this(Project.newBuilder());
     }

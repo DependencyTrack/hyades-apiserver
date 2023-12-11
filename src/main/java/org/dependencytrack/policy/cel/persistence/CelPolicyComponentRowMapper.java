@@ -15,6 +15,7 @@ public class CelPolicyComponentRowMapper implements RowMapper<Component> {
 
     private final Component.Builder builder;
 
+    @SuppressWarnings("unused") // Used by JDBI
     public CelPolicyComponentRowMapper() {
         this(Component.newBuilder());
     }

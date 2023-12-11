@@ -2,17 +2,15 @@ package org.dependencytrack.policy.cel;
 
 import com.google.api.expr.v1alpha1.Decl;
 import com.google.api.expr.v1alpha1.Type;
-import org.dependencytrack.proto.policy.v1.Component;
-import org.dependencytrack.proto.policy.v1.Project;
-import org.dependencytrack.proto.policy.v1.Vulnerability;
+import org.dependencytrack.policy.cel.definition.CelPolicyTypes;
 import org.projectnessie.cel.checker.Decls;
 
 enum CelPolicyVariable {
 
-    COMPONENT("component", Decls.newObjectType(Component.getDescriptor().getFullName())),
-    PROJECT("project", Decls.newObjectType(Project.getDescriptor().getFullName())),
-    VULN("vuln", Decls.newObjectType(Vulnerability.getDescriptor().getFullName())),
-    VULNS("vulns", Decls.newListType(Decls.newObjectType(Vulnerability.getDescriptor().getFullName()))),
+    COMPONENT("component", CelPolicyTypes.TYPE_COMPONENT),
+    PROJECT("project", CelPolicyTypes.TYPE_PROJECT),
+    VULN("vuln", CelPolicyTypes.TYPE_VULNERABILITY),
+    VULNS("vulns", CelPolicyTypes.TYPE_VULNERABILITIES),
     NOW("now", Decls.Timestamp);
 
     private final String name;
