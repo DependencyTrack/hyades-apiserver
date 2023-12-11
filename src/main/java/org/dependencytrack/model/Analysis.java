@@ -32,6 +32,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -95,6 +96,41 @@ public class Analysis implements Serializable {
     @Column(name = "SUPPRESSED")
     @JsonProperty(value = "isSuppressed")
     private boolean suppressed;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "SEVERITY")
+    @JsonProperty(value = "severity")
+    private Severity severity;
+
+    @Persistent
+    @Column(name = "CVSSV2VECTOR")
+    @JsonProperty(value = "cvssV2Vector")
+    private String cvssV2Vector;
+
+    @Persistent
+    @Column(name = "CVSSV2SCORE")
+    @JsonProperty(value = "cvssV2Score")
+    private BigDecimal cvssV2Score;
+
+    @Persistent
+    @Column(name = "CVSSV3VECTOR")
+    @JsonProperty(value = "cvssV3Vector")
+    private String cvssV3Vector;
+
+    @Persistent
+    @Column(name = "CVSSV3SCORE")
+    @JsonProperty(value = "cvssV3Score")
+    private BigDecimal cvssV3Score;
+
+    @Persistent
+    @Column(name = "OWASPVECTOR")
+    @JsonProperty(value = "owaspVector")
+    private String owaspVector;
+
+    @Persistent
+    @Column(name = "OWASPSCORE")
+    @JsonProperty(value = "owaspScore")
+    private BigDecimal owaspScore;
 
     public long getId() {
         return id;
@@ -171,5 +207,61 @@ public class Analysis implements Serializable {
 
     public void setSuppressed(boolean suppressed) {
         this.suppressed = suppressed;
+    }
+
+    public Severity getSeverity() {
+        return severity;
+    }
+
+    public void setSeverity(Severity severity) {
+        this.severity = severity;
+    }
+
+    public String getCvssV2Vector() {
+        return cvssV2Vector;
+    }
+
+    public void setCvssV2Vector(String cvssV2Vector) {
+        this.cvssV2Vector = cvssV2Vector;
+    }
+
+    public BigDecimal getCvssV2Score() {
+        return cvssV2Score;
+    }
+
+    public void setCvssV2Score(BigDecimal cvssV2Score) {
+        this.cvssV2Score = cvssV2Score;
+    }
+
+    public String getCvssV3Vector() {
+        return cvssV3Vector;
+    }
+
+    public void setCvssV3Vector(String cvssV3Vector) {
+        this.cvssV3Vector = cvssV3Vector;
+    }
+
+    public BigDecimal getCvssV3Score() {
+        return cvssV3Score;
+    }
+
+    public void setCvssV3Score(BigDecimal cvssV3Score) {
+        this.cvssV3Score = cvssV3Score;
+    }
+
+    public String getOwaspVector() {
+        return owaspVector;
+    }
+
+    public void setOwaspVector(String owaspVector) {
+        this.owaspVector = owaspVector;
+    }
+
+    public BigDecimal getOwaspScore() {
+        return owaspScore;
+    }
+
+    public void setOwaspScore(BigDecimal owaspScore) {
+        this.owaspScore = owaspScore;
     }
 }

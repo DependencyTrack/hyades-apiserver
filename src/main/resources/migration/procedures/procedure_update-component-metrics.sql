@@ -44,16 +44,16 @@ BEGIN
     RAISE EXCEPTION 'Component with UUID % does not exist', "component_uuid";
   END IF;
 
-  FOR "v_vulnerability" IN SELECT "VULNID", "SOURCE", "SEVERITY", "CVSSV2BASESCORE", "CVSSV3BASESCORE"
+  FOR "v_vulnerability" IN SELECT "VULNID", "SOURCE", "V"."SEVERITY", "A"."SEVERITY" AS "SEVERITY_OVERRIDE", "CVSSV2BASESCORE", "CVSSV3BASESCORE"
                            FROM "VULNERABILITY" AS "V"
                                   INNER JOIN "COMPONENTS_VULNERABILITIES" AS "CV"
                                              ON "CV"."COMPONENT_ID" = "v_component"."ID"
                                                AND "CV"."VULNERABILITY_ID" = "V"."ID"
-                           WHERE NOT EXISTS(SELECT 1
-                                            FROM "ANALYSIS" AS "A"
-                                            WHERE "A"."COMPONENT_ID" = "v_component"."ID"
-                                              AND "A"."VULNERABILITY_ID" = "CV"."VULNERABILITY_ID"
-                                              AND "A"."SUPPRESSED" = TRUE)
+                                  LEFT OUTER JOIN "ANALYSIS" AS "A"
+                                        ON "A"."COMPONENT_ID" = "v_component"."ID"
+                                            AND "A"."COMPONENT_ID" = "CV"."COMPONENT_ID"
+                                            AND "A"."VULNERABILITY_ID" = "V"."ID"
+                                        WHERE "A"."SUPPRESSED" != TRUE OR "A"."SUPPRESSED" IS NULL
     LOOP
       CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
 
@@ -101,6 +101,7 @@ BEGIN
 
       SELECT "CALC_SEVERITY"(
         "v_vulnerability"."SEVERITY",
+        "v_vulnerability"."SEVERITY_OVERRIDE",
         "v_vulnerability"."CVSSV3BASESCORE",
         "v_vulnerability"."CVSSV2BASESCORE")
       INTO "v_severity";

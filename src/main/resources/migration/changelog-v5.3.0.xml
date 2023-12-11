@@ -2353,4 +2353,18 @@
             <column name="NAME"/>
         </createIndex>
     </changeSet>
+    <changeSet id="v5.3.0-6" author="sahibamittal">
+        <preConditions onFail="MARK_RAN">
+                <tableExists tableName="ANALYSIS"/>
+        </preConditions>
+        <addColumn tableName="ANALYSIS">
+            <column name="CVSSV2VECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3SCORE" type="numeric"/>
+            <column name="OWASPSCORE" type="numeric"/>
+            <column name="CVSSV2SCORE" type="numeric"/>
+            <column name="OWASPVECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3VECTOR" type="VARCHAR(255)"/>
+            <column name="SEVERITY" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

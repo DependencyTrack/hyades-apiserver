@@ -7,6 +7,7 @@
 -- https://github.com/DependencyTrack/dependency-track/blob/1976be1f5cc9d027900f09aed9d1539595aeda3a/src/main/java/org/dependencytrack/model/Vulnerability.java#L338-L340
 CREATE OR REPLACE FUNCTION "CALC_SEVERITY"(
   "severity" VARCHAR,
+  "severity_override" VARCHAR,
   "cvssv3_base_score" NUMERIC,
   "cvssv2_base_score" NUMERIC
 ) RETURNS VARCHAR
@@ -14,7 +15,9 @@ CREATE OR REPLACE FUNCTION "CALC_SEVERITY"(
 AS
 $$
 BEGIN
-  IF "cvssv3_base_score" IS NOT NULL THEN
+  IF "severity_override" IS NOT NULL THEN
+    RETURN "severity_override";
+  ELSEIF "cvssv3_base_score" IS NOT NULL THEN
     RETURN "CVSSV3_TO_SEVERITY"("cvssv3_base_score");
   ELSEIF "cvssv2_base_score" IS NOT NULL THEN
     RETURN "CVSSV2_TO_SEVERITY"("cvssv2_base_score");
