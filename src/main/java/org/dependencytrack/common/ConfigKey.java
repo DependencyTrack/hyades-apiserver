@@ -86,7 +86,6 @@ public enum ConfigKey implements Config.Key {
     VULNERABILITY_POLICY_S3_SECRET_KEY("vulnerability.policy.s3.secret.key", null),
     VULNERABILITY_POLICY_S3_BUCKET_NAME("vulnerability.policy.s3.bucket.name", null),
     VULNERABILITY_POLICY_S3_FILE_NAME("vulnerability.policy.s3.file.name", null),
-    VULNERABILITY_POLICY_FILE_FETCH_URL("vulnerability.policy.file.fetch.url", null),
     RUN_MIGRATIONS("run.migrations", true);
 
     private final String propertyName;
