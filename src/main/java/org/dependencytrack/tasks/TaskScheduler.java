@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import alpine.Config;
-import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
@@ -39,6 +38,7 @@ import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
+import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
 import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
 import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -58,6 +58,7 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_OSV_MIRRO
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_FETCH_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK;
@@ -71,7 +72,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
  */
 public final class TaskScheduler extends BaseTaskScheduler {
 
-    private static final Logger LOGGER = Logger.getLogger(TaskScheduler.class);
     // Holds an instance of TaskScheduler
     private static final TaskScheduler INSTANCE = new TaskScheduler();
 
@@ -83,6 +83,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
         try {
             Map<Event, Schedule> configurableTasksMap = new HashMap<>();
             Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
+                    Map.entry(new VulnerabilityPolicyFetchEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_FETCH_TASK))),
                     Map.entry(new LdapSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
                     Map.entry(new NistMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
                     Map.entry(new OsvMirrorEvent(null), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),

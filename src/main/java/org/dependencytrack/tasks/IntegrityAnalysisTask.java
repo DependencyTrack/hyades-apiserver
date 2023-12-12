@@ -6,7 +6,6 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
-import org.dependencytrack.event.kafka.componentmeta.IntegrityCheck;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.persistence.QueryManager;
@@ -19,6 +18,7 @@ public class IntegrityAnalysisTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(IntegrityAnalysisTask.class);
 
+    @Override
     public void inform(final Event e) {
         if (e instanceof final IntegrityAnalysisEvent event) {
             if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.INTEGRITY_CHECK_ENABLED)) {
