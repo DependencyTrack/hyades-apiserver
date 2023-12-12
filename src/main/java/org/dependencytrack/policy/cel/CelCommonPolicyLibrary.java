@@ -14,6 +14,7 @@ import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.dependencytrack.util.VersionDistance;
+import org.jdbi.v3.core.Handle;
 import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Library;
 import org.projectnessie.cel.ProgramOption;
@@ -25,10 +26,6 @@ import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
 import javax.jdo.Query;
-import javax.jdo.datastore.JDOConnection;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
@@ -39,9 +36,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
 public class CelCommonPolicyLibrary implements Library {
 
@@ -336,125 +333,124 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        final var filters = new ArrayList<String>();
-        final var params = new HashMap<Integer, Object>();
-        var paramPosition = 1;
+        final var queryFilters = new ArrayList<String>();
+        final var queryParams = new HashMap<String, Object>();
+        queryParams.put("leafComponentUuid", leafComponent.getUuid());
         if (!rootComponent.getUuid().isBlank()) {
-            filters.add("\"C\".\"UUID\" = ?");
-            params.put(paramPosition++, rootComponent.getUuid());
+            queryFilters.add("\"UUID\" = :uuid");
+            queryParams.put("uuid", rootComponent.getUuid());
         }
         if (!rootComponent.getGroup().isBlank()) {
-            filters.add("\"C\".\"GROUP\" = ?");
-            params.put(paramPosition++, rootComponent.getGroup());
+            queryFilters.add("\"GROUP\" = :group");
+            queryParams.put("group", rootComponent.getGroup());
         }
         if (!rootComponent.getName().isBlank()) {
-            filters.add("\"C\".\"NAME\" = ?");
-            params.put(paramPosition++, rootComponent.getName());
+            queryFilters.add("\"NAME\" = :name");
+            queryParams.put("name", rootComponent.getName());
         }
         if (!rootComponent.getVersion().isBlank()) {
-            filters.add("\"C\".\"VERSION\" = ?");
-            params.put(paramPosition++, rootComponent.getVersion());
+            queryFilters.add("\"VERSION\" = :version");
+            queryParams.put("version", rootComponent.getVersion());
         }
         if (!rootComponent.getClassifier().isBlank()) {
-            filters.add("\"C\".\"CLASSIFIER\" = ?");
-            params.put(paramPosition++, rootComponent.getClassifier());
+            queryFilters.add("\"CLASSIFIER\" = :classifier");
+            queryParams.put("classifier", rootComponent.getClassifier());
         }
         if (!rootComponent.getCpe().isBlank()) {
-            filters.add("\"C\".\"CPE\" = ?");
-            params.put(paramPosition++, rootComponent.getCpe());
+            queryFilters.add("\"CPE\" = :cpe");
+            queryParams.put("cpe", rootComponent.getCpe());
         }
         if (!rootComponent.getPurl().isBlank()) {
-            filters.add("\"C\".\"PURL\" = ?");
-            params.put(paramPosition++, rootComponent.getPurl());
+            queryFilters.add("\"PURL\" = :purl");
+            queryParams.put("purl", rootComponent.getPurl());
         }
         if (!rootComponent.getSwidTagId().isBlank()) {
-            filters.add("\"C\".\"SWIDTAGID\" = ?");
-            params.put(paramPosition++, rootComponent.getSwidTagId());
+            queryFilters.add("\"SWIDTAGID\" = :swidTagId");
+            queryParams.put("swidTagId", rootComponent.getSwidTagId());
         }
         if (rootComponent.hasIsInternal()) {
             if (rootComponent.getIsInternal()) {
-                filters.add("\"C\".\"INTERNAL\" = ?");
-                params.put(paramPosition++, true);
+                queryFilters.add("\"INTERNAL\" = TRUE");
             } else {
-                filters.add("(\"C\".\"INTERNAL\" IS NULL OR \"C\".\"INTERNAL\" = ?)");
-                params.put(paramPosition++, false);
+                queryFilters.add("(\"INTERNAL\" IS NULL OR \"INTERNAL\" = FALSE)");
             }
         }
 
-        if (filters.isEmpty()) {
+        if (queryFilters.isEmpty()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from root component %s; \
                     Unable to evaluate, returning false""".formatted(FUNC_IS_DEPENDENCY_OF, rootComponent));
             return false;
         }
 
-        final String sqlFilter = String.join(" AND ", filters);
-
-        final var query = """
-                WITH RECURSIVE
-                "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "COMPONENTS_SEEN") AS (
-                  SELECT
-                    "C"."UUID",
-                    "C"."PROJECT_ID",
-                    CASE WHEN (%s) THEN TRUE ELSE FALSE END AS "FOUND",
-                    ARRAY []::BIGINT[] AS "COMPONENTS_SEEN"
-                  FROM
-                    "COMPONENT" AS "C"
-                    WHERE
-                      -- TODO: Need to get project ID from somewhere to speed up
-                      --   this initial query for the CTE.
-                      -- "PROJECT_ID" = ?
-                        "C"."DIRECT_DEPENDENCIES" IS NOT NULL
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ?
-                  UNION ALL
-                  SELECT
-                    "C"."UUID"       AS "UUID",
-                    "C"."PROJECT_ID" AS "PROJECT_ID",
-                    CASE WHEN (%s) THEN TRUE ELSE FALSE END AS "FOUND",
-                    ARRAY_APPEND("COMPONENTS_SEEN", "C"."ID")
-                  FROM
-                    "COMPONENT" AS "C"
-                  INNER JOIN
-                    "CTE_DEPENDENCIES"
-                      ON "C"."PROJECT_ID" = "CTE_DEPENDENCIES"."PROJECT_ID"
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%%"' || "CTE_DEPENDENCIES"."UUID" || '"%%')
-                  WHERE
-                    "C"."PROJECT_ID" = "CTE_DEPENDENCIES"."PROJECT_ID"
-                    AND (
-                      "FOUND" OR "C"."DIRECT_DEPENDENCIES" IS NOT NULL
+        try (final var qm = new QueryManager();
+             final Handle jdbiHandle = jdbi(qm).open()) {
+            final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
+                    -- Determine the project the given leaf component is part of.
+                    WITH RECURSIVE
+                    "CTE_PROJECT" AS (
+                      SELECT
+                        "PROJECT_ID" AS "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "UUID" = :leafComponentUuid
+                    ),
+                    -- Identify the IDs of all components in the project that
+                    -- match the desired criteria.
+                    "CTE_MATCHES" AS (
+                      SELECT
+                        "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                        -- Do not consider other leaf nodes (typically the majority of components).
+                        -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                        AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                        AND <filters>
+                    ),
+                    "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "PATH") AS (
+                      SELECT
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      WHERE
+                        -- Short-circuit the recursive query if we don't have any matches at all.
+                        EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        -- Otherwise, find components of which the given leaf component is a direct dependency.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                      UNION ALL
+                      SELECT
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      INNER JOIN
+                        "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                      WHERE
+                        -- If the previous row was a match already, we're done.
+                        NOT "PREVIOUS"."FOUND"
+                        -- Also, ensure we haven't seen this component before, to prevent cycles.
+                        AND NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                        -- Otherwise, the previous component must appear in the current direct dependencies.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
                     )
-                )
-                SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
-                """.formatted(sqlFilter, sqlFilter);
+                    SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
+                    """);
 
-        try (final var qm = new QueryManager()) {
-            final JDOConnection jdoConnection = qm.getPersistenceManager().getDataStoreConnection();
-            try {
-                final var connection = (Connection) jdoConnection.getNativeConnection();
-                final var preparedStatement = connection.prepareStatement(query);
-                // Params need to be set twice because the rootComponent filter
-                // appears twice in the query... This needs improvement.
-                for (final Map.Entry<Integer, Object> param : params.entrySet()) {
-                    preparedStatement.setObject(param.getKey(), param.getValue());
-                }
-                preparedStatement.setString(params.size() + 1, "%" + leafComponent.getUuid() + "%");
-                for (final Map.Entry<Integer, Object> param : params.entrySet()) {
-                    preparedStatement.setObject((params.size() + 1) + param.getKey(), param.getValue());
-                }
-
-                try (final ResultSet rs = preparedStatement.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getBoolean(1);
-                    }
-                }
-            } catch (SQLException e) {
-                LOGGER.warn("%s: Failed to execute query: %s".formatted(FUNC_IS_DEPENDENCY_OF, query), e);
-            } finally {
-                jdoConnection.close();
-            }
+            return query
+                    .define("filters", String.join(" AND ", queryFilters))
+                    .bindMap(queryParams)
+                    .mapTo(Boolean.class)
+                    .findOne()
+                    .orElse(false);
         }
-
-        return false;
     }
 
     private static boolean matchesRange(final String version, final String versStr) {
