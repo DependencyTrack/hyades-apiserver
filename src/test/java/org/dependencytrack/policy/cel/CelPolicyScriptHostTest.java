@@ -12,11 +12,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_LICENSE;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_LICENSE_GROUP;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
