@@ -1942,20 +1942,20 @@ public class QueryManager extends AlpineQueryManager {
         return getComponentQueryManager().getComponentsByPurl(purl);
     }
 
-    public int createVulnerabilityPolicy(VulnerabilityPolicy vulnerabilityPolicy) {
-        return getVulnerabilityPolicyQueryManager().createVulnerabilityPolicy(vulnerabilityPolicy);
+    public int createVulnerabilityPolicy(VulnerabilityPolicy vulnerabilityPolicy, Connection connection) {
+        return getVulnerabilityPolicyQueryManager().createVulnerabilityPolicy(vulnerabilityPolicy, connection);
     }
 
     public List<VulnerabilityPolicy> getAllVulnerabilityPolicies() {
         return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies();
     }
 
-    public int deleteVulnerabilityPolicyByName(String vulnerabilityPolicyName) {
-        return getVulnerabilityPolicyQueryManager().deleteVulnerabilityPolicyByName(vulnerabilityPolicyName);
+    public int deleteVulnerabilityPolicyByName(String vulnerabilityPolicyName, Connection connection) {
+        return getVulnerabilityPolicyQueryManager().deleteVulnerabilityPolicyByName(vulnerabilityPolicyName,connection);
     }
 
-    public int updateVulnerablePolicyByName(VulnerabilityPolicy vulnerabilityPolicy) {
-        return getVulnerabilityPolicyQueryManager().updateVulnerabilityPolicyByName(vulnerabilityPolicy);
+    public int updateVulnerablePolicyByName(VulnerabilityPolicy vulnerabilityPolicy, Connection connection) {
+        return getVulnerabilityPolicyQueryManager().updateVulnerabilityPolicyByName(vulnerabilityPolicy, connection);
     }
 
     public VulnerabilityPolicy getVulnerabilityPolicyByName(String vulnerabilityPolicyName) {
