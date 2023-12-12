@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -227,6 +228,92 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                 }
         );
         assertThat(component.getLastInheritedRiskScore()).isEqualTo(8.0);
+    }
+
+
+    @Test
+    public void testUpdateMetricsVulnerabilitiesWhenSeverityIsOverridden() {
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.createProject(project, List.of(), false);
+
+        var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component = qm.createComponent(component, false);
+
+        // Create an unaudited vulnerability.
+        var vulnUnaudited = new Vulnerability();
+        vulnUnaudited.setVulnId("INTERNAL-001");
+        vulnUnaudited.setSource(Vulnerability.Source.INTERNAL);
+        vulnUnaudited.setSeverity(Severity.HIGH);
+        vulnUnaudited = qm.createVulnerability(vulnUnaudited, false);
+        qm.addVulnerability(vulnUnaudited, component, AnalyzerIdentity.NONE);
+
+        // Create an audited vulnerability.
+        var vulnAudited = new Vulnerability();
+        vulnAudited.setVulnId("INTERNAL-002");
+        vulnAudited.setSource(Vulnerability.Source.INTERNAL);
+        vulnAudited.setSeverity(Severity.MEDIUM);
+        vulnAudited = qm.createVulnerability(vulnAudited, false);
+        qm.addVulnerability(vulnAudited, component, AnalyzerIdentity.NONE);
+        qm.makeAnalysis(component, vulnAudited, AnalysisState.NOT_AFFECTED, null, null, null, false);
+
+        // Create an overridden vulnerability.
+        var vulnSuppressed = new Vulnerability();
+        vulnSuppressed.setVulnId("INTERNAL-003");
+        vulnSuppressed.setSource(Vulnerability.Source.INTERNAL);
+        vulnSuppressed.setSeverity(Severity.MEDIUM);
+        vulnSuppressed = qm.createVulnerability(vulnSuppressed, false);
+        qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
+        var analysis = new Analysis();
+        analysis.setComponent(component);
+        analysis.setSeverity(Severity.LOW);
+        analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
+        analysis.setVulnerability(vulnSuppressed);
+        qm.makeAnalysis(component, vulnSuppressed, analysis);
+
+        var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
+        qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
+        new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
+
+        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        assertThat(metrics.getCritical()).isZero();
+        assertThat(metrics.getHigh()).isEqualTo(1);
+        assertThat(metrics.getMedium()).isEqualTo(1);
+        assertThat(metrics.getLow()).isEqualTo(1); //One is overridden with low
+        assertThat(metrics.getUnassigned()).isZero();
+        assertThat(metrics.getVulnerabilities()).isEqualTo(3); // One is overridden vulnerability
+        assertThat(metrics.getSuppressed()).isEqualTo(0); // vulnerability is overridden but not suppressed
+        assertThat(metrics.getFindingsTotal()).isEqualTo(3); // One is overridden vulnerability
+        assertThat(metrics.getFindingsAudited()).isEqualTo(2); // Overridden vulnerability is also audited
+        assertThat(metrics.getFindingsUnaudited()).isEqualTo(1);
+        assertThat(metrics.getInheritedRiskScore()).isEqualTo(9.0);
+        assertThat(metrics.getPolicyViolationsFail()).isZero();
+        assertThat(metrics.getPolicyViolationsWarn()).isZero();
+        assertThat(metrics.getPolicyViolationsInfo()).isZero();
+        assertThat(metrics.getPolicyViolationsTotal()).isZero();
+        assertThat(metrics.getPolicyViolationsAudited()).isZero();
+        assertThat(metrics.getPolicyViolationsUnaudited()).isZero();
+        assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero();
+        assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
+        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
+        assertThat(metrics.getPolicyViolationsLicenseTotal()).isZero();
+        assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
+        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isZero();
+        assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
+        assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
+        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
+
+        qm.getPersistenceManager().refresh(component);
+        assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
+                state -> {
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isNotNull();
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                }
+        );
+        assertThat(component.getLastInheritedRiskScore()).isEqualTo(9.0);
     }
 
     @Test
