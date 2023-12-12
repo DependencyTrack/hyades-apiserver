@@ -35,7 +35,9 @@
 
     <name>Dependency-Track</name>
     <url>https://dependencytrack.org/</url>
-    <description>Dependency-Track is an intelligent component analysis platform that allows organizations to identify and reduce risk in the software supply chain.</description>
+    <description>Dependency-Track is an intelligent component analysis platform that allows organizations to identify
+        and reduce risk in the software supply chain.
+    </description>
     <inceptionYear>2013</inceptionYear>
     <organization>
         <name>OWASP</name>
@@ -448,6 +450,11 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>${lib.jackson.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.7</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
@@ -590,14 +597,14 @@
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
                 </configuration>
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>validate</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>check</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
+                <!--                <executions>-->
+                <!--                    <execution>-->
+                <!--                        <phase>validate</phase>-->
+                <!--                        <goals>-->
+                <!--                            <goal>check</goal>-->
+                <!--                        </goals>-->
+                <!--                    </execution>-->
+                <!--                </executions>-->
                 <dependencies>
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>

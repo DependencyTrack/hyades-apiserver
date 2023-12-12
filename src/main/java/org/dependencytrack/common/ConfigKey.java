@@ -80,9 +80,12 @@ public enum ConfigKey implements Config.Key {
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
     VULNERABILITY_POLICY_ANALYSIS_ENABLED("vulnerability.policy.analysis.enabled", false),
-    VULNERABILITY_POLICY_FILE_FETCH_USERNAME( "vulnerability.policy.file.fetch.username", null),
-    VULNERABILITY_POLICY_FILE_FETCH_PASSWORD( "vulnerability.policy.file.fetch.password", null),
-
+    VULNERABILITY_POLICY_FILE_FETCH_USERNAME("vulnerability.policy.file.fetch.username", null),
+    VULNERABILITY_POLICY_FILE_FETCH_PASSWORD("vulnerability.policy.file.fetch.password", null),
+    VULNERABILITY_POLICY_S3_ACCESS_KEY("vulnerability.policy.s3.access.key", null),
+    VULNERABILITY_POLICY_S3_SECRET_KEY("vulnerability.policy.s3.secret.key", null),
+    VULNERABILITY_POLICY_S3_BUCKET_NAME("vulnerability.policy.s3.bucket.name", null),
+    VULNERABILITY_POLICY_S3_FILE_NAME("vulnerability.policy.s3.file.name", null),
     VULNERABILITY_POLICY_FILE_FETCH_URL("vulnerability.policy.file.fetch.url", null),
     RUN_MIGRATIONS("run.migrations", true);
 
