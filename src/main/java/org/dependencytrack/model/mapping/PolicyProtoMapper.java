@@ -15,6 +15,9 @@ import java.util.stream.Stream;
 
 import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
 
+/**
+ * Utility class to map objects from Dependency-Track's internal data model to Policy protocol buffers.
+ */
 public class PolicyProtoMapper {
 
     public static org.dependencytrack.proto.policy.v1.Vulnerability mapToProto(final Vulnerability vuln) {
@@ -32,8 +35,9 @@ public class PolicyProtoMapper {
         maybeSet(vuln::getVulnId, protoBuilder::setId);
         maybeSet(vuln::getSource, protoBuilder::setSource);
         maybeSet(() -> vuln.getAliases() != null
-                ? vuln.getAliases().stream().flatMap(PolicyProtoMapper::mapToProtos).distinct().toList()
-                : Collections.emptyList(), protoBuilder::addAllAliases);
+                        ? vuln.getAliases().stream().flatMap(PolicyProtoMapper::mapToProtos).distinct().toList()
+                        : Collections.emptyList(),
+                protoBuilder::addAllAliases);
         maybeSet(vuln::getCwes, protoBuilder::addAllCwes);
         maybeSet(asTimestamp(vuln.getCreated()), protoBuilder::setCreated);
         maybeSet(asTimestamp(vuln.getPublished()), protoBuilder::setPublished);
