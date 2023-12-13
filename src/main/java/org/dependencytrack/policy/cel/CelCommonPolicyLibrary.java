@@ -408,7 +408,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Do not consider other leaf nodes (typically the majority of components).
                         -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
                         AND "DIRECT_DEPENDENCIES" IS NOT NULL
-                        AND <filters>
+                        AND ${filters}
                     ),
                     "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "PATH") AS (
                       SELECT

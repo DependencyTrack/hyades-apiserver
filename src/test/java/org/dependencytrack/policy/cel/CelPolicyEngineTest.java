@@ -845,37 +845,37 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
     }
 
-//    @Test
-//    public void testEvaluateProjectWithFuncComponentIsDependencyOfComponent() {
-//        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-//        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-//                component.is_dependency_of(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
-//                """, PolicyViolation.Type.OPERATIONAL);
-//
-//        final var project = new Project();
-//        project.setName("acme-app");
-//        qm.persist(project);
-//
-//        final var componentA = new Component();
-//        componentA.setProject(project);
-//        componentA.setName("acme-lib-a");
-//        qm.persist(componentA);
-//
-//        final var componentB = new Component();
-//        componentB.setProject(project);
-//        componentB.setName("acme-lib-b");
-//        qm.persist(componentB);
-//
-//        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
-//        qm.persist(project);
-//        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
-//        qm.persist(componentA);
-//
-//        new CelPolicyEngine().evaluateProject(project.getUuid());
-//
-//        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
-//        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
-//    }
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfComponent() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.is_dependency_of(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+        qm.persist(project);
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(componentA);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
 
     @Test
     public void testEvaluateProjectWithFuncMatchesRange() {
