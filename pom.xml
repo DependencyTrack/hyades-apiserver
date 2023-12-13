@@ -235,6 +235,11 @@
             <artifactId>jdbi3-postgres</artifactId>
             <version>${lib.jdbi.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-freemarker</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
         <!-- OWASP Risk Rating calculator -->
         <dependency>
             <groupId>us.springett</groupId>

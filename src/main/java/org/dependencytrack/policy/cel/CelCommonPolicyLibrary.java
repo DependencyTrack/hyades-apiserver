@@ -3,7 +3,6 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.apache.commons.lang3.tuple.Pair;
@@ -37,20 +36,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
-class CelCommonPolicyLibrary implements Library {
+public class CelCommonPolicyLibrary implements Library {
 
     private static final Logger LOGGER = Logger.getLogger(CelCommonPolicyLibrary.class);
-
-    static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
-    static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
-    static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
-    static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());
-    static final Type TYPE_PROJECT_PROPERTY = Decls.newObjectType(Project.Property.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
-    static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
 
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
@@ -416,7 +408,7 @@ class CelCommonPolicyLibrary implements Library {
                         -- Do not consider other leaf nodes (typically the majority of components).
                         -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
                         AND "DIRECT_DEPENDENCIES" IS NOT NULL
-                        AND <filters>
+                        AND ${filters}
                     ),
                     "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "PATH") AS (
                       SELECT
