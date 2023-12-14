@@ -54,7 +54,7 @@ public interface CelPolicyDao {
             <#if fetchColumns?seq_contains("\\"tags\\"")>
               LEFT JOIN LATERAL (
                 SELECT
-                  CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
+                  ARRAY_AGG(DISTINCT "T"."NAME") AS "tags"
                 FROM
                   "TAG" AS "T"
                 INNER JOIN

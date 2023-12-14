@@ -158,7 +158,7 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                                     "owaspRRLikelihood": 4.4,
                                     "owaspRRTechnicalImpact": 5.5,
                                     "recommendation": "vulnARecommendation",
-                                    "severity": "MEDIUM",
+                                    "severity": "LOW",
                                     "source": "NVD",
                                     "subtitle": "vulnASubTitle",
                                     "title": "vulnATitle",
@@ -223,44 +223,24 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                         {
                           "component": {
                             "uuid": "${json-unit.matches:componentUuid}",
-                            "group": "",
-                            "name": "componentName",
-                            "purl": "",
-                            "md5": "",
-                            "sha1": "",
-                            "sha256": "",
-                            "sha512": ""
+                            "name": "componentName"
                           },
                           "project": {
                             "uuid": "${json-unit.matches:projectUuid}",
-                            "name": "projectName",
-                            "version": "",
-                            "description": "",
-                            "purl": ""
+                            "name": "projectName"
                           },
                           "vulnerability": {
                             "uuid": "${json-unit.matches:vulnUuid}",
                             "vulnId": "CVE-100",
                             "source": "NVD",
-                            "title": "",
-                            "subtitle": "",
-                            "description": "",
-                            "recommendation": "",
-                            "cvssv2": 0.0,
                             "cvssv3": 10.0,
-                            "owaspRRLikelihood": 0.0,
-                            "owaspRRTechnicalImpact": 0.0,
-                            "owaspRRBusinessImpact": 0.0,
                             "severity": "CRITICAL"
                           },
                           "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
                           "affectedProjects": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
-                              "name": "projectName",
-                              "version": "",
-                              "description": "",
-                              "purl": ""
+                              "name": "projectName"
                             }
                           ]
                         }
@@ -370,7 +350,7 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                               "owaspRRLikelihood": 4.4,
                               "owaspRRTechnicalImpact": 5.5,
                               "owaspRRBusinessImpact": 3.3,
-                              "severity": "MEDIUM",
+                              "severity": "LOW",
                               "cwes": [
                                 {
                                   "cweId": 666,
@@ -442,35 +422,18 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                         {
                           "component": {
                             "uuid": "${json-unit.matches:componentUuid}",
-                            "group": "",
-                            "name": "componentName",
-                            "purl": "",
-                            "md5": "",
-                            "sha1": "",
-                            "sha256": "",
-                            "sha512": ""
+                            "name": "componentName"
                           },
                           "project": {
                             "uuid": "${json-unit.matches:projectUuid}",
-                            "name": "projectName",
-                            "version": "",
-                            "description": "",
-                            "purl": ""
+                            "name": "projectName"
                           },
                           "vulnerabilities": [
                             {
                               "uuid": "${json-unit.matches:vulnUuid}",
                               "vulnId": "CVE-100",
                               "source": "NVD",
-                              "title": "",
-                              "subtitle": "",
-                              "description": "",
-                              "recommendation": "",
-                              "cvssv2": 0.0,
                               "cvssv3": 10.0,
-                              "owaspRRLikelihood": 0.0,
-                              "owaspRRTechnicalImpact": 0.0,
-                              "owaspRRBusinessImpact": 0.0,
                               "severity": "CRITICAL"
                             }
                           ]

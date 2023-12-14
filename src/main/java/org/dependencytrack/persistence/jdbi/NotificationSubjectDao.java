@@ -27,62 +27,67 @@ public interface NotificationSubjectDao {
 
     @SqlQuery("""
             SELECT
-              "C"."UUID"                               AS "componentUuid",
-              "C"."GROUP"                              AS "componentGroup",
-              "C"."NAME"                               AS "componentName",
-              "C"."VERSION"                            AS "componentVersion",
-              "C"."PURL"                               AS "componentPurl",
-              "C"."MD5"                                AS "componentMd5",
-              "C"."SHA1"                               AS "componentSha1",
-              "C"."SHA_256"                            AS "componentSha256",
-              "C"."SHA_512"                            AS "componentSha512",
-              "P"."UUID"                               AS "projectUuid",
-              "P"."NAME"                               AS "projectName",
-              "P"."VERSION"                            AS "projectVersion",
-              "P"."DESCRIPTION"                        AS "projectDescription",
-              "P"."PURL"                               AS "projectPurl",
+              "C"."UUID"                       AS "componentUuid",
+              "C"."GROUP"                      AS "componentGroup",
+              "C"."NAME"                       AS "componentName",
+              "C"."VERSION"                    AS "componentVersion",
+              "C"."PURL"                       AS "componentPurl",
+              "C"."MD5"                        AS "componentMd5",
+              "C"."SHA1"                       AS "componentSha1",
+              "C"."SHA_256"                    AS "componentSha256",
+              "C"."SHA_512"                    AS "componentSha512",
+              "P"."UUID"                       AS "projectUuid",
+              "P"."NAME"                       AS "projectName",
+              "P"."VERSION"                    AS "projectVersion",
+              "P"."DESCRIPTION"                AS "projectDescription",
+              "P"."PURL"                       AS "projectPurl",
               (SELECT
-                 STRING_AGG("T"."NAME", ',')
+                 ARRAY_AGG(DISTINCT "T"."NAME")
                FROM
                  "TAG" AS "T"
                INNER JOIN
                  "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
                WHERE
                  "PT"."PROJECT_ID" = "P"."ID"
-              )                                        AS "projectTags",
-              "V"."UUID"                               AS "vulnUuid",
-              "V"."VULNID"                             AS "vulnId",
-              "V"."SOURCE"                             AS "vulnSource",
-              "V"."TITLE"                              AS "vulnTitle",
-              "V"."SUBTITLE"                           AS "vulnSubTitle",
-              "V"."DESCRIPTION"                        AS "vulnDescription",
-              "V"."RECOMMENDATION"                     AS "vulnRecommendation",
+              )                                AS "projectTags",
+              "V"."UUID"                       AS "vulnUuid",
+              "V"."VULNID"                     AS "vulnId",
+              "V"."SOURCE"                     AS "vulnSource",
+              "V"."TITLE"                      AS "vulnTitle",
+              "V"."SUBTITLE"                   AS "vulnSubTitle",
+              "V"."DESCRIPTION"                AS "vulnDescription",
+              "V"."RECOMMENDATION"             AS "vulnRecommendation",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2SCORE"
                 ELSE "V"."CVSSV2BASESCORE"
-              END                                      AS "vulnCvssV2BaseScore",
+              END                              AS "vulnCvssV2BaseScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
                 ELSE "V"."CVSSV3BASESCORE"
-              END                                      AS "vulnCvssV3BaseScore",
+              END                              AS "vulnCvssV3BaseScore",
               -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
               --  How to handle this?
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRBUSINESSIMPACTSCORE"
-              END                                      AS "vulnOwaspRrBusinessImpactScore",
+              END                              AS "vulnOwaspRrBusinessImpactScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRLIKELIHOODSCORE"
-              END                                      AS "vulnOwaspRrLikelihoodScore",
+              END                              AS "vulnOwaspRrLikelihoodScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
-              END                                      AS "vulnOwaspRrTechnicalImpactScore",
-              COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
-              "V"."CWES"                               AS "vulnCwes",
+              END                              AS "vulnOwaspRrTechnicalImpactScore",
+              "CALC_SEVERITY"(
+                "V"."SEVERITY",
+                "A"."SEVERITY",
+                "V"."CVSSV3BASESCORE",
+                "V"."CVSSV2BASESCORE"
+              )                    AS "vulnSeverity",
+              STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson",
-              :vulnAnalysisLevel                       AS "vulnAnalysisLevel"
+              :vulnAnalysisLevel               AS "vulnAnalysisLevel"
             FROM
               "COMPONENT" AS "C"
             INNER JOIN
@@ -127,60 +132,65 @@ public interface NotificationSubjectDao {
 
     @SqlQuery("""
             SELECT
-              "C"."UUID"                               AS "componentUuid",
-              "C"."GROUP"                              AS "componentGroup",
-              "C"."NAME"                               AS "componentName",
-              "C"."VERSION"                            AS "componentVersion",
-              "C"."PURL"                               AS "componentPurl",
-              "C"."MD5"                                AS "componentMd5",
-              "C"."SHA1"                               AS "componentSha1",
-              "C"."SHA_256"                            AS "componentSha256",
-              "C"."SHA_512"                            AS "componentSha512",
-              "P"."UUID"                               AS "projectUuid",
-              "P"."NAME"                               AS "projectName",
-              "P"."VERSION"                            AS "projectVersion",
-              "P"."DESCRIPTION"                        AS "projectDescription",
-              "P"."PURL"                               AS "projectPurl",
+              "C"."UUID"                       AS "componentUuid",
+              "C"."GROUP"                      AS "componentGroup",
+              "C"."NAME"                       AS "componentName",
+              "C"."VERSION"                    AS "componentVersion",
+              "C"."PURL"                       AS "componentPurl",
+              "C"."MD5"                        AS "componentMd5",
+              "C"."SHA1"                       AS "componentSha1",
+              "C"."SHA_256"                    AS "componentSha256",
+              "C"."SHA_512"                    AS "componentSha512",
+              "P"."UUID"                       AS "projectUuid",
+              "P"."NAME"                       AS "projectName",
+              "P"."VERSION"                    AS "projectVersion",
+              "P"."DESCRIPTION"                AS "projectDescription",
+              "P"."PURL"                       AS "projectPurl",
               (SELECT
-                 STRING_AGG("T"."NAME", ',')
+                 ARRAY_AGG(DISTINCT "T"."NAME")
                FROM
                  "TAG" AS "T"
                INNER JOIN
                  "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
                WHERE
                  "PT"."PROJECT_ID" = "P"."ID"
-              )                                        AS "projectTags",
-              "V"."UUID"                               AS "vulnUuid",
-              "V"."VULNID"                             AS "vulnId",
-              "V"."SOURCE"                             AS "vulnSource",
-              "V"."TITLE"                              AS "vulnTitle",
-              "V"."SUBTITLE"                           AS "vulnSubTitle",
-              "V"."DESCRIPTION"                        AS "vulnDescription",
-              "V"."RECOMMENDATION"                     AS "vulnRecommendation",
+              )                                AS "projectTags",
+              "V"."UUID"                       AS "vulnUuid",
+              "V"."VULNID"                     AS "vulnId",
+              "V"."SOURCE"                     AS "vulnSource",
+              "V"."TITLE"                      AS "vulnTitle",
+              "V"."SUBTITLE"                   AS "vulnSubTitle",
+              "V"."DESCRIPTION"                AS "vulnDescription",
+              "V"."RECOMMENDATION"             AS "vulnRecommendation",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2SCORE"
                 ELSE "V"."CVSSV2BASESCORE"
-              END                                      AS "vulnCvssV2BaseScore",
+              END                              AS "vulnCvssV2BaseScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
                 ELSE "V"."CVSSV3BASESCORE"
-              END                                      AS "vulnCvssV3BaseScore",
+              END                              AS "vulnCvssV3BaseScore",
               -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
               --  How to handle this?
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRBUSINESSIMPACTSCORE"
-              END                                      AS "vulnOwaspRrBusinessImpactScore",
+              END                              AS "vulnOwaspRrBusinessImpactScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRLIKELIHOODSCORE"
-              END                                      AS "vulnOwaspRrLikelihoodScore",
+              END                              AS "vulnOwaspRrLikelihoodScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
-              END                                      AS "vulnOwaspRrTechnicalImpactScore",
-              COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
-              "V"."CWES"                               AS "vulnCwes",
+              END                              AS "vulnOwaspRrTechnicalImpactScore",
+              "CALC_SEVERITY"(
+                "V"."SEVERITY",
+                "A"."SEVERITY",
+                "V"."CVSSV3BASESCORE",
+                "V"."CVSSV2BASESCORE"
+              )                                AS "vulnSeverity",
+              STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson"
             FROM
               "COMPONENT" AS "C"
