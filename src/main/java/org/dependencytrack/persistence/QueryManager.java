@@ -1209,6 +1209,10 @@ public class QueryManager extends AlpineQueryManager {
         return getFindingsQueryManager().getFindings(project, includeSuppressed);
     }
 
+    public PaginatedResult getFindingsPage(final Project project, final Vulnerability.Source limitToSource, final boolean includeSuppressed) {
+        return getFindingsQueryManager().getFindingsPage(project, limitToSource, includeSuppressed);
+    }
+
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }

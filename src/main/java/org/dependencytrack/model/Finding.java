@@ -145,19 +145,27 @@ public class Finding implements Serializable {
         optValue(analysis, "isSuppressed", o[27], false);
     }
 
-    public Map getComponent() {
+    public Finding(final Map<String, Object> analysis, final Map<String, Object> attribution,
+                   final Map<String, Object> component, final Map<String, Object> vulnerability) {
+        this.analysis = analysis;
+        this.attribution = attribution;
+        this.component = component;
+        this.vulnerability = vulnerability;
+    }
+
+    public Map<String, Object> getComponent() {
         return component;
     }
 
-    public Map getVulnerability() {
+    public Map<String, Object> getVulnerability() {
         return vulnerability;
     }
 
-    public Map getAnalysis() {
+    public Map<String, Object> getAnalysis() {
         return analysis;
     }
 
-    public Map getAttribution() {
+    public Map<String, Object> getAttribution() {
         return attribution;
     }
 
@@ -199,7 +207,7 @@ public class Finding implements Serializable {
     }
 
     public String getMatrix() {
-        return project.toString() + ":" + component.get("uuid") + ":" + vulnerability.get("uuid");
+        return component.get("project") + ":" + component.get("uuid") + ":" + vulnerability.get("uuid");
     }
 
     public void addVulnerabilityAliases(List<VulnerabilityAlias> aliases) {
