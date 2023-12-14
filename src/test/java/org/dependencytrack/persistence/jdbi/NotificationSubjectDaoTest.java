@@ -2,6 +2,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import com.google.protobuf.util.JsonFormat;
 import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -170,6 +171,103 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
     }
 
     @Test
+    public void testGetForNewVulnerabilityWithAnalysisRatingOverwrite() throws Exception {
+        final var project = new Project();
+        project.setName("projectName");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("componentName");
+        qm.persist(component);
+
+        final var vuln = new Vulnerability();
+        vuln.setVulnId("CVE-100");
+        vuln.setSource(Vulnerability.Source.NVD);
+        vuln.setSeverity(Severity.MEDIUM);
+        vuln.setCvssV2Vector("");
+        vuln.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
+        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(1.2));
+        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(1.3));
+        vuln.setCvssV3Vector("cvssV3Vector");
+        vuln.setCvssV3BaseScore(BigDecimal.valueOf(2.1));
+        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(2.2));
+        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(2.3));
+        vuln.setOwaspRRVector("owaspRrVector");
+        vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.1));
+        vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(3.2));
+        vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(3.3));
+        qm.persist(vuln);
+
+        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+
+        final var analysis = new Analysis();
+        analysis.setComponent(component);
+        analysis.setVulnerability(vuln);
+        analysis.setAnalysisState(AnalysisState.EXPLOITABLE);
+        analysis.setSeverity(Severity.CRITICAL);
+        analysis.setCvssV3Vector("cvssV3VectorOverwrite");
+        analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
+        qm.persist(analysis);
+
+        final List<NewVulnerabilitySubject> subjects = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
+                dao -> dao.getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid()),
+                        VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+
+        assertThat(subjects).hasSize(1);
+        assertThatJson(JsonFormat.printer().print(subjects.get(0)))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
+                .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "component": {
+                            "uuid": "${json-unit.matches:componentUuid}",
+                            "group": "",
+                            "name": "componentName",
+                            "purl": "",
+                            "md5": "",
+                            "sha1": "",
+                            "sha256": "",
+                            "sha512": ""
+                          },
+                          "project": {
+                            "uuid": "${json-unit.matches:projectUuid}",
+                            "name": "projectName",
+                            "version": "",
+                            "description": "",
+                            "purl": ""
+                          },
+                          "vulnerability": {
+                            "uuid": "${json-unit.matches:vulnUuid}",
+                            "vulnId": "CVE-100",
+                            "source": "NVD",
+                            "title": "",
+                            "subtitle": "",
+                            "description": "",
+                            "recommendation": "",
+                            "cvssv2": 0.0,
+                            "cvssv3": 10.0,
+                            "owaspRRLikelihood": 0.0,
+                            "owaspRRTechnicalImpact": 0.0,
+                            "owaspRRBusinessImpact": 0.0,
+                            "severity": "CRITICAL"
+                          },
+                          "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
+                          "affectedProjects": [
+                            {
+                              "uuid": "${json-unit.matches:projectUuid}",
+                              "name": "projectName",
+                              "version": "",
+                              "description": "",
+                              "purl": ""
+                            }
+                          ]
+                        }
+                        """);
+    }
+
+    @Test
     public void testGetForNewVulnerableDependency() throws Exception {
         final var project = new Project();
         project.setName("projectName");
@@ -286,6 +384,94 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                               "aliases": [
                                 {"vulnId": "GHSA-100", "source": "GITHUB"}
                               ]
+                            }
+                          ]
+                        }
+                        """);
+    }
+
+    @Test
+    public void testGetForNewVulnerableDependencyWithAnalysisRatingOverwrite() throws Exception {
+        final var project = new Project();
+        project.setName("projectName");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("componentName");
+        qm.persist(component);
+
+        final var vuln = new Vulnerability();
+        vuln.setVulnId("CVE-100");
+        vuln.setSource(Vulnerability.Source.NVD);
+        vuln.setSeverity(Severity.MEDIUM);
+        vuln.setCvssV2Vector("");
+        vuln.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
+        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(1.2));
+        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(1.3));
+        vuln.setCvssV3Vector("cvssV3Vector");
+        vuln.setCvssV3BaseScore(BigDecimal.valueOf(2.1));
+        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(2.2));
+        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(2.3));
+        vuln.setOwaspRRVector("owaspRrVector");
+        vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.1));
+        vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(3.2));
+        vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(3.3));
+        qm.persist(vuln);
+
+        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+
+        final var analysis = new Analysis();
+        analysis.setComponent(component);
+        analysis.setVulnerability(vuln);
+        analysis.setAnalysisState(AnalysisState.EXPLOITABLE);
+        analysis.setSeverity(Severity.CRITICAL);
+        analysis.setCvssV3Vector("cvssV3VectorOverwrite");
+        analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
+        qm.persist(analysis);
+
+        final Optional<NewVulnerableDependencySubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
+                dao -> dao.getForNewVulnerableDependency(component.getUuid()));
+
+        assertThat(optionalSubject).isPresent();
+        assertThatJson(JsonFormat.printer().print(optionalSubject.get()))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
+                .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "component": {
+                            "uuid": "${json-unit.matches:componentUuid}",
+                            "group": "",
+                            "name": "componentName",
+                            "purl": "",
+                            "md5": "",
+                            "sha1": "",
+                            "sha256": "",
+                            "sha512": ""
+                          },
+                          "project": {
+                            "uuid": "${json-unit.matches:projectUuid}",
+                            "name": "projectName",
+                            "version": "",
+                            "description": "",
+                            "purl": ""
+                          },
+                          "vulnerabilities": [
+                            {
+                              "uuid": "${json-unit.matches:vulnUuid}",
+                              "vulnId": "CVE-100",
+                              "source": "NVD",
+                              "title": "",
+                              "subtitle": "",
+                              "description": "",
+                              "recommendation": "",
+                              "cvssv2": 0.0,
+                              "cvssv3": 10.0,
+                              "owaspRRLikelihood": 0.0,
+                              "owaspRRTechnicalImpact": 0.0,
+                              "owaspRRBusinessImpact": 0.0,
+                              "severity": "CRITICAL"
                             }
                           ]
                         }
