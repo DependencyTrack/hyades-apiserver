@@ -84,19 +84,6 @@ public final class PersistenceUtil {
         return false;
     }
 
-    public static <T, V> boolean applyIfNonNullAndChanged(final T existingObject, final T newObject,
-                                                          final Function<T, V> getter, final Consumer<V> setter) {
-        final V existingValue = getter.apply(existingObject);
-        final V newValue = getter.apply(newObject);
-
-        if (newValue != null && !Objects.equals(existingValue, newValue)) {
-            setter.accept(newValue);
-            return true;
-        }
-
-        return false;
-    }
-
     public static boolean isUniqueConstraintViolation(final Throwable throwable) {
         // TODO: DataNucleus doesn't map constraint violation exceptions very well,
         // so we have to depend on the exception of the underlying JDBC driver to
@@ -121,14 +108,31 @@ public final class PersistenceUtil {
      * @see <a href="https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle">Object Lifecycle</a>
      */
     public static void assertPersistent(final Object object, final String message) {
-        final ObjectState objectState = JDOHelper.getObjectState(object);
-        if (objectState != PERSISTENT_CLEAN
-                && objectState != PERSISTENT_DIRTY
-                && objectState != PERSISTENT_NEW
-                && objectState != PERSISTENT_NONTRANSACTIONAL_DIRTY
-                && objectState != HOLLOW_PERSISTENT_NONTRANSACTIONAL) {
+        if (!isPersistent(object)) {
             throw new IllegalStateException(message != null ? message : "Object must be persistent");
         }
+    }
+
+    /**
+     * Utility method to ensure that a given object is <strong>not</strong> in a persistent state.
+     *
+     * @param object  The object to check the state of
+     * @param message Message to use for the exception, if object is persistent
+     * @see #assertPersistent(Object, String)
+     */
+    public static void assertNonPersistent(final Object object, final String message) {
+        if (isPersistent(object)) {
+            throw new IllegalStateException(message != null ? message : "Object must not be persistent");
+        }
+    }
+
+    private static boolean isPersistent(final Object object) {
+        final ObjectState objectState = JDOHelper.getObjectState(object);
+        return objectState == PERSISTENT_CLEAN
+                || objectState == PERSISTENT_DIRTY
+                || objectState == PERSISTENT_NEW
+                || objectState == PERSISTENT_NONTRANSACTIONAL_DIRTY
+                || objectState == HOLLOW_PERSISTENT_NONTRANSACTIONAL;
     }
 
 }

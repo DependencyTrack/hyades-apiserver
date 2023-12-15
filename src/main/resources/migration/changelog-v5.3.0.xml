@@ -2367,4 +2367,19 @@
             <column name="SEVERITY" type="VARCHAR(255)"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.3.0-7" author="nscuro@protonmail.com">
+        <!-- The existing index does not enforce uniqueness, but it is required for batch upserts. -->
+        <dropIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX"/>
+        <createIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <!-- The unique index is required to support batch upserts. -->
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPOSITE_IDX" tableName="COMPONENTS_VULNERABILITIES" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
