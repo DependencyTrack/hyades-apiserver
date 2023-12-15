@@ -136,6 +136,7 @@
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
         <lib.liquibase.version>4.25.0</lib.liquibase.version>
+        <lib.minio.version>8.5.7</lib.minio.version>
     </properties>
 
     <repositories>
@@ -458,7 +459,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.5.7</version>
+            <version>${lib.minio.version}</version>
         </dependency>
 
         <!-- Test Dependencies -->
