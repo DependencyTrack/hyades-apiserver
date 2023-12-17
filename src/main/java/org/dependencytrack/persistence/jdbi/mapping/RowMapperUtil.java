@@ -98,7 +98,7 @@ public class RowMapperUtil {
         return Arrays.asList((String[]) array.getArray());
     }
 
-    public static <T> T json(final ResultSet rs, final String columnName, final TypeReference<T> typeReference) throws SQLException {
+    public static <T> T deserializeJson(final ResultSet rs, final String columnName, final TypeReference<T> typeReference) throws SQLException {
         final String jsonString = rs.getString(columnName);
         if (isBlank(jsonString)) {
             return null;
