@@ -18,17 +18,13 @@
  */
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.parser.common.resolver.CweResolver;
-import org.dependencytrack.util.VulnerabilityUtil;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,193 +43,391 @@ public class Finding implements Serializable {
 
     private static final long serialVersionUID = 5313521394432526986L;
 
-    /*
-     * This statement works on Microsoft SQL Server, MySQL, and PostgreSQL. Due to the standardization
-     * of upper-case table and column names in Dependency-Track, every identifier needs to be wrapped
-     * in double quotes to satisfy PostgreSQL case-sensitive requirements. This also places a requirement
-     * on ANSI_QUOTES mode being enabled in MySQL. SQL Server works regardless and is just happy to be invited :-)
-     */
-    public static final String QUERY = "SELECT " +
-            "\"COMPONENT\".\"UUID\"," +
-            "\"COMPONENT\".\"NAME\"," +
-            "\"COMPONENT\".\"GROUP\"," +
-            "\"COMPONENT\".\"VERSION\"," +
-            "\"COMPONENT\".\"PURL\"," +
-            "\"COMPONENT\".\"CPE\"," +
-            "\"VULNERABILITY\".\"UUID\"," +
-            "\"VULNERABILITY\".\"SOURCE\"," +
-            "\"VULNERABILITY\".\"VULNID\"," +
-            "\"VULNERABILITY\".\"TITLE\"," +
-            "\"VULNERABILITY\".\"SUBTITLE\"," +
-            "\"VULNERABILITY\".\"DESCRIPTION\"," +
-            "\"VULNERABILITY\".\"RECOMMENDATION\"," +
-            "\"VULNERABILITY\".\"SEVERITY\"," +
-            "\"VULNERABILITY\".\"CVSSV2BASESCORE\"," +
-            "\"VULNERABILITY\".\"CVSSV3BASESCORE\"," +
-            "\"VULNERABILITY\".\"OWASPRRLIKELIHOODSCORE\"," +
-            "\"VULNERABILITY\".\"OWASPRRTECHNICALIMPACTSCORE\"," +
-            "\"VULNERABILITY\".\"OWASPRRBUSINESSIMPACTSCORE\"," +
-            "\"VULNERABILITY\".\"EPSSSCORE\"," +
-            "\"VULNERABILITY\".\"EPSSPERCENTILE\"," +
-            "\"VULNERABILITY\".\"CWES\"," +
-            "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\"," +
-            "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"," +
-            "\"FINDINGATTRIBUTION\".\"ALT_ID\"," +
-            "\"FINDINGATTRIBUTION\".\"REFERENCE_URL\"," +
-            "\"ANALYSIS\".\"STATE\"," +
-            "\"ANALYSIS\".\"SUPPRESSED\" " +
-            "FROM \"COMPONENT\" " +
-            "INNER JOIN \"COMPONENTS_VULNERABILITIES\" ON (\"COMPONENT\".\"ID\" = \"COMPONENTS_VULNERABILITIES\".\"COMPONENT_ID\") " +
-            "INNER JOIN \"VULNERABILITY\" ON (\"COMPONENTS_VULNERABILITIES\".\"VULNERABILITY_ID\" = \"VULNERABILITY\".\"ID\") " +
-            "INNER JOIN \"FINDINGATTRIBUTION\" ON (\"COMPONENT\".\"ID\" = \"FINDINGATTRIBUTION\".\"COMPONENT_ID\") AND (\"VULNERABILITY\".\"ID\" = \"FINDINGATTRIBUTION\".\"VULNERABILITY_ID\")" +
-            "LEFT JOIN \"ANALYSIS\" ON (\"COMPONENT\".\"ID\" = \"ANALYSIS\".\"COMPONENT_ID\") AND (\"VULNERABILITY\".\"ID\" = \"ANALYSIS\".\"VULNERABILITY_ID\") AND (\"COMPONENT\".\"PROJECT_ID\" = \"ANALYSIS\".\"PROJECT_ID\") " +
-            "WHERE \"COMPONENT\".\"PROJECT_ID\" = ?";
+    private final Component component;
+    private final Vulnerability vulnerability;
+    private final Analysis analysis;
+    private final Attribution attribution;
 
-    private UUID project;
-    private Map<String, Object> component = new LinkedHashMap<>();
-    private Map<String, Object> vulnerability = new LinkedHashMap<>();
-    private Map<String, Object> analysis = new LinkedHashMap<>();
-    private Map<String, Object> attribution = new LinkedHashMap<>();
-
-    /**
-     * Constructs a new Finding object. The generic Object array passed as an argument is the
-     * individual values for each row in a resultset. The order of these must match the order
-     * of the columns being queried in {@link #QUERY}.
-     *
-     * @param o An array of values specific to an individual row returned from {@link #QUERY}
-     */
-    public Finding(UUID project, Object... o) {
-        this.project = project;
-        optValue(component, "uuid", o[0]);
-        optValue(component, "name", o[1]);
-        optValue(component, "group", o[2]);
-        optValue(component, "version", o[3]);
-        optValue(component, "purl", o[4]);
-        optValue(component, "cpe", o[5]);
-        optValue(component, "project", project.toString());
-
-        optValue(vulnerability, "uuid", o[6]);
-        optValue(vulnerability, "source", o[7]);
-        optValue(vulnerability, "vulnId", o[8]);
-        optValue(vulnerability, "title", o[9]);
-        optValue(vulnerability, "subtitle", o[10]);
-        //optValue(vulnerability, "description", o[11]); // CLOB - handle this in QueryManager
-        //optValue(vulnerability, "recommendation", o[12]); // CLOB - handle this in QueryManager
-        final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[16], (BigDecimal) o[17], (BigDecimal) o[18]);
-        optValue(vulnerability, "cvssV2BaseScore", o[14]);
-        optValue(vulnerability, "cvssV3BaseScore", o[15]);
-        optValue(vulnerability, "owaspLikelihoodScore", o[16]);
-        optValue(vulnerability, "owaspTechnicalImpactScore", o[17]);
-        optValue(vulnerability, "owaspBusinessImpactScore", o[18]);
-        optValue(vulnerability, "severity", severity.name());
-        optValue(vulnerability, "severityRank", severity.ordinal());
-        optValue(vulnerability, "epssScore", o[19]);
-        optValue(vulnerability, "epssPercentile", o[20]);
-        final List<Cwe> cwes = getCwes(o[21]);
-        if (cwes != null && !cwes.isEmpty()) {
-            // Ensure backwards-compatibility with DT < 4.5.0. Remove this in v5!
-            optValue(vulnerability, "cweId", cwes.get(0).getCweId());
-            optValue(vulnerability, "cweName", cwes.get(0).getName());
-        }
-        optValue(vulnerability, "cwes", cwes);
-        optValue(attribution, "analyzerIdentity", o[22]);
-        optValue(attribution, "attributedOn", o[23]);
-        optValue(attribution, "alternateIdentifier", o[24]);
-        optValue(attribution, "referenceUrl", o[25]);
-
-        optValue(analysis, "state", o[26]);
-        optValue(analysis, "isSuppressed", o[27], false);
-    }
-
-    public Finding(final Map<String, Object> analysis, final Map<String, Object> attribution,
-                   final Map<String, Object> component, final Map<String, Object> vulnerability) {
+    public Finding(final Analysis analysis, final Attribution attribution,
+                   final Component component, final Vulnerability vulnerability) {
         this.analysis = analysis;
         this.attribution = attribution;
         this.component = component;
         this.vulnerability = vulnerability;
     }
 
-    public Map<String, Object> getComponent() {
+    public Component getComponent() {
         return component;
     }
 
-    public Map<String, Object> getVulnerability() {
+    public Vulnerability getVulnerability() {
         return vulnerability;
     }
 
-    public Map<String, Object> getAnalysis() {
+    public Analysis getAnalysis() {
         return analysis;
     }
 
-    public Map<String, Object> getAttribution() {
+    public Attribution getAttribution() {
         return attribution;
     }
 
-    private void optValue(Map<String, Object> map, String key, Object value, boolean defaultValue) {
-        if (value == null) {
-            map.put(key, defaultValue);
-        } else {
-            map.put(key, value);
-        }
-    }
-
-    private void optValue(Map<String, Object> map, String key, Object value) {
-        if (value != null) {
-            map.put(key, value);
-        }
-    }
-
-    static List<Cwe> getCwes(final Object value) {
-        if (value instanceof final String cweIds) {
-            if (StringUtils.isBlank(cweIds)) {
-                return null;
-            }
-            final List<Cwe> cwes = new ArrayList<>();
-            for (final String s : cweIds.split(",")) {
-                if (StringUtils.isNumeric(s)) {
-                    final Cwe cwe = CweResolver.getInstance().lookup(Integer.valueOf(s));
-                    if (cwe != null) {
-                        cwes.add(cwe);
-                    }
-                }
-            }
-            if (cwes.isEmpty()) {
-                return null;
-            }
-            return cwes;
-        } else {
-            return null;
-        }
-    }
-
     public String getMatrix() {
-        return component.get("project") + ":" + component.get("uuid") + ":" + vulnerability.get("uuid");
+        return component.getProject() + ":" + component.getUuid() + ":" + vulnerability.getUuid();
     }
 
-    public void addVulnerabilityAliases(List<VulnerabilityAlias> aliases) {
-        final Set<Map<String, String>> uniqueAliases = new HashSet<>();
-        for (final VulnerabilityAlias alias : aliases) {
-            Map<String, String> map = new HashMap<>();
-            if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
-                map.put("cveId", alias.getCveId());
-            }
-            if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
-                map.put("ghsaId", alias.getGhsaId());
-            }
-            if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
-                map.put("sonatypeId", alias.getSonatypeId());
-            }
-            if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
-                map.put("osvId", alias.getOsvId());
-            }
-            if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
-                map.put("snykId", alias.getSnykId());
-            }
-            if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
-                map.put("vulnDbId", alias.getVulnDbId());
-            }
-            uniqueAliases.add(map);
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static final class Analysis {
+
+        private AnalysisState state;
+        private Boolean isSuppressed;
+
+        public AnalysisState getState() {
+            return state;
         }
-        vulnerability.put("aliases", uniqueAliases);
+
+        public void setState(final AnalysisState state) {
+            this.state = state;
+        }
+
+        @JsonGetter("isSuppressed")
+        public Boolean isSuppressed() {
+            return isSuppressed;
+        }
+
+        public void setSuppressed(final Boolean suppressed) {
+            isSuppressed = suppressed;
+        }
+
     }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static final class Attribution {
+
+        private AnalyzerIdentity analyzerIdentity;
+        private Date attributedOn;
+        private String alternateIdentifier;
+        private String referenceUrl;
+
+        public AnalyzerIdentity getAnalyzerIdentity() {
+            return analyzerIdentity;
+        }
+
+        public void setAnalyzerIdentity(final AnalyzerIdentity analyzerIdentity) {
+            this.analyzerIdentity = analyzerIdentity;
+        }
+
+        public Date getAttributedOn() {
+            return attributedOn;
+        }
+
+        public void setAttributedOn(final Date attributedOn) {
+            this.attributedOn = attributedOn;
+        }
+
+        public String getAlternateIdentifier() {
+            return alternateIdentifier;
+        }
+
+        public void setAlternateIdentifier(final String alternateIdentifier) {
+            this.alternateIdentifier = alternateIdentifier;
+        }
+
+        public String getReferenceUrl() {
+            return referenceUrl;
+        }
+
+        public void setReferenceUrl(final String referenceUrl) {
+            this.referenceUrl = referenceUrl;
+        }
+
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static final class Component {
+
+        private UUID project;
+        private UUID uuid;
+        private String group;
+        private String name;
+        private String version;
+        private String latestVersion;
+        private String cpe;
+        private String purl;
+
+        public UUID getProject() {
+            return project;
+        }
+
+        public void setProject(final UUID project) {
+            this.project = project;
+        }
+
+        public UUID getUuid() {
+            return uuid;
+        }
+
+        public void setUuid(final UUID uuid) {
+            this.uuid = uuid;
+        }
+
+        public String getGroup() {
+            return group;
+        }
+
+        public void setGroup(final String group) {
+            this.group = group;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+
+        public void setVersion(final String version) {
+            this.version = version;
+        }
+
+        public String getLatestVersion() {
+            return latestVersion;
+        }
+
+        public void setLatestVersion(final String latestVersion) {
+            this.latestVersion = latestVersion;
+        }
+
+        public String getCpe() {
+            return cpe;
+        }
+
+        public void setCpe(final String cpe) {
+            this.cpe = cpe;
+        }
+
+        public String getPurl() {
+            return purl;
+        }
+
+        public void setPurl(final String purl) {
+            this.purl = purl;
+        }
+
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static final class Vulnerability {
+
+        private UUID uuid;
+        private String vulnId;
+        private org.dependencytrack.model.Vulnerability.Source source;
+        private String title;
+        private String subtitle;
+        private String description;
+        private String recommendation;
+        private Double cvssV2BaseScore;
+        private Double cvssV3BaseScore;
+        private Double owaspBusinessImpactScore;
+        private Double owaspLikelihoodScore;
+        private Double owaspTechnicalImpactScore;
+        private Severity severity;
+        private Integer severityRank;
+        private Double epssScore;
+        private Double epssPercentile;
+        private List<Cwe> cwes;
+        private Integer cweId;
+        private String cweName;
+        private Set<Map<String, String>> aliases;
+
+        public UUID getUuid() {
+            return uuid;
+        }
+
+        public void setUuid(final UUID uuid) {
+            this.uuid = uuid;
+        }
+
+        public String getVulnId() {
+            return vulnId;
+        }
+
+        public void setVulnId(final String vulnId) {
+            this.vulnId = vulnId;
+        }
+
+        public org.dependencytrack.model.Vulnerability.Source getSource() {
+            return source;
+        }
+
+        public void setSource(final org.dependencytrack.model.Vulnerability.Source source) {
+            this.source = source;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(final String title) {
+            this.title = title;
+        }
+
+        public String getSubtitle() {
+            return subtitle;
+        }
+
+        public void setSubtitle(final String subtitle) {
+            this.subtitle = subtitle;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(final String description) {
+            this.description = description;
+        }
+
+        public String getRecommendation() {
+            return recommendation;
+        }
+
+        public void setRecommendation(final String recommendation) {
+            this.recommendation = recommendation;
+        }
+
+        public Double getCvssV2BaseScore() {
+            return cvssV2BaseScore;
+        }
+
+        public void setCvssV2BaseScore(final Double cvssV2BaseScore) {
+            this.cvssV2BaseScore = cvssV2BaseScore;
+        }
+
+        public Double getCvssV3BaseScore() {
+            return cvssV3BaseScore;
+        }
+
+        public void setCvssV3BaseScore(final Double cvssV3BaseScore) {
+            this.cvssV3BaseScore = cvssV3BaseScore;
+        }
+
+        public Double getOwaspBusinessImpactScore() {
+            return owaspBusinessImpactScore;
+        }
+
+        public void setOwaspBusinessImpactScore(final Double owaspBusinessImpactScore) {
+            this.owaspBusinessImpactScore = owaspBusinessImpactScore;
+        }
+
+        public Double getOwaspLikelihoodScore() {
+            return owaspLikelihoodScore;
+        }
+
+        public void setOwaspLikelihoodScore(final Double owaspLikelihoodScore) {
+            this.owaspLikelihoodScore = owaspLikelihoodScore;
+        }
+
+        public Double getOwaspTechnicalImpactScore() {
+            return owaspTechnicalImpactScore;
+        }
+
+        public void setOwaspTechnicalImpactScore(final Double owaspTechnicalImpactScore) {
+            this.owaspTechnicalImpactScore = owaspTechnicalImpactScore;
+        }
+
+        public Severity getSeverity() {
+            return severity;
+        }
+
+        public void setSeverity(final Severity severity) {
+            this.severity = severity;
+            this.severityRank = severity.ordinal();
+        }
+
+        public Integer getSeverityRank() {
+            return severityRank;
+        }
+
+        public Double getEpssScore() {
+            return epssScore;
+        }
+
+        public void setEpssScore(final Double epssScore) {
+            this.epssScore = epssScore;
+        }
+
+        public Double getEpssPercentile() {
+            return epssPercentile;
+        }
+
+        public void setEpssPercentile(final Double epssPercentile) {
+            this.epssPercentile = epssPercentile;
+        }
+
+        public List<Cwe> getCwes() {
+            return cwes;
+        }
+
+        public void setCwes(final List<Cwe> cwes) {
+            this.cwes = cwes;
+        }
+
+        public Integer getCweId() {
+            return cweId;
+        }
+
+        public void setCweId(final Integer cweId) {
+            this.cweId = cweId;
+        }
+
+        public String getCweName() {
+            return cweName;
+        }
+
+        public void setCweName(final String cweName) {
+            this.cweName = cweName;
+        }
+
+        public Set<Map<String, String>> getAliases() {
+            return aliases;
+        }
+
+        public void setAliases(final Set<Map<String, String>> aliases) {
+            this.aliases = aliases;
+        }
+
+        public void addVulnerabilityAliases(List<VulnerabilityAlias> aliases) {
+            final Set<Map<String, String>> uniqueAliases = new HashSet<>();
+            for (final VulnerabilityAlias alias : aliases) {
+                Map<String, String> map = new HashMap<>();
+                if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
+                    map.put("cveId", alias.getCveId());
+                }
+                if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
+                    map.put("ghsaId", alias.getGhsaId());
+                }
+                if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
+                    map.put("sonatypeId", alias.getSonatypeId());
+                }
+                if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
+                    map.put("osvId", alias.getOsvId());
+                }
+                if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
+                    map.put("snykId", alias.getSnykId());
+                }
+                if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
+                    map.put("vulnDbId", alias.getVulnDbId());
+                }
+                uniqueAliases.add(map);
+            }
+            this.aliases = uniqueAliases;
+        }
+    }
+
 }

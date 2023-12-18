@@ -32,10 +32,10 @@ import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class FindingPackagingFormatTest extends PersistenceCapableTest {
 
@@ -67,15 +67,69 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         Project project = qm.createProject(
                 "Test", "Sample project", "1.0", null, null, null, true, false);
 
-        Finding findingWithoutAlias = new Finding(project.getUuid(), "component-uuid-1", "component-name-1", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.CRITICAL, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "0.5", "0.9", null, AnalyzerIdentity.OSSINDEX_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+        final var componentA = new Finding.Component();
+        componentA.setProject(project.getUuid());
+        componentA.setUuid(UUID.randomUUID());
+        componentA.setGroup("component-group");
+        componentA.setName("component-name-1");
+        componentA.setVersion("component-version");
+        componentA.setCpe("component-cpe");
+        componentA.setPurl("component-purl");
+        final var vulnA = new Finding.Vulnerability();
+        vulnA.setUuid(UUID.randomUUID());
+        vulnA.setVulnId("vuln-vulnId-1");
+        vulnA.setSource(Vulnerability.Source.GITHUB);
+        vulnA.setTitle("vuln-title");
+        vulnA.setSubtitle("vuln-subtitle");
+        vulnA.setDescription("vuln-description");
+        vulnA.setRecommendation("vuln-recommendation");
+        vulnA.setSeverity(Severity.CRITICAL);
+        vulnA.setCvssV2BaseScore(7.2);
+        vulnA.setCvssV3BaseScore(8.4);
+        vulnA.setOwaspLikelihoodScore(1.25);
+        vulnA.setOwaspBusinessImpactScore(1.75);
+        vulnA.setOwaspTechnicalImpactScore(1.3);
+        vulnA.setEpssScore(0.5);
+        vulnA.setEpssPercentile(0.9);
+        final var attributionA = new Finding.Attribution();
+        attributionA.setAnalyzerIdentity(AnalyzerIdentity.OSSINDEX_ANALYZER);
+        attributionA.setAttributedOn(new Date());
+        final var analysisA = new Finding.Analysis();
+        analysisA.setState(AnalysisState.NOT_AFFECTED);
+        analysisA.setSuppressed(true);
+        Finding findingWithoutAlias = new Finding(analysisA, attributionA, componentA, vulnA);
 
-        Finding findingWithAlias = new Finding(project.getUuid(), "component-uuid-2", "component-name-2", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "0.5", "0.9", null, AnalyzerIdentity.INTERNAL_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+        final var componentB = new Finding.Component();
+        componentB.setProject(project.getUuid());
+        componentB.setUuid(UUID.randomUUID());
+        componentB.setGroup("component-group");
+        componentB.setName("component-name-2");
+        componentB.setVersion("component-version");
+        componentB.setCpe("component-cpe");
+        componentB.setPurl("component-purl");
+        final var vulnB = new Finding.Vulnerability();
+        vulnB.setUuid(UUID.randomUUID());
+        vulnB.setVulnId("vuln-vulnId-2");
+        vulnB.setSource(Vulnerability.Source.NVD);
+        vulnB.setTitle("vuln-title");
+        vulnB.setSubtitle("vuln-subtitle");
+        vulnB.setDescription("vuln-description");
+        vulnB.setRecommendation("vuln-recommendation");
+        vulnB.setSeverity(Severity.HIGH);
+        vulnB.setCvssV2BaseScore(7.2);
+        vulnB.setCvssV3BaseScore(8.4);
+        vulnB.setOwaspLikelihoodScore(1.25);
+        vulnB.setOwaspBusinessImpactScore(1.75);
+        vulnB.setOwaspTechnicalImpactScore(1.3);
+        vulnB.setEpssScore(0.5);
+        vulnB.setEpssPercentile(0.9);
+        final var attributionB = new Finding.Attribution();
+        attributionB.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
+        attributionB.setAttributedOn(new Date());
+        final var analysisB = new Finding.Analysis();
+        analysisB.setState(AnalysisState.NOT_AFFECTED);
+        analysisB.setSuppressed(true);
+        Finding findingWithAlias = new Finding(analysisB, attributionB, componentB, vulnB);
 
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
@@ -97,8 +151,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setInternalId("anotherInternalId");
         other.setVulnDbId(null);
 
-        findingWithoutAlias.addVulnerabilityAliases(List.of());
-        findingWithAlias.addVulnerabilityAliases(List.of(alias, other));
+        findingWithoutAlias.getVulnerability().addVulnerabilityAliases(List.of());
+        findingWithAlias.getVulnerability().addVulnerabilityAliases(List.of(alias, other));
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),

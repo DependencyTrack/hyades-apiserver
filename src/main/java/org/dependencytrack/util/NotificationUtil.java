@@ -471,14 +471,14 @@ public final class NotificationUtil {
             List<Component> componentList = new ArrayList<>();
             ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
             for (Finding finding : findings) {
-                final var componentUuid = (String) finding.getComponent().get("uuid");
+                final var componentUuid = finding.getComponent().getUuid();
                 Component component = qm.getObjectByUuid(Component.class, componentUuid);
                 if (component == null) {
                     // This can happen when the project was deleted while this method is executing.
                     throw new NoSuchElementException("Component with UUID %s does not exist in project %s"
                             .formatted(componentUuid, project.getUuid()));
                 }
-                final var vulnerabilityUuid = (String) finding.getVulnerability().get("uuid");
+                final var vulnerabilityUuid = finding.getVulnerability().getUuid();
                 Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, vulnerabilityUuid);
                 if (vulnerability == null) {
                     // Unlikely to happen, but when in doubt it's still better to raise this exception

@@ -25,7 +25,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.DateUtil;
 import org.json.JSONArray;
@@ -74,18 +73,13 @@ public class KennaDataTransformer {
         final JSONArray vulns = new JSONArray();
         final List<Finding> findings = qm.getFindings(project);
         for (final Finding finding: findings) {
-            final Map analysis = finding.getAnalysis();
-            final Object suppressed = finding.getAnalysis().get("isSuppressed");
-            if (suppressed instanceof Boolean) {
-                final boolean isSuppressed = (Boolean)analysis.get("isSuppressed");
-                if (isSuppressed) {
-                    continue;
-                }
+            final Finding.Analysis analysis = finding.getAnalysis();
+            if (analysis.isSuppressed()) {
+                continue;
             }
-            final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (String)finding.getVulnerability().get("uuid"));
+            final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, finding.getVulnerability().getUuid());
             //final Component component = qm.getObjectByUuid(Component.class, (String)finding.getComponent().get("uuid"));
-            final String stateString = (String)finding.getAnalysis().get("state");
-            final AnalysisState analysisState = (stateString != null) ? AnalysisState.valueOf(stateString) : AnalysisState.NOT_SET;
+            final AnalysisState analysisState = (finding.getAnalysis().getState() != null) ? finding.getAnalysis().getState() : AnalysisState.NOT_SET;
             final JSONObject kdiVuln = generateKdiVuln(vulnerability, analysisState);
             vulns.put(kdiVuln);
             portfolioVulnerabilities.put(generateScannerIdentifier(vulnerability), vulnerability);
