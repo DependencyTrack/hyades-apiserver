@@ -816,7 +816,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithFuncProjectDependsOnComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                project.depends_on(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
+                project.depends_on(v1.Component{name: "acme-lib-a"})
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -849,7 +849,7 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
     public void testEvaluateProjectWithFuncComponentIsDependencyOfComponent() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.is_dependency_of(org.dependencytrack.policy.v1.Component{name: "acme-lib-a"})
+                component.is_dependency_of(v1.Component{name: "acme-lib-a"})
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
