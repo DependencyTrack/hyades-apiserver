@@ -165,7 +165,11 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                                     "uuid": "${json-unit.matches:vulnUuid}",
                                     "vulnId": "CVE-100"
                                   },
-                                  "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS"
+                                  "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
+                                  "affectedProjectsReference": {
+                                    "apiUri": "/api/v1/vulnerability/source/NVD/vuln/CVE-100/projects",
+                                    "frontendUri": "/vulnerabilities/NVD/CVE-100/affectedProjects"
+                                  }
                                 }
                                 """));
     }
@@ -242,7 +246,11 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
                               "uuid": "${json-unit.matches:projectUuid}",
                               "name": "projectName"
                             }
-                          ]
+                          ],
+                          "affectedProjectsReference": {
+                            "apiUri": "/api/v1/vulnerability/source/NVD/vuln/CVE-100/projects",
+                            "frontendUri": "/vulnerabilities/NVD/CVE-100/affectedProjects"
+                          }
                         }
                         """);
     }

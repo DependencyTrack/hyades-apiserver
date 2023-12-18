@@ -59,13 +59,13 @@ import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -386,12 +386,12 @@ public final class NotificationUtil {
         }
     }
 
-    public static String generateNotificationContent(final Vulnerability vulnerability) {
+    public static String generateNotificationContent(final org.dependencytrack.proto.notification.v1.Vulnerability vulnerability) {
         final String content;
-        if (vulnerability.getDescription() != null) {
+        if (vulnerability.hasDescription()) {
             content = vulnerability.getDescription();
         } else {
-            content = (vulnerability.getTitle() != null) ? vulnerability.getVulnId() + ": " + vulnerability.getTitle() : vulnerability.getVulnId();
+            content = vulnerability.hasTitle() ? vulnerability.getVulnId() + ": " + vulnerability.getTitle() : vulnerability.getVulnId();
         }
         return content;
     }
@@ -400,7 +400,8 @@ public final class NotificationUtil {
         return "A " + policyViolation.getType().name().toLowerCase() + " policy violation occurred";
     }
 
-    public static String generateNotificationContent(final Component component, final Set<Vulnerability> vulnerabilities) {
+    public static String generateNotificationContent(final org.dependencytrack.proto.notification.v1.Component component,
+                                                     final Collection<org.dependencytrack.proto.notification.v1.Vulnerability> vulnerabilities) {
         final String content;
         if (vulnerabilities.size() == 1) {
             content = "A dependency was introduced that contains 1 known vulnerability";
@@ -429,6 +430,27 @@ public final class NotificationUtil {
             return messageType + " on Project: [" + project.toString() + "]";
         }
         return messageType;
+    }
+
+    public static String generateNotificationTitle(final String messageType, final org.dependencytrack.proto.notification.v1.Project project) {
+        if (project == null) {
+            return messageType;
+        }
+
+        // Emulate Project#toString()
+        final String projectStr;
+        if (project.hasPurl()) {
+            projectStr = project.getPurl();
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append(project.getName());
+            if (project.hasVersion()) {
+                sb.append(" : ").append(project.getVersion());
+            }
+            projectStr = sb.toString();
+        }
+
+        return messageType + " on Project: [" + projectStr + "]";
     }
 
     private static void sendNotificationToKafka(UUID projectUuid, Notification notification) {
