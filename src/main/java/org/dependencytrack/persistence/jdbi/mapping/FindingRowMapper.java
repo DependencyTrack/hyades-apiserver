@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.json;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.stringArray;
 
@@ -62,7 +62,18 @@ public class FindingRowMapper implements RowMapper<Finding> {
         });
         maybeSet(rs, "vulnEpssScore", RowMapperUtil::nullableDouble, value -> vuln.put("epssScore", value));
         maybeSet(rs, "vulnEpssPercentile", RowMapperUtil::nullableDouble, value -> vuln.put("epssPercentile", value));
-        maybeSet(rs, "vulnCwes", FindingRowMapper::maybeConvertCwes, value -> vuln.put("cwes", value));
+        maybeSet(rs, "vulnCwes", FindingRowMapper::maybeConvertCwes, value -> {
+            vuln.put("cwes", value);
+
+            // Ensure backwards-compatibility with DT < 4.5.0.
+            // TODO: This is scheduled for removal in v5.
+            //  Remove in separate PR and make sure to document it!
+            if (!value.isEmpty()) {
+                final Cwe firstCwe = value.get(0);
+                vuln.put("cweId", firstCwe.getCweId());
+                vuln.put("cweName", firstCwe.getName());
+            }
+        });
         maybeSet(rs, "vulnAliases", FindingRowMapper::maybeConvertAliases, value -> vuln.put("aliases", value));
         maybeSet(rs, "analyzerIdentity", ResultSet::getString, value -> attribution.put("analyzerIdentity", value));
         maybeSet(rs, "attributedOn", ResultSet::getTimestamp, value -> attribution.put("attributedOn", value));
@@ -82,7 +93,7 @@ public class FindingRowMapper implements RowMapper<Finding> {
     }
 
     private static Set<Map<String, String>> maybeConvertAliases(final ResultSet rs, final String columnName) throws SQLException {
-        final List<VulnerabilityAlias> aliases = json(rs, columnName, VULNERABILITY_ALIASES_TYPE_REF);
+        final List<VulnerabilityAlias> aliases = deserializeJson(rs, columnName, VULNERABILITY_ALIASES_TYPE_REF);
         if (aliases == null) {
             return Collections.emptySet();
         }

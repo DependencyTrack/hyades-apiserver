@@ -99,6 +99,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(0).getJsonObject("component").getString("version"));
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -108,6 +109,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(1).getJsonObject("component").getString("version"));
         assertEquals("Vuln-2", json.getJsonObject(1).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.HIGH.name(), json.getJsonObject(1).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -117,6 +119,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(2).getJsonObject("component").getString("version"));
         assertEquals("Vuln-3", json.getJsonObject(2).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.MEDIUM.name(), json.getJsonObject(2).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -273,6 +276,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(0).getJsonObject("component").getString("version"));
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -283,6 +287,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(1).getJsonObject("component").getString("version"));
         assertEquals("Vuln-2", json.getJsonObject(1).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.HIGH.name(), json.getJsonObject(1).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -293,6 +298,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(2).getJsonObject("component").getString("version"));
         assertEquals("Vuln-3", json.getJsonObject(2).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.MEDIUM.name(), json.getJsonObject(2).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
@@ -321,6 +327,7 @@ public class FindingResourceTest extends PostgresResourceTest {
         assertEquals("1.0", json.getJsonObject(0).getJsonObject("component").getString("version"));
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getInt("cweId"));
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
