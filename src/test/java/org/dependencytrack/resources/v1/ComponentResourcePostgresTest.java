@@ -22,9 +22,7 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.postgresql.ds.PGSimpleDataSource;
@@ -43,7 +41,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ComponentResourcePostgresTest extends ResourceTest {
+public class ComponentResourcePostgresTest extends AbstractPostgresResourceTest {
 
     @Override
     protected DeploymentContext configureDeployment() {
@@ -51,63 +49,6 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                         new ResourceConfig(ComponentResource.class)
                                 .register(ApiFilter.class)))
                 .build();
-    }
-
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
-    protected PostgreSQLContainer<?> postgresContainer;
-    protected MockProducer<byte[], byte[]> kafkaMockProducer;
-    protected QueryManager qm;
-
-    @BeforeClass
-    public static void init() {
-        Config.enableUnitTests();
-    }
-
-    @BeforeEach
-    public void setUp() throws Exception {
-        super.setUp();
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
-                .withUsername("dtrack")
-                .withPassword("dtrack")
-                .withDatabaseName("dtrack");
-        postgresContainer.start();
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        MigrationInitializer.runMigration(dataSource, /* silent */ true);
-
-        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
-                postgresContainer.getDriverClassName(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.tearDown();
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
-
-        qm = new QueryManager();
-
-        environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
-        this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
-    }
-
-    @AfterEach
-    public void tearDown() throws Exception {
-        super.tearDown();
-        if (!qm.getPersistenceManager().isClosed()
-                && qm.getPersistenceManager().currentTransaction().isActive()) {
-            qm.getPersistenceManager().currentTransaction().rollback();
-        }
-
-        PersistenceManagerFactory.tearDown();
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-        KafkaProducerInitializer.tearDown();
     }
 
     @Test
