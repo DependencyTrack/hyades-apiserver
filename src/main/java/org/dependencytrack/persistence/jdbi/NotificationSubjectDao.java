@@ -87,7 +87,9 @@ public interface NotificationSubjectDao {
               )                    AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson",
-              :vulnAnalysisLevel               AS "vulnAnalysisLevel"
+              :vulnAnalysisLevel               AS "vulnAnalysisLevel",
+              '/api/v1/vulnerability/source/' || "V"."SOURCE" || '/vuln/' || "V"."VULNID" || '/projects' AS "affectedProjectsApiUrl",
+              '/vulnerabilities/' || "V"."SOURCE" || '/' || "V"."VULNID" || '/affectedProjects'          AS "affectedProjectsFrontendUrl"
             FROM
               "COMPONENT" AS "C"
             INNER JOIN
