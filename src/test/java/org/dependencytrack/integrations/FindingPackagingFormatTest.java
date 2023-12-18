@@ -169,8 +169,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         Assert.assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
         Assert.assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
 
-        Assert.assertEquals(Severity.CRITICAL.toString(), findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
-        Assert.assertEquals(Severity.HIGH.toString(), findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));
+        Assert.assertEquals(Severity.CRITICAL, findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
+        Assert.assertEquals(Severity.HIGH, findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));
 
         JSONArray aliases_1 = findings.getJSONObject(0).getJSONObject("vulnerability").getJSONArray("aliases");
         Assert.assertTrue(aliases_1.isEmpty());

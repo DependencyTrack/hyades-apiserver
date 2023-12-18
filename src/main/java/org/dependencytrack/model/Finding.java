@@ -20,6 +20,7 @@ package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.json.JSONPropertyName;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -72,6 +73,7 @@ public class Finding implements Serializable {
         return attribution;
     }
 
+    @SuppressWarnings("unused") // Called by JSON serializers.
     public String getMatrix() {
         return component.getProject() + ":" + component.getUuid() + ":" + vulnerability.getUuid();
     }
@@ -80,6 +82,7 @@ public class Finding implements Serializable {
     public static final class Analysis {
 
         private AnalysisState state;
+
         private Boolean isSuppressed;
 
         public AnalysisState getState() {
@@ -90,7 +93,8 @@ public class Finding implements Serializable {
             this.state = state;
         }
 
-        @JsonGetter("isSuppressed")
+        @JsonGetter("isSuppressed") // For Jackson; Used to serialize REST API responses.
+        @JSONPropertyName("isSuppressed") // For JSON-Java; Used for Finding Packaging Format (FPF).
         public Boolean isSuppressed() {
             return isSuppressed;
         }

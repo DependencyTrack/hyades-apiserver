@@ -59,18 +59,23 @@ public class FindingRowMapper implements RowMapper<Finding> {
         maybeSet(rs, "vulnEpssScore", RowMapperUtil::nullableDouble, vuln::setEpssScore);
         maybeSet(rs, "vulnEpssPercentile", RowMapperUtil::nullableDouble, vuln::setEpssPercentile);
         maybeSet(rs, "vulnCwes", FindingRowMapper::maybeConvertCwes, value -> {
+            if (value.isEmpty()) {
+                // As per API contract / historic behavior, CWEs must not be set when empty.
+                return;
+            }
             vuln.setCwes(value);
 
             // Ensure backwards-compatibility with DT < 4.5.0.
             // TODO: This is scheduled for removal in v5.
             //  Remove in separate PR and make sure to document it!
-            if (!value.isEmpty()) {
-                final Cwe firstCwe = value.get(0);
-                vuln.setCweId(firstCwe.getCweId());
-                vuln.setCweName(firstCwe.getName());
-            }
+            final Cwe firstCwe = value.get(0);
+            vuln.setCweId(firstCwe.getCweId());
+            vuln.setCweName(firstCwe.getName());
         });
-        maybeSet(rs, "vulnAliases", FindingRowMapper::maybeConvertAliases, vuln::addVulnerabilityAliases);
+        if (!maybeSet(rs, "vulnAliases", FindingRowMapper::maybeConvertAliases, vuln::addVulnerabilityAliases)) {
+            // As per API contract / historic behavior, aliases always be set.
+            vuln.setAliases(Collections.emptySet());
+        }
         maybeSet(rs, "analyzerIdentity", ResultSet::getString, value -> attribution.setAnalyzerIdentity(AnalyzerIdentity.valueOf(value)));
         maybeSet(rs, "attributedOn", ResultSet::getTimestamp, attribution::setAttributedOn);
         maybeSet(rs, "alternateIdentifier", ResultSet::getString, attribution::setAlternateIdentifier);
