@@ -54,7 +54,7 @@ public interface CelPolicyDao {
             <#if fetchColumns?seq_contains("\\"tags\\"")>
               LEFT JOIN LATERAL (
                 SELECT
-                  CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tags"
+                  ARRAY_AGG(DISTINCT "T"."NAME") AS "tags"
                 FROM
                   "TAG" AS "T"
                 INNER JOIN
@@ -222,7 +222,14 @@ public interface CelPolicyDao {
 
         final List<String> sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
                 .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
-                .map(fieldMapping -> "\"V\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
+                .map(fieldMapping -> {
+                    if ("cwes".equals(fieldMapping.protoFieldName())) {
+                        return "STRING_TO_ARRAY(\"V\".\"%s\", ',') AS \"%s\""
+                                .formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
+                    }
+
+                    return "\"V\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
+                })
                 .collect(Collectors.toList());
         if (fieldsToLoad.contains("aliases")) {
             sqlSelectColumns.add("\"aliases\"");
