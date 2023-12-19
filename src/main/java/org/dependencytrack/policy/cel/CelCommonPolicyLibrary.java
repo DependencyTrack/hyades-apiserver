@@ -36,9 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
 public class CelCommonPolicyLibrary implements Library {
 
@@ -53,10 +54,11 @@ public class CelCommonPolicyLibrary implements Library {
     @Override
     public List<EnvOption> getCompileOptions() {
         return List.of(
+                EnvOption.container("org.dependencytrack.policy"),
                 EnvOption.declarations(
                         Decls.newFunction(
                                 FUNC_DEPENDS_ON,
-                                // project.depends_on(org.dependencytrack.policy.v1.Component{name: "foo"})
+                                // project.depends_on(v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "project_depends_on_component_bool",
                                         List.of(TYPE_PROJECT, TYPE_COMPONENT),
@@ -65,7 +67,7 @@ public class CelCommonPolicyLibrary implements Library {
                         ),
                         Decls.newFunction(
                                 FUNC_IS_DEPENDENCY_OF,
-                                // component.is_dependency_of(org.dependencytrack.policy.v1.Component{name: "foo"})
+                                // component.is_dependency_of(v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "component_is_dependency_of_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
@@ -197,7 +199,7 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         if (lhs.value() instanceof final Project project) {
-            // project.depends_on(org.dependencytrack.policy.v1.Component{name: "foo"})
+            // project.depends_on(v1.Component{name: "foo"})
             return Types.boolOf(dependsOn(project, leafComponent));
         }
 
