@@ -13,7 +13,6 @@ import org.projectnessie.cel.Ast;
 import org.projectnessie.cel.CEL;
 import org.projectnessie.cel.Env;
 import org.projectnessie.cel.Env.AstIssuesTuple;
-import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Program;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.common.Errors;
@@ -52,17 +51,17 @@ public class CelPolicyScriptHost {
     private final AbstractCacheManager cacheManager;
     private final Env environment;
 
-    CelPolicyScriptHost(final AbstractCacheManager cacheManager, final List<EnvOption> envOptions) {
+    public CelPolicyScriptHost(final AbstractCacheManager cacheManager, final CelPolicyType policyType) {
         this.locks = Striped.lock(128);
         this.cacheManager = cacheManager;
         this.environment = Env.newCustomEnv(
                 ProtoTypeRegistry.newRegistry(),
-                envOptions
+                policyType.envOptions()
         );
     }
 
     public static synchronized CelPolicyScriptHost getInstance(final CelPolicyType policyType) {
-        return INSTANCES.computeIfAbsent(policyType, ignored -> new CelPolicyScriptHost(CacheManager.getInstance(), policyType.envOptions()));
+        return INSTANCES.computeIfAbsent(policyType, ignored -> new CelPolicyScriptHost(CacheManager.getInstance(), policyType));
     }
 
     /**
