@@ -22,19 +22,9 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSe
 
 public class CelPolicyProjectRowMapper implements RowMapper<Project> {
 
-    private final Project.Builder builder;
-
-    @SuppressWarnings("unused") // Used by JDBI
-    public CelPolicyProjectRowMapper() {
-        this(Project.newBuilder());
-    }
-
-    public CelPolicyProjectRowMapper(final Project.Builder builder) {
-        this.builder = builder;
-    }
-
     @Override
     public Project map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        final Project.Builder builder = Project.newBuilder();
         maybeSet(rs, "uuid", ResultSet::getString, builder::setUuid);
         maybeSet(rs, "group", ResultSet::getString, builder::setGroup);
         maybeSet(rs, "name", ResultSet::getString, builder::setName);

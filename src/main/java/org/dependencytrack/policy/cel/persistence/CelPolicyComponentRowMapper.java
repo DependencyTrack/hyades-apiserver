@@ -12,19 +12,9 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSe
 
 public class CelPolicyComponentRowMapper implements RowMapper<Component> {
 
-    private final Component.Builder builder;
-
-    @SuppressWarnings("unused") // Used by JDBI
-    public CelPolicyComponentRowMapper() {
-        this(Component.newBuilder());
-    }
-
-    CelPolicyComponentRowMapper(final Component.Builder builder) {
-        this.builder = builder;
-    }
-
     @Override
     public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        final Component.Builder builder = Component.newBuilder();
         maybeSet(rs, "uuid", ResultSet::getString, builder::setUuid);
         maybeSet(rs, "group", ResultSet::getString, builder::setGroup);
         maybeSet(rs, "name", ResultSet::getString, builder::setName);
