@@ -1,8 +1,8 @@
 package org.dependencytrack.policy.cel;
 
-import alpine.server.cache.AbstractCacheManager;
 import com.google.api.expr.v1alpha1.Type;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.dependencytrack.TestCacheManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.junit.Test;
 import org.projectnessie.cel.tools.ScriptCreateException;
@@ -22,22 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class CelPolicyScriptHostTest {
 
-    private static class TestCacheManager extends AbstractCacheManager {
-
-        private TestCacheManager() {
-            super(30, TimeUnit.SECONDS, 5);
-        }
-
-    }
-
     @Test
     public void testCompileWithCache() throws Exception {
         final var scriptSrc = """
                 component.name == "foo"
                 """;
 
-        final var cacheManager = new TestCacheManager();
-        final CelPolicyScript script = new CelPolicyScriptHost(cacheManager, CelPolicyType.COMPONENT.envOptions()).compile("""
+        final var cacheManager = new TestCacheManager(30, TimeUnit.SECONDS, 5);
+        final CelPolicyScript script = new CelPolicyScriptHost(cacheManager, CelPolicyType.COMPONENT).compile("""
                 component.name == "foo"
                 """, CacheMode.CACHE);
 
@@ -50,8 +42,8 @@ public class CelPolicyScriptHostTest {
                 component.name == "foo"
                 """;
 
-        final var cacheManager = new TestCacheManager();
-        new CelPolicyScriptHost(cacheManager, CelPolicyType.COMPONENT.envOptions()).compile("""
+        final var cacheManager = new TestCacheManager(30, TimeUnit.SECONDS, 5);
+        new CelPolicyScriptHost(cacheManager, CelPolicyType.COMPONENT).compile("""
                 component.name == "foo"
                 """, CacheMode.NO_CACHE);
 
