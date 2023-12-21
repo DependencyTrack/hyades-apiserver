@@ -34,6 +34,8 @@ import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_REPO_META_ANAL
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
@@ -44,6 +46,7 @@ import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_VULN_ANALYSIS_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.VULNERABILITY_METRICS_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.WORKFLOW_STEP_CLEANUP_TASK_LOCK;
 
 public class LockProvider {
@@ -141,6 +144,10 @@ public class LockProvider {
                     INTEGRITY_META_INITIALIZER_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR)),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR)));
+            case VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_LEAST_FOR)));
         };
 
     }

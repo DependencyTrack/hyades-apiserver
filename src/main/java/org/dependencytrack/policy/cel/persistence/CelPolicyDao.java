@@ -256,7 +256,7 @@ public interface CelPolicyDao {
             if (fieldDescriptor.isRepeated() && typeInstance.getRepeatedFieldCount(fieldDescriptor) == 0) {
                 // There's no way differentiate between repeated fields being not set or just empty.
                 fieldsToLoad.add(fieldName);
-            } else if (!typeInstance.hasField(fieldDescriptor)) {
+            } else if (!fieldDescriptor.isRepeated() && !typeInstance.hasField(fieldDescriptor)) {
                 fieldsToLoad.add(fieldName);
             }
         }
