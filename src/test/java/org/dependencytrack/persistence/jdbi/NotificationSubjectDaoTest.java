@@ -491,28 +491,20 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
         vulnA.setCwes(List.of(666, 777));
         qm.persist(vulnA);
 
-        final var vulnB = new Vulnerability();
-        vulnB.setVulnId("CVE-200");
-        vulnB.setSource(Vulnerability.Source.NVD);
-        qm.persist(vulnB);
-
         final var vulnAlias = new VulnerabilityAlias();
         vulnAlias.setCveId("CVE-100");
         vulnAlias.setGhsaId("GHSA-100");
         qm.synchronizeVulnerabilityAlias(vulnAlias);
 
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        qm.makeAnalysis(component, vulnB, AnalysisState.FALSE_POSITIVE, null, null, null, true);
         qm.makeAnalysis(component, vulnA, AnalysisState.NOT_AFFECTED, null, null, null, false);
 
-        final List<VulnerabilityAnalysisDecisionChangeSubject> subjects = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForProjectAuditChange(component.getUuid(), List.of(vulnA.getId(), vulnB.getId())));
+        final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
+                dao -> dao.getForProjectAuditChange(component.getUuid(), vulnA.getUuid()));
 
-        assertThat(subjects.size()).isEqualTo(2);
-        assertThat(subjects.get(0)).satisfies(subject ->
+        assertThat(optionalSubject.get()).satisfies(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))
                         .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                         .withMatcher("componentUuid", equalTo(component.getUuid().toString()))

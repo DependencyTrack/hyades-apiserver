@@ -24,7 +24,9 @@ import alpine.notification.NotificationLevel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Finding;
@@ -108,35 +110,7 @@ public final class NotificationUtil {
             final NotificationGroup notificationGroup;
             notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
 
-            String title = null;
-            if (analysisStateChange) {
-                switch (analysis.getAnalysisState()) {
-                    case EXPLOITABLE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
-                        break;
-                    case IN_TRIAGE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
-                        break;
-                    case NOT_AFFECTED:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
-                        break;
-                    case FALSE_POSITIVE:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
-                        break;
-                    case NOT_SET:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
-                        break;
-                    case RESOLVED:
-                        title = NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
-                        break;
-                }
-            } else if (suppressionChange) {
-                if (analysis.isSuppressed()) {
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED;
-                } else {
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_UNSUPPRESSED;
-                }
-            }
+            String title = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
 
             Project project = analysis.getComponent().getProject();
 
@@ -157,6 +131,39 @@ public final class NotificationUtil {
                             analysis.getComponent(), analysis.getProject(), analysis))
             );
         }
+    }
+
+    public static String generateTitle(AnalysisState analysisState, boolean isSuppressed, boolean analysisStateChange, boolean suppressionChange) {
+        String title = null;
+        if (analysisStateChange) {
+            switch (analysisState) {
+                case EXPLOITABLE:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
+                    break;
+                case IN_TRIAGE:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
+                    break;
+                case NOT_AFFECTED:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
+                    break;
+                case FALSE_POSITIVE:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
+                    break;
+                case NOT_SET:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
+                    break;
+                case RESOLVED:
+                    title = NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
+                    break;
+            }
+        } else if (suppressionChange) {
+            if (isSuppressed) {
+                title = NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED;
+            } else {
+                title = NotificationConstants.Title.ANALYSIS_DECISION_UNSUPPRESSED;
+            }
+        }
+        return title;
     }
 
     public static void analyzeNotificationCriteria(final QueryManager qm, ViolationAnalysis violationAnalysis,
@@ -430,6 +437,10 @@ public final class NotificationUtil {
             return messageType + " on Project: [" + project.toString() + "]";
         }
         return messageType;
+    }
+
+    public static String generateNotificationContent(final VulnerabilityScanResultProcessor.Analysis analysis) {
+        return "An analysis decision was made to a finding affecting a project";
     }
 
     public static String generateNotificationTitle(final String messageType, final org.dependencytrack.proto.notification.v1.Project project) {

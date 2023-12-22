@@ -338,8 +338,8 @@ public interface NotificationSubjectDao {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT AND "V"."ID" = ANY((:vulnIds)::BIGINT[])
+              "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = (:vulnUuid)::TEXT
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
-    List<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final Collection<Long> vulnIds);
+    Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid);
 }
