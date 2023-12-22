@@ -499,10 +499,10 @@ public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        qm.makeAnalysis(component, vulnA, AnalysisState.NOT_AFFECTED, null, null, null, false);
+        var policyAnalysis = qm.makeAnalysis(component, vulnA, AnalysisState.NOT_AFFECTED, null, null, null, false);
 
         final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForProjectAuditChange(component.getUuid(), vulnA.getUuid()));
+                dao -> dao.getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));
 
         assertThat(optionalSubject.get()).satisfies(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))

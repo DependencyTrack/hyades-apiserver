@@ -1,5 +1,6 @@
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
@@ -299,8 +300,8 @@ public interface NotificationSubjectDao {
               )                    AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson",
-              "A"."SUPPRESSED"             AS "isVulnAnalysisSuppressed",
-              "A"."STATE"             AS "vulnAnalysisState",
+              :isSuppressed              AS "isVulnAnalysisSuppressed",
+              :analysisState             AS "vulnAnalysisState",
               '/api/v1/vulnerability/source/' || "V"."SOURCE" || '/vuln/' || "V"."VULNID" || '/projects' AS "affectedProjectsApiUrl",
               '/vulnerabilities/' || "V"."SOURCE" || '/' || "V"."VULNID" || '/affectedProjects'          AS "affectedProjectsFrontendUrl"
             FROM
@@ -341,5 +342,6 @@ public interface NotificationSubjectDao {
               "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = (:vulnUuid)::TEXT
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
-    Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid);
+
+    Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid, AnalysisState analysisState, boolean isSuppressed);
 }
