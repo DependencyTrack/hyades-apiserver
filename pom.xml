@@ -102,7 +102,7 @@
         -->
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.kafka.version>3.6.1</lib.kafka.version>
-        <lib.kafka-junit.version>3.5.1</lib.kafka-junit.version>
+        <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
