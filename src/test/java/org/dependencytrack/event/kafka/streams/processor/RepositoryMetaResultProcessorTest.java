@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka.processor;
+package org.dependencytrack.event.kafka.streams.processor;
 
 import com.google.protobuf.Timestamp;
 import org.apache.kafka.common.serialization.StringDeserializer;
