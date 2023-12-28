@@ -1,14 +1,14 @@
 package org.dependencytrack.event.kafka.processor.api;
 
-import io.confluent.parallelconsumer.ParallelStreamProcessor;
+import io.confluent.parallelconsumer.PollContext;
 
-public interface RecordProcessingStrategy {
+interface RecordProcessingStrategy {
 
     /**
-     * Process records provided by a given {@link ParallelStreamProcessor}.
+     * Handle the result of a consumer poll.
      *
-     * @param streamProcessor The {@link ParallelStreamProcessor} to process records from
+     * @param pollCtx The context of the current consumer poll
      */
-    void process(final ParallelStreamProcessor<byte[], byte[]> streamProcessor);
+    void handlePoll(final PollContext<byte[], byte[]> pollCtx);
 
 }

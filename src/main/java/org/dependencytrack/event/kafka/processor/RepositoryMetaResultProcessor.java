@@ -7,9 +7,8 @@ import com.github.packageurl.PackageURL;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.dependencytrack.event.kafka.processor.api.RecordConsumer;
+import org.dependencytrack.event.kafka.processor.api.SingleRecordProcessor;
 import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
-import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -29,17 +28,17 @@ import java.util.Optional;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.performIntegrityCheck;
 
 /**
- * A {@link RecordConsumer} that ingests repository metadata {@link AnalysisResult}s.
+ * A {@link SingleRecordProcessor} that ingests repository metadata {@link AnalysisResult}s.
  */
-public class RepositoryMetaResultConsumer implements RecordConsumer<String, AnalysisResult> {
+public class RepositoryMetaResultProcessor implements SingleRecordProcessor<String, AnalysisResult> {
 
-    private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
+    private static final Logger LOGGER = Logger.getLogger(org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor.class);
     private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
             .description("Time taken to process repository meta analysis results")
             .register(Metrics.getRegistry());
 
     @Override
-    public void consume(final ConsumerRecord<String, AnalysisResult> record) throws RecordProcessingException {
+    public void process(final ConsumerRecord<String, AnalysisResult> record) throws RecordProcessingException {
         final Timer.Sample timerSample = Timer.start();
         if (!isRecordValid(record)) {
             return;
