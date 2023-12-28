@@ -1,14 +1,16 @@
 package org.dependencytrack.event.kafka.processor.api;
 
-import io.confluent.parallelconsumer.PollContext;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+
+import java.util.List;
 
 interface RecordProcessingStrategy {
 
     /**
-     * Handle the result of a consumer poll.
+     * Process zero or more {@link ConsumerRecord}s.
      *
-     * @param pollCtx The context of the current consumer poll
+     * @param records The {@link ConsumerRecord}s to process
      */
-    void handlePoll(final PollContext<byte[], byte[]> pollCtx);
+    void processRecords(final List<ConsumerRecord<byte[], byte[]>> records);
 
 }

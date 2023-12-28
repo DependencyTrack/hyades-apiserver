@@ -2,7 +2,6 @@ package org.dependencytrack.event.kafka.processor.api;
 
 import alpine.common.logging.Logger;
 import io.confluent.parallelconsumer.PCRetriableException;
-import io.confluent.parallelconsumer.PollContext;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
@@ -34,9 +33,7 @@ class BatchRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrate
      * {@inheritDoc}
      */
     @Override
-    public void handlePoll(final PollContext<byte[], byte[]> pollCtx) {
-        final List<ConsumerRecord<byte[], byte[]>> records = pollCtx.getConsumerRecordsFlattened();
-
+    public void processRecords(final List<ConsumerRecord<byte[], byte[]>> records) {
         final var deserializedRecords = new ArrayList<ConsumerRecord<K, V>>(records.size());
         for (final ConsumerRecord<byte[], byte[]> record : records) {
             try {

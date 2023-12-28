@@ -52,22 +52,31 @@ public class RecordProcessorManagerTest {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         kafka.createTopic(TopicConfig.withName(inputTopic.name()));
 
-        final var foo = new ConcurrentLinkedQueue<String>();
+        final var recordsProcessed = new AtomicInteger(0);
+
+        doReturn(Map.of(
+                "kafka.processor.foo.processing.order", "key",
+                "kafka.processor.foo.max.concurrency", "5",
+                "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
+        )).when(configMock).getPassThroughProperties(eq("kafka.processor.foo.consumer"));
 
         final SingleRecordProcessor<String, String> recordProcessor =
-                record -> foo.add("%s-%s".formatted(record.key(), record.value()));
+                record -> recordsProcessed.incrementAndGet();
 
         try (final var processorManager = new RecordProcessorManager(configMock)) {
             processorManager.register("foo", recordProcessor, inputTopic);
+
+            for (int i = 0; i < 100; i++) {
+                kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo" + i, "bar" + i)))
+                        .with(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName())
+                        .with(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName()));
+            }
+
             processorManager.startAll();
 
-            kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo", "bar")))
-                    .with(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName())
-                    .with(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName()));
-
-            await()
+            await("Record Processing")
                     .atMost(Duration.ofSeconds(5))
-                    .untilAsserted(() -> assertThat(foo).containsOnly("foo-bar"));
+                    .untilAsserted(() -> assertThat(recordsProcessed).hasValue(100));
         }
     }
 
@@ -80,6 +89,7 @@ public class RecordProcessorManagerTest {
         final var actualBatchSizes = new ConcurrentLinkedQueue<>();
 
         doReturn(Map.of(
+                "kafka.processor.foo.processing.order", "key",
                 "kafka.processor.foo.max.batch.size", "100"
         )).when(configMock).getPassThroughProperties(eq("kafka.processor.foo"));
         doReturn(Map.of("kafka.processor.foo.consumer.auto.offset.reset", "earliest"))
@@ -101,7 +111,7 @@ public class RecordProcessorManagerTest {
 
             processorManager.startAll();
 
-            await()
+            await("Record Processing")
                     .atMost(Duration.ofSeconds(5))
                     .untilAsserted(() -> assertThat(recordsProcessed).hasValue(1_000));
 

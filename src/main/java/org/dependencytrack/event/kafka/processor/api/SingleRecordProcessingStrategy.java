@@ -2,12 +2,13 @@ package org.dependencytrack.event.kafka.processor.api;
 
 import alpine.common.logging.Logger;
 import io.confluent.parallelconsumer.PCRetriableException;
-import io.confluent.parallelconsumer.PollContext;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
 import org.dependencytrack.event.kafka.processor.exception.RetryableRecordProcessingException;
+
+import java.util.List;
 
 /**
  * A {@link RecordProcessingStrategy} that processes records individually.
@@ -31,8 +32,15 @@ class SingleRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrat
      * {@inheritDoc}
      */
     @Override
-    public void handlePoll(final PollContext<byte[], byte[]> pollCtx) {
-        final ConsumerRecord<byte[], byte[]> record = pollCtx.getSingleConsumerRecord();
+    public void processRecords(final List<ConsumerRecord<byte[], byte[]>> records) {
+        if (records.isEmpty()) {
+            return;
+        }
+        if (records.size() > 1) {
+            throw new IllegalArgumentException("Expected at most one record, but received %d".formatted(records.size()));
+        }
+
+        final ConsumerRecord<byte[], byte[]> record = records.get(0);
 
         final ConsumerRecord<K, V> deserializedRecord;
         try {

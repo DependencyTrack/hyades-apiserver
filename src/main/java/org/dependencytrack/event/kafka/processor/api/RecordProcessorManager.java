@@ -9,6 +9,7 @@ import io.confluent.parallelconsumer.ParallelStreamProcessor;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
@@ -62,7 +63,10 @@ public class RecordProcessorManager implements AutoCloseable {
 
             LOGGER.info("Starting processor %s".formatted(processorName));
             managedProcessor.parallelConsumer().subscribe(List.of(managedProcessor.topic().name()));
-            managedProcessor.parallelConsumer().poll(managedProcessor.processingStrategy::handlePoll);
+            managedProcessor.parallelConsumer().poll(pollCtx -> {
+                final List<ConsumerRecord<byte[], byte[]>> polledRecords = pollCtx.getConsumerRecordsFlattened();
+                managedProcessor.processingStrategy().processRecords(polledRecords);
+            });
         }
     }
 
@@ -95,6 +99,15 @@ public class RecordProcessorManager implements AutoCloseable {
         optionsBuilder.maxConcurrency(maxConcurrency);
 
         if (isBatch) {
+            if (processingOrder == ProcessingOrder.PARTITION) {
+                LOGGER.warn("""
+                        Processor %s is configured to use batching with processing order %s;
+                        Batch sizes are limited by the number of partitions in the topic,
+                        and may not yield the desired effect \
+                        (https://github.com/confluentinc/parallel-consumer/issues/551)\
+                        """.formatted(processorName, processingOrder));
+            }
+
             final int maxBatchSize = Optional.ofNullable(properties.get("max.batch.size"))
                     .map(Integer::parseInt)
                     .orElse(10);
