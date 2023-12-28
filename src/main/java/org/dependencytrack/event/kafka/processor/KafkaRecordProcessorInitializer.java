@@ -17,8 +17,10 @@ public class KafkaRecordProcessorInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing Kafka processors");
 
-        processorManager.register("vuln-mirror", new VulnerabilityMirrorProcessor(), KafkaTopics.NEW_VULNERABILITY);
-        processorManager.register("repo-meta-result", new RepositoryMetaResultProcessor(), KafkaTopics.REPO_META_ANALYSIS_RESULT);
+        processorManager.register(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
+                new VulnerabilityMirrorProcessor(), KafkaTopics.NEW_VULNERABILITY);
+        processorManager.register(RepositoryMetaResultProcessor.PROCESSOR_NAME,
+                new RepositoryMetaResultProcessor(), KafkaTopics.REPO_META_ANALYSIS_RESULT);
         processorManager.startAll();
     }
 
