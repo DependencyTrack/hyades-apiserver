@@ -6,7 +6,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
-import org.dependencytrack.event.kafka.processor.exception.RetryableRecordProcessingException;
 
 import java.util.List;
 
@@ -53,10 +52,12 @@ class SingleRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrat
 
         try {
             recordProcessor.process(deserializedRecord);
-        } catch (RetryableRecordProcessingException e) {
-            LOGGER.warn("Encountered retryable exception while processing %s".formatted(deserializedRecord), e);
-            throw new PCRetriableException(e);
         } catch (RecordProcessingException | RuntimeException e) {
+            if (isRetryableException(e)) {
+                LOGGER.warn("Encountered retryable exception while processing %s".formatted(deserializedRecord), e);
+                throw new PCRetriableException(e);
+            }
+
             LOGGER.error("Encountered non-retryable exception while processing %s; Skipping".formatted(deserializedRecord), e);
             // TODO: Consider supporting error handlers, e.g. to send record to DLT.
             // Skip record to avoid poison-pill scenario.
