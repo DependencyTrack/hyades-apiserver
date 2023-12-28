@@ -34,7 +34,7 @@ public class RepositoryMetaResultProcessor implements SingleRecordProcessor<Stri
 
     public static final String PROCESSOR_NAME = "repo-meta-result";
 
-    private static final Logger LOGGER = Logger.getLogger(org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor.class);
+    private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
     private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
             .description("Time taken to process repository meta analysis results")
             .register(Metrics.getRegistry());
