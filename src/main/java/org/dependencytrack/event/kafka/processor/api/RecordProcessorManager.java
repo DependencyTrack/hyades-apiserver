@@ -40,7 +40,7 @@ public class RecordProcessorManager implements AutoCloseable {
     private static final String PROPERTY_MAX_CONCURRENCY = "max.concurrency";
     private static final int PROPERTY_MAX_CONCURRENCY_DEFAULT = 3;
     private static final String PROPERTY_PROCESSING_ORDER = "processing.order";
-    private static final ProcessingOrder PROPERTY_PROCESSING_ORDER_DEFAULT = ProcessingOrder.KEY;
+    private static final ProcessingOrder PROPERTY_PROCESSING_ORDER_DEFAULT = ProcessingOrder.PARTITION;
     private static final String PROPERTY_RETRY_INITIAL_DELAY_MS = "retry.initial.delay.ms";
     private static final long PROPERTY_RETRY_INITIAL_DELAY_MS_DEFAULT = 1000;
     private static final String PROPERTY_RETRY_MULTIPLIER = "retry.multiplier";
@@ -57,7 +57,7 @@ public class RecordProcessorManager implements AutoCloseable {
         this(Config.getInstance());
     }
 
-    RecordProcessorManager(final Config config) {
+    public RecordProcessorManager(final Config config) {
         this.config = config;
     }
 
@@ -108,6 +108,15 @@ public class RecordProcessorManager implements AutoCloseable {
                 .map(String::toUpperCase)
                 .map(ProcessingOrder::valueOf)
                 .orElse(PROPERTY_PROCESSING_ORDER_DEFAULT);
+        if (processingOrder != ProcessingOrder.PARTITION) {
+            LOGGER.warn("""
+                    Processor %s is configured to use ordering mode %s; \
+                    Ordering modes other than %s bypass head-of-line blocking \
+                    and can put additional strain on the system in cases where \
+                    external systems like the database are temporarily unavailable \
+                    (https://github.com/confluentinc/parallel-consumer#head-of-line-blocking)\
+                    """.formatted(processorName, processingOrder, ProcessingOrder.PARTITION));
+        }
         optionsBuilder.ordering(processingOrder);
 
         final int maxConcurrency = Optional.ofNullable(properties.get(PROPERTY_MAX_CONCURRENCY))
@@ -118,8 +127,8 @@ public class RecordProcessorManager implements AutoCloseable {
         if (isBatch) {
             if (processingOrder == ProcessingOrder.PARTITION) {
                 LOGGER.warn("""
-                        Processor %s is configured to use batching with processing order %s;
-                        Batch sizes are limited by the number of partitions in the topic,
+                        Processor %s is configured to use batching with processing order %s; \
+                        Batch sizes are limited by the number of partitions in the topic, \
                         and may thus not yield the desired effect \
                         (https://github.com/confluentinc/parallel-consumer/issues/551)\
                         """.formatted(processorName, processingOrder));

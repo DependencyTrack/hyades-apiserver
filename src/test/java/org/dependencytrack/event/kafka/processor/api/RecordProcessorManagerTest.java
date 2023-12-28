@@ -37,8 +37,8 @@ public class RecordProcessorManagerTest {
     public RedpandaContainer kafkaContainer = new RedpandaContainer(DockerImageName
             .parse("docker.redpanda.com/vectorized/redpanda:v23.2.13"));
 
-    ExternalKafkaCluster kafka;
-    Config configMock;
+    private ExternalKafkaCluster kafka;
+    private Config configMock;
 
     @Before
     public void setUp() {
