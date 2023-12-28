@@ -8,11 +8,14 @@ import org.apache.kafka.common.serialization.Serde;
 import org.datanucleus.api.jdo.exceptions.ConnectionInUseException;
 import org.datanucleus.store.query.QueryInterruptedException;
 import org.dependencytrack.event.kafka.processor.exception.RetryableRecordProcessingException;
+import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDOOptimisticVerificationException;
 import java.net.SocketTimeoutException;
+import java.sql.SQLException;
+import java.sql.SQLTransientConnectionException;
 import java.sql.SQLTransientException;
-import java.util.concurrent.TimeoutException;
+import java.util.List;
 
 /**
  * An abstract {@link RecordProcessingStrategy} that provides various shared functionality.
@@ -54,19 +57,29 @@ abstract class AbstractRecordProcessingStrategy<K, V> implements RecordProcessin
                 deserializedKey, deserializedValue, record.headers(), record.leaderEpoch());
     }
 
+    private static final List<Class<? extends Exception>> KNOWN_TRANSIENT_EXCEPTIONS = List.of(
+            ConnectTimeoutException.class,
+            ConnectionInUseException.class,
+            JDOOptimisticVerificationException.class,
+            QueryInterruptedException.class,
+            SocketTimeoutException.class,
+            SQLTransientException.class,
+            SQLTransientConnectionException.class
+    );
+
     boolean isRetryableException(final Throwable throwable) {
         if (throwable instanceof RetryableRecordProcessingException) {
             return true;
         }
 
-        final Throwable rootCause = ExceptionUtils.getRootCause(throwable);
-        return rootCause instanceof TimeoutException
-                || rootCause instanceof ConnectTimeoutException
-                || rootCause instanceof SocketTimeoutException
-                || rootCause instanceof ConnectionInUseException
-                || rootCause instanceof QueryInterruptedException
-                || rootCause instanceof JDOOptimisticVerificationException
-                || rootCause instanceof SQLTransientException;
+        final boolean isKnownTransientException = ExceptionUtils.getThrowableList(throwable).stream()
+                .anyMatch(cause -> KNOWN_TRANSIENT_EXCEPTIONS.contains(cause.getClass()));
+        if (isKnownTransientException) {
+            return true;
+        }
+
+        return ExceptionUtils.getRootCause(throwable) instanceof final SQLException se
+                && PSQLState.isConnectionError(se.getSQLState());
     }
 
 }
