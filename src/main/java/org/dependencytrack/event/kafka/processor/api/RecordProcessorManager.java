@@ -6,6 +6,7 @@ import alpine.common.metrics.Metrics;
 import io.confluent.parallelconsumer.ParallelConsumerOptions;
 import io.confluent.parallelconsumer.ParallelConsumerOptions.ProcessingOrder;
 import io.confluent.parallelconsumer.ParallelStreamProcessor;
+import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -14,6 +15,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +34,21 @@ import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 public class RecordProcessorManager implements AutoCloseable {
 
     private static final Logger LOGGER = Logger.getLogger(RecordProcessorManager.class);
+
+    private static final String PROPERTY_MAX_BATCH_SIZE = "max.batch.size";
+    private static final int PROPERTY_MAX_BATCH_SIZE_DEFAULT = 10;
+    private static final String PROPERTY_MAX_CONCURRENCY = "max.concurrency";
+    private static final int PROPERTY_MAX_CONCURRENCY_DEFAULT = 3;
+    private static final String PROPERTY_PROCESSING_ORDER = "processing.order";
+    private static final ProcessingOrder PROPERTY_PROCESSING_ORDER_DEFAULT = ProcessingOrder.KEY;
+    private static final String PROPERTY_RETRY_INITIAL_DELAY = "retry.initial.delay";
+    private static final Duration PROPERTY_RETRY_INITIAL_DELAY_DEFAULT = Duration.ofSeconds(1);
+    private static final String PROPERTY_RETRY_MULTIPLIER = "retry.multiplier";
+    private static final int PROPERTY_RETRY_MULTIPLIER_DEFAULT = 1;
+    private static final String PROPERTY_RETRY_RANDOMIZATION_FACTOR = "retry.randomization.factor";
+    private static final double PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT = 0.3;
+    private static final String PROPERTY_RETRY_MAX_DELAY = "retry.max.delay";
+    private static final Duration PROPERTY_RETRY_MAX_DELAY_DEFAULT = Duration.ofMinutes(1);
 
     private final Map<String, ManagedRecordProcessor> managedProcessors = new LinkedHashMap<>();
     private final Config config;
@@ -85,17 +102,17 @@ public class RecordProcessorManager implements AutoCloseable {
         final var optionsBuilder = ParallelConsumerOptions.<byte[], byte[]>builder()
                 .consumer(createConsumer(processorName));
 
-        final Map<String, String> properties = passThroughProperties(processorName);
+        final Map<String, String> properties = getPassThroughProperties(processorName);
 
-        final ProcessingOrder processingOrder = Optional.ofNullable(properties.get("processing.order"))
+        final ProcessingOrder processingOrder = Optional.ofNullable(properties.get(PROPERTY_PROCESSING_ORDER))
                 .map(String::toUpperCase)
                 .map(ProcessingOrder::valueOf)
-                .orElse(ProcessingOrder.KEY);
+                .orElse(PROPERTY_PROCESSING_ORDER_DEFAULT);
         optionsBuilder.ordering(processingOrder);
 
-        final int maxConcurrency = Optional.ofNullable(properties.get("max.concurrency"))
+        final int maxConcurrency = Optional.ofNullable(properties.get(PROPERTY_MAX_CONCURRENCY))
                 .map(Integer::parseInt)
-                .orElse(3);
+                .orElse(PROPERTY_MAX_CONCURRENCY_DEFAULT);
         optionsBuilder.maxConcurrency(maxConcurrency);
 
         if (isBatch) {
@@ -103,16 +120,22 @@ public class RecordProcessorManager implements AutoCloseable {
                 LOGGER.warn("""
                         Processor %s is configured to use batching with processing order %s;
                         Batch sizes are limited by the number of partitions in the topic,
-                        and may not yield the desired effect \
+                        and may thus not yield the desired effect \
                         (https://github.com/confluentinc/parallel-consumer/issues/551)\
                         """.formatted(processorName, processingOrder));
             }
 
-            final int maxBatchSize = Optional.ofNullable(properties.get("max.batch.size"))
+            final int maxBatchSize = Optional.ofNullable(properties.get(PROPERTY_MAX_BATCH_SIZE))
                     .map(Integer::parseInt)
-                    .orElse(10);
+                    .orElse(PROPERTY_MAX_BATCH_SIZE_DEFAULT);
             optionsBuilder.batchSize(maxBatchSize);
         }
+
+        final IntervalFunction retryIntervalFunction = getRetryIntervalFunction(properties);
+        optionsBuilder.retryDelayProvider(recordCtx -> {
+            final long delayMillis = retryIntervalFunction.apply(recordCtx.getNumberOfFailedAttempts());
+            return Duration.ofMillis(delayMillis);
+        });
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             optionsBuilder
@@ -134,7 +157,7 @@ public class RecordProcessorManager implements AutoCloseable {
         consumerConfig.put(VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         consumerConfig.put(ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        final Map<String, String> properties = passThroughProperties("%s.consumer".formatted(processorName));
+        final Map<String, String> properties = getPassThroughProperties("%s.consumer".formatted(processorName));
         for (final Map.Entry<String, String> property : properties.entrySet()) {
             if (!ConsumerConfig.configNames().contains(property.getKey())) {
                 LOGGER.warn("Consumer property %s was set for processor %s, but is unknown; Ignoring"
@@ -153,7 +176,7 @@ public class RecordProcessorManager implements AutoCloseable {
         return consumer;
     }
 
-    private Map<String, String> passThroughProperties(final String prefix) {
+    private Map<String, String> getPassThroughProperties(final String prefix) {
         final String fullPrefix = "kafka.processor.%s".formatted(prefix);
         final Pattern fullPrefixPattern = Pattern.compile(Pattern.quote("%s.".formatted(fullPrefix)));
 
@@ -169,6 +192,23 @@ public class RecordProcessorManager implements AutoCloseable {
         }
 
         return trimmedProperties;
+    }
+
+    private static IntervalFunction getRetryIntervalFunction(final Map<String, String> properties) {
+        final Duration initialDelay = Optional.ofNullable(properties.get(PROPERTY_RETRY_INITIAL_DELAY))
+                .map(Duration::parse)
+                .orElse(PROPERTY_RETRY_INITIAL_DELAY_DEFAULT);
+        final Duration maxDelay = Optional.ofNullable(properties.get(PROPERTY_RETRY_MAX_DELAY))
+                .map(Duration::parse)
+                .orElse(PROPERTY_RETRY_MAX_DELAY_DEFAULT);
+        final int multiplier = Optional.of(properties.get(PROPERTY_RETRY_MULTIPLIER))
+                .map(Integer::parseInt)
+                .orElse(PROPERTY_RETRY_MULTIPLIER_DEFAULT);
+        final double randomizationFactor = Optional.of(properties.get(PROPERTY_RETRY_RANDOMIZATION_FACTOR))
+                .map(Double::parseDouble)
+                .orElse(PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT);
+
+        return IntervalFunction.ofExponentialRandomBackoff(initialDelay, multiplier, randomizationFactor, maxDelay);
     }
 
     private record ManagedRecordProcessor(ParallelStreamProcessor<byte[], byte[]> parallelConsumer,
