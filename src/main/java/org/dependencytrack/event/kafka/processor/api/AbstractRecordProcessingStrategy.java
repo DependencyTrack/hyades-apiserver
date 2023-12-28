@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.sql.SQLTransientException;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 /**
  * An abstract {@link RecordProcessingStrategy} that provides various shared functionality.
@@ -64,7 +65,8 @@ abstract class AbstractRecordProcessingStrategy<K, V> implements RecordProcessin
             QueryInterruptedException.class,
             SocketTimeoutException.class,
             SQLTransientException.class,
-            SQLTransientConnectionException.class
+            SQLTransientConnectionException.class,
+            TimeoutException.class
     );
 
     boolean isRetryableException(final Throwable throwable) {
