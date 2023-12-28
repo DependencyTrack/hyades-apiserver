@@ -41,14 +41,14 @@ public class RecordProcessorManager implements AutoCloseable {
     private static final int PROPERTY_MAX_CONCURRENCY_DEFAULT = 3;
     private static final String PROPERTY_PROCESSING_ORDER = "processing.order";
     private static final ProcessingOrder PROPERTY_PROCESSING_ORDER_DEFAULT = ProcessingOrder.KEY;
-    private static final String PROPERTY_RETRY_INITIAL_DELAY = "retry.initial.delay";
-    private static final Duration PROPERTY_RETRY_INITIAL_DELAY_DEFAULT = Duration.ofSeconds(1);
+    private static final String PROPERTY_RETRY_INITIAL_DELAY_MS = "retry.initial.delay.ms";
+    private static final long PROPERTY_RETRY_INITIAL_DELAY_MS_DEFAULT = 1000;
     private static final String PROPERTY_RETRY_MULTIPLIER = "retry.multiplier";
     private static final int PROPERTY_RETRY_MULTIPLIER_DEFAULT = 1;
     private static final String PROPERTY_RETRY_RANDOMIZATION_FACTOR = "retry.randomization.factor";
     private static final double PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT = 0.3;
-    private static final String PROPERTY_RETRY_MAX_DELAY = "retry.max.delay";
-    private static final Duration PROPERTY_RETRY_MAX_DELAY_DEFAULT = Duration.ofMinutes(1);
+    private static final String PROPERTY_RETRY_MAX_DELAY_MS = "retry.max.delay.ms";
+    private static final long PROPERTY_RETRY_MAX_DELAY_MS_DEFAULT = 60 * 1000;
 
     private final Map<String, ManagedRecordProcessor> managedProcessors = new LinkedHashMap<>();
     private final Config config;
@@ -195,20 +195,21 @@ public class RecordProcessorManager implements AutoCloseable {
     }
 
     private static IntervalFunction getRetryIntervalFunction(final Map<String, String> properties) {
-        final Duration initialDelay = Optional.ofNullable(properties.get(PROPERTY_RETRY_INITIAL_DELAY))
-                .map(Duration::parse)
-                .orElse(PROPERTY_RETRY_INITIAL_DELAY_DEFAULT);
-        final Duration maxDelay = Optional.ofNullable(properties.get(PROPERTY_RETRY_MAX_DELAY))
-                .map(Duration::parse)
-                .orElse(PROPERTY_RETRY_MAX_DELAY_DEFAULT);
-        final int multiplier = Optional.of(properties.get(PROPERTY_RETRY_MULTIPLIER))
+        final long initialDelayMs = Optional.ofNullable(properties.get(PROPERTY_RETRY_INITIAL_DELAY_MS))
+                .map(Long::parseLong)
+                .orElse(PROPERTY_RETRY_INITIAL_DELAY_MS_DEFAULT);
+        final long maxDelayMs = Optional.ofNullable(properties.get(PROPERTY_RETRY_MAX_DELAY_MS))
+                .map(Long::parseLong)
+                .orElse(PROPERTY_RETRY_MAX_DELAY_MS_DEFAULT);
+        final int multiplier = Optional.ofNullable(properties.get(PROPERTY_RETRY_MULTIPLIER))
                 .map(Integer::parseInt)
                 .orElse(PROPERTY_RETRY_MULTIPLIER_DEFAULT);
-        final double randomizationFactor = Optional.of(properties.get(PROPERTY_RETRY_RANDOMIZATION_FACTOR))
+        final double randomizationFactor = Optional.ofNullable(properties.get(PROPERTY_RETRY_RANDOMIZATION_FACTOR))
                 .map(Double::parseDouble)
                 .orElse(PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT);
 
-        return IntervalFunction.ofExponentialRandomBackoff(initialDelay, multiplier, randomizationFactor, maxDelay);
+        return IntervalFunction.ofExponentialRandomBackoff(Duration.ofMillis(initialDelayMs),
+                multiplier, randomizationFactor, Duration.ofMillis(maxDelayMs));
     }
 
     private record ManagedRecordProcessor(ParallelStreamProcessor<byte[], byte[]> parallelConsumer,
