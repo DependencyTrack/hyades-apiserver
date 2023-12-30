@@ -1,16 +1,20 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.persistence.jdbi.mapping.NotificationBomRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectBomConsumedOrProcessedRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerabilityRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerableDependencyRowReducer;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationVulnerabilityRowMapper;
+import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMappers;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.UseRowMapper;
 import org.jdbi.v3.sqlobject.statement.UseRowReducer;
 
 import java.util.Collection;
@@ -19,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RegisterRowMappers({
+        @RegisterRowMapper(NotificationBomRowMapper.class),
         @RegisterRowMapper(NotificationComponentRowMapper.class),
         @RegisterRowMapper(NotificationProjectRowMapper.class),
         @RegisterRowMapper(NotificationVulnerabilityRowMapper.class)
@@ -128,7 +133,7 @@ public interface NotificationSubjectDao {
               "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = ANY((:vulnUuids)::TEXT[])
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
-    @RegisterRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
+    @UseRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
     List<NewVulnerabilitySubject> getForNewVulnerabilities(final UUID componentUuid, final Collection<UUID> vulnUuids,
                                                            final VulnerabilityAnalysisLevel vulnAnalysisLevel);
 
@@ -234,5 +239,38 @@ public interface NotificationSubjectDao {
             """)
     @UseRowReducer(NotificationSubjectNewVulnerableDependencyRowReducer.class)
     Optional<NewVulnerableDependencySubject> getForNewVulnerableDependency(final UUID componentUuid);
+
+    @SqlQuery("""
+            SELECT
+              "P"."UUID"        AS "projectUuid",
+              "P"."NAME"        AS "projectName",
+              "P"."VERSION"     AS "projectVersion",
+              "P"."DESCRIPTION" AS "projectDescription",
+              "P"."PURL"        AS "projectPurl",
+              (SELECT
+                 ARRAY_AGG(DISTINCT "T"."NAME")
+               FROM
+                 "TAG" AS "T"
+               INNER JOIN
+                 "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
+               WHERE
+                 "PT"."PROJECT_ID" = "P"."ID"
+              )                 AS "projectTags",
+              'CycloneDX'       AS "bomFormat",
+              '(Unknown)'       AS "bomSpecVersion",
+              '(Omitted)'       AS "bomContent"
+            FROM
+              "VULNERABILITYSCAN" AS "VS"
+            INNER JOIN
+              "PROJECT" AS "P" ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
+            INNER JOIN
+              "WORKFLOW_STATE" AS "WFS" ON "WFS"."TOKEN" = "VS"."TOKEN"
+                AND "WFS"."STEP" = 'BOM_PROCESSING'
+                AND "WFS"."STATUS" = 'COMPLETED'
+            WHERE
+              "VS"."TOKEN" = ANY(:tokens)
+            """)
+    @UseRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
+    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(final Collection<String> tokens);
 
 }

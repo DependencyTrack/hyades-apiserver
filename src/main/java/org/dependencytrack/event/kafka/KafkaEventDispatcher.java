@@ -18,9 +18,12 @@ import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.model.Vulnerability;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -144,6 +147,50 @@ public class KafkaEventDispatcher {
             return CompletableFuture.completedFuture(null);
         }
 
+        return producer.send(toProducerRecord(event), requireNonNullElseGet(callback,
+                () -> new KafkaDefaultProducerCallback(LOGGER, event.topic().name(), event.key())));
+    }
+
+    public <K, V> void dispatchAllBlocking(final List<KafkaEvent<K, V>> events) {
+        dispatchAllBlocking(events, null);
+    }
+
+    public <K, V> void dispatchAllBlocking(final List<KafkaEvent<K, V>> events, Callback callback) {
+        final var countDownLatch = new CountDownLatch(events.size());
+
+        callback = requireNonNullElseGet(callback, () -> new KafkaDefaultProducerCallback(LOGGER));
+        callback = decorateCallback(callback, ((metadata, exception) -> countDownLatch.countDown()));
+
+        dispatchAllAsync(events, callback);
+
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new KafkaException("""
+                    Thread was interrupted while waiting for all events to be acknowledged \
+                    by the broker. The acknowledgement of %d/%d events can not be determined.\
+                    """.formatted(countDownLatch.getCount(), events.size()), e);
+        }
+    }
+
+    public <K, V> List<Future<RecordMetadata>> dispatchAllAsync(final List<KafkaEvent<K, V>> events, Callback callback) {
+        final var records = new ArrayList<ProducerRecord<byte[], byte[]>>(events.size());
+        for (final KafkaEvent<K, V> event : events) {
+            records.add(toProducerRecord(event));
+        }
+
+        callback = requireNonNullElseGet(callback, () -> new KafkaDefaultProducerCallback(LOGGER));
+
+        final var futures = new ArrayList<Future<RecordMetadata>>(records.size());
+        for (final ProducerRecord<byte[], byte[]> record : records) {
+            futures.add(producer.send(record, callback));
+        }
+
+        return futures;
+    }
+
+    private static <K, V> ProducerRecord<byte[], byte[]> toProducerRecord(final KafkaEvent<K, V> event) {
         final byte[] keyBytes;
         try (final Serde<K> keySerde = event.topic().keySerde()) {
             keyBytes = keySerde.serializer().serialize(event.topic().name(), event.key());
@@ -165,8 +212,14 @@ public class KafkaEventDispatcher {
             }
         }
 
-        return producer.send(record, requireNonNullElseGet(callback,
-                () -> new KafkaDefaultProducerCallback(LOGGER, record.topic(), event.key())));
+        return record;
+    }
+
+    private static Callback decorateCallback(final Callback originalCallback, final Callback decoratorCallback) {
+        return (metadata, exception) -> {
+            decoratorCallback.onCompletion(metadata, exception);
+            originalCallback.onCompletion(metadata, exception);
+        };
     }
 
 }
