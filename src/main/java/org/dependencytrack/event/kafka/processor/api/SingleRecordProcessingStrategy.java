@@ -5,26 +5,26 @@ import io.confluent.parallelconsumer.PCRetriableException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
-import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 
 import java.util.List;
 
 /**
- * A {@link RecordProcessingStrategy} that processes records individually.
+ * A {@link ProcessingStrategy} that processes records individually.
  *
  * @param <K> Type of the {@link ConsumerRecord} key
  * @param <V> Type of the {@link ConsumerRecord} value
  */
-class SingleRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrategy<K, V> {
+class SingleRecordProcessingStrategy<K, V> extends AbstractProcessingStrategy<K, V> {
 
     private static final Logger LOGGER = Logger.getLogger(SingleRecordProcessingStrategy.class);
 
-    private final SingleRecordProcessor<K, V> recordProcessor;
+    private final Processor<K, V> processor;
 
-    SingleRecordProcessingStrategy(final SingleRecordProcessor<K, V> recordProcessor,
+    SingleRecordProcessingStrategy(final Processor<K, V> processor,
                                    final Serde<K> keySerde, final Serde<V> valueSerde) {
         super(keySerde, valueSerde);
-        this.recordProcessor = recordProcessor;
+        this.processor = processor;
     }
 
     /**
@@ -51,8 +51,8 @@ class SingleRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrat
         }
 
         try {
-            recordProcessor.process(deserializedRecord);
-        } catch (RecordProcessingException | RuntimeException e) {
+            processor.process(deserializedRecord);
+        } catch (ProcessingException | RuntimeException e) {
             if (isRetryableException(e)) {
                 LOGGER.warn("Encountered retryable exception while processing %s".formatted(deserializedRecord), e);
                 throw new PCRetriableException(e);

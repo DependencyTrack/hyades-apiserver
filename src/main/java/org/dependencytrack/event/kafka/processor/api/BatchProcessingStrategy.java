@@ -5,25 +5,25 @@ import io.confluent.parallelconsumer.PCRetriableException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
-import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A {@link RecordProcessingStrategy} that processes records in batches.
+ * A {@link ProcessingStrategy} that processes records in batches.
  *
  * @param <K> Type of the {@link ConsumerRecord} key
  * @param <V> Type of the {@link ConsumerRecord} value
  */
-class BatchRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrategy<K, V> {
+class BatchProcessingStrategy<K, V> extends AbstractProcessingStrategy<K, V> {
 
-    private static final Logger LOGGER = Logger.getLogger(BatchRecordProcessingStrategy.class);
+    private static final Logger LOGGER = Logger.getLogger(BatchProcessingStrategy.class);
 
-    private final BatchRecordProcessor<K, V> batchConsumer;
+    private final BatchProcessor<K, V> batchConsumer;
 
-    BatchRecordProcessingStrategy(final BatchRecordProcessor<K, V> batchConsumer,
-                                  final Serde<K> keySerde, final Serde<V> valueSerde) {
+    BatchProcessingStrategy(final BatchProcessor<K, V> batchConsumer,
+                            final Serde<K> keySerde, final Serde<V> valueSerde) {
         super(keySerde, valueSerde);
         this.batchConsumer = batchConsumer;
     }
@@ -50,7 +50,7 @@ class BatchRecordProcessingStrategy<K, V> extends AbstractRecordProcessingStrate
 
         try {
             batchConsumer.process(deserializedRecords);
-        } catch (RecordProcessingException | RuntimeException e) {
+        } catch (ProcessingException | RuntimeException e) {
             if (isRetryableException(e)) {
                 LOGGER.warn("Encountered retryable exception while processing %d records".formatted(deserializedRecords.size()), e);
                 throw new PCRetriableException(e);

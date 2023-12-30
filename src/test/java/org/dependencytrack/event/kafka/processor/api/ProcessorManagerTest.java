@@ -31,7 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-public class RecordProcessorManagerTest {
+public class ProcessorManagerTest {
 
     @Rule
     public RedpandaContainer kafkaContainer = new RedpandaContainer(DockerImageName
@@ -63,11 +63,11 @@ public class RecordProcessorManagerTest {
                         "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
                 ));
 
-        final SingleRecordProcessor<String, String> recordProcessor =
+        final Processor<String, String> processor =
                 record -> recordsProcessed.incrementAndGet();
 
-        try (final var processorManager = new RecordProcessorManager(configMock)) {
-            processorManager.registerProcessor("foo", recordProcessor, inputTopic);
+        try (final var processorManager = new ProcessorManager(configMock)) {
+            processorManager.registerProcessor("foo", processor, inputTopic);
 
             for (int i = 0; i < 100; i++) {
                 kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo" + i, "bar" + i)))
@@ -97,7 +97,7 @@ public class RecordProcessorManagerTest {
                 .thenThrow(new RuntimeException(new TimeoutException()))
                 .thenReturn("done");
 
-        final SingleRecordProcessor<String, String> recordProcessor = record -> {
+        final Processor<String, String> processor = record -> {
             attemptsCounter.incrementAndGet();
             objectSpy.toString();
         };
@@ -113,8 +113,8 @@ public class RecordProcessorManagerTest {
                         "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
                 ));
 
-        try (final var processorManager = new RecordProcessorManager(configMock)) {
-            processorManager.registerProcessor("foo", recordProcessor, inputTopic);
+        try (final var processorManager = new ProcessorManager(configMock)) {
+            processorManager.registerProcessor("foo", processor, inputTopic);
 
             kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo", "bar")))
                     .with(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName())
@@ -146,12 +146,12 @@ public class RecordProcessorManagerTest {
                         "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
                 ));
 
-        final BatchRecordProcessor<String, String> recordProcessor = records -> {
+        final BatchProcessor<String, String> recordProcessor = records -> {
             recordsProcessed.addAndGet(records.size());
             actualBatchSizes.add(records.size());
         };
 
-        try (final var processorManager = new RecordProcessorManager(configMock)) {
+        try (final var processorManager = new ProcessorManager(configMock)) {
             processorManager.registerBatchProcessor("foo", recordProcessor, inputTopic);
 
             for (int i = 0; i < 1_000; i++) {

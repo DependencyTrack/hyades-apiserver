@@ -1,7 +1,7 @@
 package org.dependencytrack.event.kafka.processor.api;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 
 /**
  * A processor of individual {@link ConsumerRecord}s.
@@ -9,14 +9,14 @@ import org.dependencytrack.event.kafka.processor.exception.RecordProcessingExcep
  * @param <K> Type of the {@link ConsumerRecord} key
  * @param <V> Type of the {@link ConsumerRecord} value
  */
-public interface SingleRecordProcessor<K, V> {
+public interface Processor<K, V> {
 
     /**
      * Process a {@link ConsumerRecord}.
      *
      * @param record The {@link ConsumerRecord} to process
-     * @throws RecordProcessingException When processing the {@link ConsumerRecord} failed
+     * @throws ProcessingException When processing the {@link ConsumerRecord} failed
      */
-    void process(final ConsumerRecord<K, V> record) throws RecordProcessingException;
+    void process(final ConsumerRecord<K, V> record) throws ProcessingException;
 
 }

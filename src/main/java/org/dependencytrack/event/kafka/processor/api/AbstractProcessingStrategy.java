@@ -7,7 +7,7 @@ import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.datanucleus.api.jdo.exceptions.ConnectionInUseException;
 import org.datanucleus.store.query.QueryInterruptedException;
-import org.dependencytrack.event.kafka.processor.exception.RetryableRecordProcessingException;
+import org.dependencytrack.event.kafka.processor.exception.RetryableProcessingException;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDOOptimisticVerificationException;
@@ -19,17 +19,17 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 /**
- * An abstract {@link RecordProcessingStrategy} that provides various shared functionality.
+ * An abstract {@link ProcessingStrategy} that provides various shared functionality.
  *
  * @param <K> Type of the {@link ConsumerRecord} key
  * @param <V> Type of the {@link ConsumerRecord} value
  */
-abstract class AbstractRecordProcessingStrategy<K, V> implements RecordProcessingStrategy {
+abstract class AbstractProcessingStrategy<K, V> implements ProcessingStrategy {
 
     private final Serde<K> keySerde;
     private final Serde<V> valueSerde;
 
-    AbstractRecordProcessingStrategy(final Serde<K> keySerde, final Serde<V> valueSerde) {
+    AbstractProcessingStrategy(final Serde<K> keySerde, final Serde<V> valueSerde) {
         this.keySerde = keySerde;
         this.valueSerde = valueSerde;
     }
@@ -70,7 +70,7 @@ abstract class AbstractRecordProcessingStrategy<K, V> implements RecordProcessin
     );
 
     boolean isRetryableException(final Throwable throwable) {
-        if (throwable instanceof RetryableRecordProcessingException) {
+        if (throwable instanceof RetryableProcessingException) {
             return true;
         }
 

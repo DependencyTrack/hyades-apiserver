@@ -7,8 +7,8 @@ import com.github.packageurl.PackageURL;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.dependencytrack.event.kafka.processor.api.SingleRecordProcessor;
-import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
+import org.dependencytrack.event.kafka.processor.api.Processor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -28,9 +28,9 @@ import java.util.Optional;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.performIntegrityCheck;
 
 /**
- * A {@link SingleRecordProcessor} that ingests repository metadata {@link AnalysisResult}s.
+ * A {@link Processor} that ingests repository metadata {@link AnalysisResult}s.
  */
-public class RepositoryMetaResultProcessor implements SingleRecordProcessor<String, AnalysisResult> {
+public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
 
     public static final String PROCESSOR_NAME = "repo.meta.result";
 
@@ -40,7 +40,7 @@ public class RepositoryMetaResultProcessor implements SingleRecordProcessor<Stri
             .register(Metrics.getRegistry());
 
     @Override
-    public void process(final ConsumerRecord<String, AnalysisResult> record) throws RecordProcessingException {
+    public void process(final ConsumerRecord<String, AnalysisResult> record) throws ProcessingException {
         final Timer.Sample timerSample = Timer.start();
         if (!isRecordValid(record)) {
             return;
@@ -52,7 +52,7 @@ public class RepositoryMetaResultProcessor implements SingleRecordProcessor<Stri
                 performIntegrityCheck(integrityMetaComponent, record.value(), qm);
             }
         } catch (Exception e) {
-            throw new RecordProcessingException("An unexpected error occurred while processing record %s".formatted(record), e);
+            throw new ProcessingException("An unexpected error occurred while processing record %s".formatted(record), e);
         } finally {
             timerSample.stop(TIMER);
         }

@@ -11,8 +11,8 @@ import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.KafkaEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.event.kafka.processor.api.BatchRecordProcessor;
-import org.dependencytrack.event.kafka.processor.exception.RecordProcessingException;
+import org.dependencytrack.event.kafka.processor.api.BatchProcessor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
@@ -33,13 +33,13 @@ import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONA
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 /**
- * A {@link BatchRecordProcessor} responsible for dispatching {@link NotificationGroup#BOM_PROCESSED} notifications
+ * A {@link BatchProcessor} responsible for dispatching {@link NotificationGroup#BOM_PROCESSED} notifications
  * upon detection of a completed {@link VulnerabilityScan}.
  * <p>
  * The completion detection is based on {@link NotificationGroup#PROJECT_VULN_ANALYSIS_COMPLETE} notifications.
  * This processor does nothing unless {@link ConfigKey#TMP_DELAY_BOM_PROCESSED_NOTIFICATION} is enabled.
  */
-public class DelayedBomProcessedNotificationProcessor implements BatchRecordProcessor<String, Notification> {
+public class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String, Notification> {
 
     public static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
 
@@ -58,7 +58,7 @@ public class DelayedBomProcessedNotificationProcessor implements BatchRecordProc
     }
 
     @Override
-    public void process(final List<ConsumerRecord<String, Notification>> records) throws RecordProcessingException {
+    public void process(final List<ConsumerRecord<String, Notification>> records) throws ProcessingException {
         if (!config.getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION)) {
             return;
         }

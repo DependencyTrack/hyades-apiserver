@@ -4,7 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.util.List;
 
-interface RecordProcessingStrategy {
+interface ProcessingStrategy {
 
     /**
      * Process zero or more {@link ConsumerRecord}s.

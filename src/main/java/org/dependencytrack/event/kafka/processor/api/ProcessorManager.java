@@ -34,9 +34,9 @@ import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_
 import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
-public class RecordProcessorManager implements AutoCloseable {
+public class ProcessorManager implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(RecordProcessorManager.class);
+    private static final Logger LOGGER = Logger.getLogger(ProcessorManager.class);
     private static final Pattern PROCESSOR_NAME_PATTERN = Pattern.compile("^[a-z.]+$");
 
     private static final String PROPERTY_MAX_BATCH_SIZE = "max.batch.size";
@@ -57,16 +57,16 @@ public class RecordProcessorManager implements AutoCloseable {
     private final Map<String, ManagedProcessor> managedProcessors = new LinkedHashMap<>();
     private final Config config;
 
-    public RecordProcessorManager() {
+    public ProcessorManager() {
         this(Config.getInstance());
     }
 
-    public RecordProcessorManager(final Config config) {
+    public ProcessorManager(final Config config) {
         this.config = config;
     }
 
     /**
-     * Register a new {@link SingleRecordProcessor}.
+     * Register a new {@link Processor}.
      *
      * @param name      Name of the processor to register
      * @param processor The processor to register
@@ -74,7 +74,7 @@ public class RecordProcessorManager implements AutoCloseable {
      * @param <K>       Type of record keys in the topic
      * @param <V>       Type of record values in the topic
      */
-    public <K, V> void registerProcessor(final String name, final SingleRecordProcessor<K, V> processor, final Topic<K, V> topic) {
+    public <K, V> void registerProcessor(final String name, final Processor<K, V> processor, final Topic<K, V> topic) {
         requireValidProcessorName(name);
         final var processingStrategy = new SingleRecordProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
         final ParallelStreamProcessor<byte[], byte[]> parallelConsumer = createParallelConsumer(name, false);
@@ -82,7 +82,7 @@ public class RecordProcessorManager implements AutoCloseable {
     }
 
     /**
-     * Register a new {@link BatchRecordProcessor}.
+     * Register a new {@link BatchProcessor}.
      *
      * @param name      Name of the processor to register
      * @param processor The processor to register
@@ -90,9 +90,9 @@ public class RecordProcessorManager implements AutoCloseable {
      * @param <K>       Type of record keys in the topic
      * @param <V>       Type of record values in the topic
      */
-    public <K, V> void registerBatchProcessor(final String name, final BatchRecordProcessor<K, V> processor, final Topic<K, V> topic) {
+    public <K, V> void registerBatchProcessor(final String name, final BatchProcessor<K, V> processor, final Topic<K, V> topic) {
         requireValidProcessorName(name);
-        final var processingStrategy = new BatchRecordProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
+        final var processingStrategy = new BatchProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
         final ParallelStreamProcessor<byte[], byte[]> parallelConsumer = createParallelConsumer(name, true);
         managedProcessors.put(name, new ManagedProcessor(parallelConsumer, processingStrategy, topic.name()));
     }
@@ -287,7 +287,7 @@ public class RecordProcessorManager implements AutoCloseable {
     }
 
     private record ManagedProcessor(ParallelStreamProcessor<byte[], byte[]> parallelConsumer,
-                                    RecordProcessingStrategy processingStrategy,
+                                    ProcessingStrategy processingStrategy,
                                     String topic) {
     }
 
