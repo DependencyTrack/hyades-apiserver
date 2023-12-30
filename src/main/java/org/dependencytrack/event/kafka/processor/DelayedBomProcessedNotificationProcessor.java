@@ -41,7 +41,7 @@ import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
  */
 public class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String, Notification> {
 
-    public static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
+    static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
 
     private static final Logger LOGGER = Logger.getLogger(DelayedBomProcessedNotificationProcessor.class);
 
@@ -119,6 +119,11 @@ public class DelayedBomProcessedNotificationProcessor implements BatchProcessor<
         }
 
         eventDispatcher.dispatchAllBlocking(events);
+
+        for (final BomConsumedOrProcessedSubject subject : subjects) {
+            LOGGER.info("Dispatched delayed %s notification (token=%s, project=%s)"
+                    .formatted(GROUP_BOM_PROCESSED, subject.getToken(), subject.getProject().getUuid()));
+        }
     }
 
 }

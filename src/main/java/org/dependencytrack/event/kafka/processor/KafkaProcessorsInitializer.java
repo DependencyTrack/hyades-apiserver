@@ -17,10 +17,10 @@ public class KafkaProcessorsInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Initializing Kafka processors");
+        LOGGER.info("Initializing processors");
 
-        PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
-                new VulnerabilityMirrorProcessor(), KafkaTopics.NEW_VULNERABILITY);
+        PROCESSOR_MANAGER.registerProcessor(MirroredVulnerabilityProcessor.PROCESSOR_NAME,
+                new MirroredVulnerabilityProcessor(), KafkaTopics.NEW_VULNERABILITY);
         PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 new RepositoryMetaResultProcessor(), KafkaTopics.REPO_META_ANALYSIS_RESULT);
         PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
@@ -35,7 +35,7 @@ public class KafkaProcessorsInitializer implements ServletContextListener {
 
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
-        LOGGER.info("Stopping Kafka processors");
+        LOGGER.info("Stopping processors");
         PROCESSOR_MANAGER.close();
     }
 

@@ -32,7 +32,7 @@ import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.perfo
  */
 public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
 
-    public static final String PROCESSOR_NAME = "repo.meta.result";
+    static final String PROCESSOR_NAME = "repo.meta.result";
 
     private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
     private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
