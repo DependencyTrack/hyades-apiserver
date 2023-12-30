@@ -5,6 +5,7 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import io.confluent.parallelconsumer.ParallelConsumerOptions;
 import io.confluent.parallelconsumer.ParallelConsumerOptions.ProcessingOrder;
+import io.confluent.parallelconsumer.ParallelEoSStreamProcessor;
 import io.confluent.parallelconsumer.ParallelStreamProcessor;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
@@ -14,6 +15,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -85,6 +87,31 @@ public class RecordProcessorManager implements AutoCloseable {
                 managedProcessor.processingStrategy().processRecords(polledRecords);
             });
         }
+    }
+
+    public HealthCheckResponse probeHealth() {
+        final var responseBuilder = HealthCheckResponse.named("kafka-processors");
+
+        boolean isUp = true;
+        for (final Map.Entry<String, ManagedRecordProcessor> managedProcessorEntry : managedProcessors.entrySet()) {
+            final String processorName = managedProcessorEntry.getKey();
+            final ParallelStreamProcessor<?, ?> parallelConsumer = managedProcessorEntry.getValue().parallelConsumer();
+            final boolean isProcessorUp = !parallelConsumer.isClosedOrFailed();
+
+            responseBuilder.withData(processorName, isProcessorUp
+                    ? HealthCheckResponse.Status.UP.name()
+                    : HealthCheckResponse.Status.DOWN.name());
+            if (isProcessorUp
+                    && parallelConsumer instanceof final ParallelEoSStreamProcessor<?, ?> concreteParallelConsumer
+                    && concreteParallelConsumer.getFailureCause() != null) {
+                responseBuilder.withData("%s_failure_reason".formatted(processorName),
+                        concreteParallelConsumer.getFailureCause().getMessage());
+            }
+
+            isUp &= isProcessorUp;
+        }
+
+        return responseBuilder.status(isUp).build();
     }
 
     @Override

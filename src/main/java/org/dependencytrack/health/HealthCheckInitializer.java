@@ -24,6 +24,7 @@ import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import org.dependencytrack.event.kafka.processor.KafkaProcessorsHealthCheck;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -36,7 +37,7 @@ public class HealthCheckInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
-        HealthCheckRegistry.getInstance().register("kafka-streams", new KafkaStreamsHealthCheck());
+        HealthCheckRegistry.getInstance().register("kafka-processors", new KafkaProcessorsHealthCheck());
 
         // TODO: Move this to its own initializer if it turns out to be useful
         LOGGER.info("Registering extra process metrics");
