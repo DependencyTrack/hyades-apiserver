@@ -67,7 +67,7 @@ public class RecordProcessorManagerTest {
                 record -> recordsProcessed.incrementAndGet();
 
         try (final var processorManager = new RecordProcessorManager(configMock)) {
-            processorManager.register("foo", recordProcessor, inputTopic);
+            processorManager.registerProcessor("foo", recordProcessor, inputTopic);
 
             for (int i = 0; i < 100; i++) {
                 kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo" + i, "bar" + i)))
@@ -114,7 +114,7 @@ public class RecordProcessorManagerTest {
                 ));
 
         try (final var processorManager = new RecordProcessorManager(configMock)) {
-            processorManager.register("foo", recordProcessor, inputTopic);
+            processorManager.registerProcessor("foo", recordProcessor, inputTopic);
 
             kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo", "bar")))
                     .with(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName())
@@ -152,7 +152,7 @@ public class RecordProcessorManagerTest {
         };
 
         try (final var processorManager = new RecordProcessorManager(configMock)) {
-            processorManager.register("foo", recordProcessor, inputTopic);
+            processorManager.registerBatchProcessor("foo", recordProcessor, inputTopic);
 
             for (int i = 0; i < 1_000; i++) {
                 kafka.send(SendKeyValues.to("input", List.of(new KeyValue<>("foo" + i, "bar" + i)))

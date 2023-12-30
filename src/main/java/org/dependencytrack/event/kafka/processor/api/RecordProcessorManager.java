@@ -19,6 +19,7 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,23 +37,24 @@ import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 public class RecordProcessorManager implements AutoCloseable {
 
     private static final Logger LOGGER = Logger.getLogger(RecordProcessorManager.class);
+    private static final Pattern PROCESSOR_NAME_PATTERN = Pattern.compile("^[a-z.]+$");
 
     private static final String PROPERTY_MAX_BATCH_SIZE = "max.batch.size";
     private static final int PROPERTY_MAX_BATCH_SIZE_DEFAULT = 10;
     private static final String PROPERTY_MAX_CONCURRENCY = "max.concurrency";
-    private static final int PROPERTY_MAX_CONCURRENCY_DEFAULT = 3;
+    private static final int PROPERTY_MAX_CONCURRENCY_DEFAULT = 1;
     private static final String PROPERTY_PROCESSING_ORDER = "processing.order";
     private static final ProcessingOrder PROPERTY_PROCESSING_ORDER_DEFAULT = ProcessingOrder.PARTITION;
     private static final String PROPERTY_RETRY_INITIAL_DELAY_MS = "retry.initial.delay.ms";
-    private static final long PROPERTY_RETRY_INITIAL_DELAY_MS_DEFAULT = 1000;
+    private static final long PROPERTY_RETRY_INITIAL_DELAY_MS_DEFAULT = 1000; // 1s
     private static final String PROPERTY_RETRY_MULTIPLIER = "retry.multiplier";
     private static final int PROPERTY_RETRY_MULTIPLIER_DEFAULT = 1;
     private static final String PROPERTY_RETRY_RANDOMIZATION_FACTOR = "retry.randomization.factor";
     private static final double PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT = 0.3;
     private static final String PROPERTY_RETRY_MAX_DELAY_MS = "retry.max.delay.ms";
-    private static final long PROPERTY_RETRY_MAX_DELAY_MS_DEFAULT = 60 * 1000;
+    private static final long PROPERTY_RETRY_MAX_DELAY_MS_DEFAULT = 60 * 1000; // 60s
 
-    private final Map<String, ManagedRecordProcessor> managedProcessors = new LinkedHashMap<>();
+    private final Map<String, ManagedProcessor> managedProcessors = new LinkedHashMap<>();
     private final Config config;
 
     public RecordProcessorManager() {
@@ -63,25 +65,46 @@ public class RecordProcessorManager implements AutoCloseable {
         this.config = config;
     }
 
-    public <K, V> void register(final String name, final SingleRecordProcessor<K, V> recordProcessor, final Topic<K, V> topic) {
-        final var processingStrategy = new SingleRecordProcessingStrategy<>(recordProcessor, topic.keySerde(), topic.valueSerde());
-        final var parallelConsumer = createParallelConsumer(name, false);
-        managedProcessors.put(name, new ManagedRecordProcessor(parallelConsumer, processingStrategy, topic));
+    /**
+     * Register a new {@link SingleRecordProcessor}.
+     *
+     * @param name      Name of the processor to register
+     * @param processor The processor to register
+     * @param topic     The topic to have the processor subscribe to
+     * @param <K>       Type of record keys in the topic
+     * @param <V>       Type of record values in the topic
+     */
+    public <K, V> void registerProcessor(final String name, final SingleRecordProcessor<K, V> processor, final Topic<K, V> topic) {
+        requireValidProcessorName(name);
+        final var processingStrategy = new SingleRecordProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
+        final ParallelStreamProcessor<byte[], byte[]> parallelConsumer = createParallelConsumer(name, false);
+        managedProcessors.put(name, new ManagedProcessor(parallelConsumer, processingStrategy, topic.name()));
     }
 
-    public <K, V> void register(final String name, final BatchRecordProcessor<K, V> recordProcessor, final Topic<K, V> topic) {
-        final var processingStrategy = new BatchRecordProcessingStrategy<>(recordProcessor, topic.keySerde(), topic.valueSerde());
-        final var parallelConsumer = createParallelConsumer(name, true);
-        managedProcessors.put(name, new ManagedRecordProcessor(parallelConsumer, processingStrategy, topic));
+    /**
+     * Register a new {@link BatchRecordProcessor}.
+     *
+     * @param name      Name of the processor to register
+     * @param processor The processor to register
+     * @param topic     The topic to have the processor subscribe to
+     * @param <K>       Type of record keys in the topic
+     * @param <V>       Type of record values in the topic
+     */
+    public <K, V> void registerBatchProcessor(final String name, final BatchRecordProcessor<K, V> processor, final Topic<K, V> topic) {
+        requireValidProcessorName(name);
+        final var processingStrategy = new BatchRecordProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
+        final ParallelStreamProcessor<byte[], byte[]> parallelConsumer = createParallelConsumer(name, true);
+        managedProcessors.put(name, new ManagedProcessor(parallelConsumer, processingStrategy, topic.name()));
     }
 
+    @SuppressWarnings("resource")
     public void startAll() {
-        for (final Map.Entry<String, ManagedRecordProcessor> managedProcessorEntry : managedProcessors.entrySet()) {
-            final String processorName = managedProcessorEntry.getKey();
-            final ManagedRecordProcessor managedProcessor = managedProcessorEntry.getValue();
+        for (final Map.Entry<String, ManagedProcessor> entry : managedProcessors.entrySet()) {
+            final String processorName = entry.getKey();
+            final ManagedProcessor managedProcessor = entry.getValue();
 
             LOGGER.info("Starting processor %s".formatted(processorName));
-            managedProcessor.parallelConsumer().subscribe(List.of(managedProcessor.topic().name()));
+            managedProcessor.parallelConsumer().subscribe(List.of(managedProcessor.topic()));
             managedProcessor.parallelConsumer().poll(pollCtx -> {
                 final List<ConsumerRecord<byte[], byte[]>> polledRecords = pollCtx.getConsumerRecordsFlattened();
                 managedProcessor.processingStrategy().processRecords(polledRecords);
@@ -93,9 +116,9 @@ public class RecordProcessorManager implements AutoCloseable {
         final var responseBuilder = HealthCheckResponse.named("kafka-processors");
 
         boolean isUp = true;
-        for (final Map.Entry<String, ManagedRecordProcessor> managedProcessorEntry : managedProcessors.entrySet()) {
-            final String processorName = managedProcessorEntry.getKey();
-            final ParallelStreamProcessor<?, ?> parallelConsumer = managedProcessorEntry.getValue().parallelConsumer();
+        for (final Map.Entry<String, ManagedProcessor> entry : managedProcessors.entrySet()) {
+            final String processorName = entry.getKey();
+            final ParallelStreamProcessor<?, ?> parallelConsumer = entry.getValue().parallelConsumer();
             final boolean isProcessorUp = !parallelConsumer.isClosedOrFailed();
 
             responseBuilder.withData(processorName, isProcessorUp
@@ -115,13 +138,17 @@ public class RecordProcessorManager implements AutoCloseable {
     }
 
     @Override
+    @SuppressWarnings("resource")
     public void close() {
-        for (final Map.Entry<String, ManagedRecordProcessor> managedProcessorEntry : managedProcessors.entrySet()) {
-            final String processorName = managedProcessorEntry.getKey();
-            final ManagedRecordProcessor managedProcessor = managedProcessorEntry.getValue();
+        final Iterator<Map.Entry<String, ManagedProcessor>> entryIterator = managedProcessors.entrySet().iterator();
+        while (entryIterator.hasNext()) {
+            final Map.Entry<String, ManagedProcessor> entry = entryIterator.next();
+            final String processorName = entry.getKey();
+            final ManagedProcessor managedProcessor = entry.getValue();
 
             LOGGER.info("Stopping processor %s".formatted(processorName));
-            managedProcessor.parallelConsumer().closeDrainFirst();
+            managedProcessor.parallelConsumer().closeDontDrainFirst();
+            entryIterator.remove();
         }
     }
 
@@ -129,21 +156,12 @@ public class RecordProcessorManager implements AutoCloseable {
         final var optionsBuilder = ParallelConsumerOptions.<byte[], byte[]>builder()
                 .consumer(createConsumer(processorName));
 
-        final Map<String, String> properties = getPassThroughProperties(processorName);
+        final Map<String, String> properties = getPassThroughProperties(processorName.toLowerCase());
 
         final ProcessingOrder processingOrder = Optional.ofNullable(properties.get(PROPERTY_PROCESSING_ORDER))
                 .map(String::toUpperCase)
                 .map(ProcessingOrder::valueOf)
                 .orElse(PROPERTY_PROCESSING_ORDER_DEFAULT);
-        if (processingOrder != ProcessingOrder.PARTITION) {
-            LOGGER.warn("""
-                    Processor %s is configured to use ordering mode %s; \
-                    Ordering modes other than %s bypass head-of-line blocking \
-                    and can put additional strain on the system in cases where \
-                    external systems like the database are temporarily unavailable \
-                    (https://github.com/confluentinc/parallel-consumer#head-of-line-blocking)\
-                    """.formatted(processorName, processingOrder, ProcessingOrder.PARTITION));
-        }
         optionsBuilder.ordering(processingOrder);
 
         final int maxConcurrency = Optional.ofNullable(properties.get(PROPERTY_MAX_CONCURRENCY))
@@ -151,6 +169,7 @@ public class RecordProcessorManager implements AutoCloseable {
                 .orElse(PROPERTY_MAX_CONCURRENCY_DEFAULT);
         optionsBuilder.maxConcurrency(maxConcurrency);
 
+        final Optional<String> optionalMaxBatchSizeProperty = Optional.ofNullable(properties.get(PROPERTY_MAX_BATCH_SIZE));
         if (isBatch) {
             if (processingOrder == ProcessingOrder.PARTITION) {
                 LOGGER.warn("""
@@ -161,10 +180,13 @@ public class RecordProcessorManager implements AutoCloseable {
                         """.formatted(processorName, processingOrder));
             }
 
-            final int maxBatchSize = Optional.ofNullable(properties.get(PROPERTY_MAX_BATCH_SIZE))
+            final int maxBatchSize = optionalMaxBatchSizeProperty
                     .map(Integer::parseInt)
                     .orElse(PROPERTY_MAX_BATCH_SIZE_DEFAULT);
             optionsBuilder.batchSize(maxBatchSize);
+        } else if (optionalMaxBatchSizeProperty.isPresent()) {
+            LOGGER.warn("Processor %s is configured with %s, but it is not a batch processor; Ignoring property"
+                    .formatted(processorName, PROPERTY_MAX_BATCH_SIZE));
         }
 
         final IntervalFunction retryIntervalFunction = getRetryIntervalFunction(properties);
@@ -189,11 +211,9 @@ public class RecordProcessorManager implements AutoCloseable {
         consumerConfig.put(BOOTSTRAP_SERVERS_CONFIG, config.getProperty(KAFKA_BOOTSTRAP_SERVERS));
         consumerConfig.put(CLIENT_ID_CONFIG, "%s-consumer".formatted(processorName));
         consumerConfig.put(GROUP_ID_CONFIG, processorName);
-        consumerConfig.put(KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-        consumerConfig.put(VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-        consumerConfig.put(ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        final Map<String, String> properties = getPassThroughProperties("%s.consumer".formatted(processorName));
+        final String propertyPrefix = "%s.consumer".formatted(processorName.toLowerCase());
+        final Map<String, String> properties = getPassThroughProperties(propertyPrefix);
         for (final Map.Entry<String, String> property : properties.entrySet()) {
             if (!ConsumerConfig.configNames().contains(property.getKey())) {
                 LOGGER.warn("Consumer property %s was set for processor %s, but is unknown; Ignoring"
@@ -204,7 +224,15 @@ public class RecordProcessorManager implements AutoCloseable {
             consumerConfig.put(property.getKey(), property.getValue());
         }
 
+        // Properties that MUST NOT be overwritten under any circumstance have to be applied
+        // AFTER pass-through properties.
+        consumerConfig.put(KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        consumerConfig.put(VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        consumerConfig.put(ENABLE_AUTO_COMMIT_CONFIG, false); // Commits are managed by parallel consumer
+
+        LOGGER.debug("Creating consumer for processor %s with options %s".formatted(processorName, consumerConfig));
         final var consumer = new KafkaConsumer<byte[], byte[]>(consumerConfig);
+
         if (config.getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             new KafkaClientMetrics(consumer).bindTo(Metrics.getRegistry());
         }
@@ -230,6 +258,16 @@ public class RecordProcessorManager implements AutoCloseable {
         return trimmedProperties;
     }
 
+    private static void requireValidProcessorName(final String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+        if (!PROCESSOR_NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException("name is invalid; names must match the regular expression %s"
+                    .formatted(PROCESSOR_NAME_PATTERN.pattern()));
+        }
+    }
+
     private static IntervalFunction getRetryIntervalFunction(final Map<String, String> properties) {
         final long initialDelayMs = Optional.ofNullable(properties.get(PROPERTY_RETRY_INITIAL_DELAY_MS))
                 .map(Long::parseLong)
@@ -248,9 +286,9 @@ public class RecordProcessorManager implements AutoCloseable {
                 multiplier, randomizationFactor, Duration.ofMillis(maxDelayMs));
     }
 
-    private record ManagedRecordProcessor(ParallelStreamProcessor<byte[], byte[]> parallelConsumer,
-                                          RecordProcessingStrategy processingStrategy,
-                                          Topic<?, ?> topic) {
+    private record ManagedProcessor(ParallelStreamProcessor<byte[], byte[]> parallelConsumer,
+                                    RecordProcessingStrategy processingStrategy,
+                                    String topic) {
     }
 
 }

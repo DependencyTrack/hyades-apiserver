@@ -36,8 +36,8 @@ public class HealthCheckInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Registering health checks");
-        HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
-        HealthCheckRegistry.getInstance().register("kafka-processors", new KafkaProcessorsHealthCheck());
+        HealthCheckRegistry.getInstance().register(DatabaseHealthCheck.class.getName(), new DatabaseHealthCheck());
+        HealthCheckRegistry.getInstance().register(KafkaProcessorsHealthCheck.class.getName(), new KafkaProcessorsHealthCheck());
 
         // TODO: Move this to its own initializer if it turns out to be useful
         LOGGER.info("Registering extra process metrics");

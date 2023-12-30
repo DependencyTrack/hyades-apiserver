@@ -19,12 +19,14 @@ public class KafkaProcessorsInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing Kafka processors");
 
-        PROCESSOR_MANAGER.register(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
+        PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
                 new VulnerabilityMirrorProcessor(), KafkaTopics.NEW_VULNERABILITY);
-        PROCESSOR_MANAGER.register(RepositoryMetaResultProcessor.PROCESSOR_NAME,
+        PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 new RepositoryMetaResultProcessor(), KafkaTopics.REPO_META_ANALYSIS_RESULT);
+        PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
+                new ProcessedVulnerabilityScanResultProcessor(), KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED);
         if (Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION)) {
-            PROCESSOR_MANAGER.register(DelayedBomProcessedNotificationProcessor.PROCESSOR_NAME,
+            PROCESSOR_MANAGER.registerBatchProcessor(DelayedBomProcessedNotificationProcessor.PROCESSOR_NAME,
                     new DelayedBomProcessedNotificationProcessor(), KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE);
         }
 

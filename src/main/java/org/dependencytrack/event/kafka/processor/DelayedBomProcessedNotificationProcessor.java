@@ -41,8 +41,7 @@ import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
  */
 public class DelayedBomProcessedNotificationProcessor implements BatchRecordProcessor<String, Notification> {
 
-    // TODO: Find better name
-    public static final String PROCESSOR_NAME = "delayed-bom-processed-notification";
+    public static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
 
     private static final Logger LOGGER = Logger.getLogger(DelayedBomProcessedNotificationProcessor.class);
 
