@@ -39,7 +39,7 @@ import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
  * The completion detection is based on {@link NotificationGroup#PROJECT_VULN_ANALYSIS_COMPLETE} notifications.
  * This processor does nothing unless {@link ConfigKey#TMP_DELAY_BOM_PROCESSED_NOTIFICATION} is enabled.
  */
-public class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String, Notification> {
+class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String, Notification> {
 
     static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
 
@@ -48,7 +48,7 @@ public class DelayedBomProcessedNotificationProcessor implements BatchProcessor<
     private final Config config;
     private final KafkaEventDispatcher eventDispatcher;
 
-    public DelayedBomProcessedNotificationProcessor() {
+    DelayedBomProcessedNotificationProcessor() {
         this(Config.getInstance(), new KafkaEventDispatcher());
     }
 

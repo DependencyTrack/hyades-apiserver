@@ -30,7 +30,7 @@ import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.perfo
 /**
  * A {@link Processor} that ingests repository metadata {@link AnalysisResult}s.
  */
-public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
+class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
 
     static final String PROCESSOR_NAME = "repo.meta.result";
 
