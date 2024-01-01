@@ -13,6 +13,8 @@ public interface Processor<K, V> {
 
     /**
      * Process a {@link ConsumerRecord}.
+     * <p>
+     * This method may be called by multiple threads concurrently and thus MUST be thread safe!
      *
      * @param record The {@link ConsumerRecord} to process
      * @throws ProcessingException When processing the {@link ConsumerRecord} failed

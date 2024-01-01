@@ -15,6 +15,8 @@ public interface BatchProcessor<K, V> {
 
     /**
      * Process a batch of {@link ConsumerRecord}s.
+     * <p>
+     * This method may be called by multiple threads concurrently and thus MUST be thread safe!
      *
      * @param records Batch of {@link ConsumerRecord}s to process
      * @throws ProcessingException When consuming the batch of {@link ConsumerRecord}s failed
