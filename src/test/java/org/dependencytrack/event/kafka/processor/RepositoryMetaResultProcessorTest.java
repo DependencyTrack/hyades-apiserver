@@ -49,7 +49,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         final RepositoryMetaComponent metaComponent = qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
         assertThat(metaComponent).isNotNull();
@@ -69,7 +69,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         final Query<RepositoryMetaComponent> query = qm.getPersistenceManager().newQuery(RepositoryMetaComponent.class);
         query.setResult("count(this)");
@@ -99,7 +99,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -135,7 +135,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
 
         // Pipe in a record that was produced 10 seconds ago, 5 seconds before metaComponent's lastCheck.
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result, Instant.now().minusSeconds(10)));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).withTimestamp(Instant.now().minusSeconds(10)).build());
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -181,7 +181,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -234,7 +234,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -285,7 +285,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNull();
@@ -324,7 +324,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNull();
@@ -364,7 +364,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNotNull();
@@ -394,7 +394,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(uuid);
         assertThat(analysis).isNull();
@@ -432,7 +432,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -481,7 +481,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -532,7 +532,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -567,7 +567,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -598,7 +598,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -632,7 +632,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         final RepositoryMetaComponent metaComponent =
                 qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
@@ -667,7 +667,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
                 .build();
 
         final var processor = new RepositoryMetaResultProcessor();
-        processor.process(createConsumerRecord("pkg:maven/foo/bar@1.2.3", result));
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
