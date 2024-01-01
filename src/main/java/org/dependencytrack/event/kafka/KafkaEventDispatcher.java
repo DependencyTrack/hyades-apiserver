@@ -151,11 +151,11 @@ public class KafkaEventDispatcher {
                 () -> new KafkaDefaultProducerCallback(LOGGER, event.topic().name(), event.key())));
     }
 
-    public <K, V> void dispatchAllBlocking(final List<KafkaEvent<K, V>> events) {
+    public void dispatchAllBlocking(final List<KafkaEvent<?, ?>> events) {
         dispatchAllBlocking(events, null);
     }
 
-    public <K, V> void dispatchAllBlocking(final List<KafkaEvent<K, V>> events, Callback callback) {
+    public void dispatchAllBlocking(final List<KafkaEvent<?, ?>> events, Callback callback) {
         final var countDownLatch = new CountDownLatch(events.size());
 
         callback = requireNonNullElseGet(callback, () -> new KafkaDefaultProducerCallback(LOGGER));
@@ -174,9 +174,9 @@ public class KafkaEventDispatcher {
         }
     }
 
-    public <K, V> List<Future<RecordMetadata>> dispatchAllAsync(final List<KafkaEvent<K, V>> events, Callback callback) {
+    public <K, V> List<Future<RecordMetadata>> dispatchAllAsync(final List<KafkaEvent<?, ?>> events, Callback callback) {
         final var records = new ArrayList<ProducerRecord<byte[], byte[]>>(events.size());
-        for (final KafkaEvent<K, V> event : events) {
+        for (final KafkaEvent<?, ?> event : events) {
             records.add(toProducerRecord(event));
         }
 

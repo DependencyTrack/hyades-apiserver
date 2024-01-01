@@ -103,7 +103,7 @@ class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String,
 
     private void dispatchNotifications(final List<BomConsumedOrProcessedSubject> subjects) {
         final Timestamp timestamp = Timestamps.now();
-        final var events = new ArrayList<KafkaEvent<String, Notification>>(subjects.size());
+        final var events = new ArrayList<KafkaEvent<?, ?>>(subjects.size());
         for (final BomConsumedOrProcessedSubject subject : subjects) {
             final var event = new KafkaEvent<>(KafkaTopics.NOTIFICATION_BOM,
                     subject.getProject().getUuid(), Notification.newBuilder()
