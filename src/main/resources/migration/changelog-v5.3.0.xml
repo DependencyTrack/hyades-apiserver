@@ -2382,4 +2382,17 @@
             <column name="VULNERABILITY_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.3.0-8" author="nscuro@protonmail.com">
+        <addColumn tableName="ANALYSIS">
+            <column name="VULNERABILITY_POLICY_ID" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="ANALYSIS"
+                baseColumnNames="VULNERABILITY_POLICY_ID"
+                constraintName="ANALYSIS_VULNERABILITY_POLICY_ID_FK"
+                referencedTableName="VULNERABILITY_POLICY"
+                referencedColumnNames="ID"/>
+    </changeSet>
 </databaseChangeLog>
