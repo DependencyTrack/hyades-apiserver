@@ -132,7 +132,7 @@ public class Analysis implements Serializable {
     @JsonProperty(value = "owaspScore")
     private BigDecimal owaspScore;
 
-    @Persistent(defaultFetchGroup = "true")
+    @Persistent
     @Column(name = "VULNERABILITY_POLICY_ID", allowsNull = "true")
     @JsonIgnore
     private VulnerabilityPolicy vulnerabilityPolicy;
