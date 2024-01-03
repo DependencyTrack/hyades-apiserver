@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ReadKeyValues;
@@ -6,6 +6,7 @@ import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;

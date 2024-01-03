@@ -1,7 +1,7 @@
 package org.dependencytrack.health;
 
 import org.apache.kafka.streams.KafkaStreams;
-import org.dependencytrack.event.kafka.KafkaStreamsInitializer;
+import org.dependencytrack.event.kafka.streams.KafkaStreamsInitializer;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;

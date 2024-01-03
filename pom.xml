@@ -106,6 +106,7 @@
         <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
+        <lib.parallel-consumer.version>0.5.2.7</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
         <lib.protobuf-java.version>3.25.1</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
@@ -300,6 +301,13 @@
             <artifactId>packageurl-java</artifactId>
             <version>${lib.packageurl.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.confluent.parallelconsumer</groupId>
+            <artifactId>parallel-consumer-core</artifactId>
+            <version>${lib.parallel-consumer.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>

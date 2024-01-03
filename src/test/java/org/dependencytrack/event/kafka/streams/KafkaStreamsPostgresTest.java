@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import net.mguenther.kafka.junit.ExternalKafkaCluster;
 import net.mguenther.kafka.junit.TopicConfig;
@@ -6,6 +6,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.After;

@@ -1,87 +1,128 @@
 package org.dependencytrack.event.kafka.processor;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.notification.NotificationLevel;
-import org.apache.kafka.streams.processor.api.ContextualProcessor;
-import org.apache.kafka.streams.processor.api.Processor;
-import org.apache.kafka.streams.processor.api.Record;
-import org.dependencytrack.model.Bom;
-import org.dependencytrack.model.Project;
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.kafka.KafkaEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.event.kafka.processor.api.BatchProcessor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
+import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 
-import javax.jdo.Query;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import static org.dependencytrack.parser.dependencytrack.NotificationModelConverter.convert;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 /**
- * A {@link Processor} responsible for dispatching {@link NotificationGroup#BOM_PROCESSED} notifications
+ * A {@link BatchProcessor} responsible for dispatching {@link NotificationGroup#BOM_PROCESSED} notifications
  * upon detection of a completed {@link VulnerabilityScan}.
+ * <p>
+ * The completion detection is based on {@link NotificationGroup#PROJECT_VULN_ANALYSIS_COMPLETE} notifications.
+ * This processor does nothing unless {@link ConfigKey#TMP_DELAY_BOM_PROCESSED_NOTIFICATION} is enabled.
  */
-public class DelayedBomProcessedNotificationProcessor extends ContextualProcessor<String, VulnerabilityScan, String, Notification> {
+class DelayedBomProcessedNotificationProcessor implements BatchProcessor<String, Notification> {
+
+    static final String PROCESSOR_NAME = "delayed.bom.processed.notification";
 
     private static final Logger LOGGER = Logger.getLogger(DelayedBomProcessedNotificationProcessor.class);
 
-    @Override
-    public void process(final Record<String, VulnerabilityScan> record) {
-        final VulnerabilityScan vulnScan = record.value();
+    private final Config config;
+    private final KafkaEventDispatcher eventDispatcher;
 
-        if (vulnScan.getStatus() != VulnerabilityScan.Status.COMPLETED
-                && vulnScan.getStatus() != VulnerabilityScan.Status.FAILED) {
-            LOGGER.warn("Received vulnerability scan with non-terminal status %s; Dropping (token=%s, project=%s)"
-                    .formatted(vulnScan.getStatus(), vulnScan.getToken(), vulnScan.getTargetIdentifier()));
+    DelayedBomProcessedNotificationProcessor() {
+        this(Config.getInstance(), new KafkaEventDispatcher());
+    }
+
+    DelayedBomProcessedNotificationProcessor(final Config config, final KafkaEventDispatcher eventDispatcher) {
+        this.config = config;
+        this.eventDispatcher = eventDispatcher;
+    }
+
+    @Override
+    public void process(final List<ConsumerRecord<String, Notification>> records) throws ProcessingException {
+        if (!config.getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION)) {
             return;
         }
 
-        final Project project;
-        try (final var qm = new QueryManager()) {
-            if (!qm.hasWorkflowStepWithStatus(UUID.fromString(vulnScan.getToken()), WorkflowStep.BOM_PROCESSING, WorkflowStatus.COMPLETED)) {
-                LOGGER.debug("Received completed vulnerability scan, but no %s step exists in this workflow; Dropping (token=%s, project=%s)"
-                        .formatted(WorkflowStep.BOM_PROCESSING, vulnScan.getToken(), vulnScan.getTargetIdentifier()));
-                return;
-            }
-
-            project = getProject(qm, vulnScan.getTargetIdentifier());
-            if (project == null) {
-                LOGGER.warn("Received completed vulnerability scan, but the target project does not exist; Dropping (token=%s, project=%s)"
-                        .formatted(vulnScan.getToken(), vulnScan.getTargetIdentifier()));
-                return;
-            }
+        final Set<String> tokens = extractTokens(records);
+        if (tokens.isEmpty()) {
+            LOGGER.warn("No token could be extracted from any of the %d records in this batch"
+                    .formatted(records.size()));
+            return;
         }
 
-        final var alpineNotification = new alpine.notification.Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_PROCESSED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.BOM_PROCESSED)
-                // BOM format and spec version are hardcoded because we don't have this information at this point.
-                // DT currently only accepts CycloneDX anyway.
-                .content("A %s BOM was processed".formatted(Bom.Format.CYCLONEDX.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(UUID.fromString(vulnScan.getToken()), project, /* bom */ "(Omitted)", Bom.Format.CYCLONEDX, "Unknown"));
+        final List<BomConsumedOrProcessedSubject> subjects;
+        try (final var qm = new QueryManager()) {
+            subjects = jdbi(qm).withExtension(NotificationSubjectDao.class,
+                    dao -> dao.getForDelayedBomProcessed(tokens));
+        }
 
-        context().forward(record.withKey(project.getUuid().toString()).withValue(convert(alpineNotification)));
-        LOGGER.info("Dispatched delayed %s notification (token=%s, project=%s)"
-                .formatted(NotificationGroup.BOM_PROCESSED, vulnScan.getToken(), vulnScan.getTargetIdentifier()));
+        dispatchNotifications(subjects);
     }
 
-    private static Project getProject(final QueryManager qm, final UUID uuid) {
-        final Query<Project> projectQuery = qm.getPersistenceManager().newQuery(Project.class);
-        projectQuery.setFilter("uuid == :uuid");
-        projectQuery.setParameters(uuid);
-        projectQuery.getFetchPlan().clearGroups(); // Ensure we're not loading too much bloat.
-        projectQuery.getFetchPlan().setGroup(Project.FetchGroup.NOTIFICATION.name());
-        try {
-            return qm.getPersistenceManager().detachCopy(projectQuery.executeResultUnique(Project.class));
-        } finally {
-            projectQuery.closeAll();
+    private static Set<String> extractTokens(final List<ConsumerRecord<String, Notification>> records) {
+        final var tokens = new HashSet<String>();
+        for (final ConsumerRecord<String, Notification> record : records) {
+            final Notification notification = record.value();
+            if (!notification.hasSubject() || !notification.getSubject().is(ProjectVulnAnalysisCompleteSubject.class)) {
+                continue;
+            }
+
+            final ProjectVulnAnalysisCompleteSubject subject;
+            try {
+                subject = notification.getSubject().unpack(ProjectVulnAnalysisCompleteSubject.class);
+            } catch (InvalidProtocolBufferException e) {
+                LOGGER.warn("Failed to unpack notification subject from %s; Skipping".formatted(record), e);
+                continue;
+            }
+
+            tokens.add(subject.getToken());
+        }
+
+        return tokens;
+    }
+
+    private void dispatchNotifications(final List<BomConsumedOrProcessedSubject> subjects) {
+        final Timestamp timestamp = Timestamps.now();
+        final var events = new ArrayList<KafkaEvent<?, ?>>(subjects.size());
+        for (final BomConsumedOrProcessedSubject subject : subjects) {
+            final var event = new KafkaEvent<>(KafkaTopics.NOTIFICATION_BOM,
+                    subject.getProject().getUuid(), Notification.newBuilder()
+                    .setScope(SCOPE_PORTFOLIO)
+                    .setGroup(GROUP_BOM_PROCESSED)
+                    .setLevel(LEVEL_INFORMATIONAL)
+                    .setTimestamp(timestamp)
+                    .setTitle(NotificationConstants.Title.BOM_PROCESSED)
+                    .setContent("A %s BOM was processed".formatted(subject.getBom().getFormat()))
+                    .setSubject(Any.pack(subject))
+                    .build());
+            events.add(event);
+        }
+
+        eventDispatcher.dispatchAllBlocking(events);
+
+        for (final BomConsumedOrProcessedSubject subject : subjects) {
+            LOGGER.info("Dispatched delayed %s notification (token=%s, project=%s)"
+                    .formatted(GROUP_BOM_PROCESSED, subject.getToken(), subject.getProject().getUuid()));
         }
     }
 

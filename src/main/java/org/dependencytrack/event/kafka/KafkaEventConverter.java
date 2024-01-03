@@ -17,7 +17,7 @@ import java.util.UUID;
  * Utility class to convert {@link alpine.event.framework.Event}s and {@link alpine.notification.Notification}s
  * to {@link KafkaEvent}s.
  */
-final class KafkaEventConverter {
+public final class KafkaEventConverter {
 
     private KafkaEventConverter() {
     }
@@ -65,7 +65,7 @@ final class KafkaEventConverter {
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
-    static KafkaEvent<String, Notification> convert(final String key, final Notification notification) {
+    public static KafkaEvent<String, Notification> convert(final String key, final Notification notification) {
         final Topic<String, Notification> topic = switch (notification.getGroup()) {
             case GROUP_CONFIGURATION -> KafkaTopics.NOTIFICATION_CONFIGURATION;
             case GROUP_DATASOURCE_MIRRORING -> KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING;

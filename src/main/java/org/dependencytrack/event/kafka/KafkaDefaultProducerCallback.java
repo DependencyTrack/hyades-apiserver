@@ -15,6 +15,10 @@ class KafkaDefaultProducerCallback implements Callback {
     private final String topic;
     private final Object key;
 
+    KafkaDefaultProducerCallback(final Logger logger) {
+        this(logger, null, null);
+    }
+
     KafkaDefaultProducerCallback(final Logger logger, final String topic, final Object key) {
         this.logger = logger;
         this.topic = topic;
@@ -27,7 +31,11 @@ class KafkaDefaultProducerCallback implements Callback {
     @Override
     public void onCompletion(final RecordMetadata metadata, final Exception exception) {
         if (exception != null) {
-            logger.error("Failed to produce record with key %s to topic %s".formatted(key, topic), exception);
+            if (topic != null) {
+                logger.error("Failed to produce record with key %s to topic %s".formatted(key, topic), exception);
+            } else {
+                logger.error("Failed to produce record", exception);
+            }
         }
     }
 

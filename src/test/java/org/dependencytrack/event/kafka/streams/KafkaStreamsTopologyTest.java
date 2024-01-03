@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
@@ -19,6 +19,7 @@ import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
