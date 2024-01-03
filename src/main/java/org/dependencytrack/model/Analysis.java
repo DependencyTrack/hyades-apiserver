@@ -89,7 +89,7 @@ public class Analysis implements Serializable {
     private String analysisDetails;
 
     @Persistent(mappedBy = "analysis", defaultFetchGroup = "true")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "timestamp ASC"))
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "timestamp ASC, id ASC"))
     private List<AnalysisComment> analysisComments;
 
     @Persistent
