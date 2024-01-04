@@ -132,6 +132,11 @@ public class Analysis implements Serializable {
     @JsonProperty(value = "owaspScore")
     private BigDecimal owaspScore;
 
+    @Persistent
+    @Column(name = "VULNERABILITY_POLICY_ID", allowsNull = "true")
+    @JsonIgnore
+    private VulnerabilityPolicy vulnerabilityPolicy;
+
     public long getId() {
         return id;
     }
@@ -263,5 +268,13 @@ public class Analysis implements Serializable {
 
     public void setOwaspScore(BigDecimal owaspScore) {
         this.owaspScore = owaspScore;
+    }
+
+    public VulnerabilityPolicy getVulnerabilityPolicy() {
+        return vulnerabilityPolicy;
+    }
+
+    public void setVulnerabilityPolicy(VulnerabilityPolicy vulnerabilityPolicy) {
+        this.vulnerabilityPolicy = vulnerabilityPolicy;
     }
 }
