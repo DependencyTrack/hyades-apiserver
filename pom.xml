@@ -96,14 +96,8 @@
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.42.0</lib.jdbi.version>
         <lib.json-unit.version>3.2.2</lib.json-unit.version>
-        <!--
-          Overriding logstash-logback-encoder version as a temporary workaround until
-          https://github.com/stevespringett/Alpine/pull/517 is merged and released.
-        -->
-        <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.kafka.version>3.6.1</lib.kafka.version>
         <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
-        <lib.logstash-logback-encoder.version>7.3</lib.logstash-logback-encoder.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.packageurl.version>1.4.1</lib.packageurl.version>
         <lib.pebble.version>3.2.0</lib.pebble.version>
