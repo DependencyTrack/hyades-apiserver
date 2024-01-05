@@ -83,7 +83,7 @@ public enum ConfigKey implements Config.Key {
     VULNERABILITY_POLICY_BUNDLE_URL("vulnerability.policy.bundle.url", null),
     VULNERABILITY_POLICY_BUNDLE_SOURCE_TYPE("vulnerability.policy.bundle.source.type", "NGINX"),
     VULNERABILITY_POLICY_BUNDLE_AUTH_USERNAME( "vulnerability.policy.bundle.auth.username", null),
-    VULNERABILITY_POLICY_BUNDLE_BEARER_TOKEN("vulnerability.policy.bundle.bearer.token", null),
+    VULNERABILITY_POLICY_BUNDLE_AUTH_BEARER_TOKEN("vulnerability.policy.bundle.auth.bearer.token", null),
     VULNERABILITY_POLICY_BUNDLE_AUTH_PASSWORD( "vulnerability.policy.bundle.auth.password", null),
     VULNERABILITY_POLICY_S3_ACCESS_KEY("vulnerability.policy.s3.access.key", null),
     VULNERABILITY_POLICY_S3_SECRET_KEY("vulnerability.policy.s3.secret.key", null),
