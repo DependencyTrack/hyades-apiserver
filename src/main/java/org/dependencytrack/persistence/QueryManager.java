@@ -1950,6 +1950,10 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies();
     }
 
+    public List<VulnerabilityPolicy> getAllValidVulnerabilityPolicies() {
+        return getVulnerabilityPolicyQueryManager().getAllValidVulnerabilityPolicies();
+    }
+
     public PaginatedResult getAllVulnerabilityPolicies(String name, Date validFrom, Date validUntil) {
         return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies(name, validFrom, validUntil);
     }
