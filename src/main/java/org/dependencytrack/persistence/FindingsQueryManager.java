@@ -18,9 +18,8 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import com.github.packageurl.PackageURL;
-import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.AnalysisJustification;
@@ -29,16 +28,15 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
 public class FindingsQueryManager extends QueryManager implements IQueryManager {
 
@@ -324,7 +322,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param project the project to retrieve findings for
      * @return a List of Finding objects
      */
-    @SuppressWarnings("unchecked")
     public List<Finding> getFindings(Project project) {
         return getFindings(project, false);
     }
@@ -336,36 +333,13 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param includeSuppressed determines if suppressed vulnerabilities should be included or not
      * @return a List of Finding objects
      */
-    @SuppressWarnings("unchecked")
     public List<Finding> getFindings(Project project, boolean includeSuppressed) {
-        final Query<Object[]> query = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, Finding.QUERY);
-        query.setParameters(project.getId());
-        final List<Object[]> list = query.executeList();
-        final List<Finding> findings = new ArrayList<>();
-        for (final Object[] o : list) {
-            final Finding finding = new Finding(project.getUuid(), o);
-            final Component component = getObjectByUuid(Component.class, (String) finding.getComponent().get("uuid"));
-            final Vulnerability vulnerability = getObjectByUuid(Vulnerability.class, (String) finding.getVulnerability().get("uuid"));
-            final Analysis analysis = getAnalysis(component, vulnerability);
-            final List<VulnerabilityAlias> aliases = detach(getVulnerabilityAliases(vulnerability));
-            finding.addVulnerabilityAliases(aliases);
-            if (includeSuppressed || analysis == null || !analysis.isSuppressed()) { // do not add globally suppressed findings
-                // These are CLOB fields. Handle these here so that database-specific deserialization doesn't need to be performed (in Finding)
-                finding.getVulnerability().put("description", vulnerability.getDescription());
-                finding.getVulnerability().put("recommendation", vulnerability.getRecommendation());
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        if (repoMetaComponent != null) {
-                            finding.getComponent().put("latestVersion", repoMetaComponent.getLatestVersion());
-                        }
-                    }
-                }
-                findings.add(finding);
-            }
-        }
-        return findings;
+        return getFindingsPage(project, null, includeSuppressed).getList(Finding.class);
     }
+
+    public PaginatedResult getFindingsPage(final Project project, final Vulnerability.Source source, final boolean includeSuppressed) {
+        return jdbi(this).withExtension(FindingDao.class, findingDao ->
+                findingDao.getPageForProject(this.pagination, project.getId(), source, includeSuppressed));
+    }
+
 }

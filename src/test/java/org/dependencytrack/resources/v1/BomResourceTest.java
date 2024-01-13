@@ -26,7 +26,7 @@ import junitparams.Parameters;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.dependencytrack.ResourceTest;
+import org.dependencytrack.PostgresResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -78,7 +78,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 @RunWith(JUnitParamsRunner.class)
-public class BomResourceTest extends ResourceTest {
+public class BomResourceTest extends PostgresResourceTest {
 
     @Override
     protected DeploymentContext configureDeployment() {

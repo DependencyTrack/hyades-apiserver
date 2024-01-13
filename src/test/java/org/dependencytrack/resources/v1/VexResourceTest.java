@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import org.dependencytrack.ResourceTest;
+import org.dependencytrack.PostgresResourceTest;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -42,7 +42,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.equalTo;
 
-public class VexResourceTest extends ResourceTest {
+public class VexResourceTest extends PostgresResourceTest {
 
     @Override
     protected DeploymentContext configureDeployment() {

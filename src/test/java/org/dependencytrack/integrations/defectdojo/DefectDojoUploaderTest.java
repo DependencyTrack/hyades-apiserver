@@ -21,7 +21,7 @@ package org.dependencytrack.integrations.defectdojo;
 import alpine.model.IConfigProperty;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import org.apache.http.HttpHeaders;
-import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
@@ -55,7 +55,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABL
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_REIMPORT_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_URL;
 
-public class DefectDojoUploaderTest extends PersistenceCapableTest {
+public class DefectDojoUploaderTest extends AbstractPostgresEnabledTest {
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule(options().dynamicPort());

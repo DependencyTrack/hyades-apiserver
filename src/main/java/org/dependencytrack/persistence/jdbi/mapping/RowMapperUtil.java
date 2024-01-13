@@ -45,17 +45,21 @@ public class RowMapperUtil {
      * @param getter     The {@link ThrowingBiFunction} to call when the column exists
      * @param setter     The {@link Consumer} to call when {@code getter} returns a non-{@code null} value
      * @param <V>        The value type
+     * @return {@code true} When {@code setter} was called, otherwise {@code false}
      * @throws SQLException When accessing the {@link ResultSet} failed
      */
-    public static <V> void maybeSet(final ResultSet rs, final String columnName, final ThrowingBiFunction<V> getter, final Consumer<V> setter) throws SQLException {
+    public static <V> boolean maybeSet(final ResultSet rs, final String columnName, final ThrowingBiFunction<V> getter, final Consumer<V> setter) throws SQLException {
         if (!hasColumn(rs, columnName)) {
-            return;
+            return false;
         }
 
         final V value = getter.apply(rs, columnName);
         if (value != null) {
             setter.accept(value);
+            return true;
         }
+
+        return false;
     }
 
     public static boolean hasColumn(final ResultSet rs, final String columnName) throws SQLException {
