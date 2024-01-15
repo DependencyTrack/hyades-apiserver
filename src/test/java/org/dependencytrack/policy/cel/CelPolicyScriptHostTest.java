@@ -80,17 +80,39 @@ public class CelPolicyScriptHostTest {
     public void testVisitVersRangeCheck() {
         var exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 project.name == "foo" && project.matches_range("vers:generic<1")
+                  && project.depends_on(v1.Component{
+                       version: "vers:maven/>0|>1"
+                     })
                 """, CacheMode.NO_CACHE));
-        assertThat(exception.getMessage()).contains("Failed to parse the vers range");
+        assertThat(exception.getMessage()).isEqualTo("""
+                Failed to check script: ERROR: <input>:1:48: vers string does not contain a versioning scheme separator
+                 | project.name == "foo" && project.matches_range("vers:generic<1")
+                 | ...............................................^
+                ERROR: <input>:2:37: Querying by version range without providing an additional field to filter on is not allowed. Possible fields to filter on are: [classifier, cpe, group, name, purl, swid_tag_id]
+                 |   && project.depends_on(v1.Component{
+                 | ....................................^
+                ERROR: <input>:3:17: Invalid range vers:maven/>0|>1: A > or >= comparator must only be followed by a < or <= comparator, but got: >
+                 |        version: "vers:maven/>0|>1"
+                 | ................^""");
 
-        assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+        exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 component.matches_range("vers:generic<1") == "foo" && project.matches_range("vers:generic<1")
                 """, CacheMode.NO_CACHE));
+        assertThat(exception.getMessage()).isEqualTo("""
+                Failed to check script: ERROR: <input>:1:25: vers string does not contain a versioning scheme separator
+                 | component.matches_range("vers:generic<1") == "foo" && project.matches_range("vers:generic<1")
+                 | ........................^
+                ERROR: <input>:1:77: vers string does not contain a versioning scheme separator
+                 | component.matches_range("vers:generic<1") == "foo" && project.matches_range("vers:generic<1")
+                 | ............................................................................^""");
 
         exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 component.name == "foo" || vulns.exists(vuln, vuln.id == "foo" && component.matches_range("versgeneric/<1"))
                 """, CacheMode.NO_CACHE));
-        assertThat(exception.getMessage()).contains("vers string does not contain a URI scheme separator");
+        assertThat(exception.getMessage()).isEqualTo("""
+                Failed to check script: ERROR: <input>:1:91: vers string does not contain a URI scheme separator
+                 | component.name == "foo" || vulns.exists(vuln, vuln.id == "foo" && component.matches_range("versgeneric/<1"))
+                 | ..........................................................................................^""");
 
         assertDoesNotThrow(() -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 project.matches_range("vers:generic/<1")

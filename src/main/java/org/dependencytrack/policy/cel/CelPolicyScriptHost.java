@@ -8,6 +8,7 @@ import com.google.api.expr.v1alpha1.Type;
 import com.google.common.util.concurrent.Striped;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.dependencytrack.policy.cel.CelPolicyScriptVersValidationVisitor.VersValidationError;
 import org.dependencytrack.policy.cel.CelPolicyScriptVisitor.FunctionSignature;
 import org.projectnessie.cel.Ast;
 import org.projectnessie.cel.CEL;
@@ -17,6 +18,7 @@ import org.projectnessie.cel.Program;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.common.Errors;
 import org.projectnessie.cel.common.Location;
+import org.projectnessie.cel.common.Source;
 import org.projectnessie.cel.common.types.Err.ErrException;
 import org.projectnessie.cel.common.types.pb.ProtoTypeRegistry;
 import org.projectnessie.cel.tools.ScriptCreateException;
@@ -93,11 +95,13 @@ public class CelPolicyScriptHost {
                 throw new ScriptCreateException("Failed to parse script", astIssuesTuple.getIssues());
             }
 
+            final Source source = newTextSource(scriptSrc);
+
             try {
                 astIssuesTuple = environment.check(astIssuesTuple.getAst());
             } catch (ErrException e) {
                 // TODO: Bring error message in a more digestible form.
-                throw new ScriptCreateException("Failed to check script", newIssues(new Errors(newTextSource(scriptSrc))
+                throw new ScriptCreateException("Failed to check script", newIssues(new Errors(source)
                         .append(Collections.singletonList(
                                 new CELError(e, Location.newLocation(1, 1), e.getMessage())
                         ))
@@ -111,12 +115,7 @@ public class CelPolicyScriptHost {
             final Program program = environment.program(ast);
             final var expr = CEL.astToCheckedExpr(ast);
             final MultiValuedMap<Type, String> requirements = analyzeRequirements(expr);
-
-            // perform vers range validity
-            if (requirements.get(TYPE_PROJECT).contains("version") || requirements.get(TYPE_COMPONENT).contains("version")) {
-                final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
-                visitor.visitVersRangeCheck(expr.getExpr());
-            }
+            validateVersRanges(expr, source);
 
             script = new CelPolicyScript(program, requirements);
             if (cacheMode == CacheMode.CACHE) {
@@ -139,7 +138,7 @@ public class CelPolicyScriptHost {
         // in the SEVERITY database column. To compute the actual severity, CVSSv2, CVSSv3, and OWASP RR
         // scores may be required. See https://github.com/DependencyTrack/dependency-track/issues/2474
         if (requirements.containsKey(TYPE_VULNERABILITY)
-                && requirements.get(TYPE_VULNERABILITY).contains("severity")) {
+            && requirements.get(TYPE_VULNERABILITY).contains("severity")) {
             requirements.putAll(TYPE_VULNERABILITY, List.of(
                     "cvssv2_base_score",
                     "cvssv3_base_score",
@@ -177,6 +176,25 @@ public class CelPolicyScriptHost {
         }
 
         return requirements;
+    }
+
+    private static void validateVersRanges(final CheckedExpr expr, final Source source) throws ScriptCreateException {
+        final var visitor = new CelPolicyScriptVersValidationVisitor(expr.getSourceInfo().getPositionsMap());
+        visitor.visit(expr.getExpr());
+
+        final List<VersValidationError> validationErrors = visitor.getErrors();
+        if (validationErrors.isEmpty()) {
+            return;
+        }
+
+        final List<CELError> celErrors = validationErrors.stream()
+                .map(versError -> {
+                    final Location location = source.offsetLocation(versError.position());
+                    return new CELError(versError.exception(), location, versError.exception().getMessage());
+                })
+                .toList();
+
+        throw new ScriptCreateException("Failed to check script", newIssues(new Errors(source).append(celErrors)));
     }
 
 }
