@@ -3,26 +3,15 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.google.api.expr.v1alpha1.Expr;
 import com.google.api.expr.v1alpha1.Type;
-import io.github.nscuro.versatile.Vers;
-import io.github.nscuro.versatile.VersException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.projectnessie.cel.common.CELError;
-import org.projectnessie.cel.common.Errors;
-import org.projectnessie.cel.common.Location;
-import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.ArrayDeque;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static com.google.api.expr.v1alpha1.Expr.ExprKindCase.CONST_EXPR;
-import static org.projectnessie.cel.Issues.newIssues;
-import static org.projectnessie.cel.common.Source.newTextSource;
 
 class CelPolicyScriptVisitor {
 
@@ -117,39 +106,11 @@ class CelPolicyScriptVisitor {
         logExpr(expr);
     }
 
-    public void visitVersRangeCheck(final Expr expr) throws ScriptCreateException {
-        for (Expr argExpr : expr.getCallExpr().getArgsList()) {
-            if (argExpr.hasCallExpr()) {
-                validateVersRange(argExpr.getCallExpr());
-                visitVersRangeCheck(argExpr);
-            }
-            if (argExpr.hasComprehensionExpr()) {
-                var argCallExpr = argExpr.getComprehensionExpr();
-                if (argCallExpr.hasLoopStep()) {
-                    validateVersRange(argCallExpr.getLoopStep().getCallExpr());
-                    visitVersRangeCheck(argCallExpr.getLoopStep());
-                }
-            }
-        }
-    }
-
-    private static void validateVersRange(Expr.Call callExpr) throws ScriptCreateException {
-        if (callExpr.getFunction().equals("matches_range") && !callExpr.getArgsList().isEmpty()
-            && callExpr.getArgsList().get(0).getExprKindCase() == CONST_EXPR) {
-            var versArg = callExpr.getArgsList().get(0).getConstExpr().getStringValue();
-            try {
-                Vers.parse(versArg).validate();
-            } catch (VersException e) {
-                throw new ScriptCreateException("Failed to parse the vers range ", newIssues(new Errors(newTextSource(versArg))
-                        .append(Collections.singletonList(
-                                new CELError(e, Location.newLocation(1, 1), e.getMessage())
-                        ))
-                ));
-            }
-        }
-    }
-
     private void logExpr(final Expr expr) {
+        if (!LOGGER.isDebugEnabled()) {
+            return;
+        }
+
         LOGGER.debug("Visiting %s (id=%d, fieldStack=%s, fieldTypeStack=%s, functionStack=%s)"
                 .formatted(expr.getExprKindCase(), expr.getId(), selectFieldStack, selectOperandTypeStack, callFunctionStack));
     }

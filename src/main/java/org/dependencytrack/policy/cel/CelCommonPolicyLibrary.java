@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
@@ -327,6 +328,9 @@ public class CelCommonPolicyLibrary implements Library {
         return false;
     }
 
+    private static final String VALUE_PREFIX_REGEX = "re:";
+    private static final String VALUE_PREFIX_VERS = "vers:";
+
     private static boolean isDependencyOf(final Component leafComponent, final Component rootComponent) {
         if (leafComponent.getUuid().isBlank()) {
             // Need a UUID for our starting point.
@@ -334,6 +338,8 @@ public class CelCommonPolicyLibrary implements Library {
                     .formatted(FUNC_IS_DEPENDENCY_OF));
             return false;
         }
+
+        Vers vers = null;
 
         final var queryFilters = new ArrayList<String>();
         final var queryParams = new HashMap<String, Object>();
@@ -343,32 +349,65 @@ public class CelCommonPolicyLibrary implements Library {
             queryParams.put("uuid", rootComponent.getUuid());
         }
         if (!rootComponent.getGroup().isBlank()) {
-            queryFilters.add("\"GROUP\" = :group");
-            queryParams.put("group", rootComponent.getGroup());
+            if (rootComponent.getGroup().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"GROUP\" ~ :groupRegex");
+                queryParams.put("groupRegex", substringAfter(rootComponent.getGroup(), VALUE_PREFIX_REGEX));
+            } else {
+                queryFilters.add("\"GROUP\" = :group");
+                queryParams.put("group", rootComponent.getGroup());
+            }
         }
         if (!rootComponent.getName().isBlank()) {
-            queryFilters.add("\"NAME\" = :name");
-            queryParams.put("name", rootComponent.getName());
+            if (rootComponent.getName().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"NAME\" ~ :nameRegex");
+                queryParams.put("nameRegex", substringAfter(rootComponent.getName(), VALUE_PREFIX_REGEX));
+            } else {
+                queryFilters.add("\"NAME\" = :name");
+                queryParams.put("name", rootComponent.getName());
+            }
         }
         if (!rootComponent.getVersion().isBlank()) {
-            queryFilters.add("\"VERSION\" = :version");
-            queryParams.put("version", rootComponent.getVersion());
+            if (rootComponent.getVersion().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"VERSION\" ~ :versionRegex");
+                queryParams.put("versionRegex", substringAfter(rootComponent.getVersion(), VALUE_PREFIX_REGEX));
+            } else if (rootComponent.getVersion().startsWith(VALUE_PREFIX_VERS)) {
+                // Note: Validation already happens during script compilation.
+                vers = Vers.parse(rootComponent.getVersion());
+            } else {
+                queryFilters.add("\"VERSION\" = :version");
+                queryParams.put("version", rootComponent.getVersion());
+            }
         }
         if (!rootComponent.getClassifier().isBlank()) {
             queryFilters.add("\"CLASSIFIER\" = :classifier");
             queryParams.put("classifier", rootComponent.getClassifier());
         }
         if (!rootComponent.getCpe().isBlank()) {
-            queryFilters.add("\"CPE\" = :cpe");
-            queryParams.put("cpe", rootComponent.getCpe());
+            if (rootComponent.getCpe().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"CPE\" ~ :cpeRegex");
+                queryParams.put("cpeRegex", substringAfter(rootComponent.getCpe(), VALUE_PREFIX_REGEX));
+            } else {
+                queryFilters.add("\"CPE\" = :cpe");
+                queryParams.put("cpe", rootComponent.getCpe());
+            }
         }
         if (!rootComponent.getPurl().isBlank()) {
-            queryFilters.add("\"PURL\" = :purl");
-            queryParams.put("purl", rootComponent.getPurl());
+            if (rootComponent.getPurl().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"PURL\" ~ :purlRegex");
+                queryParams.put("purlRegex", substringAfter(rootComponent.getPurl(), VALUE_PREFIX_REGEX));
+            } else {
+                queryFilters.add("\"PURL\" = :purl");
+                queryParams.put("purl", rootComponent.getPurl());
+            }
         }
         if (!rootComponent.getSwidTagId().isBlank()) {
-            queryFilters.add("\"SWIDTAGID\" = :swidTagId");
-            queryParams.put("swidTagId", rootComponent.getSwidTagId());
+            if (rootComponent.getSwidTagId().startsWith(VALUE_PREFIX_REGEX)) {
+                queryFilters.add("\"SWIDTAGID\" ~ :swidTagIdRegex");
+                queryParams.put("swidTagIdRegex", substringAfter(rootComponent.getSwidTagId(), VALUE_PREFIX_REGEX));
+            } else {
+                queryFilters.add("\"SWIDTAGID\" = :swidTagId");
+                queryParams.put("swidTagId", rootComponent.getSwidTagId());
+            }
         }
         if (rootComponent.hasIsInternal()) {
             if (rootComponent.getIsInternal()) {
@@ -387,71 +426,151 @@ public class CelCommonPolicyLibrary implements Library {
 
         try (final var qm = new QueryManager();
              final Handle jdbiHandle = jdbi(qm).open()) {
-            final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
-                    -- Determine the project the given leaf component is part of.
-                    WITH RECURSIVE
-                    "CTE_PROJECT" AS (
-                      SELECT
-                        "PROJECT_ID" AS "ID"
-                      FROM
-                        "COMPONENT"
-                      WHERE
-                        "UUID" = :leafComponentUuid
-                    ),
-                    -- Identify the IDs of all components in the project that
-                    -- match the desired criteria.
-                    "CTE_MATCHES" AS (
-                      SELECT
-                        "ID"
-                      FROM
-                        "COMPONENT"
-                      WHERE
-                        "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
-                        -- Do not consider other leaf nodes (typically the majority of components).
-                        -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
-                        AND "DIRECT_DEPENDENCIES" IS NOT NULL
-                        AND ${filters}
-                    ),
-                    "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "PATH") AS (
-                      SELECT
-                        "C"."UUID"                                       AS "UUID",
-                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
-                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
-                        ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
-                      FROM
-                        "COMPONENT" AS "C"
-                      WHERE
-                        -- Short-circuit the recursive query if we don't have any matches at all.
-                        EXISTS(SELECT 1 FROM "CTE_MATCHES")
-                        -- Otherwise, find components of which the given leaf component is a direct dependency.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
-                      UNION ALL
-                      SELECT
-                        "C"."UUID"                                       AS "UUID",
-                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
-                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
-                        ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
-                      FROM
-                        "COMPONENT" AS "C"
-                      INNER JOIN
-                        "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
-                      WHERE
-                        -- If the previous row was a match already, we're done.
-                        NOT "PREVIOUS"."FOUND"
-                        -- Also, ensure we haven't seen this component before, to prevent cycles.
-                        AND NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
-                        -- Otherwise, the previous component must appear in the current direct dependencies.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
-                    )
-                    SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
-                    """);
+            if (vers == null) {
+                final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
+                        -- Determine the project the given leaf component is part of.
+                        WITH RECURSIVE
+                        "CTE_PROJECT" AS (
+                          SELECT
+                            "PROJECT_ID" AS "ID"
+                          FROM
+                            "COMPONENT"
+                          WHERE
+                            "UUID" = :leafComponentUuid
+                        ),
+                        -- Identify the IDs of all components in the project that
+                        -- match the desired criteria.
+                        "CTE_MATCHES" AS (
+                          SELECT
+                            "ID"
+                          FROM
+                            "COMPONENT"
+                          WHERE
+                            "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                            -- Do not consider other leaf nodes (typically the majority of components).
+                            -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                            AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                            AND ${filters}
+                        ),
+                        "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "FOUND", "PATH") AS (
+                          SELECT
+                            "C"."UUID"                                       AS "UUID",
+                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                            ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                          FROM
+                            "COMPONENT" AS "C"
+                          WHERE
+                            -- Short-circuit the recursive query if we don't have any matches at all.
+                            EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                            -- Otherwise, find components of which the given leaf component is a direct dependency.
+                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                          UNION ALL
+                          SELECT
+                            "C"."UUID"                                       AS "UUID",
+                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                            ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                          FROM
+                            "COMPONENT" AS "C"
+                          INNER JOIN
+                            "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                          WHERE
+                            -- If the previous row was a match already, we're done.
+                            NOT "PREVIOUS"."FOUND"
+                            -- Also, ensure we haven't seen this component before, to prevent cycles.
+                            AND NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                            -- Otherwise, the previous component must appear in the current direct dependencies.
+                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        )
+                        SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
+                        """);
 
-            return query
-                    .define("filters", String.join(" AND ", queryFilters))
-                    .bindMap(queryParams)
-                    .mapTo(Boolean.class)
-                    .findOne()
-                    .orElse(false);
+                return query
+                        .define("filters", String.join(" AND ", queryFilters))
+                        .bindMap(queryParams)
+                        .mapTo(Boolean.class)
+                        .findOne()
+                        .orElse(false);
+            } else {
+                // Vers ranges can only be validated in-memory. In-memory evaluation has the following downsides:
+                //  - Query can't short-circuit on first match. Because multiple components can match for conditions
+                //    other than the vers range, we have to check all of them. This means more recursive calls in the
+                //    query, and more data fetched from the database.
+                //  - The query has to return multiple values, instead of a single boolean, causing additional latency.
+
+                final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
+                        -- Determine the project the given leaf component is part of.
+                        WITH RECURSIVE
+                        "CTE_PROJECT" AS (
+                          SELECT
+                            "PROJECT_ID" AS "ID"
+                          FROM
+                            "COMPONENT"
+                          WHERE
+                            "UUID" = :leafComponentUuid
+                        ),
+                        -- Identify the IDs of all components in the project that
+                        -- match the desired criteria.
+                        "CTE_MATCHES" AS (
+                          SELECT
+                            "ID"
+                          FROM
+                            "COMPONENT"
+                          WHERE
+                            "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                            -- Do not consider other leaf nodes (typically the majority of components).
+                            -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                            AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                            AND ${filters}
+                        ),
+                        "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "VERSION", "FOUND", "PATH") AS (
+                          SELECT
+                            "C"."UUID"                                       AS "UUID",
+                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                            "C"."VERSION"                                    AS "VERSION",
+                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                            ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                          FROM
+                            "COMPONENT" AS "C"
+                          WHERE
+                            -- Short-circuit the recursive query if we don't have any matches at all.
+                            EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                            -- Otherwise, find components of which the given leaf component is a direct dependency.
+                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                          UNION ALL
+                          SELECT
+                            "C"."UUID"                                       AS "UUID",
+                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                            "C"."VERSION"                                    AS "VERSION",
+                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                            ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                          FROM
+                            "COMPONENT" AS "C"
+                          INNER JOIN
+                            "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                          WHERE
+                            -- Ensure we haven't seen this component before, to prevent cycles.
+                            NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                            -- Otherwise, the previous component must appear in the current direct dependencies.
+                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        )
+                        SELECT "VERSION" FROM "CTE_DEPENDENCIES" WHERE "FOUND";
+                        """);
+
+                final List<String> versions = query
+                        .define("filters", String.join(" AND ", queryFilters))
+                        .bindMap(queryParams)
+                        .mapTo(String.class)
+                        .list();
+                for (final String version : versions) {
+                    if (vers.contains(version)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
     }
 
