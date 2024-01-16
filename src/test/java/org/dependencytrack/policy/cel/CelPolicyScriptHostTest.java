@@ -88,7 +88,7 @@ public class CelPolicyScriptHostTest {
                 Failed to check script: ERROR: <input>:1:48: vers string does not contain a versioning scheme separator
                  | project.name == "foo" && project.matches_range("vers:generic<1")
                  | ...............................................^
-                ERROR: <input>:2:37: Querying by version range without providing an additional field to filter on is not allowed. Possible fields to filter on are: [classifier, cpe, group, name, purl, swid_tag_id]
+                ERROR: <input>:2:37: Querying by version range without providing an additional field to filter on is not allowed. Possible fields to filter on are: [cpe, group, name, purl, swid_tag_id]
                  |   && project.depends_on(v1.Component{
                  | ....................................^
                 ERROR: <input>:3:17: Invalid range vers:maven/>0|>1: A > or >= comparator must only be followed by a < or <= comparator, but got: >

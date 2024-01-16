@@ -16,7 +16,7 @@ import java.util.Set;
 class CelPolicyScriptVersValidationVisitor {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptVersValidationVisitor.class);
-    private static final Set<String> COMPONENT_FILTER_FIELDS = Set.of("group", "name", "classifier", "cpe", "purl", "swid_tag_id");
+    private static final Set<String> COMPONENT_FILTER_FIELDS = Set.of("group", "name", "cpe", "purl", "swid_tag_id");
     private static final List<String> COMPONENT_FILTER_FIELDS_SORTED = COMPONENT_FILTER_FIELDS.stream().sorted().toList();
 
     record VersValidationError(RuntimeException exception, Integer position) {
