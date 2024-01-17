@@ -2395,4 +2395,19 @@
                 referencedTableName="VULNERABILITY_POLICY"
                 referencedColumnNames="ID"/>
     </changeSet>
+
+    <changeSet id="v5.3.0-9" author="VithikaS">
+        <createTable tableName="VULNERABILITY_POLICY_BUNDLE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITY_POLICY_BUNDLE_PK"/>
+            </column>
+            <column name="URL" type="VARCHAR(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HASH" type="VARCHAR(255)"/>
+            <column name="LAST_SUCCESSFUL_SYNC" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="CREATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

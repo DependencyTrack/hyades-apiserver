@@ -83,6 +83,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityPolicy;
+import org.dependencytrack.model.VulnerabilityPolicyBundle;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
@@ -1968,5 +1969,11 @@ public class QueryManager extends AlpineQueryManager {
 
     public VulnerabilityPolicy getVulnerabilityPolicyByName(String vulnerabilityPolicyName) {
         return getVulnerabilityPolicyQueryManager().getVulnerabilityPolicyByName(vulnerabilityPolicyName);
+    }
+
+    public VulnerabilityPolicyBundle getVulnerabilityPolicyBundle() {
+        final Query<VulnerabilityPolicyBundle> query = pm.newQuery(VulnerabilityPolicyBundle.class);
+        query.setRange(0, 1);
+        return singleResult(query.execute());
     }
 }
