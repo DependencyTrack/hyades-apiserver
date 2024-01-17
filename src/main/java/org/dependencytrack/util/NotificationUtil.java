@@ -134,36 +134,26 @@ public final class NotificationUtil {
     }
 
     public static String generateTitle(AnalysisState analysisState, boolean isSuppressed, boolean analysisStateChange, boolean suppressionChange) {
-        String title = null;
         if (analysisStateChange) {
-            switch (analysisState) {
-                case EXPLOITABLE:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
-                    break;
-                case IN_TRIAGE:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
-                    break;
-                case NOT_AFFECTED:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
-                    break;
-                case FALSE_POSITIVE:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
-                    break;
-                case NOT_SET:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
-                    break;
-                case RESOLVED:
-                    title = NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
-                    break;
-            }
+            return switch (analysisState) {
+                case EXPLOITABLE -> NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE;
+                case IN_TRIAGE -> NotificationConstants.Title.ANALYSIS_DECISION_IN_TRIAGE;
+                case NOT_AFFECTED -> NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED;
+                case FALSE_POSITIVE -> NotificationConstants.Title.ANALYSIS_DECISION_FALSE_POSITIVE;
+                case NOT_SET -> NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET;
+                case RESOLVED -> NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED;
+            };
         } else if (suppressionChange) {
             if (isSuppressed) {
-                title = NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED;
-            } else {
-                title = NotificationConstants.Title.ANALYSIS_DECISION_UNSUPPRESSED;
+                return NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED;
             }
+
+            return NotificationConstants.Title.ANALYSIS_DECISION_UNSUPPRESSED;
         }
-        return title;
+
+        throw new IllegalArgumentException("""
+                A title for %s notifications can only be generated if either the analysis state,
+                or the suppression state has changed.""".formatted(NotificationGroup.PROJECT_AUDIT_CHANGE));
     }
 
     public static void analyzeNotificationCriteria(final QueryManager qm, ViolationAnalysis violationAnalysis,
