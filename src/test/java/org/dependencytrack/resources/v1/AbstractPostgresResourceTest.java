@@ -2,6 +2,8 @@ package org.dependencytrack.resources.v1;
 
 import alpine.Config;
 import alpine.model.Permission;
+import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
@@ -11,11 +13,11 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.migration.MigrationInitializer;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -37,7 +39,7 @@ public class AbstractPostgresResourceTest extends ResourceTest {
         Config.enableUnitTests();
     }
 
-    @BeforeEach
+    @Before
     public void setUp() throws Exception {
         super.setUp();
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
@@ -63,9 +65,15 @@ public class AbstractPostgresResourceTest extends ResourceTest {
 
         qm = new QueryManager();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
+
+        testUser = qm.createManagedUser("testuser", String.valueOf(PasswordService.createHash("testuser".toCharArray())));
+        this.jwt = new JsonWebToken().createToken(testUser);
+        team = qm.createTeam("Test Users", true);
+        qm.addUserToTeam(testUser, team);
+        this.apiKey = team.getApiKeys().get(0).getKey();
     }
 
-    @AfterEach
+    @After
     public void tearDown() throws Exception {
         super.tearDown();
         if (!qm.getPersistenceManager().isClosed()

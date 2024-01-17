@@ -1,10 +1,22 @@
 package org.dependencytrack.model;
 
 public enum WorkflowStatus {
-    PENDING,
-    TIMED_OUT,
-    COMPLETED,
-    FAILED,
-    CANCELLED,
-    NOT_APPLICABLE
+
+    PENDING(false),
+    TIMED_OUT(false),
+    COMPLETED(true),
+    FAILED(true),
+    CANCELLED(true),
+    NOT_APPLICABLE(true);
+
+    private final boolean terminal;
+
+    WorkflowStatus(final boolean terminal) {
+        this.terminal = terminal;
+    }
+
+    public boolean isTerminal() {
+        return terminal;
+    }
+
 }
