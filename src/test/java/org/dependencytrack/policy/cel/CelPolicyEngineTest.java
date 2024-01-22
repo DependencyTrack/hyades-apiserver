@@ -834,8 +834,43 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
-        qm.persist(project);
         componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncProjectDependsOnComponentWithRegexAndVers() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.depends_on(v1.Component{name: "re:^acme-lib-.*$", version: "vers:generic/>1|<2.0"})
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("1.3");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        componentB.setVersion("2.1.1");
+        qm.persist(componentB);
+
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
         qm.persist(componentA);
 
         final var policyEngine = new CelPolicyEngine();
@@ -867,8 +902,8 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
-        qm.persist(project);
         componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
         qm.persist(componentA);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
@@ -899,8 +934,8 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
-        qm.persist(project);
         componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
         qm.persist(componentA);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
@@ -935,14 +970,531 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         qm.persist(componentB);
 
         project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
-        qm.persist(project);
         componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
         qm.persist(componentA);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
 
         assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithSinglePath() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("acme-lib-c");
+        qm.persist(componentC);
+
+        final var componentD = new Component();
+        componentD.setProject(project);
+        componentD.setName("acme-lib-d");
+        qm.persist(componentD);
+
+        //  /-> A -> C
+        // *
+        //  \-> B -> D
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentA).toJSON(),
+                new ComponentIdentity(componentB).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        componentB.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentD).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+        qm.persist(componentB);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through A?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through B?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-b"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).hasSize(1);
+
+        // Is component introduced exclusively through C?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-c"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through D?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-d"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithMultiplePaths() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("acme-lib-c");
+        qm.persist(componentC);
+
+        final var componentD = new Component();
+        componentD.setProject(project);
+        componentD.setName("acme-lib-d");
+        qm.persist(componentD);
+
+        //  /-> A -------\
+        // *              > C
+        //  \-> B -> D --/
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentA).toJSON(),
+                new ComponentIdentity(componentB).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        componentB.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentD).toJSON()));
+        componentD.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+        qm.persist(componentB);
+        qm.persist(componentD);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through A?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through B?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-b"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).hasSize(1);
+
+        // Is component introduced exclusively through C?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-c"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through D?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-D"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithMultiplePaths2() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("acme-lib-c");
+        qm.persist(componentC);
+
+        final var componentD = new Component();
+        componentD.setProject(project);
+        componentD.setName("acme-lib-d");
+        qm.persist(componentD);
+
+        //  /-> A --\
+        // *         > C -> D
+        //  \-> B --/
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentA).toJSON(),
+                new ComponentIdentity(componentB).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        componentB.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        componentC.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentD).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+        qm.persist(componentB);
+        qm.persist(componentC);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through A?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through B?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-b"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+
+        // Is component introduced exclusively through C?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-c"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentD)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithMultiplePaths3() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentSpringBootStarter = new Component();
+        componentSpringBootStarter.setProject(project);
+        componentSpringBootStarter.setName("spring-boot-starter");
+        qm.persist(componentSpringBootStarter);
+
+        final var componentSpringCore = new Component();
+        componentSpringCore.setProject(project);
+        componentSpringCore.setName("spring-core");
+        qm.persist(componentSpringCore);
+
+        final var componentJacksonDataformatYaml = new Component();
+        componentJacksonDataformatYaml.setProject(project);
+        componentJacksonDataformatYaml.setName("jackson-dataformat-yaml");
+        qm.persist(componentJacksonDataformatYaml);
+
+        final var componentSnakeYaml = new Component();
+        componentSnakeYaml.setProject(project);
+        componentSnakeYaml.setName("snakeyaml");
+        qm.persist(componentSnakeYaml);
+
+        //    /------------------------------------------\
+        //   /                                           v
+        //  /-> spring-boot-starter -> spring-core -> snakeyaml
+        // *                                             ^
+        //  \-> jackson-dataformat-yaml ----------------/
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentSpringBootStarter).toJSON(),
+                new ComponentIdentity(componentSnakeYaml).toJSON())
+        );
+        componentSpringBootStarter.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringCore).toJSON()));
+        componentSpringCore.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSnakeYaml).toJSON()));
+        componentJacksonDataformatYaml.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSnakeYaml).toJSON()));
+        qm.persist(project);
+        qm.persist(componentSpringBootStarter);
+        qm.persist(componentSpringCore);
+        qm.persist(componentJacksonDataformatYaml);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through spring-boot-starter?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "spring-boot-starter"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentJacksonDataformatYaml)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSnakeYaml)).isEmpty();
+
+        // Is component introduced exclusively through spring-core?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-core"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentJacksonDataformatYaml)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSnakeYaml)).isEmpty();
+
+        // Is component introduced exclusively through jackson-dataformat-yaml?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "jackson-dataformat-yaml"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentJacksonDataformatYaml)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSnakeYaml)).isEmpty();
+
+        // Is component introduced exclusively through snakeyaml?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "snakeyaml"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentJacksonDataformatYaml)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSnakeYaml)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithMultiplePaths4() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentSpringBootStarter = new Component();
+        componentSpringBootStarter.setProject(project);
+        componentSpringBootStarter.setName("spring-boot-starter");
+        qm.persist(componentSpringBootStarter);
+
+        final var componentSpringBoot = new Component();
+        componentSpringBoot.setProject(project);
+        componentSpringBoot.setName("spring-boot");
+        qm.persist(componentSpringBoot);
+
+        final var componentSpringContext = new Component();
+        componentSpringContext.setProject(project);
+        componentSpringContext.setName("spring-context");
+        qm.persist(componentSpringContext);
+
+        final var componentSpringAop = new Component();
+        componentSpringAop.setProject(project);
+        componentSpringAop.setName("spring-aop");
+        qm.persist(componentSpringAop);
+
+        final var componentSpringBeans = new Component();
+        componentSpringBeans.setProject(project);
+        componentSpringBeans.setName("spring-beans");
+        qm.persist(componentSpringBeans);
+
+        final var componentSpringExpression = new Component();
+        componentSpringExpression.setProject(project);
+        componentSpringExpression.setName("spring-expression");
+        qm.persist(componentSpringExpression);
+
+        final var componentSpringCore = new Component();
+        componentSpringCore.setProject(project);
+        componentSpringCore.setName("spring-core");
+        qm.persist(componentSpringCore);
+        //                                                     /-------------------------------------------\
+        //                                                    /                                            v
+        //                                                   /               /-----------------------------\
+        //                                                  /               /                              v
+        // * -> spring-boot-starter -> spring-boot -> spring-context -> spring-aop -> spring-beans -> spring-core
+        //                                   \              \                                               ^
+        //                                    \              \---------> spring-expression ----------------/
+        //                                     \                                                            ^
+        //                                      \----------------------------------------------------------/
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringBootStarter).toJSON()));
+        componentSpringBootStarter.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringBoot).toJSON()));
+        componentSpringBoot.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentSpringCore).toJSON(),
+                new ComponentIdentity(componentSpringContext).toJSON())
+        );
+        componentSpringContext.setDirectDependencies("[%s, %s, %s]".formatted(
+                new ComponentIdentity(componentSpringAop).toJSON(),
+                new ComponentIdentity(componentSpringExpression).toJSON(),
+                new ComponentIdentity(componentSpringCore).toJSON()
+        ));
+        componentSpringAop.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentSpringCore).toJSON(),
+                new ComponentIdentity(componentSpringBeans).toJSON()
+        ));
+        componentSpringBeans.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringCore).toJSON()));
+        componentSpringExpression.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringCore).toJSON()));
+        qm.persist(project);
+        qm.persist(componentSpringBootStarter);
+        qm.persist(componentSpringBoot);
+        qm.persist(componentSpringContext);
+        qm.persist(componentSpringAop);
+        qm.persist(componentSpringBeans);
+        qm.persist(componentSpringExpression);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through spring-boot-starter?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "spring-boot-starter"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).hasSize(1);
+
+        // Is component introduced exclusively through spring-boot?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-boot"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).hasSize(1);
+
+        // Is component introduced exclusively through spring-context?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-context"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+
+        // Is component introduced exclusively through spring-aop?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-aop"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+
+        // Is component introduced exclusively through spring-beans?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-beans"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+
+        // Is component introduced exclusively through spring-expression?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-expression"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+
+        // Is component introduced exclusively through spring-core?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "spring-core"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
+
+        // Is component introduced exclusively through components with names matching a regular expression?
+        condition.setValue("""
+                has(component.name) && component.is_exclusive_dependency_of(v1.Component{name: "re:^spring-.*$"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).hasSize(1);
     }
 
     @Test
