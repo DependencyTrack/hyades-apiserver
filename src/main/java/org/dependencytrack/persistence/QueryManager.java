@@ -82,7 +82,6 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
-import org.dependencytrack.model.VulnerabilityPolicy;
 import org.dependencytrack.model.VulnerabilityPolicyBundle;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
@@ -151,7 +150,6 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityMetaQueryManager integrityMetaQueryManager;
 
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
-    private VulnerabilityPolicyQueryManager vulnerabilityPolicyQueryManager;
 
     private TagQueryManager tagQueryManager;
 
@@ -409,13 +407,6 @@ public class QueryManager extends AlpineQueryManager {
             integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
         }
         return integrityAnalysisQueryManager;
-    }
-
-    private VulnerabilityPolicyQueryManager getVulnerabilityPolicyQueryManager() {
-        if (vulnerabilityPolicyQueryManager == null) {
-            vulnerabilityPolicyQueryManager = (request == null) ? new VulnerabilityPolicyQueryManager(getPersistenceManager()) : new VulnerabilityPolicyQueryManager(getPersistenceManager(), request);
-        }
-        return vulnerabilityPolicyQueryManager;
     }
 
     /**
@@ -1941,34 +1932,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Component> getComponentsByPurl(String purl) {
         return getComponentQueryManager().getComponentsByPurl(purl);
-    }
-
-    public int createVulnerabilityPolicy(VulnerabilityPolicy vulnerabilityPolicy, Connection connection) {
-        return getVulnerabilityPolicyQueryManager().createVulnerabilityPolicy(vulnerabilityPolicy, connection);
-    }
-
-    public List<VulnerabilityPolicy> getAllVulnerabilityPolicies() {
-        return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies();
-    }
-
-    public List<VulnerabilityPolicy> getAllValidVulnerabilityPolicies() {
-        return getVulnerabilityPolicyQueryManager().getAllValidVulnerabilityPolicies();
-    }
-
-    public PaginatedResult getAllVulnerabilityPolicies(String name, Date validFrom, Date validUntil) {
-        return getVulnerabilityPolicyQueryManager().getAllVulnerabilityPolicies(name, validFrom, validUntil);
-    }
-
-    public int deleteVulnerabilityPolicyByName(String vulnerabilityPolicyName, Connection connection) {
-        return getVulnerabilityPolicyQueryManager().deleteVulnerabilityPolicyByName(vulnerabilityPolicyName,connection);
-    }
-
-    public int updateVulnerablePolicyByName(VulnerabilityPolicy vulnerabilityPolicy, Connection connection) {
-        return getVulnerabilityPolicyQueryManager().updateVulnerabilityPolicyByName(vulnerabilityPolicy, connection);
-    }
-
-    public VulnerabilityPolicy getVulnerabilityPolicyByName(String vulnerabilityPolicyName) {
-        return getVulnerabilityPolicyQueryManager().getVulnerabilityPolicyByName(vulnerabilityPolicyName);
     }
 
     public VulnerabilityPolicyBundle getVulnerabilityPolicyBundle() {
