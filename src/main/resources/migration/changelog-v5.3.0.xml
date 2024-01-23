@@ -2410,4 +2410,10 @@
             <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
         </createTable>
     </changeSet>
+
+    <changeSet id="v5.3.0-10" author="sahibamittal">
+        <addColumn tableName="NOTIFICATIONRULE">
+            <column name="LOG_SUCCESSFUL_PUBLISH" type="BOOLEAN"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
