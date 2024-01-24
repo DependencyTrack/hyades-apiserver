@@ -66,10 +66,10 @@ public class RepositoryResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(14), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assert.assertEquals(String.valueOf(15), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(14, json.size());
+        Assert.assertEquals(15, json.size());
         for (int i = 0; i < json.size(); i++) {
             Assert.assertNotNull(json.getJsonObject(i).getString("type"));
             Assert.assertNotNull(json.getJsonObject(i).getString("identifier"));
@@ -194,17 +194,17 @@ public class RepositoryResourceTest extends ResourceTest {
 
         response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(15), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assert.assertEquals(String.valueOf(16), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(15, json.size());
-        Assert.assertEquals("MAVEN", json.getJsonObject(11).getString("type"));
-        Assert.assertEquals("test", json.getJsonObject(11).getString("identifier"));
-        Assert.assertEquals("www.foobar.com", json.getJsonObject(11).getString("url"));
-        Assert.assertTrue(json.getJsonObject(11).getInt("resolutionOrder") > 0);
-        Assert.assertTrue(json.getJsonObject(11).getBoolean("authenticationRequired"));
-        Assert.assertEquals("testuser", json.getJsonObject(11).getString("username"));
-        Assert.assertTrue(json.getJsonObject(11).getBoolean("enabled"));
+        Assert.assertEquals(16, json.size());
+        Assert.assertEquals("MAVEN", json.getJsonObject(12).getString("type"));
+        Assert.assertEquals("test", json.getJsonObject(12).getString("identifier"));
+        Assert.assertEquals("www.foobar.com", json.getJsonObject(12).getString("url"));
+        Assert.assertTrue(json.getJsonObject(12).getInt("resolutionOrder") > 0);
+        Assert.assertTrue(json.getJsonObject(12).getBoolean("authenticationRequired"));
+        Assert.assertEquals("testuser", json.getJsonObject(12).getString("username"));
+        Assert.assertTrue(json.getJsonObject(12).getBoolean("enabled"));
     }
 
     @Test
@@ -223,16 +223,16 @@ public class RepositoryResourceTest extends ResourceTest {
 
         response = target(V1_REPOSITORY).request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(15), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assert.assertEquals(String.valueOf(16), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(15, json.size());
-        Assert.assertEquals("MAVEN", json.getJsonObject(11).getString("type"));
-        Assert.assertEquals("test", json.getJsonObject(11).getString("identifier"));
-        Assert.assertEquals("www.foobar.com", json.getJsonObject(11).getString("url"));
-        Assert.assertTrue(json.getJsonObject(11).getInt("resolutionOrder") > 0);
-        Assert.assertFalse(json.getJsonObject(11).getBoolean("authenticationRequired"));
-        Assert.assertTrue(json.getJsonObject(11).getBoolean("enabled"));
+        Assert.assertEquals(16, json.size());
+        Assert.assertEquals("MAVEN", json.getJsonObject(12).getString("type"));
+        Assert.assertEquals("test", json.getJsonObject(12).getString("identifier"));
+        Assert.assertEquals("www.foobar.com", json.getJsonObject(12).getString("url"));
+        Assert.assertTrue(json.getJsonObject(12).getInt("resolutionOrder") > 0);
+        Assert.assertFalse(json.getJsonObject(12).getBoolean("authenticationRequired"));
+        Assert.assertTrue(json.getJsonObject(12).getBoolean("enabled"));
 
     }
 
