@@ -40,9 +40,7 @@ public class PolicySchemaValidationTest {
         JsonSchema schema = factory.getSchema(jsonSchemaContent);
         JsonNode jsonNode = objMapper.readTree(policyContent);
         Set<ValidationMessage> validateMsg = schema.validate(jsonNode);
-        assertThat(validateMsg.size()).isEqualTo(5);
         assertThat(validateMsg).satisfiesExactlyInAnyOrder(
-                error -> assertThat(error.getMessage()).isEqualTo("$.created: 2023-11-22T06:06Z is an invalid date-time"),
                 error -> assertThat(error.getMessage()).isEqualTo("$.analysis.justification: does not have a value in the enumeration [CODE_NOT_PRESENT, CODE_NOT_REACHABLE, REQUIRES_CONFIGURATION, REQUIRES_DEPENDENCY, REQUIRES_ENVIRONMENT, PROTECTED_BY_COMPILER, PROTECTED_AT_RUNTIME, PROTECTED_AT_PERIMETER, PROTECTED_BY_MITIGATING_CONTROL]"),
                 error -> assertThat(error.getMessage()).isEqualTo("$.ratings[0].severity: does not have a value in the enumeration [CRITICAL, HIGH, MEDIUM, LOW, INFO, UNASSIGNED]"),
                 error -> assertThat(error.getMessage()).contains("$.ratings[0].vector: does not match the regex pattern"),

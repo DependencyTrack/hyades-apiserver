@@ -1,5 +1,7 @@
 package org.dependencytrack.persistence.jdbi;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.datanucleus.store.connection.ConnectionManagerImpl;
 import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
@@ -7,6 +9,8 @@ import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
+import org.jdbi.v3.jackson2.Jackson2Config;
+import org.jdbi.v3.jackson2.Jackson2Plugin;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 
@@ -89,11 +93,7 @@ public class JdbiFactory {
                     Use the global instance instead if combining JDBI with JDO transactions is not needed.""");
         }
 
-        return Jdbi
-                .create(new JdoConnectionFactory(pm))
-                .installPlugin(new SqlObjectPlugin())
-                .installPlugin(new PostgresPlugin())
-                .setTemplateEngine(FreemarkerEngine.instance());
+        return prepare(Jdbi.create(new JdoConnectionFactory(pm)));
     }
 
     private record GlobalInstanceHolder(Jdbi jdbi, PersistenceManagerFactory pmf) {
@@ -102,21 +102,33 @@ public class JdbiFactory {
     private static Jdbi createFromPmf(final PersistenceManagerFactory pmf) {
         try {
             if (pmf instanceof final JDOPersistenceManagerFactory jdoPmf
-                    && jdoPmf.getNucleusContext().getStoreManager() instanceof final RDBMSStoreManager storeManager
-                    && storeManager.getConnectionManager() instanceof final ConnectionManagerImpl connectionManager
-                    && readField(connectionManager, "primaryConnectionFactory", true) instanceof ConnectionFactoryImpl connectionFactory
-                    && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
-                return Jdbi
-                        .create(dataSource)
-                        .installPlugin(new SqlObjectPlugin())
-                        .installPlugin(new PostgresPlugin())
-                        .setTemplateEngine(FreemarkerEngine.instance());
+                && jdoPmf.getNucleusContext().getStoreManager() instanceof final RDBMSStoreManager storeManager
+                && storeManager.getConnectionManager() instanceof final ConnectionManagerImpl connectionManager
+                && readField(connectionManager, "primaryConnectionFactory", true) instanceof ConnectionFactoryImpl connectionFactory
+                && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
+                return prepare(Jdbi.create(dataSource));
             }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
         }
 
         throw new IllegalStateException("Failed to access primary datasource of PMF");
+    }
+
+    private static Jdbi prepare(final Jdbi jdbi) {
+        final Jdbi preparedJdbi = jdbi
+                .installPlugin(new SqlObjectPlugin())
+                .installPlugin(new PostgresPlugin())
+                .installPlugin(new Jackson2Plugin())
+                .setTemplateEngine(FreemarkerEngine.instance());
+
+        preparedJdbi.getConfig(Jackson2Config.class).setMapper(createObjectMapper());
+        return preparedJdbi;
+    }
+
+    private static ObjectMapper createObjectMapper() {
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule());
     }
 
 }
