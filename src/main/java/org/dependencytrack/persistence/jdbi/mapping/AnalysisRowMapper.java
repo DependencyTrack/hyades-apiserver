@@ -5,6 +5,7 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -35,6 +36,13 @@ public class AnalysisRowMapper implements RowMapper<Analysis> {
         maybeSet(rs, "RESPONSE", ResultSet::getString, value -> analysis.setAnalysisResponse(AnalysisResponse.valueOf(value)));
         maybeSet(rs, "DETAILS", ResultSet::getString, analysis::setAnalysisDetails);
         maybeSet(rs, "SUPPRESSED", ResultSet::getBoolean, analysis::setSuppressed);
+        maybeSet(rs, "SEVERITY", ResultSet::getString, value -> analysis.setSeverity(Severity.valueOf(value)));
+        maybeSet(rs, "CVSSV2VECTOR", ResultSet::getString, analysis::setCvssV2Vector);
+        maybeSet(rs, "CVSSV2SCORE", ResultSet::getBigDecimal, analysis::setCvssV2Score);
+        maybeSet(rs, "CVSSV3VECTOR", ResultSet::getString, analysis::setCvssV3Vector);
+        maybeSet(rs, "CVSSV3SCORE", ResultSet::getBigDecimal, analysis::setCvssV3Score);
+        maybeSet(rs, "OWASPVECTOR", ResultSet::getString, analysis::setOwaspVector);
+        maybeSet(rs, "OWASPSCORE", ResultSet::getBigDecimal, analysis::setOwaspScore);
         return analysis;
     }
 
