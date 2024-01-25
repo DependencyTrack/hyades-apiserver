@@ -1,17 +1,14 @@
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.policy.PolicyEngine;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 
 import java.util.UUID;
@@ -27,15 +24,10 @@ public class PolicyEvaluationTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 
-    private final boolean celPolicyEngineEnabled;
 
     public PolicyEvaluationTask() {
-        this(Config.getInstance().getPropertyAsBoolean(ConfigKey.CEL_POLICY_ENGINE_ENABLED));
     }
 
-    PolicyEvaluationTask(final boolean celPolicyEngineEnabled) {
-        this.celPolicyEngineEnabled = celPolicyEngineEnabled;
-    }
 
     @Override
     public void inform(final Event e) {
@@ -67,19 +59,12 @@ public class PolicyEvaluationTask implements Subscriber {
     }
 
     private void evaluateProject(final UUID uuid) {
-        if (celPolicyEngineEnabled) {
-            new CelPolicyEngine().evaluateProject(uuid);
-        } else {
-            new PolicyEngine().evaluateProject(uuid);
-        }
+        new CelPolicyEngine().evaluateProject(uuid);
     }
 
     private void evaluateComponent(final UUID uuid) {
-        if (celPolicyEngineEnabled) {
-            new CelPolicyEngine().evaluateComponent(uuid);
-        } else {
-            new PolicyEngine().evaluate(uuid);
-        }
+        new CelPolicyEngine().evaluateComponent(uuid);
+
     }
 
 }
