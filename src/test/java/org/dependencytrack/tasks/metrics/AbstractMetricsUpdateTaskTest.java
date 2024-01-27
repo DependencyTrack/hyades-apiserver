@@ -18,81 +18,36 @@
  */
 package org.dependencytrack.tasks.metrics;
 
-import alpine.Config;
-import alpine.server.persistence.PersistenceManagerFactory;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.dependencytrack.TestUtil;
+import org.dependencytrack.AbstractPostgresEnabledTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-import javax.jdo.JDOHelper;
 import java.util.Date;
 import java.util.UUID;
 
-abstract class AbstractMetricsUpdateTaskTest {
+abstract class AbstractMetricsUpdateTaskTest extends AbstractPostgresEnabledTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
-    protected final String postgresImageTag;
-    protected PostgreSQLContainer<?> postgresContainer;
-    protected QueryManager qm;
-
-    protected AbstractMetricsUpdateTaskTest(final String postgresImageTag) {
-        this.postgresImageTag = postgresImageTag;
-    }
-
-    @BeforeClass
-    public static void init() {
-        Config.enableUnitTests();
-    }
-
     @Before
     public void setUp() throws Exception {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse(postgresImageTag))
-                .withUsername("dtrack")
-                .withPassword("dtrack")
-                .withDatabaseName("dtrack");
-        postgresContainer.start();
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        MigrationInitializer.runMigration(dataSource, /* silent */ true);
-
-        final var dnProps = TestUtil.getDatanucleusProperties(postgresContainer.getJdbcUrl(),
-                postgresContainer.getDriverClassName(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
-
-        qm = new QueryManager();
+        super.setUp();
 
         environmentVariables.set("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS", "2000");
     }
 
     @After
     public void tearDown() {
-        PersistenceManagerFactory.tearDown();
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
         environmentVariables.clear("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS");
+
+        super.tearDown();
     }
 
     protected PolicyViolation createPolicyViolation(final Component component, final Policy.ViolationState violationState, final PolicyViolation.Type type) {

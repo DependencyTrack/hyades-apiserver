@@ -10,10 +10,10 @@ CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
   "low" INT,
   "unassigned" INT
 ) RETURNS NUMERIC
-  LANGUAGE "plpgsql"
+  LANGUAGE "sql"
+  PARALLEL SAFE
+  IMMUTABLE
 AS
 $$
-BEGIN
-  RETURN ("critical" * 10) + ("high" * 5) + ("medium" * 3) + ("low" * 1) + ("unassigned" * 5);
-END;
+SELECT (("critical" * 10) + ("high" * 5) + ("medium" * 3) + ("low" * 1) + ("unassigned" * 5))::NUMERIC;
 $$;

@@ -31,13 +31,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -47,20 +42,7 @@ import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
-@RunWith(Parameterized.class)
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
-
-    @Parameters
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {"postgres:11-alpine"},
-                {"postgres:15-alpine"}
-        });
-    }
-
-    public ProjectMetricsUpdateTaskTest(final String postgresImageTag) {
-        super(postgresImageTag);
-    }
 
     @Test
     public void testUpdateMetricsEmpty() {

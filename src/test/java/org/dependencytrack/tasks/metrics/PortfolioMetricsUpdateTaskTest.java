@@ -38,33 +38,15 @@ import org.dependencytrack.tasks.CallbackTask;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @NotThreadSafe
-@RunWith(Parameterized.class)
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
-
-    @Parameters
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {"postgres:11-alpine"},
-                {"postgres:15-alpine"}
-        });
-    }
-
-    public PortfolioMetricsUpdateTaskTest(final String postgresImageTag) {
-        super(postgresImageTag);
-    }
 
     @BeforeClass
     public static void setUpClass() {
