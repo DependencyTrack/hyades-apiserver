@@ -6,6 +6,7 @@ AS
 $$
 DECLARE
   "v_project_id"                              BIGINT;
+  "v_component_uuid"                          TEXT;
   "v_components"                              INT; -- Total number of components in the project
   "v_vulnerable_components"                   INT; -- Number of vulnerable components in the project
   "v_vulnerabilities"                         INT; -- Total number of vulnerabilities
@@ -40,6 +41,11 @@ BEGIN
   IF "v_project_id" IS NULL THEN
     RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
   END IF;
+
+  FOR "v_component_uuid" IN SELECT "UUID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id"
+  LOOP
+    CALL "UPDATE_COMPONENT_METRICS"("v_component_uuid");
+  END LOOP;
 
   -- Aggregate over all most recent DEPENDENCYMETRICS.
   -- NOTE: SUM returns NULL when no rows match the query, but COUNT returns 0.
