@@ -180,4 +180,11 @@ public class NotificationRuleTest {
         Assert.assertEquals(team, rule.getTeams().get(0));
         Assert.assertEquals(oidcUser, rule.getTeams().get(0).getOidcUsers().get(0));
     }
+
+    @Test
+    public void testLogSuccessfulPublish() {
+        NotificationRule rule = new NotificationRule();
+        rule.setLogSuccessfulPublish(true);
+        Assert.assertTrue(rule.isLogSuccessfulPublish());
+    }
 }
