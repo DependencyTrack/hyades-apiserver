@@ -506,8 +506,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
      */
     public Component createComponent(Component component, boolean commitIndex) {
         final Component result = persist(component);
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -579,8 +577,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         final Component result = persist(component);
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        // commitSearchIndex(commitIndex, Component.class);
         return result;
     }
 
@@ -640,9 +636,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             if (!isJoiningExistingTrx) {
                 trx.commit();
             }
-
-            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, detachedComponent));
-            // commitSearchIndex(commitIndex, Component.class);
         } finally {
             if (!isJoiningExistingTrx && trx.isActive()) {
                 trx.rollback();

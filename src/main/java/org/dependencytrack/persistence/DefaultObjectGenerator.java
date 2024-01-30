@@ -96,7 +96,6 @@ public class DefaultObjectGenerator implements ServletContextListener {
                 LOGGER.error("An error occurred during the parsing SPDX license definitions");
                 LOGGER.error(e.getMessage());
             }
-            // qm.commitSearchIndex(License.class);
         }
     }
 

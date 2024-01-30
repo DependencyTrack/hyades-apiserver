@@ -245,7 +245,6 @@ public class ServiceResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
                 }
                 qm.recursivelyDelete(service, false);
-                // qm.commitSearchIndex(ServiceComponent.class);
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();

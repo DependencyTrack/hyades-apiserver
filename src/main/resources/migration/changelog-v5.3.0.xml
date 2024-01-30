@@ -2440,4 +2440,8 @@
                 CHECK ("STATUS"::TEXT = ANY(ARRAY['CANCELLED', 'COMPLETED', 'FAILED', 'NOT_APPLICABLE', 'PENDING', 'TIMED_OUT']));
         </sql>
     </changeSet>
+
+    <changeSet id="v5.3.0-12" author="sahibamittal">
+        <dropTable tableName="CPE"/>
+    </changeSet>
 </databaseChangeLog>
