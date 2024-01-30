@@ -32,26 +32,13 @@ import java.util.UUID;
 public class ProjectMetricsUpdateEvent extends AbstractChainableEvent {
 
     private final UUID uuid;
-    private final boolean forceRefresh;
 
     public ProjectMetricsUpdateEvent(final UUID uuid) {
-        this(uuid, true);
-    }
-
-    /**
-     * @param uuid {@link UUID} of the {@link Project} to update metrics for
-     */
-    public ProjectMetricsUpdateEvent(final UUID uuid, final boolean forceRefresh) {
         this.uuid = uuid;
-        this.forceRefresh = forceRefresh;
     }
 
     public UUID getUuid() {
         return uuid;
-    }
-
-    public boolean isForceRefresh() {
-        return forceRefresh;
     }
 
 }
