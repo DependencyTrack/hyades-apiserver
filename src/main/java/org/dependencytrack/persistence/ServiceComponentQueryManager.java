@@ -103,8 +103,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
      */
     public ServiceComponent createServiceComponent(ServiceComponent service, boolean commitIndex) {
         final ServiceComponent result = persist(service);
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.CREATE, pm.detachCopy(result)));
-        // commitSearchIndex(commitIndex, ServiceComponent.class);
         return result;
     }
 
@@ -226,8 +224,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
         service.setGroup(transientServiceComponent.getGroup());
         service.setDescription(transientServiceComponent.getDescription());
         final ServiceComponent result = persist(service);
-        // Event.dispatch(new IndexEvent(IndexEvent.Action.UPDATE, pm.detachCopy(result)));
-        // commitSearchIndex(commitIndex, ServiceComponent.class);
         return result;
     }
 
@@ -281,8 +277,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
                 trx.commit();
             }
 
-            // Event.dispatch(new IndexEvent(IndexEvent.Action.DELETE, detachedService));
-            // commitSearchIndex(commitIndex, ServiceComponent.class);
         } finally {
             if (!isJoiningExistingTrx && trx.isActive()) {
                 trx.rollback();
