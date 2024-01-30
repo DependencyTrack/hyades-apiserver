@@ -232,8 +232,17 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                 LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
                 LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
                 LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
-                WHERE "A0"."PROJECT_ID" = ?
+                WHERE "A0"."PROJECT_ID" = :projectId
                 """;
+
+        final var queryParams = new HashMap<String, Object>();
+        queryParams.put("projectId", project.getId());
+        if (filter != null) {
+            queryString += """
+                    AND LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    """;
+            queryParams.put("nameFilter", filter);
+        }
 
         if (onlyOutdated) {
             // Components are considered outdated when metadata does exists, but the version is different than latestVersion
@@ -319,12 +328,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
 
         Query<?> query = pm.newQuery(Query.SQL, queryString);
-        query.setParameters(project.getId());
+        query.setNamedParameters(queryParams);
         List<ComponentProjection> resultSet;
         try {
             resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
-        }
-        finally {
+        } finally {
             query.closeAll();
         }
         for (final var result : resultSet) {

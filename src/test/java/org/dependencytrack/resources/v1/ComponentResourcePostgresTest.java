@@ -1,35 +1,19 @@
 package org.dependencytrack.resources.v1;
 
-import alpine.Config;
 import alpine.server.filters.ApiFilter;
-import alpine.server.persistence.PersistenceManagerFactory;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.http.HttpStatus;
-import org.apache.kafka.clients.producer.MockProducer;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.dependencytrack.ResourceTest;
-import org.dependencytrack.TestUtil;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-import javax.jdo.JDOHelper;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonReader;
@@ -114,6 +98,40 @@ public class ComponentResourcePostgresTest extends AbstractPostgresResourceTest 
 
         final JsonArray json = parseJsonArray(response);
         assertThat(json).hasSize(100);
+    }
+
+    @Test
+    public void getAllComponentsFilterTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("Acme-Lib-A");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("aCme-lIb-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("somethingCompletelyDifferent");
+        qm.persist(componentC);
+
+        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("searchText", "ACME")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThat(parseJsonArray(response)).satisfiesExactly(
+                component -> assertThat(component.asJsonObject().getString("name")).isEqualTo("Acme-Lib-A"),
+                component -> assertThat(component.asJsonObject().getString("name")).isEqualTo("aCme-lIb-b")
+        );
     }
 
     private Project prepareProject() throws MalformedPackageURLException {
