@@ -11,20 +11,17 @@ CREATE OR REPLACE FUNCTION "CALC_SEVERITY"(
   "cvssv3_base_score" NUMERIC,
   "cvssv2_base_score" NUMERIC
 ) RETURNS VARCHAR
-  LANGUAGE "plpgsql"
+  LANGUAGE "sql"
+  PARALLEL SAFE
+  IMMUTABLE
 AS
 $$
-BEGIN
-  IF "severity_override" IS NOT NULL THEN
-    RETURN "severity_override";
-  ELSEIF "cvssv3_base_score" IS NOT NULL THEN
-    RETURN "CVSSV3_TO_SEVERITY"("cvssv3_base_score");
-  ELSEIF "cvssv2_base_score" IS NOT NULL THEN
-    RETURN "CVSSV2_TO_SEVERITY"("cvssv2_base_score");
-  ELSEIF "severity" IS NOT NULL THEN
-    RETURN "severity";
-  ELSE
-    RETURN 'UNASSIGNED';
-  END IF;
-END;
+SELECT
+  CASE
+    WHEN "severity_override" IS NOT NULL THEN "severity_override"
+    WHEN "cvssv3_base_score" IS NOT NULL THEN "CVSSV3_TO_SEVERITY"("cvssv3_base_score")
+    WHEN "cvssv2_base_score" IS NOT NULL THEN "CVSSV2_TO_SEVERITY"("cvssv2_base_score")
+    WHEN "severity" IS NOT NULL THEN "severity"
+    ELSE 'UNASSIGNED'
+  END;
 $$;
