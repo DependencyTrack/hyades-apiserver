@@ -121,7 +121,7 @@
         <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
         <!-- Maven Plugin Versions -->
         <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
-        <plugin.jetty.version>10.0.19</plugin.jetty.version>
+        <plugin.jetty.version>10.0.20</plugin.jetty.version>
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
