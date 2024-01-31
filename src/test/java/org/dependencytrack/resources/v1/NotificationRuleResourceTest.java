@@ -20,9 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
 import alpine.model.Team;
+import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import alpine.notification.NotificationLevel;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
@@ -49,6 +49,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
+import static org.hamcrest.Matchers.equalTo;
 
 public class NotificationRuleResourceTest extends ResourceTest {
 
@@ -400,6 +405,48 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
+    }
+
+    @Test
+    public void addTeamToRuleWithCustomEmailPublisherTest() {
+        final Team team = qm.createTeam("Team Example", false);
+        final NotificationPublisher publisher = qm.createNotificationPublisher("foo", "description", SendMailPublisher.name(), "template", "templateMimeType", false);
+        final NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+        final Response response = target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + team.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(""));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("publisherUuid", equalTo(publisher.getUuid().toString()))
+                .withMatcher("ruleUuid", equalTo(rule.getUuid().toString()))
+                .withMatcher("teamUuid", equalTo(team.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "name": "Example Rule",
+                          "enabled": true,
+                          "notifyChildren": true,
+                          "logSuccessfulPublish": false,
+                          "scope": "PORTFOLIO",
+                          "notificationLevel": "INFORMATIONAL",
+                          "projects": [],
+                          "teams": [
+                            {
+                              "uuid": "${json-unit.matches:teamUuid}",
+                              "name": "Team Example"
+                            }
+                          ],
+                          "notifyOn": [],
+                          "publisher": {
+                            "name": "foo",
+                            "description": "description",
+                            "publisherClass": "SendMailPublisher",
+                            "templateMimeType": "templateMimeType",
+                            "defaultPublisher": false,
+                            "uuid": "${json-unit.matches:publisherUuid}"
+                          },
+                          "uuid": "${json-unit.matches:ruleUuid}"
+                        }
+                        """);
     }
 
     @Test
