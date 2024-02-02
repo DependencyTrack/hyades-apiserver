@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka.processor;
+package org.dependencytrack.event.kafka.streams.processor;
 
 import alpine.common.logging.Logger;
 import alpine.notification.NotificationLevel;

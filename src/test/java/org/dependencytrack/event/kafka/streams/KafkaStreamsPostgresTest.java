@@ -1,10 +1,14 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import net.mguenther.kafka.junit.ExternalKafkaCluster;
 import net.mguenther.kafka.junit.TopicConfig;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
-import org.dependencytrack.PersistenceCapableTest;
+import org.apache.kafka.streams.Topology;
+import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -14,10 +18,11 @@ import org.testcontainers.utility.DockerImageName;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.Supplier;
 
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 
-abstract class KafkaStreamsTest extends PersistenceCapableTest {
+abstract class KafkaStreamsPostgresTest extends AbstractPostgresEnabledTest {
 
     @Rule
     public RedpandaContainer container = new RedpandaContainer(DockerImageName
@@ -25,10 +30,20 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
 
     KafkaStreams kafkaStreams;
     ExternalKafkaCluster kafka;
+    private final Supplier<Topology> topologySupplier;
     private Path kafkaStreamsStateDirectory;
+
+    protected KafkaStreamsPostgresTest() {
+        this(new KafkaStreamsTopologyFactory()::createTopology);
+    }
+
+    protected KafkaStreamsPostgresTest(final Supplier<Topology> topologySupplier) {
+        this.topologySupplier = topologySupplier;
+    }
 
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         kafka = ExternalKafkaCluster.at(container.getBootstrapServers());
 
         kafka.createTopic(TopicConfig
@@ -56,7 +71,7 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
         streamsConfig.put(StreamsConfig.STATE_DIR_CONFIG, kafkaStreamsStateDirectory.toString());
         streamsConfig.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "3");
 
-        kafkaStreams = new KafkaStreams(new KafkaStreamsTopologyFactory().createTopology(), streamsConfig);
+        kafkaStreams = new KafkaStreams(topologySupplier.get(), streamsConfig);
         kafkaStreams.start();
 
         assertConditionWithTimeout(() -> KafkaStreams.State.RUNNING == kafkaStreams.state(), Duration.ofSeconds(5));
@@ -70,6 +85,15 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
         if (kafkaStreamsStateDirectory != null) {
             kafkaStreamsStateDirectory.toFile().delete();
         }
+        super.tearDown();
+    }
+
+    public static class NotificationDeserializer extends KafkaProtobufDeserializer<Notification> {
+
+        public NotificationDeserializer() {
+            super(Notification.parser());
+        }
+
     }
 
 }

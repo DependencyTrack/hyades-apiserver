@@ -24,7 +24,6 @@ import alpine.notification.NotificationLevel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
@@ -427,10 +426,6 @@ public final class NotificationUtil {
             return messageType + " on Project: [" + project.toString() + "]";
         }
         return messageType;
-    }
-
-    public static String generateNotificationContent(final VulnerabilityScanResultProcessor.Analysis analysis) {
-        return "An analysis decision was made to a finding affecting a project";
     }
 
     public static String generateNotificationTitle(final String messageType, final org.dependencytrack.proto.notification.v1.Project project) {
