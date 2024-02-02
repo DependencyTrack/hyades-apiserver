@@ -35,7 +35,6 @@ import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.validation.Validator;
@@ -50,6 +49,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+
+import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
 
 /**
  * JAX-RS resources for processing notification rules.
@@ -279,7 +280,7 @@ public class NotificationRuleResource extends AlpineResource {
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
             }
-            if (!rule.getPublisher().getName().equals(DefaultNotificationPublishers.EMAIL.getPublisherName())) {
+            if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
                 return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
             }
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);
@@ -320,7 +321,7 @@ public class NotificationRuleResource extends AlpineResource {
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
             }
-            if (!rule.getPublisher().getName().equals(DefaultNotificationPublishers.EMAIL.getPublisherName())) {
+            if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
                 return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
             }
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);

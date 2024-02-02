@@ -158,6 +158,12 @@ public class VersionDistanceCelPolicyEvaluatorTest extends AbstractPostgresEnabl
         } else {
             assertThat(qm.getAllPolicyViolations(component)).isEmpty();
         }
+
+        // https://github.com/DependencyTrack/dependency-track/issues/3295
+        project.setDirectDependencies(null);
+        qm.persist(project);
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).isEmpty();
     }
 
 }
