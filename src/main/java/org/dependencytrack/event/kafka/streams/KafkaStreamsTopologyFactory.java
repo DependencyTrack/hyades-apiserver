@@ -41,7 +41,6 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.streams.processor.DelayedBomProcessedNotificationProcessor;
-import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.streams.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
@@ -234,12 +233,6 @@ class KafkaStreamsTopologyFactory {
 
                     Event.dispatch(policyEvaluationEvent);
                 }, Named.as("trigger_policy_evaluation"));
-
-        streamsBuilder
-                .stream(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(),
-                        Consumed.with(KafkaTopics.REPO_META_ANALYSIS_RESULT.keySerde(), KafkaTopics.REPO_META_ANALYSIS_RESULT.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())))
-                .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
 
         return streamsBuilder.build(streamsProperties);
     }

@@ -27,7 +27,6 @@ import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.TopologyDescription;
 import org.assertj.core.api.SoftAssertions;
@@ -42,15 +41,12 @@ import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
@@ -62,20 +58,16 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
 import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
@@ -140,36 +132,6 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         }
 
         softAsserts.assertAll();
-    }
-
-    @Test
-    public void repoMetaAnalysisResultProcessingTest() throws Exception {
-        final Date beforeTestTimestamp = Date.from(Instant.now());
-
-        final var result = AnalysisResult.newBuilder()
-                .setComponent(org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
-                        .setPurl("pkg:golang/github.com/foo/bar@1.2.3"))
-                .setLatestVersion("1.2.4")
-                .build();
-
-        kafka.send(SendKeyValues.to(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), List.of(
-                        new KeyValue<>("pkg:golang/github.com/foo/bar", result)
-                ))
-                .with(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
-                .with(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class));
-
-        final Supplier<RepositoryMetaComponent> repoMetaSupplier =
-                () -> qm.getRepositoryMetaComponent(RepositoryType.GO_MODULES, "github.com/foo", "bar");
-        assertConditionWithTimeout(() -> repoMetaSupplier.get() != null, Duration.ofSeconds(5));
-
-        final RepositoryMetaComponent metaComponent = repoMetaSupplier.get();
-        assertThat(metaComponent).isNotNull();
-        assertThat(metaComponent.getRepositoryType()).isEqualTo(RepositoryType.GO_MODULES);
-        assertThat(metaComponent.getNamespace()).isEqualTo("github.com/foo");
-        assertThat(metaComponent.getName()).isEqualTo("bar");
-        assertThat(metaComponent.getLatestVersion()).isEqualTo("1.2.4");
-        assertThat(metaComponent.getPublished()).isNull();
-        assertThat(metaComponent.getLastCheck()).isAfter(beforeTestTimestamp);
     }
 
     @Test

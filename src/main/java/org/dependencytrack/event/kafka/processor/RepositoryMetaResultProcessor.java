@@ -16,16 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event.kafka.streams.processor;
+package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kafka.streams.processor.api.Processor;
-import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.dependencytrack.event.kafka.processor.api.Processor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -47,16 +46,14 @@ import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.perfo
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
  */
-public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult, Void, Void> {
+public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
+
+    static final String PROCESSOR_NAME = "repo.meta.analysis.result";
 
     private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
-    private static final Timer TIMER = Timer.builder("repo_meta_result_processing")
-            .description("Time taken to process repository meta analysis results")
-            .register(Metrics.getRegistry());
 
     @Override
-    public void process(final Record<String, AnalysisResult> record) {
-        final Timer.Sample timerSample = Timer.start();
+    public void process(final ConsumerRecord<String, AnalysisResult> record) throws ProcessingException {
         if (!isRecordValid(record)) {
             return;
         }
@@ -67,13 +64,11 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                 performIntegrityCheck(integrityMetaComponent, record.value(), qm);
             }
         } catch (Exception e) {
-            LOGGER.error("An unexpected error occurred while processing record %s".formatted(record), e);
-        } finally {
-            timerSample.stop(TIMER);
+            throw new ProcessingException(e);
         }
     }
 
-    private IntegrityMetaComponent synchronizeIntegrityMetadata(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws MalformedPackageURLException {
+    private IntegrityMetaComponent synchronizeIntegrityMetadata(final QueryManager queryManager, final ConsumerRecord<String, AnalysisResult> record) throws MalformedPackageURLException {
         final AnalysisResult result = record.value();
         PackageURL purl = new PackageURL(result.getComponent().getPurl());
         if (result.hasIntegrityMeta()) {
@@ -84,7 +79,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private void synchronizeRepositoryMetadata(final QueryManager queryManager, final Record<String, AnalysisResult> record) throws Exception {
+    private void synchronizeRepositoryMetadata(final QueryManager queryManager, final ConsumerRecord<String, AnalysisResult> record) throws Exception {
         PersistenceManager pm = queryManager.getPersistenceManager();
         final AnalysisResult result = record.value();
         PackageURL purl = new PackageURL(result.getComponent().getPurl());
@@ -122,7 +117,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private RepositoryMetaComponent createRepositoryMetaResult(Record<String, AnalysisResult> incomingAnalysisResultRecord, PersistenceManager pm, PackageURL purl) throws Exception {
+    private RepositoryMetaComponent createRepositoryMetaResult(ConsumerRecord<String, AnalysisResult> incomingAnalysisResultRecord, PersistenceManager pm, PackageURL purl) throws Exception {
         final AnalysisResult result = incomingAnalysisResultRecord.value();
         if (result.hasLatestVersion()) {
             try (final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class)) {
@@ -163,7 +158,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         }
     }
 
-    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final Record<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
+    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final ConsumerRecord<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
         final AnalysisResult result = incomingAnalysisResultRecord.value();
         IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
         if (persistentIntegrityMetaComponent != null && persistentIntegrityMetaComponent.getStatus() != null && persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
@@ -198,7 +193,7 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
         return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
     }
 
-    private static boolean isRecordValid(final Record<String, AnalysisResult> record) {
+    private static boolean isRecordValid(final ConsumerRecord<String, AnalysisResult> record) {
         final AnalysisResult result = record.value();
         if (!result.hasComponent()) {
             LOGGER.warn("""
