@@ -23,7 +23,6 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.streams.processor.DelayedBomProcessedNotificationProcessor;
-import org.dependencytrack.event.kafka.streams.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.streams.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
@@ -223,12 +222,6 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.REPO_META_ANALYSIS_RESULT.keySerde(), KafkaTopics.REPO_META_ANALYSIS_RESULT.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())))
                 .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
-
-        streamsBuilder
-                .stream(KafkaTopics.NEW_VULNERABILITY.name(),
-                        Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
-                .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         return streamsBuilder.build(streamsProperties);
     }
