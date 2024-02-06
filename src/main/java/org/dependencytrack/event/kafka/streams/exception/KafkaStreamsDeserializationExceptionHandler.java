@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka.exception;
+package org.dependencytrack.event.kafka.streams.exception;
 
 import alpine.Config;
 import alpine.common.logging.Logger;

@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka.exception;
+package org.dependencytrack.event.kafka.streams.exception;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.errors.SerializationException;

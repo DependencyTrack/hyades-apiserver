@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
@@ -21,10 +21,11 @@ import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
-import org.dependencytrack.event.kafka.processor.DelayedBomProcessedNotificationProcessor;
-import org.dependencytrack.event.kafka.processor.MirrorVulnerabilityProcessor;
-import org.dependencytrack.event.kafka.processor.RepositoryMetaResultProcessor;
-import org.dependencytrack.event.kafka.processor.VulnerabilityScanResultProcessor;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.event.kafka.streams.processor.DelayedBomProcessedNotificationProcessor;
+import org.dependencytrack.event.kafka.streams.processor.MirrorVulnerabilityProcessor;
+import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
+import org.dependencytrack.event.kafka.streams.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;

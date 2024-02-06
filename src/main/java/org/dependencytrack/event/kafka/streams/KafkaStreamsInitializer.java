@@ -1,4 +1,4 @@
-package org.dependencytrack.event.kafka;
+package org.dependencytrack.event.kafka.streams;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
@@ -11,9 +11,9 @@ import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.kafka.exception.KafkaStreamsDeserializationExceptionHandler;
-import org.dependencytrack.event.kafka.exception.KafkaStreamsProductionExceptionHandler;
-import org.dependencytrack.event.kafka.exception.KafkaStreamsUncaughtExceptionHandler;
+import org.dependencytrack.event.kafka.streams.exception.KafkaStreamsDeserializationExceptionHandler;
+import org.dependencytrack.event.kafka.streams.exception.KafkaStreamsProductionExceptionHandler;
+import org.dependencytrack.event.kafka.streams.exception.KafkaStreamsUncaughtExceptionHandler;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
