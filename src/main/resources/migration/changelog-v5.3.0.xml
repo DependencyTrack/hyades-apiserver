@@ -2444,4 +2444,30 @@
     <changeSet id="v5.3.0-12" author="sahibamittal">
         <dropTable tableName="CPE"/>
     </changeSet>
+
+    <changeSet id="v5.3.0-13" author="nscuro@protonmail.com">
+        <!--
+          CREATE EXTENSION requires SUPERUSER (Postgres < 13) or CREATE privileges (Postgres >= 13).
+          Either configure a migration user with sufficient privileges via database.migration.username
+          and database.migration.password, or create the extension manually. The below statement will
+          not fail if the extension already exists, even though the user might now have sufficient
+          privileges to create it.
+        -->
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS PG_TRGM;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.3.0-14" author="nscuro@protonmail.com" runInTransaction="false">
+        <!--
+          Create a GIN index to support LIKE '%foo%' queries for dependency graph traversal.
+          Creating this index on an existing database might take a while, so do it concurrently
+          to not block writes on the "COMPONENT" table. Index creation cannot run in a transaction
+          when using CONCURRENTLY.
+        -->
+        <sql>
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS "COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"
+                ON "COMPONENT" USING GIN ("DIRECT_DEPENDENCIES" GIN_TRGM_OPS);
+        </sql>
+    </changeSet>
 </databaseChangeLog>
