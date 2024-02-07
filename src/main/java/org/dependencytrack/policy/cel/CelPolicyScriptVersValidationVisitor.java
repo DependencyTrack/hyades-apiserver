@@ -13,6 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
+
 class CelPolicyScriptVersValidationVisitor {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptVersValidationVisitor.class);
@@ -42,10 +47,14 @@ class CelPolicyScriptVersValidationVisitor {
 
     private void visitCall(final Expr expr) {
         final Expr.Call callExpr = expr.getCallExpr();
-        if ("matches_range".equals(callExpr.getFunction())) {
+        final String functionName = callExpr.getFunction();
+        if (FUNC_MATCHES_RANGE.equals(functionName)) {
             maybeValidateVers(callExpr.getArgs(0));
             return;
-        } else if (("depends_on".equals(callExpr.getFunction()) || "is_dependency_of".equals(callExpr.getFunction())) && callExpr.getArgsCount() == 1) {
+        } else if ((FUNC_DEPENDS_ON.equals(functionName)
+                    || FUNC_IS_DEPENDENCY_OF.equals(functionName)
+                    || FUNC_IS_EXCLUSIVE_DEPENDENCY_OF.equals(functionName))
+                   && callExpr.getArgsCount() == 1) {
             maybeValidateComponentStruct(callExpr.getArgs(0));
             return;
         }

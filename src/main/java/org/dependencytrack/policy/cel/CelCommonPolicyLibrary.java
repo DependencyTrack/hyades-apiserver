@@ -5,8 +5,6 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
-import org.apache.commons.lang3.tuple.Pair;
-import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -15,6 +13,8 @@ import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.dependencytrack.util.VersionDistance;
 import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
 import org.projectnessie.cel.EnvOption;
 import org.projectnessie.cel.Library;
 import org.projectnessie.cel.ProgramOption;
@@ -25,17 +25,22 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
-import javax.jdo.Query;
+import javax.annotation.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
@@ -48,6 +53,7 @@ public class CelCommonPolicyLibrary implements Library {
 
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
+    static final String FUNC_IS_EXCLUSIVE_DEPENDENCY_OF = "is_exclusive_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
@@ -71,6 +77,15 @@ public class CelCommonPolicyLibrary implements Library {
                                 // component.is_dependency_of(v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "component_is_dependency_of_component_bool",
+                                        List.of(TYPE_COMPONENT, TYPE_COMPONENT),
+                                        Decls.Bool
+                                )
+                        ),
+                        Decls.newFunction(
+                                FUNC_IS_EXCLUSIVE_DEPENDENCY_OF,
+                                // component.is_exclusive_dependency_of(v1.Component{name: "foo"})
+                                Decls.newInstanceOverload(
+                                        "component_is_exclusive_dependency_of_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
                                         Decls.Bool
                                 )
@@ -130,6 +145,10 @@ public class CelCommonPolicyLibrary implements Library {
                         Overload.binary(
                                 FUNC_IS_DEPENDENCY_OF,
                                 CelCommonPolicyLibrary::isDependencyOfFunc
+                        ),
+                        Overload.binary(
+                                FUNC_IS_EXCLUSIVE_DEPENDENCY_OF,
+                                CelCommonPolicyLibrary::isExclusiveDependencyOfFunc
                         ),
                         Overload.binary(
                                 FUNC_MATCHES_RANGE,
@@ -205,6 +224,21 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         return Err.maybeNoSuchOverloadErr(lhs);
+    }
+
+    private static Val isExclusiveDependencyOfFunc(final Val lhs, final Val rhs) {
+        final Component leafComponent;
+        if (lhs.value() instanceof final Component lhsValue) {
+            leafComponent = lhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        if (rhs.value() instanceof final Component rootComponent) {
+            return Types.boolOf(isExclusiveDependencyOf(leafComponent, rootComponent));
+        }
+
+        return Err.maybeNoSuchOverloadErr(rhs);
     }
 
     private static Val isDependencyOfFunc(final Val lhs, final Val rhs) {
@@ -295,31 +329,62 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        final Pair<String, Map<String, Object>> filterAndParams = toFilterAndParams(component);
-        if (filterAndParams == null) {
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(component);
+        if (!compositeNodeFilter.hasSqlFilters()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from component %s; \
                     Unable to evaluate, returning false""".formatted(FUNC_DEPENDS_ON, component));
             return false;
         }
 
-        final String filter = "project.uuid == :projectUuid && " + filterAndParams.getLeft();
-        final Map<String, Object> params = filterAndParams.getRight();
-        params.put("projectUuid", UUID.fromString(project.getUuid()));
-
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager()) {
-            final Query<org.dependencytrack.model.Component> query =
-                    qm.getPersistenceManager().newQuery(org.dependencytrack.model.Component.class);
-            query.setFilter(filter);
-            query.setNamedParameters(params);
-            query.setResult("count(this)");
-            try {
-                return query.executeResultUnique(Long.class) > 0;
-            } finally {
-                query.closeAll();
+        try (final var qm = new QueryManager();
+             final Handle jdbiHandle = jdbi(qm).open()) {
+            if (!compositeNodeFilter.hasInMemoryFilters()) {
+                final Query query = jdbiHandle.createQuery("""                     
+                        WITH
+                        "CTE_PROJECT" AS (
+                          SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid
+                        )
+                        SELECT
+                          COUNT(*)
+                        FROM
+                          "COMPONENT"
+                        WHERE
+                          "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                          AND ${filters}
+                        """);
+                return query
+                        .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                        .bind("projectUuid", project.getUuid())
+                        .bindMap(compositeNodeFilter.sqlFilterParams())
+                        .mapTo(Long.class)
+                        .map(count -> count > 0)
+                        .one();
             }
+
+            final Query query = jdbiHandle.createQuery("""
+                    WITH
+                    "CTE_PROJECT" AS (
+                      SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid
+                    )
+                    SELECT
+                      ${selectColumnNames?join(", ")}
+                    FROM
+                      "COMPONENT"
+                    WHERE
+                      "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                      AND ${filters}
+                    """);
+            return query
+                    .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                    .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
+                    .bind("projectUuid", project.getUuid())
+                    .bindMap(compositeNodeFilter.sqlFilterParams())
+                    .map(ConstructorMapper.of(DependencyNode.class))
+                    .stream()
+                    .anyMatch(compositeNodeFilter.inMemoryFiltersConjunctive());
         }
     }
 
@@ -327,9 +392,6 @@ public class CelCommonPolicyLibrary implements Library {
         // TODO
         return false;
     }
-
-    private static final String VALUE_PREFIX_REGEX = "re:";
-    private static final String VALUE_PREFIX_VERS = "vers:";
 
     private static boolean isDependencyOf(final Component leafComponent, final Component rootComponent) {
         if (leafComponent.getUuid().isBlank()) {
@@ -339,95 +401,20 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        Vers vers = null;
-
-        final var queryFilters = new ArrayList<String>();
-        final var queryParams = new HashMap<String, Object>();
-        queryParams.put("leafComponentUuid", leafComponent.getUuid());
-        if (!rootComponent.getUuid().isBlank()) {
-            queryFilters.add("\"UUID\" = :uuid");
-            queryParams.put("uuid", rootComponent.getUuid());
-        }
-        if (!rootComponent.getGroup().isBlank()) {
-            if (rootComponent.getGroup().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"GROUP\" ~ :groupRegex");
-                queryParams.put("groupRegex", substringAfter(rootComponent.getGroup(), VALUE_PREFIX_REGEX));
-            } else {
-                queryFilters.add("\"GROUP\" = :group");
-                queryParams.put("group", rootComponent.getGroup());
-            }
-        }
-        if (!rootComponent.getName().isBlank()) {
-            if (rootComponent.getName().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"NAME\" ~ :nameRegex");
-                queryParams.put("nameRegex", substringAfter(rootComponent.getName(), VALUE_PREFIX_REGEX));
-            } else {
-                queryFilters.add("\"NAME\" = :name");
-                queryParams.put("name", rootComponent.getName());
-            }
-        }
-        if (!rootComponent.getVersion().isBlank()) {
-            if (rootComponent.getVersion().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"VERSION\" ~ :versionRegex");
-                queryParams.put("versionRegex", substringAfter(rootComponent.getVersion(), VALUE_PREFIX_REGEX));
-            } else if (rootComponent.getVersion().startsWith(VALUE_PREFIX_VERS)) {
-                // Note: Validation already happens during script compilation.
-                vers = Vers.parse(rootComponent.getVersion());
-            } else {
-                queryFilters.add("\"VERSION\" = :version");
-                queryParams.put("version", rootComponent.getVersion());
-            }
-        }
-        if (!rootComponent.getClassifier().isBlank()) {
-            queryFilters.add("\"CLASSIFIER\" = :classifier");
-            queryParams.put("classifier", rootComponent.getClassifier());
-        }
-        if (!rootComponent.getCpe().isBlank()) {
-            if (rootComponent.getCpe().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"CPE\" ~ :cpeRegex");
-                queryParams.put("cpeRegex", substringAfter(rootComponent.getCpe(), VALUE_PREFIX_REGEX));
-            } else {
-                queryFilters.add("\"CPE\" = :cpe");
-                queryParams.put("cpe", rootComponent.getCpe());
-            }
-        }
-        if (!rootComponent.getPurl().isBlank()) {
-            if (rootComponent.getPurl().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"PURL\" ~ :purlRegex");
-                queryParams.put("purlRegex", substringAfter(rootComponent.getPurl(), VALUE_PREFIX_REGEX));
-            } else {
-                queryFilters.add("\"PURL\" = :purl");
-                queryParams.put("purl", rootComponent.getPurl());
-            }
-        }
-        if (!rootComponent.getSwidTagId().isBlank()) {
-            if (rootComponent.getSwidTagId().startsWith(VALUE_PREFIX_REGEX)) {
-                queryFilters.add("\"SWIDTAGID\" ~ :swidTagIdRegex");
-                queryParams.put("swidTagIdRegex", substringAfter(rootComponent.getSwidTagId(), VALUE_PREFIX_REGEX));
-            } else {
-                queryFilters.add("\"SWIDTAGID\" = :swidTagId");
-                queryParams.put("swidTagId", rootComponent.getSwidTagId());
-            }
-        }
-        if (rootComponent.hasIsInternal()) {
-            if (rootComponent.getIsInternal()) {
-                queryFilters.add("\"INTERNAL\" = TRUE");
-            } else {
-                queryFilters.add("(\"INTERNAL\" IS NULL OR \"INTERNAL\" = FALSE)");
-            }
-        }
-
-        if (queryFilters.isEmpty()) {
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent);
+        if (!compositeNodeFilter.hasSqlFilters()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from root component %s; \
                     Unable to evaluate, returning false""".formatted(FUNC_IS_DEPENDENCY_OF, rootComponent));
             return false;
         }
 
+        // TODO: Result can / should likely be cached based on filter and params.
+
         try (final var qm = new QueryManager();
              final Handle jdbiHandle = jdbi(qm).open()) {
-            if (vers == null) {
-                final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
+            if (!compositeNodeFilter.hasInMemoryFilters()) {
+                final Query query = jdbiHandle.createQuery("""
                         -- Determine the project the given leaf component is part of.
                         WITH RECURSIVE
                         "CTE_PROJECT" AS (
@@ -487,90 +474,228 @@ public class CelCommonPolicyLibrary implements Library {
                         """);
 
                 return query
-                        .define("filters", String.join(" AND ", queryFilters))
-                        .bindMap(queryParams)
+                        .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                        .bind("leafComponentUuid", leafComponent.getUuid())
+                        .bindMap(compositeNodeFilter.sqlFilterParams())
                         .mapTo(Boolean.class)
                         .findOne()
                         .orElse(false);
-            } else {
-                // Vers ranges can only be validated in-memory. In-memory evaluation has the following downsides:
-                //  - Query can't short-circuit on first match. Because multiple components can match for conditions
-                //    other than the vers range, we have to check all of them. This means more recursive calls in the
-                //    query, and more data fetched from the database.
-                //  - The query has to return multiple values, instead of a single boolean, causing additional latency.
+            }
 
-                final org.jdbi.v3.core.statement.Query query = jdbiHandle.createQuery("""
-                        -- Determine the project the given leaf component is part of.
-                        WITH RECURSIVE
-                        "CTE_PROJECT" AS (
-                          SELECT
-                            "PROJECT_ID" AS "ID"
-                          FROM
-                            "COMPONENT"
-                          WHERE
-                            "UUID" = :leafComponentUuid
-                        ),
-                        -- Identify the IDs of all components in the project that
-                        -- match the desired criteria.
-                        "CTE_MATCHES" AS (
-                          SELECT
-                            "ID"
-                          FROM
-                            "COMPONENT"
-                          WHERE
-                            "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
-                            -- Do not consider other leaf nodes (typically the majority of components).
-                            -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
-                            AND "DIRECT_DEPENDENCIES" IS NOT NULL
-                            AND ${filters}
-                        ),
-                        "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", "VERSION", "FOUND", "PATH") AS (
-                          SELECT
-                            "C"."UUID"                                       AS "UUID",
-                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
-                            "C"."VERSION"                                    AS "VERSION",
-                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
-                            ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
-                          FROM
-                            "COMPONENT" AS "C"
-                          WHERE
-                            -- Short-circuit the recursive query if we don't have any matches at all.
-                            EXISTS(SELECT 1 FROM "CTE_MATCHES")
-                            -- Otherwise, find components of which the given leaf component is a direct dependency.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
-                          UNION ALL
-                          SELECT
-                            "C"."UUID"                                       AS "UUID",
-                            "C"."PROJECT_ID"                                 AS "PROJECT_ID",
-                            "C"."VERSION"                                    AS "VERSION",
-                            ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
-                            ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
-                          FROM
-                            "COMPONENT" AS "C"
-                          INNER JOIN
-                            "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
-                          WHERE
-                            -- Ensure we haven't seen this component before, to prevent cycles.
-                            NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
-                            -- Otherwise, the previous component must appear in the current direct dependencies.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
-                        )
-                        SELECT "VERSION" FROM "CTE_DEPENDENCIES" WHERE "FOUND";
-                        """);
+            final Query query = jdbiHandle.createQuery("""
+                    -- Determine the project the given leaf component is part of.
+                    WITH RECURSIVE
+                    "CTE_PROJECT" AS (
+                      SELECT
+                        "PROJECT_ID" AS "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "UUID" = :leafComponentUuid
+                    ),
+                    -- Identify the IDs of all components in the project that
+                    -- match the desired criteria.
+                    "CTE_MATCHES" AS (
+                      SELECT
+                        "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                        -- Do not consider other leaf nodes (typically the majority of components).
+                        -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                        AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                        AND ${filters}
+                    ),
+                    "CTE_DEPENDENCIES" ("UUID", "PROJECT_ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH") AS (
+                      SELECT
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select column required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        CASE
+                          WHEN ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES"))
+                          THEN "C".${columnName}
+                        END                                              AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      WHERE
+                        -- Short-circuit the recursive query if we don't have any matches at all.
+                        EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        -- Otherwise, find components of which the given leaf component is a direct dependency.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                      UNION ALL
+                      SELECT
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select columns required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        CASE
+                          WHEN ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES"))
+                          THEN "C".${columnName}
+                        END                                              AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      INNER JOIN
+                        "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                      WHERE
+                        -- NB: No short-circuiting based on "PREVIOUS"."FOUND" here!
+                        --     There might be more matching components on this path
+                        --     for which in-memory filters need to be evaluated.
+                        -- Ensure we haven't seen this component before, to prevent cycles.
+                        NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                        -- Otherwise, the previous component must appear in the current direct dependencies.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                    )
+                    SELECT ${selectColumnNames?join(", ")} FROM "CTE_DEPENDENCIES" WHERE "FOUND";
+                    """);
 
-                final List<String> versions = query
-                        .define("filters", String.join(" AND ", queryFilters))
-                        .bindMap(queryParams)
-                        .mapTo(String.class)
-                        .list();
-                for (final String version : versions) {
-                    if (vers.contains(version)) {
-                        return true;
-                    }
-                }
+            return query
+                    .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                    .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
+                    .bind("leafComponentUuid", leafComponent.getUuid())
+                    .bindMap(compositeNodeFilter.sqlFilterParams())
+                    .map(ConstructorMapper.of(DependencyNode.class))
+                    .stream()
+                    .anyMatch(compositeNodeFilter.inMemoryFiltersConjunctive());
+        }
+    }
 
+    private static boolean isExclusiveDependencyOf(final Component leafComponent, final Component rootComponent) {
+        if (leafComponent.getUuid().isBlank()) {
+            // Need a UUID for our starting point.
+            LOGGER.warn("%s: leaf component does not have a UUID; Unable to evaluate, returning false"
+                    .formatted(FUNC_IS_EXCLUSIVE_DEPENDENCY_OF));
+            return false;
+        }
+
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent);
+        if (!compositeNodeFilter.hasSqlFilters()) {
+            LOGGER.warn("""
+                    %s: Unable to construct filter expression from root component %s; \
+                    Unable to evaluate, returning false""".formatted(FUNC_IS_EXCLUSIVE_DEPENDENCY_OF, rootComponent));
+            return false;
+        }
+
+        // TODO: Result can / should likely be cached based on filter and params.
+
+        try (final var qm = new QueryManager();
+             final Handle jdbiHandle = jdbi(qm).open()) {
+            final Query query = jdbiHandle.createQuery("""
+                     -- Determine the project the given leaf component is part of.
+                    WITH RECURSIVE
+                    "CTE_PROJECT" AS (
+                      SELECT
+                        "PROJECT_ID" AS "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "UUID" = :leafComponentUuid
+                    ),
+                    -- Identify the IDs of all components in the project that
+                    -- match the desired criteria.
+                    "CTE_MATCHES" AS (
+                      SELECT
+                        "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                        -- Do not consider other leaf nodes (typically the majority of components).
+                        -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                        AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                        AND ${filters}
+                    ),
+                    "CTE_DEPENDENCIES" ("ID", "UUID", "PROJECT_ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH") AS (
+                      SELECT
+                        "C"."ID"                                         AS "ID",
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select columns required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        CASE
+                          WHEN ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES"))
+                          THEN "C".${columnName}
+                        END                                              AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      WHERE
+                        -- Short-circuit the recursive query if we don't have any matches at all.
+                        EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        -- Otherwise, find components of which the given leaf component is a direct dependency.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                      UNION ALL
+                      SELECT
+                        "C"."ID"                                         AS "ID",
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select columns required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        CASE
+                          WHEN ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES"))
+                          THEN "C".${columnName}
+                        END                                              AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      INNER JOIN
+                        "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                      WHERE
+                        -- NB: No short-circuiting based on "PREVIOUS"."FOUND" here!
+                        --     There might be more matching components on this path
+                        --     for which in-memory filters need to be evaluated.
+                        -- Ensure we haven't seen this component before, to prevent cycles.
+                        NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                        -- Otherwise, the previous component must appear in the current direct dependencies.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                    )
+                    SELECT "ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH" FROM "CTE_DEPENDENCIES";
+                     """);
+
+            final List<DependencyNode> nodes = query
+                    .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                    .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
+                    .bind("leafComponentUuid", leafComponent.getUuid())
+                    .bindMap(compositeNodeFilter.sqlFilterParams())
+                    .map(ConstructorMapper.of(DependencyNode.class))
+                    .list();
+            if (nodes.isEmpty()) {
+                // No component matches the filter criteria.
                 return false;
             }
+
+            final Set<Long> matchedNodeIds = nodes.stream()
+                    .filter(node -> node.found() != null && node.found())
+                    .filter(compositeNodeFilter.inMemoryFiltersConjunctive())
+                    .map(DependencyNode::id)
+                    .collect(Collectors.toSet());
+            if (matchedNodeIds.isEmpty()) {
+                // None of the nodes matches the filter criteria.
+                return false;
+            }
+
+            final List<List<Long>> paths = reducePaths(nodes);
+
+            // TODO: TBD whether only direct dependency relationships should count.
+            // Direct only:
+            //   return paths.stream().allMatch(path -> matchedNodeIds.contains(path.get(0)));
+            // Also transitive (arbitrary distance between matched node and leaf component):
+            return paths.stream().allMatch(path -> path.stream().anyMatch(matchedNodeIds::contains));
         }
     }
 
@@ -621,60 +746,156 @@ public class CelCommonPolicyLibrary implements Library {
         };
     }
 
-    private static Pair<String, Map<String, Object>> toFilterAndParams(final Component component) {
-        var filters = new ArrayList<String>();
-        var params = new HashMap<String, Object>();
-
-        if (!component.getUuid().isBlank()) {
-            filters.add("uuid == :uuid");
-            params.put("uuid", component.getUuid());
-        }
-        if (!component.getGroup().isBlank()) {
-            filters.add("group == :group");
-            params.put("group", component.getGroup());
-        }
-        if (!component.getName().isBlank()) {
-            filters.add("name == :name");
-            params.put("name", component.getName());
-        }
-        if (!component.getVersion().isBlank()) {
-            filters.add("version == :version");
-            params.put("version", component.getVersion());
-        }
-        if (!component.getClassifier().isBlank()) {
-            try {
-                filters.add("classifier == :classifier");
-                params.put("classifier", Classifier.valueOf(component.getClassifier()));
-            } catch (IllegalArgumentException e) {
-                LOGGER.warn("\"%s\" is not a valid classifier; Skipping".formatted(component.getClassifier()), e);
-            }
-        }
-        if (!component.getCpe().isBlank()) {
-            filters.add("cpe == :cpe");
-            params.put("cpe", component.getCpe());
-        }
-        if (!component.getPurl().isBlank()) {
-            filters.add("purl == :purl");
-            params.put("purl", component.getPurl());
-        }
-        if (!component.getSwidTagId().isBlank()) {
-            filters.add("swidTagId == :swidTagId");
-            params.put("swidTagId", component.getSwidTagId());
-        }
-        if (component.hasIsInternal()) {
-            if (component.getIsInternal()) {
-                filters.add("internal");
-            } else {
-                filters.add("(internal == null || !internal)");
-            }
-        }
-
-        // TODO: Add more fields
-
-        if (filters.isEmpty()) {
-            return null;
-        }
-
-        return Pair.of(String.join(" && ", filters), params);
+    public record DependencyNode(@Nullable Long id, @Nullable String version,
+                                 @Nullable Boolean found, @Nullable List<Long> path) {
     }
+
+    private record CompositeDependencyNodeFilter(List<String> sqlFilters,
+                                                 Map<String, Object> sqlFilterParams,
+                                                 List<String> sqlSelectColumns,
+                                                 List<Predicate<DependencyNode>> inMemoryFilters) {
+
+        private static final String VALUE_PREFIX_REGEX = "re:";
+        private static final String VALUE_PREFIX_VERS = "vers:";
+
+        private static CompositeDependencyNodeFilter of(final Component component) {
+            final var sqlFilters = new ArrayList<String>();
+            final var sqlFilterParams = new HashMap<String, Object>();
+            final var sqlSelectColumns = new ArrayList<String>();
+            final var inMemoryFilters = new ArrayList<Predicate<DependencyNode>>();
+
+            if (!component.getUuid().isBlank()) {
+                sqlFilters.add("\"UUID\" = :uuid");
+                sqlFilterParams.put("uuid", component.getUuid());
+            }
+            if (!component.getGroup().isBlank()) {
+                if (component.getGroup().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"GROUP\" ~ :groupRegex");
+                    sqlFilterParams.put("groupRegex", substringAfter(component.getGroup(), VALUE_PREFIX_REGEX));
+                } else {
+                    sqlFilters.add("\"GROUP\" = :group");
+                    sqlFilterParams.put("group", component.getGroup());
+                }
+            }
+            if (!component.getName().isBlank()) {
+                if (component.getName().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"NAME\" ~ :nameRegex");
+                    sqlFilterParams.put("nameRegex", substringAfter(component.getName(), VALUE_PREFIX_REGEX));
+                } else {
+                    sqlFilters.add("\"NAME\" = :name");
+                    sqlFilterParams.put("name", component.getName());
+                }
+            }
+            if (!component.getVersion().isBlank()) {
+                if (component.getVersion().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"VERSION\" ~ :versionRegex");
+                    sqlFilterParams.put("versionRegex", substringAfter(component.getVersion(), VALUE_PREFIX_REGEX));
+                } else if (component.getVersion().startsWith(VALUE_PREFIX_VERS)) {
+                    // NB: Validation already happens during script compilation.
+                    final Vers vers = Vers.parse(component.getVersion());
+                    inMemoryFilters.add(node -> node.version() != null && vers.contains(node.version()));
+                    sqlSelectColumns.add("\"VERSION\"");
+                } else {
+                    sqlFilters.add("\"VERSION\" = :version");
+                    sqlFilterParams.put("version", component.getVersion());
+                }
+            }
+            if (!component.getClassifier().isBlank()) {
+                sqlFilters.add("\"CLASSIFIER\" = :classifier");
+                sqlFilterParams.put("classifier", component.getClassifier());
+            }
+            if (!component.getCpe().isBlank()) {
+                if (component.getCpe().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"CPE\" ~ :cpeRegex");
+                    sqlFilterParams.put("cpeRegex", substringAfter(component.getCpe(), VALUE_PREFIX_REGEX));
+                } else {
+                    sqlFilters.add("\"CPE\" = :cpe");
+                    sqlFilterParams.put("cpe", component.getCpe());
+                }
+            }
+            if (!component.getPurl().isBlank()) {
+                if (component.getPurl().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"PURL\" ~ :purlRegex");
+                    sqlFilterParams.put("purlRegex", substringAfter(component.getPurl(), VALUE_PREFIX_REGEX));
+                } else {
+                    sqlFilters.add("\"PURL\" = :purl");
+                    sqlFilterParams.put("purl", component.getPurl());
+                }
+            }
+            if (!component.getSwidTagId().isBlank()) {
+                if (component.getSwidTagId().startsWith(VALUE_PREFIX_REGEX)) {
+                    sqlFilters.add("\"SWIDTAGID\" ~ :swidTagIdRegex");
+                    sqlFilterParams.put("swidTagIdRegex", substringAfter(component.getSwidTagId(), VALUE_PREFIX_REGEX));
+                } else {
+                    sqlFilters.add("\"SWIDTAGID\" = :swidTagId");
+                    sqlFilterParams.put("swidTagId", component.getSwidTagId());
+                }
+            }
+            if (component.hasIsInternal()) {
+                if (component.getIsInternal()) {
+                    sqlFilters.add("\"INTERNAL\" = TRUE");
+                } else {
+                    sqlFilters.add("(\"INTERNAL\" IS NULL OR \"INTERNAL\" = FALSE)");
+                }
+            }
+
+            return new CompositeDependencyNodeFilter(sqlFilters, sqlFilterParams, sqlSelectColumns, inMemoryFilters);
+        }
+
+        private boolean hasSqlFilters() {
+            return sqlFilters != null && !sqlFilters.isEmpty();
+        }
+
+        private boolean hasInMemoryFilters() {
+            return inMemoryFilters != null && !inMemoryFilters.isEmpty();
+        }
+
+        private String sqlFiltersConjunctive() {
+            return String.join(" AND ", sqlFilters);
+        }
+
+        private Predicate<DependencyNode> inMemoryFiltersConjunctive() {
+            return inMemoryFilters.stream().reduce(Predicate::and).orElse(node -> true);
+        }
+
+    }
+
+    /**
+     * Reduce paths of all {@link DependencyNode}s to complete, unique paths.
+     * e.g. [[3, 2, 1], [2, 1], [1]] reduces to [[3, 2, 1]].
+     *
+     * @param nodes The {@link DependencyNode}s to reduce paths for
+     * @return The reduced paths
+     */
+    private static List<List<Long>> reducePaths(final List<DependencyNode> nodes) {
+        return nodes.stream()
+                .map(DependencyNode::path)
+                .sorted(Collections.reverseOrder(Comparator.comparingInt(List::size)))
+                .collect(
+                        ArrayList::new,
+                        (ArrayList<List<Long>> paths, List<Long> newPath) -> {
+                            final boolean isCovered = paths.stream()
+                                    .anyMatch(path -> containsExactly(path, newPath));
+                            if (!isCovered) {
+                                paths.add(newPath);
+                            }
+                        },
+                        ArrayList::addAll
+                );
+    }
+
+    private static <T> boolean containsExactly(final List<T> lhs, final List<T> rhs) {
+        final int lhsSize = lhs.size();
+        final int rhsSize = rhs.size();
+        final int maxSize = Math.min(lhsSize, rhsSize);
+
+        if (lhsSize > rhsSize) {
+            return Objects.equals(lhs.subList(0, maxSize), rhs);
+        } else if (lhsSize < rhsSize) {
+            return Objects.equals(lhs, rhs.subList(0, maxSize));
+        }
+
+        return Objects.equals(lhs, rhs);
+    }
+
 }

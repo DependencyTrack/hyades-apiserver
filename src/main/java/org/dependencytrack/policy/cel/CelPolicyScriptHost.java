@@ -32,6 +32,7 @@ import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE_VERSION_DISTANCE;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
@@ -153,7 +154,7 @@ public class CelPolicyScriptHost {
         // TODO: This should be restructured to be more generic.
         for (final FunctionSignature functionSignature : visitor.getUsedFunctionSignatures()) {
             switch (functionSignature.function()) {
-                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF -> {
+                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF, FUNC_IS_EXCLUSIVE_DEPENDENCY_OF -> {
                     if (TYPE_PROJECT.equals(functionSignature.targetType())) {
                         requirements.put(TYPE_PROJECT, "uuid");
                     } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
