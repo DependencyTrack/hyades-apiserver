@@ -2446,6 +2446,13 @@
     </changeSet>
 
     <changeSet id="v5.3.0-13" author="nscuro@protonmail.com">
+        <!--
+          CREATE EXTENSION requires SUPERUSER (Postgres < 13) or CREATE privileges (Postgres >= 13).
+          Either configure a migration user with sufficient privileges via database.migration.username
+          and database.migration.password, or create the extension manually. The below statement will
+          not fail if the extension already exists, even though the user might now have sufficient
+          privileges to create it.
+        -->
         <sql>
             CREATE EXTENSION IF NOT EXISTS PG_TRGM;
         </sql>
