@@ -20,8 +20,10 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.Optional;
 
 public class MigrationInitializer implements ServletContextListener {
+
     private static final Logger LOGGER = Logger.getLogger(MigrationInitializer.class);
 
     private final Config config;
@@ -68,11 +70,18 @@ public class MigrationInitializer implements ServletContextListener {
     }
 
     private HikariDataSource createDataSource() {
+        final String jdbcUrl = Optional.ofNullable(config.getProperty(ConfigKey.DATABASE_MIGRATION_URL))
+                .orElseGet(() -> config.getProperty(Config.AlpineKey.DATABASE_URL));
+        final String username = Optional.ofNullable(config.getProperty(ConfigKey.DATABASE_MIGRATION_USERNAME))
+                .orElseGet(() -> config.getProperty(Config.AlpineKey.DATABASE_USERNAME));
+        final String password = Optional.ofNullable(config.getProperty(ConfigKey.DATABASE_MIGRATION_PASSWORD))
+                .orElseGet(() -> config.getProperty(Config.AlpineKey.DATABASE_PASSWORD));
+
         final var hikariCfg = new HikariConfig();
-        hikariCfg.setJdbcUrl(config.getProperty(Config.AlpineKey.DATABASE_URL));
+        hikariCfg.setJdbcUrl(jdbcUrl);
         hikariCfg.setDriverClassName(config.getProperty(Config.AlpineKey.DATABASE_DRIVER));
-        hikariCfg.setUsername(config.getProperty(Config.AlpineKey.DATABASE_USERNAME));
-        hikariCfg.setPassword(config.getProperty(Config.AlpineKey.DATABASE_PASSWORD));
+        hikariCfg.setUsername(username);
+        hikariCfg.setPassword(password);
         hikariCfg.setMaximumPoolSize(1);
         hikariCfg.setMinimumIdle(1);
 

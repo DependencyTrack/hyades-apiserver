@@ -89,6 +89,9 @@ public enum ConfigKey implements Config.Key {
     VULNERABILITY_POLICY_S3_BUCKET_NAME("vulnerability.policy.s3.bucket.name", null),
     VULNERABILITY_POLICY_S3_BUNDLE_NAME("vulnerability.policy.s3.bundle.name", null),
     VULNERABILITY_POLICY_S3_REGION("vulnerability.policy.s3.region", null),
+    DATABASE_MIGRATION_URL("database.migration.url", null),
+    DATABASE_MIGRATION_USERNAME("database.migration.username", null),
+    DATABASE_MIGRATION_PASSWORD("database.migration.password", null),
     RUN_MIGRATIONS("run.migrations", true);
 
     private final String propertyName;
