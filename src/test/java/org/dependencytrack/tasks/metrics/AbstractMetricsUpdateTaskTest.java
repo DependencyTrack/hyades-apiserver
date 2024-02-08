@@ -59,7 +59,7 @@ abstract class AbstractMetricsUpdateTaskTest extends AbstractPostgresEnabledTest
         policyViolation.setPolicyCondition(policyCondition);
         policyViolation.setTimestamp(new Date());
         policyViolation.setType(type);
-        return qm.addPolicyViolationIfNotExist(policyViolation);
+        return qm.persist(policyViolation);
     }
 
 }

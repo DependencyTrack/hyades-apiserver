@@ -22,6 +22,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
@@ -1716,6 +1717,45 @@ public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
         policyViolation = violations.get(1);
         Assert.assertEquals("Log4J", policyViolation.getComponent().getName());
         Assert.assertEquals(PolicyCondition.Subject.LICENSE_GROUP, policyViolation.getPolicyCondition().getSubject());
+    }
+
+    @Test
+    public void testEvaluateProjectWithNoLongerApplicableViolationWithAnalysis() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("org.acme");
+        component.setName("acme-lib");
+        component.setVersion("2.0.0");
+        qm.persist(component);
+
+        final Policy policyA = qm.createPolicy("Policy A", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policyA, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
+                {"group": "*", name: "*", version: "*"}
+                """);
+
+        // Create another policy which already has a violation files for the component.
+        // The violation has both an analysis (REJECTED), and a comment added to it.
+        // As it is checking for component version == 1.5.0, it should no longer violate and be cleaned up.
+        final Policy policyB = qm.createPolicy("Policy B", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        final PolicyCondition conditionB = qm.createPolicyCondition(policyB,
+                PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.5.0");
+        final var violationB = new PolicyViolation();
+        violationB.setComponent(component);
+        violationB.setPolicyCondition(conditionB);
+        violationB.setTimestamp(Date.from(Instant.EPOCH));
+        violationB.setType(PolicyViolation.Type.OPERATIONAL);
+        qm.persist(violationB);
+        final var violationAnalysisB = qm.makeViolationAnalysis(component, violationB, ViolationAnalysisState.REJECTED, false);
+        qm.makeViolationAnalysisComment(violationAnalysisB, "comment", "commenter");
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(project)).satisfiesExactly(violation ->
+                assertThat(violation.getPolicyCondition().getPolicy().getName()).isEqualTo("Policy A"));
     }
 
     @Test

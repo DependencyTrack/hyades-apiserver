@@ -735,14 +735,6 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().updatePolicyCondition(policyCondition);
     }
 
-    public synchronized void reconcilePolicyViolations(final Component component, final List<PolicyViolation> policyViolations) {
-        getPolicyQueryManager().reconcilePolicyViolations(component, policyViolations);
-    }
-
-    public synchronized PolicyViolation addPolicyViolationIfNotExist(final PolicyViolation pv) {
-        return getPolicyQueryManager().addPolicyViolationIfNotExist(pv);
-    }
-
     public List<PolicyViolation> getAllPolicyViolations() {
         return getPolicyQueryManager().getAllPolicyViolations();
     }

@@ -475,7 +475,21 @@ class CelPolicyQueryManager implements AutoCloseable {
                 final Array violationIdsToDeleteArray =
                         nativeConnection.createArrayOf("BIGINT", violationIdsToDelete.toArray(new Long[0]));
 
-                // First, bulk-delete any analyses attached to the violations first.
+                // First, bulk-delete any analysis comments attached to the violations.
+                try (final PreparedStatement ps = nativeConnection.prepareStatement("""
+                        DELETE FROM
+                          "VIOLATIONANALYSISCOMMENT" AS "VAC"
+                        USING
+                          "VIOLATIONANALYSIS" AS "VA"
+                        WHERE
+                          "VAC"."VIOLATIONANALYSIS_ID" = "VA"."ID"
+                          AND "VA"."POLICYVIOLATION_ID" = ANY(?)
+                        """)) {
+                    ps.setArray(1, violationIdsToDeleteArray);
+                    ps.execute();
+                }
+
+                // Then, bulk-delete any analyses attached to the violations.
                 try (final PreparedStatement ps = nativeConnection.prepareStatement("""
                         DELETE FROM
                           "VIOLATIONANALYSIS"
