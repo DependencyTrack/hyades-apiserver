@@ -20,7 +20,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 abstract class KafkaStreamsPostgresTest extends AbstractPostgresEnabledTest {
 
@@ -74,7 +75,9 @@ abstract class KafkaStreamsPostgresTest extends AbstractPostgresEnabledTest {
         kafkaStreams = new KafkaStreams(topologySupplier.get(), streamsConfig);
         kafkaStreams.start();
 
-        assertConditionWithTimeout(() -> KafkaStreams.State.RUNNING == kafkaStreams.state(), Duration.ofSeconds(5));
+        await("Kafka Streams State")
+                .atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(kafkaStreams.state()).isEqualTo(KafkaStreams.State.RUNNING));
     }
 
     @After
