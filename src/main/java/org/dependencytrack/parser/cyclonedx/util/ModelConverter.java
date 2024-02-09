@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.model.Hash;
 import org.cyclonedx.model.LicenseChoice;
+import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Swid;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
@@ -39,6 +40,7 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -58,7 +60,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -81,7 +82,15 @@ public class ModelConverter {
     private ModelConverter() {
     }
 
-    public static Project convertToProject(final org.cyclonedx.model.Component cdxComponent) {
+    public static ProjectMetadata convertToProjectMetadata(final Metadata cdxMetadata) {
+        final var projectMetadata = new ProjectMetadata();
+        projectMetadata.setSupplier(ModelConverter.convert(cdxMetadata.getSupplier()));
+        projectMetadata.setAuthors(ModelConverter.convertCdxContacts(cdxMetadata.getAuthors()));
+        return projectMetadata;
+    }
+
+    public static Project convertToProject(final Metadata cdxMetadata, final ProjectMetadata projectMetadata) {
+        final var cdxComponent = cdxMetadata.getComponent();
         final var project = new Project();
         project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
@@ -91,6 +100,9 @@ public class ModelConverter {
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
+        project.setManufacturer(ModelConverter.convert(cdxMetadata.getManufacture()));
+        project.setSupplier(ModelConverter.convert(cdxComponent.getSupplier()));
+        project.setMetadata(projectMetadata);
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -120,6 +132,7 @@ public class ModelConverter {
         final var component = new Component();
         component.setAuthor(trimToNull(cdxComponent.getAuthor()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
+        component.setSupplier(convert(cdxComponent.getSupplier()));
         component.setBomRef(trimToNull(cdxComponent.getBomRef()));
         component.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.LIBRARY));
         component.setGroup(trimToNull(cdxComponent.getGroup()));
@@ -216,6 +229,80 @@ public class ModelConverter {
         return component;
     }
 
+    public static OrganizationalEntity convert(final org.cyclonedx.model.OrganizationalEntity cdxEntity) {
+        if (cdxEntity == null) {
+            return null;
+        }
+
+        final var dtEntity = new OrganizationalEntity();
+        dtEntity.setName(StringUtils.trimToNull(cdxEntity.getName()));
+        if (cdxEntity.getContacts() != null && !cdxEntity.getContacts().isEmpty()) {
+            dtEntity.setContacts(cdxEntity.getContacts().stream().map(ModelConverter::convert).toList());
+        }
+        if (cdxEntity.getUrls() != null && !cdxEntity.getUrls().isEmpty()) {
+            dtEntity.setUrls(cdxEntity.getUrls().toArray(new String[0]));
+        }
+
+        return dtEntity;
+    }
+
+    public static List<OrganizationalContact> convertCdxContacts(final List<org.cyclonedx.model.OrganizationalContact> cdxContacts) {
+        if (cdxContacts == null) {
+            return null;
+        }
+
+        return cdxContacts.stream().map(ModelConverter::convert).toList();
+    }
+
+    private static OrganizationalContact convert(final org.cyclonedx.model.OrganizationalContact cdxContact) {
+        if (cdxContact == null) {
+            return null;
+        }
+
+        final var dtContact = new OrganizationalContact();
+        dtContact.setName(StringUtils.trimToNull(cdxContact.getName()));
+        dtContact.setEmail(StringUtils.trimToNull(cdxContact.getEmail()));
+        dtContact.setPhone(StringUtils.trimToNull(cdxContact.getPhone()));
+        return dtContact;
+    }
+
+    private static List<org.cyclonedx.model.OrganizationalContact> convertContacts(final List<OrganizationalContact> dtContacts) {
+        if (dtContacts == null) {
+            return null;
+        }
+
+        return dtContacts.stream().map(ModelConverter::convert).toList();
+    }
+
+    private static org.cyclonedx.model.OrganizationalEntity convert(final OrganizationalEntity dtEntity) {
+        if (dtEntity == null) {
+            return null;
+        }
+
+        final var cdxEntity = new org.cyclonedx.model.OrganizationalEntity();
+        cdxEntity.setName(StringUtils.trimToNull(dtEntity.getName()));
+        if (dtEntity.getContacts() != null && !dtEntity.getContacts().isEmpty()) {
+            cdxEntity.setContacts(dtEntity.getContacts().stream().map(ModelConverter::convert).toList());
+        }
+        if (dtEntity.getUrls() != null && dtEntity.getUrls().length > 0) {
+            cdxEntity.setUrls(Arrays.stream(dtEntity.getUrls()).toList());
+        }
+
+        return cdxEntity;
+    }
+
+    private static org.cyclonedx.model.OrganizationalContact convert(final OrganizationalContact dtContact) {
+        if (dtContact == null) {
+            return null;
+        }
+
+        final var cdxContact = new org.cyclonedx.model.OrganizationalContact();
+        cdxContact.setName(StringUtils.trimToNull(dtContact.getName()));
+        cdxContact.setEmail(StringUtils.trimToNull(dtContact.getEmail()));
+        cdxContact.setPhone(StringUtils.trimToNull(cdxContact.getPhone()));
+        return cdxContact;
+    }
+
     public static List<ServiceComponent> convertServices(final List<org.cyclonedx.model.Service> cdxServices) {
         if (cdxServices == null || cdxServices.isEmpty()) {
             return Collections.emptyList();
@@ -227,6 +314,7 @@ public class ModelConverter {
     public static ServiceComponent convertService(final org.cyclonedx.model.Service cdxService) {
         final var service = new ServiceComponent();
         service.setBomRef(trimToNull(cdxService.getBomRef()));
+        service.setProvider(convert(cdxService.getProvider()));
         service.setGroup(trimToNull(cdxService.getGroup()));
         service.setName(trimToNull(cdxService.getName()));
         service.setVersion(trimToNull(cdxService.getVersion()));
@@ -339,7 +427,6 @@ public class ModelConverter {
         return result;
     }
 
-    @SuppressWarnings("deprecation")
     public static org.cyclonedx.model.Component convert(final QueryManager qm, final Component component) {
         final org.cyclonedx.model.Component cycloneComponent = new org.cyclonedx.model.Component();
         cycloneComponent.setBomRef(component.getUuid().toString());
@@ -350,6 +437,7 @@ public class ModelConverter {
         cycloneComponent.setCopyright(StringUtils.trimToNull(component.getCopyright()));
         cycloneComponent.setCpe(StringUtils.trimToNull(component.getCpe()));
         cycloneComponent.setAuthor(StringUtils.trimToNull(component.getAuthor()));
+        cycloneComponent.setSupplier(convert(component.getSupplier()));
 
         if (component.getSwidTagId() != null) {
             final Swid swid = new Swid();
@@ -410,7 +498,7 @@ public class ModelConverter {
             cycloneComponent.setLicenseChoice(licenseChoice);
         }
 
-        if (component.getExternalReferences() != null && component.getExternalReferences().size() > 0) {
+        if (component.getExternalReferences() != null && !component.getExternalReferences().isEmpty()) {
             List<org.cyclonedx.model.ExternalReference> references = new ArrayList<>();
             for (ExternalReference ref : component.getExternalReferences()) {
                 org.cyclonedx.model.ExternalReference cdxRef = new org.cyclonedx.model.ExternalReference();
@@ -451,6 +539,7 @@ public class ModelConverter {
         tool.setVersion(alpine.Config.getInstance().getApplicationVersion());
         metadata.setTools(Collections.singletonList(tool));
         if (project != null) {
+            metadata.setManufacture(convert(project.getManufacturer()));
             final org.cyclonedx.model.Component cycloneComponent = new org.cyclonedx.model.Component();
             cycloneComponent.setBomRef(project.getUuid().toString());
             cycloneComponent.setAuthor(StringUtils.trimToNull(project.getAuthor()));
@@ -479,9 +568,9 @@ public class ModelConverter {
             } else {
                 cycloneComponent.setType(org.cyclonedx.model.Component.Type.LIBRARY);
             }
-            if (project.getExternalReferences() != null && project.getExternalReferences().size() > 0) {
+            if (project.getExternalReferences() != null && !project.getExternalReferences().isEmpty()) {
                 List<org.cyclonedx.model.ExternalReference> references = new ArrayList<>();
-                project.getExternalReferences().stream().forEach(externalReference -> {
+                project.getExternalReferences().forEach(externalReference -> {
                     org.cyclonedx.model.ExternalReference ref = new org.cyclonedx.model.ExternalReference();
                     ref.setUrl(externalReference.getUrl());
                     ref.setType(externalReference.getType());
@@ -490,7 +579,13 @@ public class ModelConverter {
                 });
                 cycloneComponent.setExternalReferences(references);
             }
+            cycloneComponent.setSupplier(convert(project.getSupplier()));
             metadata.setComponent(cycloneComponent);
+
+            if (project.getMetadata() != null) {
+                metadata.setAuthors(convertContacts(project.getMetadata().getAuthors()));
+                metadata.setSupplier(convert(project.getMetadata().getSupplier()));
+            }
         }
         return metadata;
     }
@@ -498,25 +593,8 @@ public class ModelConverter {
     public static org.cyclonedx.model.Service convert(final QueryManager qm, final ServiceComponent service) {
         final org.cyclonedx.model.Service cycloneService = new org.cyclonedx.model.Service();
         cycloneService.setBomRef(service.getUuid().toString());
-        if (service.getProvider() != null) {
-            org.cyclonedx.model.OrganizationalEntity cycloneEntity = new org.cyclonedx.model.OrganizationalEntity();
-            cycloneEntity.setName(service.getProvider().getName());
-            if (service.getProvider().getUrls() != null) {
-                cycloneEntity.setUrls(Arrays.asList(service.getProvider().getUrls()));
-            }
-            if (service.getProvider().getContacts() != null && service.getProvider().getContacts().size() > 0) {
-                List<org.cyclonedx.model.OrganizationalContact> contacts = new ArrayList<>();
-                for (OrganizationalContact contact : service.getProvider().getContacts()) {
-                    org.cyclonedx.model.OrganizationalContact cycloneContact = new org.cyclonedx.model.OrganizationalContact();
-                    cycloneContact.setName(contact.getName());
-                    cycloneContact.setEmail(contact.getEmail());
-                    cycloneContact.setPhone(contact.getPhone());
-                    contacts.add(cycloneContact);
-                }
-                cycloneEntity.setContacts(contacts);
-            }
-            cycloneService.setProvider(cycloneEntity);
-        }
+        cycloneService.setProvider(convert(service.getProvider()));
+        cycloneService.setProvider(convert(service.getProvider()));
         cycloneService.setGroup(StringUtils.trimToNull(service.getGroup()));
         cycloneService.setName(StringUtils.trimToNull(service.getName()));
         cycloneService.setVersion(StringUtils.trimToNull(service.getVersion()));
@@ -526,13 +604,13 @@ public class ModelConverter {
         }
         cycloneService.setAuthenticated(service.getAuthenticated());
         cycloneService.setxTrustBoundary(service.getCrossesTrustBoundary());
-        if (service.getData() != null && service.getData().size() > 0) {
+        if (service.getData() != null && !service.getData().isEmpty()) {
             for (DataClassification dc : service.getData()) {
                 org.cyclonedx.model.ServiceData sd = new org.cyclonedx.model.ServiceData(dc.getDirection().name(), dc.getName());
                 cycloneService.addServiceData(sd);
             }
         }
-        if (service.getExternalReferences() != null && service.getExternalReferences().size() > 0) {
+        if (service.getExternalReferences() != null && !service.getExternalReferences().isEmpty()) {
             for (ExternalReference ref : service.getExternalReferences()) {
                 org.cyclonedx.model.ExternalReference cycloneRef = new org.cyclonedx.model.ExternalReference();
                 cycloneRef.setType(ref.getType());
