@@ -724,13 +724,6 @@
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-maven-plugin</artifactId>
                 <version>${lib.liquibase.version}</version>
-                <configuration>
-                    <outputChangeLogFile>src/main/resources/migration/changelog.xml</outputChangeLogFile>
-                    <url>jdbc:postgresql://localhost:5432/dtrack</url>
-                    <driver>org.postgresql.Driver</driver>
-                    <username></username>
-                    <password></password>
-                </configuration>
             </plugin>
         </plugins>
     </build>
