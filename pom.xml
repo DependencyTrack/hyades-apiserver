@@ -106,7 +106,7 @@
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
         <lib.resilience4j.version>2.1.0</lib.resilience4j.version>
         <lib.snappy-java.version>1.1.10.5</lib.snappy-java.version>
-        <lib.versatile.version>0.4.0</lib.versatile.version>
+        <lib.versatile.version>0.4.1</lib.versatile.version>
         <lib.woodstox.version>6.4.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.12</lib.log4j-over-slf4j.version>

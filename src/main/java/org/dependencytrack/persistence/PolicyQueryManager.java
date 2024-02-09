@@ -226,51 +226,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Intelligently adds dependencies for components that are not already a dependency
-     * of the specified project and removes the dependency relationship for components
-     * that are not in the list of specified components.
-     * @param component the project to bind components to
-     * @param policyViolations the complete list of existing dependent components
-     */
-    public synchronized void reconcilePolicyViolations(final Component component, final List<PolicyViolation> policyViolations) {
-        // Removes violations as dependencies to the project for all
-        // components not included in the list provided
-        List<PolicyViolation> markedForDeletion = new ArrayList<>();
-        for (final PolicyViolation existingViolation: getAllPolicyViolations(component)) {
-            boolean keep = false;
-            for (final PolicyViolation violation: policyViolations) {
-                if (violation.getType() == existingViolation.getType()
-                        && violation.getPolicyCondition().getId() == existingViolation.getPolicyCondition().getId()
-                        && violation.getComponent().getId() == existingViolation.getComponent().getId())
-                {
-                    keep = true;
-                    break;
-                }
-            }
-            if (!keep) {
-                markedForDeletion.add(existingViolation);
-            }
-        }
-        if (!markedForDeletion.isEmpty()) {
-            delete(markedForDeletion);
-        }
-    }
-
-    /**
-     * Adds a policy violation
-     * @param pv the policy violation to add
-     */
-    public synchronized PolicyViolation addPolicyViolationIfNotExist(final PolicyViolation pv) {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "type == :type && component == :component && policyCondition == :policyCondition");
-        query.setRange(0, 1);
-        PolicyViolation result = singleResult(query.execute(pv.getType(), pv.getComponent(), pv.getPolicyCondition()));
-        if (result == null) {
-            result = persist(pv);
-        }
-        return result;
-    }
-
-    /**
      * Returns a List of all Policy objects.
      * This method if designed NOT to provide paginated results.
      * @return a List of all Policy objects

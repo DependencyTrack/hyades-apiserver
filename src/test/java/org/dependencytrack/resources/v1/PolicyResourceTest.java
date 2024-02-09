@@ -214,9 +214,7 @@ public class PolicyResourceTest extends ResourceTest {
         violation.setPolicyCondition(condition);
         violation.setType(PolicyViolation.Type.OPERATIONAL);
         violation.setTimestamp(new Date());
-        violation = qm.addPolicyViolationIfNotExist(violation);
-
-        qm.reconcilePolicyViolations(component, singletonList(violation));
+        qm.persist(violation);
 
         final Response response = target(V1_POLICY + "/" + policy.getUuid())
                 .request()
