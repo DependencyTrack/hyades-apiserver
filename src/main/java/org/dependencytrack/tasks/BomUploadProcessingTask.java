@@ -227,7 +227,6 @@ public class BomUploadProcessingTask implements Subscriber {
             projectMetadata = convertToProjectMetadata(cdxBom.getMetadata());
             if (cdxBom.getMetadata().getComponent() != null) {
                 metadataComponent = convertToProject(cdxBom.getMetadata(), projectMetadata);
-                projectMetadata.setProject(metadataComponent);
                 components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
             }
         }
@@ -311,9 +310,10 @@ public class BomUploadProcessingTask implements Subscriber {
             final Transaction trx = pm.currentTransaction();
             try {
                 trx.begin();
-
-                qm.getPersistenceManager().makePersistent(projectMetadata);
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
+                if (projectMetadata != null) {
+                    qm.getPersistenceManager().makePersistent(projectMetadata);
+                }
                 final Map<ComponentIdentity, Component> persistentComponents =
                         processComponents(qm, project, components, identitiesByBomRef, bomRefsByIdentity);
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
@@ -419,7 +419,6 @@ public class BomUploadProcessingTask implements Subscriber {
                     }
                 });
             }
-
             // TODO: Trigger index updates
         }
     }
