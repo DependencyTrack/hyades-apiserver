@@ -311,9 +311,14 @@ public class BomUploadProcessingTask implements Subscriber {
             try {
                 trx.begin();
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
-                if (projectMetadata != null && project.getMetadata() == null) {
-                    projectMetadata.setProject(project);
-                    qm.getPersistenceManager().makePersistent(projectMetadata);
+                if (projectMetadata != null) {
+                    if (project.getMetadata() == null) {
+                        projectMetadata.setProject(project);
+                        qm.getPersistenceManager().makePersistent(projectMetadata);
+                    } else {
+                        project.getMetadata().setSupplier(projectMetadata.getSupplier());
+                        project.getMetadata().setAuthors(projectMetadata.getAuthors());
+                    }
                 }
                 final Map<ComponentIdentity, Component> persistentComponents =
                         processComponents(qm, project, components, identitiesByBomRef, bomRefsByIdentity);
