@@ -16,12 +16,16 @@ on:
       - 'docs/**'
   workflow_dispatch:
 
+permissions: { }
+
 jobs:
   call-build:
     uses: ./.github/workflows/_meta-build.yaml
     with:
       app-version: "snapshot"
       publish-container: ${{ github.ref == 'refs/heads/main' }}
+    permissions:
+      security-events: write # Required to upload trivy's SARIF output
     secrets:
       registry-0-usr: ${{ github.repository_owner }}
       registry-0-psw: ${{ secrets.GITHUB_TOKEN }}
