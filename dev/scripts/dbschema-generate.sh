@@ -1,43 +1,20 @@
 #!/usr/bin/env bash
 
-DEFAULT_OUTPUT="./schema.sql"
-DEFAULT_DNPROPS="./dev/scripts/dbschema-generate.datanucleus.properties"
+set -euox pipefail
 
-function printHelp() {
-  echo "Generate the database schema for Dependency-Track."
-  echo ""
-  echo "Usage: $0 [-o <OUTPUT_FILE>] [-p <PROPERTIES_FILE>]"
-  echo "Options:"
-  echo " -o   Set output path for the schema (default: $DEFAULT_OUTPUT)"
-  echo " -p   Set path to DataNucleus properties (default: $DEFAULT_DNPROPS)"
-  echo ""
-  echo "This script uses the DataNucleus schema tool:"
-  echo "  https://www.datanucleus.org/products/accessplatform/jdo/persistence.html#schematool"
-  echo ""
-}
+SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
+ROOT_DIR="$(cd -P -- "${SCRIPT_DIR}/../../" && pwd -P)"
+CONTAINER_ID="$(docker run -d --rm -e 'POSTGRES_DB=dtrack' -e 'POSTGRES_USER=dtrack' -e 'POSTGRES_PASSWORD=dtrack' -p '5432' postgres:11-alpine)"
+CONTAINER_PORT="$(docker port "${CONTAINER_ID}" "5432/tcp" | cut -d ':' -f 2)"
+TMP_LIQUIBASE_CONFIG_FILE="$(mktemp -p "${ROOT_DIR}")"
 
-while getopts ":h:o:p:" opt; do
-  case $opt in
-    o)
-      output=$OPTARG
-      ;;
-    p)
-      dnprops=$OPTARG
-      ;;
-    h)
-      printHelp
-      exit
-      ;;
-    *)
-      printHelp
-      exit
-      ;;
-  esac
-done
+cat << EOF > "${TMP_LIQUIBASE_CONFIG_FILE}"
+changeLogFile=migration/changelog-main.xml
+url=jdbc:postgresql://localhost:${CONTAINER_PORT}/dtrack
+username=dtrack
+password=dtrack
+EOF
 
-mvn datanucleus:schema-create \
-  -DpersistenceUnitName=Alpine \
-  -Dprops="${dnprops:-$DEFAULT_DNPROPS}" \
-  -DcompleteDdl=true \
-  -DddlFile="${output:-$DEFAULT_OUTPUT}" \
-  -Dlog4jConfiguration=./dev/scripts/dbschema-generate.log4j.properties
+mvn liquibase:updateSQL -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
+  docker stop "${CONTAINER_ID}"; \
+  rm "${TMP_LIQUIBASE_CONFIG_FILE}"
