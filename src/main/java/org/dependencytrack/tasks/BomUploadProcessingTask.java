@@ -311,7 +311,8 @@ public class BomUploadProcessingTask implements Subscriber {
             try {
                 trx.begin();
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
-                if (projectMetadata != null) {
+                if (projectMetadata != null && project.getMetadata() == null) {
+                    projectMetadata.setProject(project);
                     qm.getPersistenceManager().makePersistent(projectMetadata);
                 }
                 final Map<ComponentIdentity, Component> persistentComponents =
@@ -507,12 +508,10 @@ public class BomUploadProcessingTask implements Subscriber {
             changed |= applyIfChanged(project, metadataComponent, Project::getExternalReferences, project::setExternalReferences);
             changed |= applyIfChanged(project, metadataComponent, Project::getPurl, project::setPurl);
             changed |= applyIfChanged(project, metadataComponent, Project::getSwidTagId, project::setSwidTagId);
-            changed |= applyIfChanged(project, metadataComponent, Project::getMetadata, project::setMetadata);
             if (changed) {
                 pm.flush();
             }
         }
-
         return project;
     }
 
