@@ -145,7 +145,7 @@ public abstract class ResourceTest extends JerseyTest {
     @AfterClass
     public static void tearDownClass() {
         if (postgresContainer != null) {
-            postgresContainer.stop();
+            postgresContainer.stopWhenNotReusing();
         }
     }
 

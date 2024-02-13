@@ -5,6 +5,7 @@ import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
 public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
 
@@ -42,4 +43,11 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
             throw new RuntimeException(e);
         }
     }
+
+    public void stopWhenNotReusing() {
+        if (!TestcontainersConfiguration.getInstance().environmentSupportsReuse() || !isShouldBeReused()) {
+            stop();
+        }
+    }
+
 }
