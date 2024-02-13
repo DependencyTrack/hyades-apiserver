@@ -25,16 +25,13 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import javax.jdo.JDOHelper;
 import java.sql.Connection;
@@ -46,7 +43,7 @@ public abstract class PersistenceCapableTest {
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
-    protected static PostgreSQLContainer<?> postgresContainer;
+    protected static PostgresTestContainer postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected QueryManager qm;
 
@@ -54,9 +51,8 @@ public abstract class PersistenceCapableTest {
     public static void init() throws Exception {
         Config.enableUnitTests();
 
-        postgresContainer = createPostgresContainer();
+        postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
-        runMigrations(postgresContainer);
     }
 
     @Before
@@ -87,17 +83,9 @@ public abstract class PersistenceCapableTest {
 
     @AfterClass
     public static void tearDownClass() {
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-    }
-
-    @SuppressWarnings("resource")
-    protected static PostgreSQLContainer<?> createPostgresContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"))
-                .withUsername("dtrack")
-                .withPassword("dtrack")
-                .withDatabaseName("dtrack");
+//        if (postgresContainer != null) {
+//            postgresContainer.stop();
+//        }
     }
 
     protected static void configurePmf(final PostgreSQLContainer<?> postgresContainer) {
@@ -116,14 +104,6 @@ public abstract class PersistenceCapableTest {
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
         PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
-    }
-
-    protected static void runMigrations(final PostgreSQLContainer<?> postgresContainer) throws Exception {
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        MigrationInitializer.runMigration(dataSource, /* silent */ true);
     }
 
     protected static void truncateTables(final PostgreSQLContainer<?> postgresContainer) throws Exception {

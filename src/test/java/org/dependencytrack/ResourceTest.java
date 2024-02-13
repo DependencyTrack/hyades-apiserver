@@ -37,7 +37,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -49,8 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.dependencytrack.PersistenceCapableTest.configurePmf;
-import static org.dependencytrack.PersistenceCapableTest.createPostgresContainer;
-import static org.dependencytrack.PersistenceCapableTest.runMigrations;
 import static org.dependencytrack.PersistenceCapableTest.truncateTables;
 
 public abstract class ResourceTest extends JerseyTest {
@@ -98,7 +95,7 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String X_API_KEY = "X-Api-Key";
     protected final String V1_TAG = "/v1/tag";
 
-    protected static PostgreSQLContainer<?> postgresContainer;
+    protected static PostgresTestContainer postgresContainer;
 
     protected QueryManager qm;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
@@ -111,9 +108,8 @@ public abstract class ResourceTest extends JerseyTest {
     public static void init() throws Exception {
         Config.enableUnitTests();
 
-        postgresContainer = createPostgresContainer();
+        postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
-        runMigrations(postgresContainer);
     }
 
     @Before
