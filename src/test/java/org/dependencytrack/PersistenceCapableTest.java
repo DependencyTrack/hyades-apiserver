@@ -32,6 +32,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
 import javax.jdo.JDOHelper;
 import java.sql.Connection;
@@ -83,9 +84,10 @@ public abstract class PersistenceCapableTest {
 
     @AfterClass
     public static void tearDownClass() {
-//        if (postgresContainer != null) {
-//            postgresContainer.stop();
-//        }
+        final boolean canReuseContainers = TestcontainersConfiguration.getInstance().environmentSupportsReuse();
+        if (postgresContainer != null && (!canReuseContainers || !postgresContainer.isShouldBeReused())) {
+            postgresContainer.stop();
+        }
     }
 
     protected static void configurePmf(final PostgreSQLContainer<?> postgresContainer) {

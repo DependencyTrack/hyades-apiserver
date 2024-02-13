@@ -29,7 +29,6 @@ public class IntegrityMetaQueryManagerTest extends PersistenceCapableTest {
         assertThat(qm.getIntegrityMetaComponent(result.getPurl())).satisfies(
                 meta -> {
                     assertThat(meta.getStatus()).isEqualTo(FetchStatus.IN_PROGRESS);
-                    assertThat(meta.getId()).isEqualTo(1L);
                     assertThat(meta.getMd5()).isNull();
                     assertThat(meta.getSha1()).isNull();
                     assertThat(meta.getSha256()).isNull();

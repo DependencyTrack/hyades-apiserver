@@ -25,7 +25,9 @@ public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Before
-    public void before() {
+    public void before() throws Exception {
+        super.before();
+
         environmentVariables.set("INTEGRITY_CHECK_ENABLED", "true");
     }
 

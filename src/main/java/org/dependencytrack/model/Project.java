@@ -185,6 +185,7 @@ public class Project implements Serializable {
 
     @Persistent
     @Index(name = "PROJECT_CPE_IDX")
+    @Column(name = "CPE")
     @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     //Patterns obtained from https://csrc.nist.gov/schema/cpe/2.3/cpe-naming_2.3.xsd
@@ -193,6 +194,7 @@ public class Project implements Serializable {
 
     @Persistent
     @Index(name = "PROJECT_PURL_IDX")
+    @Column(name = "PURL")
     @Size(max = 255)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
@@ -200,6 +202,7 @@ public class Project implements Serializable {
 
     @Persistent
     @Index(name = "PROJECT_SWID_TAGID_IDX")
+    @Column(name = "SWIDTAGID")
     @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The SWID tagId may only contain printable characters")
