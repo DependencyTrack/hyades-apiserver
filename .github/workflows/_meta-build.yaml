@@ -59,6 +59,7 @@ jobs:
   build-container:
     runs-on: ubuntu-latest
     permissions:
+      packages: write # Required to push images to ghcr.io
       security-events: write # Required to upload trivy's SARIF output
     needs:
       - build-java
