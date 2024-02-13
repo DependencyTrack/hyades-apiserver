@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.PolicyCondition.Operator.MATCHES;
 
 @RunWith(JUnitParamsRunner.class)
-public class CpeConditionTest extends AbstractPostgresEnabledTest {
+public class CpeConditionTest extends PersistenceCapableTest {
 
     private Object[] parameters() {
         return new Object[]{

@@ -1,6 +1,6 @@
 package org.dependencytrack.tasks;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
-public class RepositoryMetaAnalyzerTaskTest extends AbstractPostgresEnabledTest {
+public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testPortfolioRepositoryMetaAnalysis() {

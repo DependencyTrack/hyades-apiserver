@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -15,7 +15,7 @@ import org.junit.runner.RunWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class SwidTagIdConditionTest extends AbstractPostgresEnabledTest {
+public class SwidTagIdConditionTest extends PersistenceCapableTest {
 
     private Object[] parameters() {
         return new Object[]{

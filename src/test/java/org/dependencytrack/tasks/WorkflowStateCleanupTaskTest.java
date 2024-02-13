@@ -1,6 +1,6 @@
 package org.dependencytrack.tasks;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-public class WorkflowStateCleanupTaskTest extends AbstractPostgresEnabledTest {
+public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testTransitionToTimedOut() {

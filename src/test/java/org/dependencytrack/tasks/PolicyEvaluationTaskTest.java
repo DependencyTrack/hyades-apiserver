@@ -1,7 +1,7 @@
 package org.dependencytrack.tasks;
 
 import org.assertj.core.api.Assertions;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.model.Component;
@@ -17,7 +17,7 @@ import java.util.UUID;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 
-public class PolicyEvaluationTaskTest extends AbstractPostgresEnabledTest {
+public class PolicyEvaluationTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWorkflowStateIsCompletedForComponent() {

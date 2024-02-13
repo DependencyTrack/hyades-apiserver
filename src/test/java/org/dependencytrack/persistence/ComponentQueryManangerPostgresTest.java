@@ -2,7 +2,7 @@ package org.dependencytrack.persistence;
 
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ExternalReference;
@@ -22,7 +22,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ComponentQueryManangerPostgresTest extends AbstractPostgresEnabledTest {
+public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
 
     @Test
     public void testGetAllComponents() throws MalformedPackageURLException {

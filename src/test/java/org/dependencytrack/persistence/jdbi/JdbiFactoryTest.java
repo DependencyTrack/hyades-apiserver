@@ -1,7 +1,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import alpine.server.persistence.PersistenceManagerFactory;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -13,7 +13,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class JdbiFactoryTest extends AbstractPostgresEnabledTest {
+public class JdbiFactoryTest extends PersistenceCapableTest {
 
     @Test
     public void testGlobalInstance() {
@@ -62,7 +62,7 @@ public class JdbiFactoryTest extends AbstractPostgresEnabledTest {
                 .withMessage("Pool not open");
 
         // Create a new QueryManager.
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(super.createPmf());
+        configurePmf(postgresContainer);
         try (final var otherQm = new QueryManager()) {
             // Request the global JDBI instance again and verify it differs from the original one.
             // Because the PMF changed, a new instance must have been created.

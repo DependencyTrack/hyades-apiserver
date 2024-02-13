@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -17,7 +17,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class CoordinatesConditionTest extends AbstractPostgresEnabledTest {
+public class CoordinatesConditionTest extends PersistenceCapableTest {
     private Object[] parameters() {
         return new Object[]{
                 //MATCHES group regex

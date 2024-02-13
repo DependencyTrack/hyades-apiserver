@@ -1,6 +1,6 @@
 package org.dependencytrack.tasks;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
@@ -19,7 +19,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 
-public class IntegrityAnalysisTaskTest extends AbstractPostgresEnabledTest {
+public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();

@@ -1,6 +1,6 @@
 package org.dependencytrack.policy.cel.compat;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
@@ -15,7 +15,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class LicenseGroupConditionTest extends AbstractPostgresEnabledTest {
+public class LicenseGroupConditionTest extends PersistenceCapableTest {
 
     @Test
     public void hasMatch() {

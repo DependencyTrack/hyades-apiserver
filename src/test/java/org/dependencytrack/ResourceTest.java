@@ -34,8 +34,10 @@ import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -45,6 +47,11 @@ import javax.ws.rs.core.Response;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.dependencytrack.PersistenceCapableTest.configurePmf;
+import static org.dependencytrack.PersistenceCapableTest.createPostgresContainer;
+import static org.dependencytrack.PersistenceCapableTest.runMigrations;
+import static org.dependencytrack.PersistenceCapableTest.truncateTables;
 
 public abstract class ResourceTest extends JerseyTest {
 
@@ -89,8 +96,9 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String SIZE = "size";
     protected final String TOTAL_COUNT_HEADER = "X-Total-Count";
     protected final String X_API_KEY = "X-Api-Key";
-
     protected final String V1_TAG = "/v1/tag";
+
+    protected static PostgreSQLContainer<?> postgresContainer;
 
     protected QueryManager qm;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
@@ -100,12 +108,19 @@ public abstract class ResourceTest extends JerseyTest {
     protected String apiKey;
 
     @BeforeClass
-    public static void init() {
+    public static void init() throws Exception {
         Config.enableUnitTests();
+
+        postgresContainer = createPostgresContainer();
+        postgresContainer.start();
+        runMigrations(postgresContainer);
     }
 
     @Before
     public void before() throws Exception {
+        truncateTables(postgresContainer);
+        configurePmf(postgresContainer);
+
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
@@ -118,8 +133,24 @@ public abstract class ResourceTest extends JerseyTest {
 
     @After
     public void after() {
+        // PersistenceManager will refuse to close when there's an active transaction
+        // that was neither committed nor rolled back. Unfortunately some areas of the
+        // code base can leave such a broken state behind if they run into unexpected
+        // errors. See: https://github.com/DependencyTrack/dependency-track/issues/2677
+        if (!qm.getPersistenceManager().isClosed()
+            && qm.getPersistenceManager().currentTransaction().isActive()) {
+            qm.getPersistenceManager().currentTransaction().rollback();
+        }
+
         PersistenceManagerFactory.tearDown();
         KafkaProducerInitializer.tearDown();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        if (postgresContainer != null) {
+            postgresContainer.stop();
+        }
     }
 
     @Override

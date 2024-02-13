@@ -4,14 +4,14 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 
 import java.time.Instant;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNullElseGet;
 
-abstract class AbstractProcessorTest extends AbstractPostgresEnabledTest {
+abstract class AbstractProcessorTest extends PersistenceCapableTest {
 
     static <K, V> ConsumerRecordBuilder<K, V> aConsumerRecord(final K key, final V value) {
         return new ConsumerRecordBuilder<>(key, value);

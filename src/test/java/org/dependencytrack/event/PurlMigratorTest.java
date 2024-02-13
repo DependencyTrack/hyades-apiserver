@@ -1,6 +1,6 @@
 package org.dependencytrack.event;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.junit.Before;
@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
 
-public class PurlMigratorTest extends AbstractPostgresEnabledTest {
+public class PurlMigratorTest extends PersistenceCapableTest {
 
     final Component componentPersisted = new Component();
 

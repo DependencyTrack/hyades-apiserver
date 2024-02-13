@@ -32,7 +32,7 @@ import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatu
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_SUCCESSFUL;
 import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL;
 
-public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStreamsPostgresTest {
+public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStreamsTest {
 
     public KafkaStreamsDelayedBomProcessedNotificationTest() {
         super(new KafkaStreamsTopologyFactory(true)::createTopology);

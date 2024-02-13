@@ -4,6 +4,7 @@ import alpine.server.filters.ApiFilter;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.http.HttpStatus;
+import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -25,7 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ComponentResourcePostgresTest extends AbstractPostgresResourceTest {
+public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Override
     protected DeploymentContext configureDeployment() {
