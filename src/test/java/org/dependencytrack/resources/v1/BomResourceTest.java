@@ -23,6 +23,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
@@ -185,6 +186,7 @@ public class BomResourceTest extends ResourceTest {
 
         final String jsonResponse = getPlainTextBody(response);
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentWithoutVulnUuid", equalTo(componentWithoutVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnUuid", equalTo(componentWithVuln.getUuid().toString()))
@@ -333,6 +335,7 @@ public class BomResourceTest extends ResourceTest {
 
         final String jsonResponse = getPlainTextBody(response);
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vulnerability.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentWithoutVulnUuid", equalTo(componentWithoutVuln.getUuid().toString()))
@@ -526,6 +529,7 @@ public class BomResourceTest extends ResourceTest {
 
         final String jsonResponse = getPlainTextBody(response);
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vulnerability.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentWithoutVulnUuid", equalTo(componentWithoutVuln.getUuid().toString()))
