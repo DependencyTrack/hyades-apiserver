@@ -2479,15 +2479,15 @@
             <column name="PROJECT_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="SUPPLIER" type="TEXT"/>
-            <column name="AUTHORS" type="TEXT"/>
+            <column name="SUPPLIER" type="JSONB"/>
+            <column name="AUTHORS" type="JSONB"/>
         </createTable>
         <addColumn tableName="COMPONENT">
-            <column name="SUPPLIER" type="TEXT"/>
+            <column name="SUPPLIER" type="JSONB"/>
         </addColumn>
         <addColumn tableName="PROJECT">
-            <column name="SUPPLIER" type="TEXT"/>
-            <column name="MANUFACTURER" type="TEXT"/>
+            <column name="SUPPLIER" type="JSONB"/>
+            <column name="MANUFACTURER" type="JSONB"/>
         </addColumn>
     </changeSet>
 </databaseChangeLog>
