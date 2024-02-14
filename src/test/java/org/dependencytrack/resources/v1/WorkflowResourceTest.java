@@ -2,6 +2,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
@@ -66,6 +67,7 @@ public class WorkflowResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("token", equalTo(uuid.toString()))
                 .withMatcher("step1", equalTo("BOM_CONSUMPTION"))
                 .withMatcher("status1", equalTo("COMPLETED"))

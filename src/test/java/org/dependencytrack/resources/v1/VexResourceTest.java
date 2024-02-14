@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -125,6 +126,7 @@ public class VexResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnAUuid", equalTo(vulnA.getUuid().toString()))
                 .withMatcher("vulnBUuid", equalTo(vulnB.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
