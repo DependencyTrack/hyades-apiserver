@@ -42,6 +42,8 @@ jobs:
           chmod +x "$HOME/.local/bin/cyclonedx"
 
       - name: Build with Maven
+        env:
+          MAVEN_ARGS: "-B --no-transfer-progress"
         run: |-
           mvn clean
           mvn package -Dmaven.test.skip=true -P enhance -P embedded-jetty -Dservices.bom.merge.skip=false -Dlogback.configuration.file=src/main/docker/logback.xml

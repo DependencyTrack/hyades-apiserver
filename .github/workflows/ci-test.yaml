@@ -41,6 +41,8 @@ jobs:
           cache: 'maven'
 
       - name: Execute unit tests
+        env:
+          MAVEN_ARGS: "-B --no-transfer-progress"
         run: |-
           mvn clean
           mvn test -P enhance
