@@ -29,9 +29,11 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
+import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
@@ -119,6 +121,11 @@ public class Component implements Serializable {
     @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
     private String publisher;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalEntityJsonConverter.class)
+    @Column(name = "SUPPLIER", jdbcType = "CLOB", allowsNull = "true")
+    private OrganizationalEntity supplier;
 
     @Persistent
     @Column(name = "GROUP", jdbcType = "VARCHAR")
@@ -391,6 +398,14 @@ public class Component implements Serializable {
 
     public void setPublisher(String publisher) {
         this.publisher = publisher;
+    }
+
+    public OrganizationalEntity getSupplier() {
+        return supplier;
+    }
+
+    public void setSupplier(OrganizationalEntity supplier) {
+        this.supplier = supplier;
     }
 
     public String getGroup() {

@@ -50,6 +50,7 @@ import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan.TargetType;
@@ -97,6 +98,7 @@ import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TI
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
 import static org.dependencytrack.util.InternalComponentIdentificationUtil.isInternalComponent;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
@@ -218,13 +220,15 @@ public class BomUploadProcessingTask implements Subscriber {
         // Note: One identity can point to multiple BOM refs, due to component and service de-duplication.
         final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
 
-        final Project metadataComponent;
+        Project metadataComponent = null;
+        ProjectMetadata projectMetadata = null;
         List<Component> components = new ArrayList<>();
-        if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
-            metadataComponent = convertToProject(cdxBom.getMetadata().getComponent());
-            components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
-        } else {
-            metadataComponent = null;
+        if (cdxBom.getMetadata() != null) {
+            projectMetadata = convertToProjectMetadata(cdxBom.getMetadata());
+            if (cdxBom.getMetadata().getComponent() != null) {
+                metadataComponent = convertToProject(cdxBom.getMetadata(), projectMetadata);
+                components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
+            }
         }
         components.addAll(convertComponents(cdxBom.getComponents()));
         components = flatten(components, Component::getChildren, Component::setChildren);
@@ -306,8 +310,16 @@ public class BomUploadProcessingTask implements Subscriber {
             final Transaction trx = pm.currentTransaction();
             try {
                 trx.begin();
-
                 final Project project = processMetadataComponent(ctx, pm, metadataComponent);
+                if (projectMetadata != null) {
+                    if (project.getMetadata() == null) {
+                        projectMetadata.setProject(project);
+                        qm.getPersistenceManager().makePersistent(projectMetadata);
+                    } else {
+                        project.getMetadata().setSupplier(projectMetadata.getSupplier());
+                        project.getMetadata().setAuthors(projectMetadata.getAuthors());
+                    }
+                }
                 final Map<ComponentIdentity, Component> persistentComponents =
                         processComponents(qm, project, components, identitiesByBomRef, bomRefsByIdentity);
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
@@ -413,7 +425,6 @@ public class BomUploadProcessingTask implements Subscriber {
                     }
                 });
             }
-
             // TODO: Trigger index updates
         }
     }
@@ -491,6 +502,8 @@ public class BomUploadProcessingTask implements Subscriber {
             changed |= applyIfChanged(project, metadataComponent, Project::getAuthor, project::setAuthor);
             changed |= applyIfChanged(project, metadataComponent, Project::getPublisher, project::setPublisher);
             changed |= applyIfChanged(project, metadataComponent, Project::getClassifier, project::setClassifier);
+            changed |= applyIfChanged(project, metadataComponent, Project::getSupplier, project::setSupplier);
+            changed |= applyIfChanged(project, metadataComponent, Project::getManufacturer, project::setManufacturer);
             // TODO: Currently these properties are "decoupled" from the BOM and managed directly by DT users.
             //   Perhaps there could be a flag for BOM uploads saying "use BOM properties" or something?
             // changed |= applyIfChanged(project, metadataComponent, Project::getGroup, project::setGroup);
@@ -504,7 +517,6 @@ public class BomUploadProcessingTask implements Subscriber {
                 pm.flush();
             }
         }
-
         return project;
     }
 
@@ -582,6 +594,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     var changed = false;
                     changed |= applyIfChanged(persistentComponent, component, Component::getAuthor, persistentComponent::setAuthor);
                     changed |= applyIfChanged(persistentComponent, component, Component::getPublisher, persistentComponent::setPublisher);
+                    changed |= applyIfChanged(persistentComponent, component, Component::getSupplier, persistentComponent::setSupplier);
                     changed |= applyIfChanged(persistentComponent, component, Component::getClassifier, persistentComponent::setClassifier);
                     changed |= applyIfChanged(persistentComponent, component, Component::getGroup, persistentComponent::setGroup);
                     changed |= applyIfChanged(persistentComponent, component, Component::getName, persistentComponent::setName);

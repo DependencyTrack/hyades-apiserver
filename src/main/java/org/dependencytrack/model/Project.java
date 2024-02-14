@@ -31,9 +31,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import io.swagger.annotations.ApiModelProperty;
+import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
@@ -86,7 +89,11 @@ import java.util.UUID;
                 @Persistent(name = "children"),
                 @Persistent(name = "properties"),
                 @Persistent(name = "tags"),
-                @Persistent(name = "accessTeams")
+                @Persistent(name = "accessTeams"),
+                @Persistent(name = "metadata")
+        }),
+        @FetchGroup(name = "METADATA", members = {
+                @Persistent(name = "metadata")
         }),
         @FetchGroup(name = "IDENTIFIERS", members = {
                 @Persistent(name = "id"),
@@ -122,6 +129,7 @@ public class Project implements Serializable {
      */
     public enum FetchGroup {
         ALL,
+        METADATA,
         IDENTIFIERS,
         METRICS_UPDATE,
         NOTIFICATION,
@@ -146,6 +154,16 @@ public class Project implements Serializable {
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
     private String publisher;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalEntityJsonConverter.class)
+    @Column(name = "MANUFACTURER", jdbcType = "CLOB", allowsNull = "true")
+    private OrganizationalEntity manufacturer;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalEntityJsonConverter.class)
+    @Column(name = "SUPPLIER", jdbcType = "CLOB", allowsNull = "true")
+    private OrganizationalEntity supplier;
 
     @Persistent
     @Column(name = "GROUP", jdbcType = "VARCHAR")
@@ -275,6 +293,10 @@ public class Project implements Serializable {
     @Serialized
     private List<ExternalReference> externalReferences;
 
+    @Persistent(mappedBy = "project")
+    @ApiModelProperty(accessMode = ApiModelProperty.AccessMode.READ_ONLY)
+    private ProjectMetadata metadata;
+
     private transient ProjectMetrics metrics;
 
     private transient List<ProjectVersion> versions;
@@ -303,6 +325,22 @@ public class Project implements Serializable {
 
     public void setPublisher(String publisher) {
         this.publisher = publisher;
+    }
+
+    public OrganizationalEntity getManufacturer() {
+        return manufacturer;
+    }
+
+    public void setManufacturer(final OrganizationalEntity manufacturer) {
+        this.manufacturer = manufacturer;
+    }
+
+    public OrganizationalEntity getSupplier() {
+        return supplier;
+    }
+
+    public void setSupplier(OrganizationalEntity supplier) {
+        this.supplier = supplier;
     }
 
     public String getGroup() {
@@ -499,6 +537,14 @@ public class Project implements Serializable {
             this.accessTeams = new ArrayList<>();
         }
         this.accessTeams.add(accessTeam);
+    }
+
+    public ProjectMetadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(final ProjectMetadata metadata) {
+        this.metadata = metadata;
     }
 
     @JsonIgnore

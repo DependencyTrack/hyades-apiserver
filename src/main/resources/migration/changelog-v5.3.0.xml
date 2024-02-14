@@ -2470,4 +2470,28 @@
                 ON "COMPONENT" USING GIN ("DIRECT_DEPENDENCIES" GIN_TRGM_OPS);
         </sql>
     </changeSet>
+
+    <changeSet id="v5.3.0-15" author="sahibamittal">
+        <createTable tableName="PROJECT_METADATA">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_METADATA_PK"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUPPLIER" type="TEXT"/>
+            <column name="AUTHORS" type="TEXT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="PROJECT_METADATA" baseColumnNames="PROJECT_ID"
+                constraintName="PROJECT_METADATA_PROJECT_ID_FK" deferrable="true" initiallyDeferred="true"
+                referencedTableName="PROJECT" referencedColumnNames="ID"
+                onDelete="NO ACTION" onUpdate="NO ACTION" validate="true"/>
+        <addColumn tableName="COMPONENT">
+            <column name="SUPPLIER" type="TEXT"/>
+        </addColumn>
+        <addColumn tableName="PROJECT">
+            <column name="SUPPLIER" type="TEXT"/>
+            <column name="MANUFACTURER" type="TEXT"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
