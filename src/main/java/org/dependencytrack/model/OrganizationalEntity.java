@@ -21,6 +21,7 @@ package org.dependencytrack.model;
 import alpine.server.json.TrimmedStringArrayDeserializer;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.io.Serializable;
@@ -41,11 +42,14 @@ public class OrganizationalEntity implements Serializable {
     private static final long serialVersionUID = 5333594855427723634L;
 
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
+    @JsonView(JsonViews.MetadataTools.class)
     private String name;
 
     @JsonDeserialize(using = TrimmedStringArrayDeserializer.class)
+    @JsonView(JsonViews.MetadataTools.class)
     private String[] urls;
 
+    @JsonView(JsonViews.MetadataTools.class)
     private List<OrganizationalContact> contacts;
 
     public String getName() {

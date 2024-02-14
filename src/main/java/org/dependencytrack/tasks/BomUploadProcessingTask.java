@@ -92,6 +92,7 @@ import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
+import static org.datanucleus.PropertyNames.PROPERTY_RETAIN_VALUES;
 import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
@@ -220,15 +221,11 @@ public class BomUploadProcessingTask implements Subscriber {
         // Note: One identity can point to multiple BOM refs, due to component and service de-duplication.
         final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
 
-        Project metadataComponent = null;
-        ProjectMetadata projectMetadata = null;
+        final ProjectMetadata projectMetadata = convertToProjectMetadata(cdxBom.getMetadata());
+        final Project project = convertToProject(cdxBom.getMetadata());
         List<Component> components = new ArrayList<>();
-        if (cdxBom.getMetadata() != null) {
-            projectMetadata = convertToProjectMetadata(cdxBom.getMetadata());
-            if (cdxBom.getMetadata().getComponent() != null) {
-                metadataComponent = convertToProject(cdxBom.getMetadata(), projectMetadata);
-                components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
-            }
+        if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getComponent() != null) {
+            components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponents()));
         }
         components.addAll(convertComponents(cdxBom.getComponents()));
         components = flatten(components, Component::getChildren, Component::setChildren);
@@ -304,30 +301,27 @@ public class BomUploadProcessingTask implements Subscriber {
             // BomUploadProcessingTaskTest#informWithBloatedBomTest can be used to profile the impact on large BOMs.
             pm.setProperty(PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
+            // Prevent object fields from being unloaded upon commit.
+            //
+            // DataNucleus transitions objects into the "hollow" state after the transaction is committed.
+            // In hollow state, all fields except the ID are unloaded. Accessing fields afterward triggers
+            // one or more database queries to load them again.
+            // See https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle
+            qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
+
             LOGGER.info("Processing %d components and %d services from BOM (%s)"
                     .formatted(components.size(), services.size(), ctx));
 
             final Transaction trx = pm.currentTransaction();
             try {
                 trx.begin();
-                final Project project = processMetadataComponent(ctx, pm, metadataComponent);
-                if (projectMetadata != null) {
-                    if (project.getMetadata() == null) {
-                        projectMetadata.setProject(project);
-                        qm.getPersistenceManager().makePersistent(projectMetadata);
-                    } else {
-                        project.getMetadata().setSupplier(projectMetadata.getSupplier());
-                        project.getMetadata().setAuthors(projectMetadata.getAuthors() != null
-                                ? new ArrayList<>(projectMetadata.getAuthors())
-                                : null);
-                    }
-                }
+                final Project persistentProject = processProject(ctx, pm, project, projectMetadata);
                 final Map<ComponentIdentity, Component> persistentComponents =
-                        processComponents(qm, project, components, identitiesByBomRef, bomRefsByIdentity);
+                        processComponents(qm, persistentProject, components, identitiesByBomRef, bomRefsByIdentity);
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
-                        processServices(qm, project, services, identitiesByBomRef, bomRefsByIdentity);
-                processDependencyGraph(ctx, pm, cdxBom, project, persistentComponents, persistentServices, identitiesByBomRef);
-                recordBomImport(ctx, pm, project);
+                        processServices(qm, persistentProject, services, identitiesByBomRef, bomRefsByIdentity);
+                processDependencyGraph(ctx, pm, cdxBom, persistentProject, persistentComponents, persistentServices, identitiesByBomRef);
+                recordBomImport(ctx, pm, persistentProject);
 
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
@@ -484,42 +478,58 @@ public class BomUploadProcessingTask implements Subscriber {
         return bom;
     }
 
-    private static Project processMetadataComponent(final Context ctx, final PersistenceManager pm, final Project metadataComponent) throws BomProcessingException {
+    private static Project processProject(final Context ctx, final PersistenceManager pm,
+                                          final Project project, final ProjectMetadata projectMetadata) throws BomProcessingException {
         final Query<Project> query = pm.newQuery(Project.class);
         query.setFilter("uuid == :uuid");
         query.setParameters(ctx.project.getUuid());
 
-        final Project project;
+        final Project persistentProject;
         try {
-            project = query.executeUnique();
+            persistentProject = query.executeUnique();
         } finally {
             query.closeAll();
         }
-        if (project == null) {
+        if (persistentProject == null) {
             throw new BomProcessingException(ctx, "Project does not exist");
         }
 
-        if (metadataComponent != null) {
-            boolean changed = false;
-            changed |= applyIfChanged(project, metadataComponent, Project::getAuthor, project::setAuthor);
-            changed |= applyIfChanged(project, metadataComponent, Project::getPublisher, project::setPublisher);
-            changed |= applyIfChanged(project, metadataComponent, Project::getClassifier, project::setClassifier);
-            changed |= applyIfChanged(project, metadataComponent, Project::getSupplier, project::setSupplier);
-            changed |= applyIfChanged(project, metadataComponent, Project::getManufacturer, project::setManufacturer);
+        boolean hasChanged = false;
+        if (project != null) {
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getAuthor, persistentProject::setAuthor);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getPublisher, persistentProject::setPublisher);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getClassifier, persistentProject::setClassifier);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getSupplier, persistentProject::setSupplier);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getManufacturer, persistentProject::setManufacturer);
             // TODO: Currently these properties are "decoupled" from the BOM and managed directly by DT users.
             //   Perhaps there could be a flag for BOM uploads saying "use BOM properties" or something?
-            // changed |= applyIfChanged(project, metadataComponent, Project::getGroup, project::setGroup);
-            // changed |= applyIfChanged(project, metadataComponent, Project::getName, project::setName);
-            // changed |= applyIfChanged(project, metadataComponent, Project::getVersion, project::setVersion);
-            // changed |= applyIfChanged(project, metadataComponent, Project::getDescription, project::setDescription);
-            changed |= applyIfChanged(project, metadataComponent, Project::getExternalReferences, project::setExternalReferences);
-            changed |= applyIfChanged(project, metadataComponent, Project::getPurl, project::setPurl);
-            changed |= applyIfChanged(project, metadataComponent, Project::getSwidTagId, project::setSwidTagId);
-            if (changed) {
-                pm.flush();
+            // hasChanged |= applyIfChanged(persistentProject, project, Project::getGroup, persistentProject::setGroup);
+            // hasChanged |= applyIfChanged(persistentProject, project, Project::getName, persistentProject::setName);
+            // hasChanged |= applyIfChanged(persistentProject, project, Project::getVersion, persistentProject::setVersion);
+            // hasChanged |= applyIfChanged(persistentProject, project, Project::getDescription, persistentProject::setDescription);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getExternalReferences, persistentProject::setExternalReferences);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getPurl, persistentProject::setPurl);
+            hasChanged |= applyIfChanged(persistentProject, project, Project::getSwidTagId, persistentProject::setSwidTagId);
+        }
+
+        if (projectMetadata != null) {
+            if (persistentProject.getMetadata() == null) {
+                projectMetadata.setProject(persistentProject);
+                pm.makePersistent(projectMetadata);
+                hasChanged = true;
+            } else {
+                hasChanged |= applyIfChanged(persistentProject.getMetadata(), projectMetadata, ProjectMetadata::getAuthors,
+                        authors -> persistentProject.getMetadata().setAuthors(authors != null ? new ArrayList<>(authors) : null));
+                hasChanged |= applyIfChanged(persistentProject.getMetadata(), projectMetadata, ProjectMetadata::getSupplier, persistentProject.getMetadata()::setSupplier);
+                hasChanged |= applyIfChanged(persistentProject.getMetadata(), projectMetadata, ProjectMetadata::getTools, persistentProject.getMetadata()::setTools);
             }
         }
-        return project;
+
+        if (hasChanged) {
+            pm.flush();
+        }
+
+        return persistentProject;
     }
 
     private static Map<ComponentIdentity, Component> processComponents(final QueryManager qm,

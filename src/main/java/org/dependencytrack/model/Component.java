@@ -23,6 +23,7 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
@@ -114,17 +115,20 @@ public class Component implements Serializable {
     @Persistent
     @Column(name = "AUTHOR", jdbcType = "CLOB")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The author may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String author;
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
     @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String publisher;
 
     @Persistent(defaultFetchGroup = "true")
     @Convert(OrganizationalEntityJsonConverter.class)
     @Column(name = "SUPPLIER", jdbcType = "CLOB", allowsNull = "true")
+    @JsonView(JsonViews.MetadataTools.class)
     private OrganizationalEntity supplier;
 
     @Persistent
@@ -132,6 +136,7 @@ public class Component implements Serializable {
     @Index(name = "COMPONENT_GROUP_IDX")
     @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String group;
 
     @Persistent
@@ -141,6 +146,7 @@ public class Component implements Serializable {
     @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String name;
 
     @Persistent
@@ -148,12 +154,14 @@ public class Component implements Serializable {
     @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String version;
 
     @Persistent
     @Column(name = "CLASSIFIER", jdbcType = "VARCHAR")
     @Index(name = "COMPONENT_CLASSIFIER_IDX")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
+    @JsonView(JsonViews.MetadataTools.class)
     private Classifier classifier;
 
     @Persistent
@@ -174,72 +182,84 @@ public class Component implements Serializable {
     @Index(name = "COMPONENT_MD5_IDX")
     @Column(name = "MD5", jdbcType = "VARCHAR", length = 32)
     @Pattern(regexp = "^[0-9a-fA-F]{32}$", message = "The MD5 hash must be a valid 32 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String md5;
 
     @Persistent
     @Index(name = "COMPONENT_SHA1_IDX")
     @Column(name = "SHA1", jdbcType = "VARCHAR", length = 40)
     @Pattern(regexp = "^[0-9a-fA-F]{40}$", message = "The SHA1 hash must be a valid 40 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha1;
 
     @Persistent
     @Index(name = "COMPONENT_SHA256_IDX")
     @Column(name = "SHA_256", jdbcType = "VARCHAR", length = 64)
     @Pattern(regexp = "^[0-9a-fA-F]{64}$", message = "The SHA-256 hash must be a valid 64 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha256;
 
     @Persistent
     @Index(name = "COMPONENT_SHA384_IDX")
     @Column(name = "SHA_384", jdbcType = "VARCHAR", length = 96)
     @Pattern(regexp = "^[0-9a-fA-F]{96}$", message = "The SHA-384 hash must be a valid 96 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha384;
 
     @Persistent
     @Index(name = "COMPONENT_SHA512_IDX")
     @Column(name = "SHA_512", jdbcType = "VARCHAR", length = 128)
     @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA-512 hash must be a valid 128 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha512;
 
     @Persistent
     @Index(name = "COMPONENT_SHA3_256_IDX")
     @Column(name = "SHA3_256", jdbcType = "VARCHAR", length = 64)
     @Pattern(regexp = "^[0-9a-fA-F]{64}$", message = "The SHA3-256 hash must be a valid 64 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha3_256;
 
     @Persistent
     @Index(name = "COMPONENT_SHA3_384_IDX")
     @Column(name = "SHA3_384", jdbcType = "VARCHAR", length = 96)
     @Pattern(regexp = "^[0-9a-fA-F]{96}$", message = "The SHA3-384 hash must be a valid 96 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha3_384;
 
     @Persistent
     @Index(name = "COMPONENT_SHA3_512_IDX")
     @Column(name = "SHA3_512", jdbcType = "VARCHAR", length = 128)
     @Pattern(regexp = "^[0-9a-fA-F]{128}$", message = "The SHA3-512 hash must be a valid 128 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String sha3_512;
 
     @Persistent
     @Index(name = "COMPONENT_BLAKE2B_256_IDX")
     @Column(name = "BLAKE2B_256", jdbcType = "VARCHAR", length = 64)
     @Pattern(regexp = RegexSequence.Definition.HASH_SHA256, message = "The BLAKE2b hash must be a valid 64 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String blake2b_256;
 
     @Persistent
     @Index(name = "COMPONENT_BLAKE2B_384_IDX")
     @Column(name = "BLAKE2B_384", jdbcType = "VARCHAR", length = 96)
     @Pattern(regexp = RegexSequence.Definition.HASH_SHA384, message = "The BLAKE2b hash must be a valid 96 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String blake2b_384;
 
     @Persistent
     @Index(name = "COMPONENT_BLAKE2B_512_IDX")
     @Column(name = "BLAKE2B_512", jdbcType = "VARCHAR", length = 128)
     @Pattern(regexp = RegexSequence.Definition.HASH_SHA512, message = "The BLAKE2b hash must be a valid 128 character HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String blake2b_512;
 
     @Persistent
     @Index(name = "COMPONENT_BLAKE3_IDX")
     @Column(name = "BLAKE3", jdbcType = "VARCHAR", length = 255)
     @Pattern(regexp = RegexSequence.Definition.HEXADECIMAL, message = "The BLAKE3 hash must be a valid HEX number")
+    @JsonView(JsonViews.MetadataTools.class)
     private String blake3;
 
     @Persistent
@@ -248,6 +268,7 @@ public class Component implements Serializable {
     @Size(max = 255)
     //Patterns obtained from https://csrc.nist.gov/schema/cpe/2.3/cpe-naming_2.3.xsd
     @Pattern(regexp = "(cpe:2\\.3:[aho\\*\\-](:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\\*\\-]))(:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){4})|([c][pP][eE]:/[AHOaho]?(:[A-Za-z0-9\\._\\-~%]*){0,6})", message = "The CPE must conform to the CPE v2.2 or v2.3 specification defined by NIST")
+    @JsonView(JsonViews.MetadataTools.class)
     private String cpe;
 
     @Persistent(defaultFetchGroup = "true")
@@ -256,6 +277,7 @@ public class Component implements Serializable {
     @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
+    @JsonView(JsonViews.MetadataTools.class)
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
@@ -270,6 +292,7 @@ public class Component implements Serializable {
     @Index(name = "COMPONENT_SWID_TAGID_IDX")
     @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The SWID tagId may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String swidTagId;
 
     @Persistent
@@ -323,6 +346,7 @@ public class Component implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "EXTERNAL_REFERENCES")
     @Serialized
+    @JsonView(JsonViews.MetadataTools.class)
     private List<ExternalReference> externalReferences;
 
     @Persistent

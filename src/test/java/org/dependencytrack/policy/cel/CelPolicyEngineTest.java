@@ -18,10 +18,12 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
@@ -69,7 +71,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
      * Data being available means:
      * <ul>
      *   <li>Expression requirements were analyzed correctly</li>
-     *   <li>Database was retrieved from the database correctly</li>
+     *   <li>Data was retrieved from the database correctly</li>
      *   <li>The mapping from DB data to CEL Protobuf models worked as expected</li>
      * </ul>
      */
@@ -87,6 +89,43 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         project.setSwidTagId("projectSwidTagId");
         project.setLastBomImport(new java.util.Date());
         qm.persist(project);
+
+        final var toolComponentLicense = new License();
+        toolComponentLicense.setUuid(UUID.randomUUID());
+        toolComponentLicense.setLicenseId("toolComponentLicenseId");
+
+        final var toolComponent = new Component();
+        toolComponent.setGroup("toolComponentGroup");
+        toolComponent.setName("toolComponentName");
+        toolComponent.setVersion("toolComponentVersion");
+        toolComponent.setClassifier(Classifier.APPLICATION);
+        toolComponent.setCpe("toolComponentCpe");
+        toolComponent.setPurl("pkg:maven/toolComponentGroup/toolComponentName@toolComponentVersion"); // NB: Must be valid PURL, otherwise it's being JSON serialized as null
+        toolComponent.setSwidTagId("toolComponentSwidTagId");
+        toolComponent.setInternal(true); // NB: Currently ignored for tool components.
+        toolComponent.setMd5("toolComponentMd5");
+        toolComponent.setSha1("toolComponentSha1");
+        toolComponent.setSha256("toolComponentSha256");
+        toolComponent.setSha384("toolComponentSha384");
+        toolComponent.setSha512("toolComponentSha512");
+        toolComponent.setSha3_256("toolComponentSha3_256");
+        toolComponent.setSha3_384("toolComponentSha3_384");
+        toolComponent.setSha3_512("toolComponentSha3_512");
+        toolComponent.setBlake2b_256("toolComponentBlake2b_256");
+        toolComponent.setBlake2b_384("toolComponentBlake2b_384");
+        toolComponent.setBlake2b_512("toolComponentBlake2b_512");
+        toolComponent.setBlake3("toolComponentBlake3");
+        // NB: License data is currently ignored for tool components.
+        //   Including it in the test for documentation purposes.
+        toolComponent.setLicense("toolComponentLicense");
+        toolComponent.setLicenseExpression("toolComponentLicenseExpression");
+        toolComponent.setLicenseUrl("toolComponentLicenseUrl");
+        toolComponent.setResolvedLicense(toolComponentLicense);
+
+        final var projectMetadata = new ProjectMetadata();
+        projectMetadata.setProject(project);
+        projectMetadata.setTools(new Tools(List.of(toolComponent), null));
+        qm.persist(projectMetadata);
 
         qm.createProjectProperty(project, "propertyGroup", "propertyName", "propertyValue", IConfigProperty.PropertyType.STRING, null);
 
@@ -231,6 +270,31 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
                   && project.purl == "projectPurl"
                   && project.swid_tag_id == "projectSwidTagId"
                   && has(project.last_bom_import)
+                  && project.metadata.tools.components.all(tool,
+                       tool.group == "toolComponentGroup"
+                         && tool.name == "toolComponentName"
+                         && tool.version == "toolComponentVersion"
+                         && tool.classifier == "APPLICATION"
+                         && tool.cpe == "toolComponentCpe"
+                         && tool.purl == "pkg:maven/toolComponentGroup/toolComponentName@toolComponentVersion"
+                         && tool.swid_tag_id == "toolComponentSwidTagId"
+                         && !tool.is_internal
+                         && tool.md5 == "toolcomponentmd5"
+                         && tool.sha1 == "toolcomponentsha1"
+                         && tool.sha256 == "toolcomponentsha256"
+                         && tool.sha384 == "toolcomponentsha384"
+                         && tool.sha512 == "toolcomponentsha512"
+                         && tool.sha3_256 == "toolcomponentsha3_256"
+                         && tool.sha3_384 == "toolcomponentsha3_384"
+                         && tool.sha3_512 == "toolcomponentsha3_512"
+                         && tool.blake2b_256 == "toolComponentBlake2b_256"
+                         && tool.blake2b_384 == "toolComponentBlake2b_384"
+                         && tool.blake2b_512 == "toolComponentBlake2b_512"
+                         && tool.blake3 == "toolComponentBlake3"
+                         && !has(tool.license_name)
+                         && !has(tool.license_expression)
+                         && !has(tool.resolved_license)
+                     )
                   && "projecttaga" in project.tags
                   && project.properties.all(property,
                        property.group == "propertyGroup"
@@ -1582,7 +1646,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.matches_range("foo")
                     && component.matches_range("bar")
-                """);
+                """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -1604,6 +1668,45 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
         assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithToolMetadata() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.metadata.tools.components.exists(tool,
+                  tool.name == "toolName" && tool.matches_range("vers:generic/>=1.2.3|<3"))
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("0.1");
+        qm.persist(project);
+
+        final var toolComponent = new Component();
+        toolComponent.setName("toolName");
+        toolComponent.setVersion("2.3.1");
+
+        final var projectMetadata = new ProjectMetadata();
+        projectMetadata.setProject(project);
+        projectMetadata.setTools(new Tools(List.of(toolComponent), null));
+        qm.persist(projectMetadata);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("v1.9.3");
+        qm.persist(componentA);
+
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
+        assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
+
+        toolComponent.setVersion("3.1");
+        projectMetadata.setTools(new Tools(List.of(toolComponent), null));
+        qm.persist(projectMetadata);
+
+        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
     }
 
     @Test
