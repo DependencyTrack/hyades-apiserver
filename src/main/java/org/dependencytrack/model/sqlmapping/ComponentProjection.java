@@ -217,23 +217,22 @@ public class ComponentProjection {
         project.setVersion(result.projectVersion);
         componentPersistent.setProject(project);
 
-        var license = new License();
-        license.setName(result.licenseName);
         if (result.licenseUuid != null) {
+            final var license = new License();
             license.setUuid(UUID.fromString(result.licenseUuid));
+            license.setLicenseId(result.licenseId);
+            license.setName(result.licenseName);
+            if (result.isCustomLicense != null) {
+                license.setCustomLicense(result.isCustomLicense);
+            }
+            if (result.isFsfLibre != null) {
+                license.setFsfLibre(result.isFsfLibre);
+            }
+            if (result.isOsiApproved != null) {
+                license.setOsiApproved(result.isOsiApproved);
+            }
+            componentPersistent.setResolvedLicense(license);
         }
-        if (result.isCustomLicense != null) {
-            license.setCustomLicense(result.isCustomLicense);
-        }
-        if (result.isFsfLibre != null) {
-            license.setFsfLibre(result.isFsfLibre);
-        }
-        license.setLicenseId(result.licenseId);
-        if (result.isOsiApproved != null) {
-            license.setOsiApproved(result.isOsiApproved);
-        }
-        license.setName(result.licenseName);
-        componentPersistent.setResolvedLicense(license);
 
         var componentMetaInformation = new ComponentMetaInformation(result.publishedAt,
                 result.integrityCheckStatus != null ? IntegrityMatchStatus.valueOf(result.integrityCheckStatus) : null,
