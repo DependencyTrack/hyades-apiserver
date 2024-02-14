@@ -506,6 +506,7 @@ public class ProjectResourceTest extends ResourceTest {
     public void updateProjectDuplicateTest() {
         qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         Project project = qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        project = qm.detach(Project.class, project.getId());
         project.setName("ABC");
         Response response = target(V1_PROJECT)
                 .request()

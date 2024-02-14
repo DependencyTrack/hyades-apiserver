@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.tasks.metrics;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -31,23 +31,23 @@ import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import java.util.Date;
 import java.util.UUID;
 
-abstract class AbstractMetricsUpdateTaskTest extends AbstractPostgresEnabledTest {
+abstract class AbstractMetricsUpdateTaskTest extends PersistenceCapableTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public void before() throws Exception {
+        super.before();
 
         environmentVariables.set("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS", "2000");
     }
 
     @After
-    public void tearDown() {
+    public void after() {
         environmentVariables.clear("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS");
 
-        super.tearDown();
+        super.after();
     }
 
     protected PolicyViolation createPolicyViolation(final Component component, final Policy.ViolationState violationState, final PolicyViolation.Type type) {

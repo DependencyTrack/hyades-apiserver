@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -21,7 +21,7 @@ import java.util.Date;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class ComponentAgeCelPolicyTest extends AbstractPostgresEnabledTest {
+public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
 
     private Object[] parameters() {
         return new Object[]{

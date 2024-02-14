@@ -19,7 +19,7 @@
 package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -32,11 +32,11 @@ import javax.jdo.Transaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class InternalComponentIdentificationTaskTest extends AbstractPostgresEnabledTest {
+public class InternalComponentIdentificationTaskTest extends PersistenceCapableTest {
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public void before() throws Exception {
+        super.before();
 
         // Configure internal components to be identified by group "org.acme"
         // and names starting with "foobar-".

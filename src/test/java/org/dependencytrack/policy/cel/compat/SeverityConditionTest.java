@@ -2,7 +2,7 @@ package org.dependencytrack.policy.cel.compat;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
@@ -22,7 +22,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class SeverityConditionTest extends AbstractPostgresEnabledTest {
+public class SeverityConditionTest extends PersistenceCapableTest {
 
     private Object[] parameters() {
         return new Object[]{

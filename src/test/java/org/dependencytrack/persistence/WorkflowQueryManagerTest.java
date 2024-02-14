@@ -1,6 +1,6 @@
 package org.dependencytrack.persistence;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.WorkflowState;
 import org.junit.Test;
 
@@ -16,7 +16,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.REPO_META_ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class WorkflowQueryManagerTest extends AbstractPostgresEnabledTest {
+public class WorkflowQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testWorkflowStateIsCreated() {

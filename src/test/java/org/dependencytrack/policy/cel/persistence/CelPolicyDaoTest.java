@@ -6,7 +6,7 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.util.JsonFormat;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
@@ -35,7 +35,7 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULN
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY_ALIAS;
 import static org.hamcrest.Matchers.equalTo;
 
-public class CelPolicyDaoTest extends AbstractPostgresEnabledTest {
+public class CelPolicyDaoTest extends PersistenceCapableTest {
 
     @Test
     public void testLoadRequiredFieldsForProject() throws Exception {

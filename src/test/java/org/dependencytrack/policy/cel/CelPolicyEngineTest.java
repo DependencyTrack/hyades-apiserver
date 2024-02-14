@@ -3,7 +3,7 @@ package org.dependencytrack.policy.cel;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Classifier;
@@ -49,11 +49,11 @@ import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-public class CelPolicyEngineTest extends AbstractPostgresEnabledTest {
+public class CelPolicyEngineTest extends PersistenceCapableTest {
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public void before() throws Exception {
+        super.before();
 
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getGroupName(),

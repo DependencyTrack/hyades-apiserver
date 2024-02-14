@@ -65,7 +65,7 @@ import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_INTERNAL
 import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_OSSINDEX;
 import static org.dependencytrack.proto.vulnanalysis.v1.Scanner.SCANNER_SNYK;
 
-public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
+public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
 
     public static class EventSubscriber implements Subscriber {
 
@@ -85,8 +85,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsPostgresTest {
     }
 
     @After
-    public void tearDown() {
-        super.tearDown();
+    public void after() {
+        super.after();
         EVENTS.clear();
     }
 

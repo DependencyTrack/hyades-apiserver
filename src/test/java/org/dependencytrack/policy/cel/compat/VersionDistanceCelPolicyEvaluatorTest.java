@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition.Operator;
@@ -39,7 +39,7 @@ import java.util.Date;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Parameterized.class)
-public class VersionDistanceCelPolicyEvaluatorTest extends AbstractPostgresEnabledTest {
+public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTest {
 
     @Parameterized.Parameters(name = "[{index}] version={0} latestVersion={1} operator={2} distance={3} shouldViolate={4}")
     public static Collection<?> testParameters() {

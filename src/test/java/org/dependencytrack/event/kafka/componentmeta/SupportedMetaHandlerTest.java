@@ -2,7 +2,7 @@ package org.dependencytrack.event.kafka.componentmeta;
 
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.FetchStatus;
@@ -20,7 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
-public class SupportedMetaHandlerTest extends AbstractPostgresEnabledTest {
+public class SupportedMetaHandlerTest extends PersistenceCapableTest {
 
     @Test
     public void testHandleIntegrityComponentNotInDB() throws MalformedPackageURLException {

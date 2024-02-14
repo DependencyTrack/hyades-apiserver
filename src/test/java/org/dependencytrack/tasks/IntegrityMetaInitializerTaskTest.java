@@ -1,6 +1,6 @@
 package org.dependencytrack.tasks;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
@@ -17,7 +17,7 @@ import java.time.temporal.ChronoUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 
-public class IntegrityMetaInitializerTaskTest extends AbstractPostgresEnabledTest {
+public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();

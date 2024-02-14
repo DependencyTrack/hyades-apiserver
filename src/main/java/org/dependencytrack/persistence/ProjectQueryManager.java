@@ -1265,6 +1265,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         query.setFilter("name == :name");
         query.setParameters(project.getName());
         query.setResult("uuid, version");
+        query.setOrdering("id asc"); // Ensure consistent ordering
         return query.executeResultList(ProjectVersion.class);
     }
 }

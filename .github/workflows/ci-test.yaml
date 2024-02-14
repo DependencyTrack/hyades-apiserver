@@ -43,6 +43,7 @@ jobs:
       - name: Execute unit tests
         env:
           MAVEN_ARGS: "-B --no-transfer-progress"
+          TESTCONTAINERS_REUSE_ENABLE: "true"
         run: |-
           mvn clean
           mvn test -P enhance

@@ -1,6 +1,6 @@
 package org.dependencytrack.persistence;
 
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -11,7 +11,7 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class IntegrityMetaQueryManagerPostgresTest extends AbstractPostgresEnabledTest {
+public class IntegrityMetaQueryManagerPostgresTest extends PersistenceCapableTest {
 
     @Test
     public void testCreateIntegrityMetadataHandlingConflict() {

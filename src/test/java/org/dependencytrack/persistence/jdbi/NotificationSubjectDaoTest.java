@@ -1,7 +1,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import com.google.protobuf.util.JsonFormat;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -26,11 +26,11 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class NotificationSubjectDaoTest extends AbstractPostgresEnabledTest {
+public class NotificationSubjectDaoTest extends PersistenceCapableTest {
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public void before() throws Exception {
+        super.before();
 
         new CweImporter().processCweDefinitions();
     }

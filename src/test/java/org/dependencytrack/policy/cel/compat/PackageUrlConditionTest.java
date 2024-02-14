@@ -3,7 +3,7 @@ package org.dependencytrack.policy.cel.compat;
 import com.github.packageurl.PackageURL;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.dependencytrack.AbstractPostgresEnabledTest;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunWith(JUnitParamsRunner.class)
-public class PackageUrlConditionTest extends AbstractPostgresEnabledTest {
+public class PackageUrlConditionTest extends PersistenceCapableTest {
 
     private Object[] parameters() {
         return new Object[]{

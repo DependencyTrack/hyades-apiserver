@@ -11,7 +11,9 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -30,6 +32,7 @@ public class DefineOrderingTest extends PersistenceCapableTest {
     }
 
     private Jdbi jdbi;
+    private final Map<String, Long> projectIdsByName = new HashMap<>();
 
     @Before
     public void setUp() {
@@ -47,6 +50,8 @@ public class DefineOrderingTest extends PersistenceCapableTest {
             final var project = new Project();
             project.setName("project-" + i);
             qm.persist(project);
+
+            projectIdsByName.put(project.getName(), project.getId());
         }
     }
 
@@ -113,10 +118,13 @@ public class DefineOrderingTest extends PersistenceCapableTest {
 
     @Test
     public void testWithOrderingAlsoBy() {
+        final var duplicateProjectIdsByName = new HashMap<String, Long>();
         for (int i = 0; i < 2; i++) {
             final var project = new Project();
             project.setName("project-" + i);
             qm.persist(project);
+
+            duplicateProjectIdsByName.put(project.getName(), project.getId());
         }
         assertThat(qm.getCount(Project.class)).isEqualTo(7);
 
@@ -124,31 +132,31 @@ public class DefineOrderingTest extends PersistenceCapableTest {
                 dao -> dao.getProjectsWithOrderingAlsoById(new Ordering("nameAlias", OrderDirection.ASCENDING)));
         assertThat(projects).satisfiesExactly(
                 project -> {
-                    assertThat(project.getId()).isEqualTo(6);
+                    assertThat(project.getId()).isEqualTo(duplicateProjectIdsByName.get("project-0"));
                     assertThat(project.getName()).isEqualTo("project-0");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(1);
+                    assertThat(project.getId()).isEqualTo(projectIdsByName.get("project-0"));
                     assertThat(project.getName()).isEqualTo("project-0");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(7);
+                    assertThat(project.getId()).isEqualTo(duplicateProjectIdsByName.get("project-1"));
                     assertThat(project.getName()).isEqualTo("project-1");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(2);
+                    assertThat(project.getId()).isEqualTo(projectIdsByName.get("project-1"));
                     assertThat(project.getName()).isEqualTo("project-1");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(3);
+                    assertThat(project.getId()).isEqualTo(projectIdsByName.get("project-2"));
                     assertThat(project.getName()).isEqualTo("project-2");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(4);
+                    assertThat(project.getId()).isEqualTo(projectIdsByName.get("project-3"));
                     assertThat(project.getName()).isEqualTo("project-3");
                 },
                 project -> {
-                    assertThat(project.getId()).isEqualTo(5);
+                    assertThat(project.getId()).isEqualTo(projectIdsByName.get("project-4"));
                     assertThat(project.getName()).isEqualTo("project-4");
                 }
         );
