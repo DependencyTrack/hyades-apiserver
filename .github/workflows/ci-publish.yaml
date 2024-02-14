@@ -39,6 +39,7 @@ jobs:
       app-version: ${{ needs.read-version.outputs.version }}
       publish-container: true
     permissions:
+      packages: write # Required to push images to ghcr.io
       security-events: write # Required to upload trivy's SARIF output
     secrets:
       registry-0-usr: ${{ github.repository_owner }}
