@@ -751,6 +751,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component.project == :project"), project);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Bom WHERE project == :project"), project);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Vex WHERE project == :project"), project);
+            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetadata WHERE project == :project"), project);
             executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectProperty WHERE project == :project"), project);
 
             // Projects, Components, and ServiceComponents must be deleted via deletePersistentAll, otherwise relationships
