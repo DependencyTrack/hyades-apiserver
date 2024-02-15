@@ -59,7 +59,6 @@ public class Cwe implements Serializable {
 
     @Persistent
     @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
-    @Size(max = 255)
     @NotNull
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")

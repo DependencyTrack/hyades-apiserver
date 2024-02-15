@@ -118,7 +118,6 @@ public class Component implements Serializable {
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
-    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
     private String publisher;
 
@@ -130,7 +129,6 @@ public class Component implements Serializable {
     @Persistent
     @Column(name = "GROUP", jdbcType = "VARCHAR")
     @Index(name = "COMPONENT_GROUP_IDX")
-    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
     private String group;
 
@@ -138,7 +136,6 @@ public class Component implements Serializable {
     @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
     @Index(name = "COMPONENT_NAME_IDX")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
@@ -158,7 +155,6 @@ public class Component implements Serializable {
 
     @Persistent
     @Column(name = "FILENAME", jdbcType = "VARCHAR")
-    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.FS_DIRECTORY_NAME, message = "The specified filename is not valid and cannot be used as a filename")
     private String filename;
@@ -253,7 +249,6 @@ public class Component implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_IDX")
     @Column(name = "PURL", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purl;
@@ -278,22 +273,19 @@ public class Component implements Serializable {
     private Boolean internal;
 
     @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
     private String description;
 
     @Persistent
-    @Column(name = "COPYRIGHT", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "COPYRIGHT", jdbcType = "VARCHAR")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The copyright may only contain printable characters")
     private String copyright;
 
     @Persistent
     @Column(name = "LICENSE", jdbcType = "VARCHAR")
-    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The license may only contain printable characters")
     private String license;
@@ -306,7 +298,6 @@ public class Component implements Serializable {
 
     @Persistent
     @Column(name = "LICENSE_URL", jdbcType = "VARCHAR")
-    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.URL, message = "The license URL must be a valid URL")
     private String licenseUrl;

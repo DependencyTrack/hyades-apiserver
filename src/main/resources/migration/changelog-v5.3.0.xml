@@ -2494,4 +2494,17 @@
             <column name="MANUFACTURER" type="TEXT"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.3.0-16" author="sahibamittal">
+        <modifyDataType  columnName="PUBLISHER" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="GROUP" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="FILENAME" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="PURL" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="DESCRIPTION" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="COPYRIGHT" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="LICENSE" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="LICENSE_URL" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="CWE"/>
+    </changeSet>
 </databaseChangeLog>
