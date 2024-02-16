@@ -43,7 +43,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
@@ -106,7 +105,6 @@ public class License implements Serializable {
     @Index(name = "LICENSE_NAME_IDX")
     @JsonProperty(value = "name")
     @NotBlank
-    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
@@ -156,7 +154,6 @@ public class License implements Serializable {
     @JsonProperty(value = "licenseId")
     @JsonAlias(value = "licenseExceptionId")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Size(min = 1, max = 255)
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.STRING_IDENTIFIER, message = "The licenseId may only contain alpha, numeric, and specific symbols _-.+")
     private String licenseId;

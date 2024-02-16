@@ -77,7 +77,6 @@ public class Policy implements Serializable {
     @Column(name = "NAME", allowsNull = "false")
     @Index(name = "POLICY_NAME_IDX")
     @NotBlank
-    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
@@ -87,7 +86,6 @@ public class Policy implements Serializable {
     @Persistent
     @Column(name = "OPERATOR", allowsNull = "false")
     @NotBlank
-    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
     private Operator operator;
 
@@ -97,7 +95,6 @@ public class Policy implements Serializable {
     @Persistent
     @Column(name = "VIOLATIONSTATE", allowsNull = "false")
     @NotBlank
-    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
     private ViolationState violationState;
 

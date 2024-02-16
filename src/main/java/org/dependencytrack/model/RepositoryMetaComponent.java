@@ -53,7 +53,7 @@ public class RepositoryMetaComponent implements Serializable {
      * This is an indirect representation of a the Package URL "type" field.
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REPOSITORY_TYPE", jdbcType = "VARCHAR", allowsNull = "false")
+    @Column(name = "REPOSITORY_TYPE", allowsNull = "false")
     @NotNull
     private RepositoryType repositoryType;
 

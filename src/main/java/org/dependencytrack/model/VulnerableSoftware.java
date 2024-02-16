@@ -18,14 +18,9 @@
  */
 package org.dependencytrack.model;
 
-import alpine.common.validation.RegexSequence;
-import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.dependencytrack.resources.v1.serializers.Iso8601DateSerializer;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
@@ -38,12 +33,8 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,82 +63,82 @@ public class VulnerableSoftware implements ICpe, Serializable {
     private long id;
 
     @Persistent
-    @Column(name = "PURL", jdbcType = "VARCHAR")
+    @Column(name = "PURL")
     private String purl;
 
     @Persistent
-    @Column(name = "PURL_TYPE", jdbcType = "VARCHAR")
+    @Column(name = "PURL_TYPE")
     private String purlType;
 
     @Persistent
-    @Column(name = "PURL_NAMESPACE", jdbcType = "VARCHAR")
+    @Column(name = "PURL_NAMESPACE")
     private String purlNamespace;
 
     @Persistent
-    @Column(name = "PURL_NAME", jdbcType = "VARCHAR")
+    @Column(name = "PURL_NAME")
     private String purlName;
 
     @Persistent
-    @Column(name = "PURL_VERSION", jdbcType = "VARCHAR")
+    @Column(name = "PURL_VERSION")
     private String purlVersion;
 
     @Persistent
-    @Column(name = "PURL_QUALIFIERS", jdbcType = "VARCHAR")
+    @Column(name = "PURL_QUALIFIERS")
     private String purlQualifiers;
 
     @Persistent
-    @Column(name = "PURL_SUBPATH", jdbcType = "VARCHAR")
+    @Column(name = "PURL_SUBPATH")
     private String purlSubpath;
 
     @Persistent
-    @Column(name = "CPE22", jdbcType = "VARCHAR")
+    @Column(name = "CPE22")
     private String cpe22;
 
     @Persistent
-    @Column(name = "CPE23", jdbcType = "VARCHAR")
+    @Column(name = "CPE23")
     private String cpe23;
 
     @Persistent
-    @Column(name = "PART", jdbcType = "VARCHAR")
+    @Column(name = "PART")
     private String part;
 
     @Persistent
-    @Column(name = "VENDOR", jdbcType = "VARCHAR")
+    @Column(name = "VENDOR")
     private String vendor;
 
     @Persistent
-    @Column(name = "PRODUCT", jdbcType = "VARCHAR")
+    @Column(name = "PRODUCT")
     private String product;
 
     @Persistent
     private String version;
 
     @Persistent
-    @Column(name = "UPDATE", jdbcType = "VARCHAR")
+    @Column(name = "UPDATE")
     private String update;
 
     @Persistent
-    @Column(name = "EDITION", jdbcType = "VARCHAR")
+    @Column(name = "EDITION")
     private String edition;
 
     @Persistent
-    @Column(name = "LANGUAGE", jdbcType = "VARCHAR")
+    @Column(name = "LANGUAGE")
     private String language;
 
     @Persistent
-    @Column(name = "SWEDITION", jdbcType = "VARCHAR")
+    @Column(name = "SWEDITION")
     private String swEdition;
 
     @Persistent
-    @Column(name = "TARGETSW", jdbcType = "VARCHAR")
+    @Column(name = "TARGETSW")
     private String targetSw;
 
     @Persistent
-    @Column(name = "TARGETHW", jdbcType = "VARCHAR")
+    @Column(name = "TARGETHW")
     private String targetHw;
 
     @Persistent
-    @Column(name = "OTHER", jdbcType = "VARCHAR")
+    @Column(name = "OTHER")
     private String other;
 
     @Persistent

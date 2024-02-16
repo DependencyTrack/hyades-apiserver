@@ -44,13 +44,13 @@ public class WorkflowState implements Serializable {
     private Date updatedAt;
 
     @Persistent
-    @Column(name = "STEP", jdbcType = "VARCHAR", length = 64, allowsNull = "false")
+    @Column(name = "STEP", allowsNull = "false")
     @NotNull
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private WorkflowStep step;
 
     @Persistent
-    @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64, allowsNull = "false")
+    @Column(name = "STATUS", allowsNull = "false")
     @NotNull
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private WorkflowStatus status;

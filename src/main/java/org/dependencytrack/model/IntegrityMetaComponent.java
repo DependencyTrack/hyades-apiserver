@@ -33,7 +33,6 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -75,9 +74,8 @@ public class IntegrityMetaComponent implements Serializable {
     private String sha512;
 
     @Persistent
-    @Column(name = "PURL", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
+    @Column(name = "PURL", allowsNull = "false")
     @Index(name = "PURL_IDX")
-    @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Unique
@@ -97,12 +95,12 @@ public class IntegrityMetaComponent implements Serializable {
     private Date lastFetch;
 
     @Persistent
-    @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64)
+    @Column(name = "STATUS")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
 
     @Persistent
-    @Column(name = "REPOSITORY_URL", jdbcType = "VARCHAR", length = 1024)
+    @Column(name = "REPOSITORY_URL")
     private String repositoryUrl;
 
 
