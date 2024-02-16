@@ -3,6 +3,7 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import com.google.protobuf.DynamicMessage;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.dependencytrack.model.RepositoryType;
@@ -46,6 +47,7 @@ import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
 
 public class CelCommonPolicyLibrary implements Library {
 
@@ -117,7 +119,7 @@ public class CelCommonPolicyLibrary implements Library {
                                 FUNC_COMPARE_VERSION_DISTANCE,
                                 Decls.newInstanceOverload(
                                         "matches_version_distance_bool",
-                                        List.of(TYPE_COMPONENT, Decls.String, Decls.String),
+                                        List.of(TYPE_COMPONENT, Decls.String, TYPE_VERSION_DISTANCE),
                                         Decls.Bool
                                 )
                         )
@@ -163,20 +165,30 @@ public class CelCommonPolicyLibrary implements Library {
     }
 
     private static Val matchesVersionDistanceFunc(Val... vals) {
-        var basicCheckResult = basicCheck(vals);
-        if ((basicCheckResult instanceof BoolT && basicCheckResult.value() == Types.boolOf(false)) || basicCheckResult instanceof Err) {
-            return basicCheckResult;
+        try {
+            org.dependencytrack.proto.policy.v1.VersionDistance value = null;
+            var basicCheckResult = basicVersionDistanceCheck(vals);
+            if ((basicCheckResult instanceof BoolT && basicCheckResult.value() == Types.boolOf(false)) || basicCheckResult instanceof Err) {
+                return basicCheckResult;
+            }
+            var component = (Component) vals[0].value();
+            if (vals[2].value() instanceof DynamicMessage message) {
+                value = org.dependencytrack.proto.policy.v1.VersionDistance.parseFrom(message.toByteString());
+            }
+            var comparator = (String) vals[1].value();
+            if (!component.hasLatestVersion()) {
+                return Err.newErr("Requested component does not have latest version information", component);
+            }
+            return Types.boolOf(matchesVersionDistance(component, comparator, value));
+        }catch (Exception ex) {
+            LOGGER.warn("""
+                    %s: Was unable to parse dynamic message for version distance policy;
+                    Unable to resolve, returning false""".formatted(FUNC_COMPARE_VERSION_DISTANCE));
+            return Types.boolOf(false);
         }
-        var component = (Component) vals[0].value();
-        var value = (String) vals[2].value();
-        var comparator = (String) vals[1].value();
-        if (!component.hasLatestVersion()) {
-            return Err.newErr("Requested component does not have latest version information", component);
-        }
-        return Types.boolOf(matchesVersionDistance(component, comparator, value));
     }
 
-    private static boolean matchesVersionDistance(Component component, String comparator, String value) {
+    private static boolean matchesVersionDistance(Component component, String comparator, org.dependencytrack.proto.policy.v1.VersionDistance value) {
         String comparatorComputed = switch (comparator) {
             case "NUMERIC_GREATER_THAN", ">" -> "NUMERIC_GREATER_THAN";
             case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
@@ -287,6 +299,36 @@ public class CelCommonPolicyLibrary implements Library {
         final var dateValue = (String) vals[2].value();
         final var comparator = (String) vals[1].value();
         return Types.boolOf(isComponentOld(component, comparator, dateValue));
+    }
+
+    private static Val basicVersionDistanceCheck(Val... vals) {
+
+        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
+            return Types.boolOf(false);
+        }
+
+        if (!(vals[0].value() instanceof final Component component)) {
+            return Err.maybeNoSuchOverloadErr(vals[0]);
+        }
+        if (!(vals[1].value() instanceof String)) {
+            return Err.maybeNoSuchOverloadErr(vals[1]);
+        }
+
+        if (!(vals[2].value() instanceof DynamicMessage)) {
+            return Err.maybeNoSuchOverloadErr(vals[2]);
+        }
+
+        if (!component.hasPurl()) {
+            return Err.newErr("Provided component does not have a purl", vals[0]);
+        }
+        try {
+            if (RepositoryType.resolve(new PackageURL(component.getPurl())) == RepositoryType.UNSUPPORTED) {
+                return Err.newErr("Unsupported repository type for component: ", vals[0]);
+            }
+        } catch (MalformedPackageURLException ex) {
+            return Err.newErr("Invalid package url ", component.getPurl());
+        }
+        return Types.boolOf(true);
     }
 
     private static Val basicCheck(Val... vals) {
