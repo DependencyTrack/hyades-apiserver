@@ -16,11 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package org.dependencytrack.util;
+package org.dependencytrack.model;
 
 import alpine.common.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.model.PolicyCondition;
 
 import java.io.Serializable;
 import java.util.ArrayList;

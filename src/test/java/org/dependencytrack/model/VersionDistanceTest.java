@@ -1,5 +1,5 @@
 
-package org.dependencytrack.util;
+package org.dependencytrack.model;
 
 import org.junit.Test;
 

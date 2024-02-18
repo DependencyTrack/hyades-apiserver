@@ -3,7 +3,6 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import com.google.protobuf.DynamicMessage;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.dependencytrack.model.RepositoryType;
@@ -11,8 +10,8 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.VersionDistance;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
-import org.dependencytrack.util.VersionDistance;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
@@ -131,7 +130,8 @@ public class CelCommonPolicyLibrary implements Library {
                         Project.getDefaultInstance(),
                         Project.Property.getDefaultInstance(),
                         Vulnerability.getDefaultInstance(),
-                        Vulnerability.Alias.getDefaultInstance()
+                        Vulnerability.Alias.getDefaultInstance(),
+                        VersionDistance.getDefaultInstance()
                 )
         );
     }
@@ -166,16 +166,13 @@ public class CelCommonPolicyLibrary implements Library {
 
     private static Val matchesVersionDistanceFunc(Val... vals) {
         try {
-            org.dependencytrack.proto.policy.v1.VersionDistance value = null;
             var basicCheckResult = basicVersionDistanceCheck(vals);
             if ((basicCheckResult instanceof BoolT && basicCheckResult.value() == Types.boolOf(false)) || basicCheckResult instanceof Err) {
                 return basicCheckResult;
             }
             var component = (Component) vals[0].value();
-            if (vals[2].value() instanceof DynamicMessage message) {
-                value = org.dependencytrack.proto.policy.v1.VersionDistance.parseFrom(message.toByteString());
-            }
             var comparator = (String) vals[1].value();
+            var value = (VersionDistance) vals[2].value();
             if (!component.hasLatestVersion()) {
                 return Err.newErr("Requested component does not have latest version information", component);
             }
@@ -188,7 +185,7 @@ public class CelCommonPolicyLibrary implements Library {
         }
     }
 
-    private static boolean matchesVersionDistance(Component component, String comparator, org.dependencytrack.proto.policy.v1.VersionDistance value) {
+    private static boolean matchesVersionDistance(Component component, String comparator, VersionDistance value) {
         String comparatorComputed = switch (comparator) {
             case "NUMERIC_GREATER_THAN", ">" -> "NUMERIC_GREATER_THAN";
             case "NUMERIC_GREATER_THAN_OR_EQUAL", ">=" -> "NUMERIC_GREATER_THAN_OR_EQUAL";
@@ -204,9 +201,9 @@ public class CelCommonPolicyLibrary implements Library {
                     Unable to resolve, returning false""".formatted(FUNC_COMPARE_VERSION_DISTANCE, comparator));
             return false;
         }
-        final VersionDistance versionDistance;
+        final org.dependencytrack.model.VersionDistance versionDistance;
         try {
-            versionDistance = VersionDistance.getVersionDistance(component.getVersion(), component.getLatestVersion());
+            versionDistance = org.dependencytrack.model.VersionDistance.getVersionDistance(component.getVersion(), component.getLatestVersion());
         } catch (RuntimeException e) {
             LOGGER.warn("""
                     %s: Failed to compute version distance for component %s (UUID: %s), \
@@ -219,7 +216,7 @@ public class CelCommonPolicyLibrary implements Library {
              final var celQm = new CelPolicyQueryManager(qm)) {
             isDirectDependency = celQm.isDirectDependency(component);
         }
-        return isDirectDependency && VersionDistance.evaluate(value, comparatorComputed, versionDistance);
+        return isDirectDependency && org.dependencytrack.model.VersionDistance.evaluate(value, comparatorComputed, versionDistance);
     }
 
     private static Val dependsOnFunc(final Val lhs, final Val rhs) {
@@ -303,7 +300,26 @@ public class CelCommonPolicyLibrary implements Library {
 
     private static Val basicVersionDistanceCheck(Val... vals) {
 
-        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
+        if (vals.length != 3) {
+            return Types.boolOf(false);
+        }
+        Val[] subVals = {vals[0], vals[1]};
+        Val basicCheckResult = basicSubCheck(subVals);
+        if ((basicCheckResult instanceof BoolT && basicCheckResult.value().equals(Types.boolOf(false))) || basicCheckResult instanceof Err) {
+            return basicCheckResult;
+        }
+
+        if (!(vals[2].value() instanceof VersionDistance)) {
+            return Err.maybeNoSuchOverloadErr(vals[2]);
+        }
+        return Types.boolOf(true);
+    }
+
+    private static Val basicSubCheck(Val... vals) {
+        if (vals.length != 2) {
+            return Types.boolOf(false);
+        }
+        if (vals[0].value() == null || vals[1].value() == null) {
             return Types.boolOf(false);
         }
 
@@ -312,10 +328,6 @@ public class CelCommonPolicyLibrary implements Library {
         }
         if (!(vals[1].value() instanceof String)) {
             return Err.maybeNoSuchOverloadErr(vals[1]);
-        }
-
-        if (!(vals[2].value() instanceof DynamicMessage)) {
-            return Err.maybeNoSuchOverloadErr(vals[2]);
         }
 
         if (!component.hasPurl()) {
@@ -335,31 +347,16 @@ public class CelCommonPolicyLibrary implements Library {
         if (vals.length != 3) {
             return Types.boolOf(false);
         }
-        if (vals[0].value() == null || vals[1].value() == null || vals[2].value() == null) {
-            return Types.boolOf(false);
-        }
-
-        if (!(vals[0].value() instanceof final Component component)) {
-            return Err.maybeNoSuchOverloadErr(vals[0]);
-        }
-        if (!(vals[1].value() instanceof String)) {
-            return Err.maybeNoSuchOverloadErr(vals[1]);
+        Val[] subVals = {vals[0], vals[1]};
+        Val basicCheckResult = basicSubCheck(subVals);
+        if ((basicCheckResult instanceof BoolT && basicCheckResult.value().equals(Types.boolOf(false))) || basicCheckResult instanceof Err) {
+            return basicCheckResult;
         }
 
         if (!(vals[2].value() instanceof String)) {
             return Err.maybeNoSuchOverloadErr(vals[2]);
         }
 
-        if (!component.hasPurl()) {
-            return Err.newErr("Provided component does not have a purl", vals[0]);
-        }
-        try {
-            if (RepositoryType.resolve(new PackageURL(component.getPurl())) == RepositoryType.UNSUPPORTED) {
-                return Err.newErr("Unsupported repository type for component: ", vals[0]);
-            }
-        } catch (MalformedPackageURLException ex) {
-            return Err.newErr("Invalid package url ", component.getPurl());
-        }
         return Types.boolOf(true);
     }
 
