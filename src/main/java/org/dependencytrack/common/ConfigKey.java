@@ -23,7 +23,7 @@ public enum ConfigKey implements Config.Key {
 
     KEY_STORE_PASSWORD("kafka.keystore.password", ""),
     KAFKA_NUM_STREAM_THREADS("kafka.num.stream.threads", 1),
-    KAFKA_TOPIC_PREFIX("api.topic.prefix", ""),
+    KAFKA_TOPIC_PREFIX("kafka.topic.prefix", ""),
     KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION("kafka.producer.drain.timeout.duration", "PT30S"),
     KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_COUNT("kafka.streams.deserialization.exception.threshold.count", "5"),
     KAFKA_STREAMS_DESERIALIZATION_EXCEPTION_THRESHOLD_INTERVAL("kafka.streams.deserialization.exception.threshold.interval", "PT30M"),
