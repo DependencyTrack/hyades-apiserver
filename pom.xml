@@ -148,17 +148,6 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>us.springett</groupId>
-                <artifactId>alpine-executable-war</artifactId>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>jetty-webapp-logging</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <dependency>
                 <!--
                   Managing snappy-java to fix GHSA-qcwq-55hx-v3vh, GHSA-fjpj-2g6w-x25r, and GHSA-pqr6-cmr2-h8hf.
                   Snappy is introduced via kafka-clients; Once kafka-clients bumps its snappy-java version, we can remove this.
