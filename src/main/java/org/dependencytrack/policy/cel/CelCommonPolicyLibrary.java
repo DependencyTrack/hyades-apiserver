@@ -304,7 +304,7 @@ public class CelCommonPolicyLibrary implements Library {
             return Types.boolOf(false);
         }
         Val[] subVals = {vals[0], vals[1]};
-        Val basicCheckResult = basicSubCheck(subVals);
+        Val basicCheckResult = basicPartsCheck(subVals);
         if ((basicCheckResult instanceof BoolT && basicCheckResult.value().equals(Types.boolOf(false))) || basicCheckResult instanceof Err) {
             return basicCheckResult;
         }
@@ -315,7 +315,7 @@ public class CelCommonPolicyLibrary implements Library {
         return Types.boolOf(true);
     }
 
-    private static Val basicSubCheck(Val... vals) {
+    private static Val basicPartsCheck(Val... vals) {
         if (vals.length != 2) {
             return Types.boolOf(false);
         }
@@ -348,7 +348,7 @@ public class CelCommonPolicyLibrary implements Library {
             return Types.boolOf(false);
         }
         Val[] subVals = {vals[0], vals[1]};
-        Val basicCheckResult = basicSubCheck(subVals);
+        Val basicCheckResult = basicPartsCheck(subVals);
         if ((basicCheckResult instanceof BoolT && basicCheckResult.value().equals(Types.boolOf(false))) || basicCheckResult instanceof Err) {
             return basicCheckResult;
         }
