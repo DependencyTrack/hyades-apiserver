@@ -26,12 +26,9 @@ import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.persistence.QueryManager;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
 
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 

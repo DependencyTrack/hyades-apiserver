@@ -40,9 +40,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import static java.time.Duration.ZERO;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
-import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
 import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
 
 /**
