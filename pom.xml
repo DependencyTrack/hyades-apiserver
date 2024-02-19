@@ -86,41 +86,44 @@
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.14.1</lib.cloud-sql-postgres-socket-factory.version>
-        <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
+        <lib.checkstyle.version>10.13.0</lib.checkstyle.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.16.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.commons-compress.version>1.25.0</lib.commons-compress.version>
+        <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>8.0.3</lib.cyclonedx-java.version>
-        <lib.jackson.version>2.16.0</lib.jackson.version>
-        <lib.jackson-databind.version>2.15.2</lib.jackson-databind.version>
+        <lib.jackson.version>2.16.1</lib.jackson.version>
+        <lib.jackson-databind.version>2.16.1</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
-        <lib.jdbi.version>3.42.0</lib.jdbi.version>
+        <lib.jdbi.version>3.45.0</lib.jdbi.version>
         <lib.json-unit.version>3.2.4</lib.json-unit.version>
         <lib.kafka.version>3.6.1</lib.kafka.version>
         <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
+        <lib.liquibase.version>4.26.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.packageurl.version>1.4.1</lib.packageurl.version>
+        <lib.minio.version>8.5.8</lib.minio.version>
+        <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.2.8</lib.parallel-consumer.version>
-        <lib.pebble.version>3.2.0</lib.pebble.version>
+        <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>3.25.3</lib.protobuf-java.version>
         <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
-        <lib.resilience4j.version>2.1.0</lib.resilience4j.version>
-        <lib.snappy-java.version>1.1.10.5</lib.snappy-java.version>
+        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
+        <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.4.1</lib.versatile.version>
-        <lib.woodstox.version>6.4.0</lib.woodstox.version>
+        <lib.woodstox.version>6.6.0</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.12</lib.log4j-over-slf4j.version>
-        <lib.signpost-core.version>2.1.1</lib.signpost-core.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>5.11.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <!-- JDBC Drivers -->
-        <lib.jdbc-driver.postgresql.version>42.7.0</lib.jdbc-driver.postgresql.version>
+        <lib.jdbc-driver.postgresql.version>42.7.1</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
         <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
         <!-- Maven Plugin Versions -->
+        <plugin.checkstyle.version>3.3.1</plugin.checkstyle.version>
         <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
         <plugin.jetty.version>10.0.20</plugin.jetty.version>
         <!-- SonarCloud properties -->
@@ -130,8 +133,6 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
-        <lib.liquibase.version>4.25.0</lib.liquibase.version>
-        <lib.minio.version>8.5.8</lib.minio.version>
     </properties>
 
     <repositories>
@@ -144,31 +145,6 @@
             </snapshots>
         </repository>
     </repositories>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>us.springett</groupId>
-                <artifactId>alpine-executable-war</artifactId>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>jetty-webapp-logging</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <dependency>
-                <!--
-                  Managing snappy-java to fix GHSA-qcwq-55hx-v3vh, GHSA-fjpj-2g6w-x25r, and GHSA-pqr6-cmr2-h8hf.
-                  Snappy is introduced via kafka-clients; Once kafka-clients bumps its snappy-java version, we can remove this.
-                -->
-                <groupId>org.xerial.snappy</groupId>
-                <artifactId>snappy-java</artifactId>
-                <version>${lib.snappy-java.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <!-- Alpine -->
@@ -436,7 +412,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.25.0</version>
+            <version>${lib.commons-compress.version}</version>
         </dependency>
         <!-- Resilience4J -->
         <dependency>
@@ -500,7 +476,7 @@
         <dependency>
             <groupId>com.github.stefanbirkner</groupId>
             <artifactId>system-rules</artifactId>
-            <version>1.19.0</version>
+            <version>${lib.system-rules.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -602,25 +578,25 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.3.1</version>
+                <version>${plugin.checkstyle.version}</version>
                 <configuration>
                     <configLocation>${project.basedir}/.checkstyle.xml</configLocation>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
                 </configuration>
-                <!--                <executions>-->
-                <!--                    <execution>-->
-                <!--                        <phase>validate</phase>-->
-                <!--                        <goals>-->
-                <!--                            <goal>check</goal>-->
-                <!--                        </goals>-->
-                <!--                    </execution>-->
-                <!--                </executions>-->
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <dependencies>
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.12.5</version>
+                        <version>${lib.checkstyle.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>

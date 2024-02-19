@@ -20,7 +20,6 @@ package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.dependencytrack.model.Component;
 
 import java.util.Date;
 

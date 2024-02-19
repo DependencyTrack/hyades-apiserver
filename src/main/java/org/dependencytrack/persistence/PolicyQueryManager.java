@@ -33,7 +33,6 @@ import org.dependencytrack.model.ViolationAnalysisState;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
