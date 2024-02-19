@@ -86,7 +86,7 @@
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
         <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
-        <lib.checkstyle.version>10.12.5</lib.checkstyle.version>
+        <lib.checkstyle.version>10.13.0</lib.checkstyle.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.16.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.25.0</lib.commons-compress.version>
         <lib.cpe-parser.version>2.0.2</lib.cpe-parser.version>
