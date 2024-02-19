@@ -2591,7 +2591,6 @@
         <modifyDataType  columnName="OWASPRRVECTOR" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="VULNERABLEVERSIONS" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="PATCHEDVERSIONS" newDataType="TEXT" tableName="VULNERABILITY"/>
-        <modifyDataType  columnName="SEVERITY" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="CWES" newDataType="TEXT" tableName="VULNERABILITY"/>
 
         <modifyDataType  columnName="CVE_ID" newDataType="TEXT" tableName="VULNERABILITYALIAS"/>

@@ -76,11 +76,11 @@ public class FindingAttribution implements Serializable {
     private Vulnerability vulnerability;
 
     @Persistent
-    @Column(name = "ALT_ID", allowsNull = "true")
+    @Column(name = "ALT_ID", allowsNull = "true", jdbcType = "CLOB")
     private String alternateIdentifier;
 
     @Persistent
-    @Column(name = "REFERENCE_URL", allowsNull = "true")
+    @Column(name = "REFERENCE_URL", allowsNull = "true", jdbcType = "CLOB")
     private String referenceUrl;
 
     @Persistent(customValueStrategy = "uuid")

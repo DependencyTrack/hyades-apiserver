@@ -74,11 +74,11 @@ public class Vex implements Serializable {
     private Date imported;
 
     @Persistent
-    @Column(name = "VEX_FORMAT")
+    @Column(name = "VEX_FORMAT", jdbcType = "CLOB")
     private String vexFormat;
 
     @Persistent
-    @Column(name = "SPEC_VERSION")
+    @Column(name = "SPEC_VERSION", jdbcType = "CLOB")
     private String specVersion;
 
     @Persistent
@@ -86,7 +86,7 @@ public class Vex implements Serializable {
     private Integer vexVersion;
 
     @Persistent
-    @Column(name = "SERIAL_NUMBER")
+    @Column(name = "SERIAL_NUMBER", jdbcType = "CLOB")
     private String serialNumber;
 
     @Persistent(defaultFetchGroup = "true")

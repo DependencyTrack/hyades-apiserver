@@ -88,25 +88,25 @@ public class ServiceComponent implements Serializable {
     private OrganizationalEntity provider;
 
     @Persistent
-    @Column(name = "GROUP")
+    @Column(name = "GROUP", jdbcType = "CLOB")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
     private String group;
 
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
     @Persistent
-    @Column(name = "VERSION")
+    @Column(name = "VERSION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
     private String version;
 
     @Persistent
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
     private String description;

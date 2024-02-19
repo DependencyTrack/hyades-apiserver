@@ -74,7 +74,7 @@ public class IntegrityMetaComponent implements Serializable {
     private String sha512;
 
     @Persistent
-    @Column(name = "PURL", allowsNull = "false")
+    @Column(name = "PURL", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "PURL_IDX")
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
@@ -100,7 +100,7 @@ public class IntegrityMetaComponent implements Serializable {
     private FetchStatus status;
 
     @Persistent
-    @Column(name = "REPOSITORY_URL")
+    @Column(name = "REPOSITORY_URL", jdbcType = "CLOB")
     private String repositoryUrl;
 
 

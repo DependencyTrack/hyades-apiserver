@@ -73,7 +73,7 @@ public class NotificationRule implements Serializable {
      * The String representation of the name of the notification.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
@@ -121,11 +121,11 @@ public class NotificationRule implements Serializable {
     private List<Team> teams;
 
     @Persistent
-    @Column(name = "NOTIFY_ON")
+    @Column(name = "NOTIFY_ON", jdbcType = "CLOB")
     private String notifyOn;
 
     @Persistent
-    @Column(name = "MESSAGE")
+    @Column(name = "MESSAGE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The message may only contain printable characters")
     private String message;

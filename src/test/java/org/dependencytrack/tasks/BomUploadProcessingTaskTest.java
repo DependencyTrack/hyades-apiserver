@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;

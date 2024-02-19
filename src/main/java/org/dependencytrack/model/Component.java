@@ -117,7 +117,7 @@ public class Component implements Serializable {
     private String author;
 
     @Persistent
-    @Column(name = "PUBLISHER")
+    @Column(name = "PUBLISHER", jdbcType = "CLOB")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
     private String publisher;
 
@@ -127,13 +127,13 @@ public class Component implements Serializable {
     private OrganizationalEntity supplier;
 
     @Persistent
-    @Column(name = "GROUP")
+    @Column(name = "GROUP", jdbcType = "CLOB")
     @Index(name = "COMPONENT_GROUP_IDX")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
     private String group;
 
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "COMPONENT_NAME_IDX")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
@@ -141,7 +141,7 @@ public class Component implements Serializable {
     private String name;
 
     @Persistent
-    @Column(name = "VERSION")
+    @Column(name = "VERSION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
     private String version;
@@ -153,13 +153,13 @@ public class Component implements Serializable {
     private Classifier classifier;
 
     @Persistent
-    @Column(name = "FILENAME")
+    @Column(name = "FILENAME", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.FS_DIRECTORY_NAME, message = "The specified filename is not valid and cannot be used as a filename")
     private String filename;
 
     @Persistent
-    @Column(name = "EXTENSION")
+    @Column(name = "EXTENSION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.FS_FILE_NAME, message = "The specified filename extension is not valid and cannot be used as a extension")
     private String extension;
@@ -238,26 +238,27 @@ public class Component implements Serializable {
 
     @Persistent
     @Index(name = "COMPONENT_CPE_IDX")
-    @Column(name = "CPE")
+    @Column(name = "CPE", jdbcType = "CLOB")
     //Patterns obtained from https://csrc.nist.gov/schema/cpe/2.3/cpe-naming_2.3.xsd
     @Pattern(regexp = "(cpe:2\\.3:[aho\\*\\-](:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\\*\\-]))(:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){4})|([c][pP][eE]:/[AHOaho]?(:[A-Za-z0-9\\._\\-~%]*){0,6})", message = "The CPE must conform to the CPE v2.2 or v2.3 specification defined by NIST")
     private String cpe;
 
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_IDX")
-    @Column(name = "PURL")
+    @Column(name = "PURL", jdbcType = "CLOB")
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_COORDINATES_IDX")
+    @Column(name = "PURLCOORDINATES", jdbcType = "CLOB")
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purlCoordinates; // Field should contain only type, namespace, name, and version. Everything up to the qualifiers
 
     @Persistent
-    @Column(name = "SWIDTAGID")
+    @Column(name = "SWIDTAGID", jdbcType = "CLOB")
     @Index(name = "COMPONENT_SWID_TAGID_IDX")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The SWID tagId may only contain printable characters")
     private String swidTagId;
@@ -268,19 +269,19 @@ public class Component implements Serializable {
     private Boolean internal;
 
     @Persistent
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
     private String description;
 
     @Persistent
-    @Column(name = "COPYRIGHT")
+    @Column(name = "COPYRIGHT", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The copyright may only contain printable characters")
     private String copyright;
 
     @Persistent
-    @Column(name = "LICENSE")
+    @Column(name = "LICENSE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The license may only contain printable characters")
     private String license;
@@ -292,7 +293,7 @@ public class Component implements Serializable {
     private String licenseExpression;
 
     @Persistent
-    @Column(name = "LICENSE_URL")
+    @Column(name = "LICENSE_URL", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.URL, message = "The license URL must be a valid URL")
     private String licenseUrl;

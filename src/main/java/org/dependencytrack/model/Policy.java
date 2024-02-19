@@ -73,7 +73,7 @@ public class Policy implements Serializable {
      * The String representation of the policy name.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "POLICY_NAME_IDX")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")

@@ -66,7 +66,7 @@ public class AnalysisComment implements Serializable {
     private String comment;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "COMMENTER")
+    @Column(name = "COMMENTER", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String commenter;
 

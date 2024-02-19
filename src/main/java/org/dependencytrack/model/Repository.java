@@ -60,13 +60,13 @@ public class Repository implements Serializable {
     private RepositoryType type;
 
     @Persistent
-    @Column(name = "IDENTIFIER", allowsNull = "false")
+    @Column(name = "IDENTIFIER", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String identifier;
 
     @Persistent
-    @Column(name = "URL")
+    @Column(name = "URL", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String url;
@@ -93,12 +93,12 @@ public class Repository implements Serializable {
     private Boolean authenticationRequired;
 
     @Persistent
-    @Column(name = "USERNAME")
+    @Column(name = "USERNAME", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String username;
 
     @Persistent
-    @Column(name = "PASSWORD")
+    @Column(name = "PASSWORD", jdbcType = "CLOB")
     private String password;
 
     @Persistent(customValueStrategy = "uuid")

@@ -72,18 +72,18 @@ public class NotificationPublisher implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String name;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String description;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "PUBLISHER_CLASS", allowsNull = "false")
+    @Column(name = "PUBLISHER_CLASS", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String publisherClass;
@@ -94,7 +94,7 @@ public class NotificationPublisher implements Serializable {
     private String template;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false")
+    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String templateMimeType;

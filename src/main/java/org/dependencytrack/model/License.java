@@ -101,7 +101,7 @@ public class License implements Serializable {
      * The String representation of the license name (i.e. Apache License 2.0).
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "LICENSE_NAME_IDX")
     @JsonProperty(value = "name")
     @NotBlank
@@ -149,7 +149,7 @@ public class License implements Serializable {
      * The SPDX defined licenseId (i.e. Apache-2.0).
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "LICENSEID")
+    @Column(name = "LICENSEID", jdbcType = "CLOB")
     @Index(name = "LICENSE_LICENSEID_IDX", unique = "true")
     @JsonProperty(value = "licenseId")
     @JsonAlias(value = "licenseExceptionId")

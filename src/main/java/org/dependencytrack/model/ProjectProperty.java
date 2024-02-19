@@ -58,21 +58,21 @@ public class ProjectProperty implements IConfigProperty, Serializable {
     private Project project;
 
     @Persistent
-    @Column(name = "GROUPNAME", allowsNull = "false")
+    @Column(name = "GROUPNAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The groupName must not contain control characters")
     private String groupName;
 
     @Persistent
-    @Column(name = "PROPERTYNAME", allowsNull = "false")
+    @Column(name = "PROPERTYNAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The propertyName must not contain control characters")
     private String propertyName;
 
     @Persistent
-    @Column(name = "PROPERTYVALUE")
+    @Column(name = "PROPERTYVALUE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The propertyValue must not contain control characters")
     private String propertyValue;
@@ -83,7 +83,7 @@ public class ProjectProperty implements IConfigProperty, Serializable {
     private PropertyType propertyType;
 
     @Persistent
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The description must not contain control characters")
     private String description;

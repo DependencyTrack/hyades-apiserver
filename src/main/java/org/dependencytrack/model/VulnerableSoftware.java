@@ -63,98 +63,99 @@ public class VulnerableSoftware implements ICpe, Serializable {
     private long id;
 
     @Persistent
-    @Column(name = "PURL")
+    @Column(name = "PURL", jdbcType = "CLOB")
     private String purl;
 
     @Persistent
-    @Column(name = "PURL_TYPE")
+    @Column(name = "PURL_TYPE", jdbcType = "CLOB")
     private String purlType;
 
     @Persistent
-    @Column(name = "PURL_NAMESPACE")
+    @Column(name = "PURL_NAMESPACE", jdbcType = "CLOB")
     private String purlNamespace;
 
     @Persistent
-    @Column(name = "PURL_NAME")
+    @Column(name = "PURL_NAME", jdbcType = "CLOB")
     private String purlName;
 
     @Persistent
-    @Column(name = "PURL_VERSION")
+    @Column(name = "PURL_VERSION", jdbcType = "CLOB")
     private String purlVersion;
 
     @Persistent
-    @Column(name = "PURL_QUALIFIERS")
+    @Column(name = "PURL_QUALIFIERS", jdbcType = "CLOB")
     private String purlQualifiers;
 
     @Persistent
-    @Column(name = "PURL_SUBPATH")
+    @Column(name = "PURL_SUBPATH", jdbcType = "CLOB")
     private String purlSubpath;
 
     @Persistent
-    @Column(name = "CPE22")
+    @Column(name = "CPE22", jdbcType = "CLOB")
     private String cpe22;
 
     @Persistent
-    @Column(name = "CPE23")
+    @Column(name = "CPE23", jdbcType = "CLOB")
     private String cpe23;
 
     @Persistent
-    @Column(name = "PART")
+    @Column(name = "PART", jdbcType = "CLOB")
     private String part;
 
     @Persistent
-    @Column(name = "VENDOR")
+    @Column(name = "VENDOR", jdbcType = "CLOB")
     private String vendor;
 
     @Persistent
-    @Column(name = "PRODUCT")
+    @Column(name = "PRODUCT", jdbcType = "CLOB")
     private String product;
 
     @Persistent
+    @Column(name = "VERSION", jdbcType = "CLOB")
     private String version;
 
     @Persistent
-    @Column(name = "UPDATE")
+    @Column(name = "UPDATE", jdbcType = "CLOB")
     private String update;
 
     @Persistent
-    @Column(name = "EDITION")
+    @Column(name = "EDITION", jdbcType = "CLOB")
     private String edition;
 
     @Persistent
-    @Column(name = "LANGUAGE")
+    @Column(name = "LANGUAGE", jdbcType = "CLOB")
     private String language;
 
     @Persistent
-    @Column(name = "SWEDITION")
+    @Column(name = "SWEDITION", jdbcType = "CLOB")
     private String swEdition;
 
     @Persistent
-    @Column(name = "TARGETSW")
+    @Column(name = "TARGETSW", jdbcType = "CLOB")
     private String targetSw;
 
     @Persistent
-    @Column(name = "TARGETHW")
+    @Column(name = "TARGETHW", jdbcType = "CLOB")
     private String targetHw;
 
     @Persistent
-    @Column(name = "OTHER")
+    @Column(name = "OTHER", jdbcType = "CLOB")
     private String other;
 
     @Persistent
-    @Column(name = "VERSIONENDEXCLUDING")
+    @Column(name = "VERSIONENDEXCLUDING", jdbcType = "CLOB")
     private String versionEndExcluding;
 
     @Persistent
-    @Column(name = "VERSIONENDINCLUDING")
+    @Column(name = "VERSIONENDINCLUDING", jdbcType = "CLOB")
     private String versionEndIncluding;
 
     @Persistent
-    @Column(name = "VERSIONSTARTEXCLUDING")
+    @Column(name = "VERSIONSTARTEXCLUDING", jdbcType = "CLOB")
     private String versionStartExcluding;
 
     @Persistent
-    @Column(name = "VERSIONSTARTINCLUDING")
+    @Column(name = "VERSIONSTARTINCLUDING", jdbcType = "CLOB")
     private String versionStartIncluding;
 
     @Persistent

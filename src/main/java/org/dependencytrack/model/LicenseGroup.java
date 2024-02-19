@@ -61,7 +61,7 @@ public class LicenseGroup implements Serializable {
      * The String representation of the license group name (i.e. Copyleft).
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "LICENSEGROUP_NAME_IDX")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
