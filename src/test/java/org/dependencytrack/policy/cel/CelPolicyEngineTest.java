@@ -1499,6 +1499,54 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testEvaluateProjectWithFuncComponentIsDependencyOfExclusiveComponentWithMultiplePaths5() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        //  /-> A -> B
+        // *         ^
+        //  \-------/
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentA).toJSON(),
+                new ComponentIdentity(componentB).toJSON()
+        ));
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through acme-lib-a?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+
+        // Is component introduced exclusively through acme-lib-b?
+        condition.setValue("""
+                component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-b"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
     public void testEvaluateProjectWithFuncMatchesRange() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
