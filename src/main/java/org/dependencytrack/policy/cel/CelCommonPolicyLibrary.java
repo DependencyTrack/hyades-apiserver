@@ -589,6 +589,13 @@ public class CelCommonPolicyLibrary implements Library {
 
         try (final var qm = new QueryManager();
              final Handle jdbiHandle = jdbi(qm).open()) {
+            // If the component is a direct dependency of the project,
+            // it can no longer be a dependency exclusively introduced
+            // through another component.
+            if (isDirectDependency(jdbiHandle, leafComponent)) {
+                return false;
+            }
+
             final Query query = jdbiHandle.createQuery("""
                      -- Determine the project the given leaf component is part of.
                     WITH RECURSIVE
@@ -691,10 +698,6 @@ public class CelCommonPolicyLibrary implements Library {
 
             final List<List<Long>> paths = reducePaths(nodes);
 
-            // TODO: TBD whether only direct dependency relationships should count.
-            // Direct only:
-            //   return paths.stream().allMatch(path -> matchedNodeIds.contains(path.get(0)));
-            // Also transitive (arbitrary distance between matched node and leaf component):
             return paths.stream().allMatch(path -> path.stream().anyMatch(matchedNodeIds::contains));
         }
     }
@@ -896,6 +899,26 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         return Objects.equals(lhs, rhs);
+    }
+
+    private static boolean isDirectDependency(final Handle jdbiHandle, final Component component) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT
+                  1
+                FROM
+                  "COMPONENT" AS "C"
+                INNER JOIN
+                  "PROJECT" AS "P" ON "P"."ID" = "C"."PROJECT_ID"
+                WHERE
+                  "C"."UUID" = :leafComponentUuid
+                  AND "P"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                """);
+
+        return query
+                .bind("leafComponentUuid", component.getUuid())
+                .mapTo(Boolean.class)
+                .findOne()
+                .orElse(false);
     }
 
 }
