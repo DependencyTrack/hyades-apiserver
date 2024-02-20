@@ -7,8 +7,8 @@
     {
       "activityTitle": "Dependency-Track",
       "activitySubtitle": "{{ timestamp }}",
-      "activityImage": "https://raw.githubusercontent.com/DependencyTrack/branding/master/dt-logo-symbol-icon-dark-background.png",
-      {% if notification.group == "NEW_VULNERABILITY" %}
+      "activityImage": "https://raw.githubusercontent.com/DependencyTrack/branding/master/dt-logo-symbol-blue-background.png",
+      {% if notification.group == "GROUP_NEW_VULNERABILITY" %}
       "facts": [
         {
           "name": "VulnID",
@@ -24,21 +24,21 @@
         },
         {
           "name": "Component",
-          "value": "{{ subject.component.toString | escape(strategy="json") }}"
+          "value": "{{ subject.component | summarize | escape(strategy="json") }}"
         }
       ],
-      {% elseif notification.group == "NEW_VULNERABLE_DEPENDENCY" %}
+      {% elseif notification.group == "GROUP_NEW_VULNERABLE_DEPENDENCY" %}
       "facts": [
         {
           "name": "Project",
-          "value": "{{ subject.dependency.project.toString | escape(strategy="json") }}"
+          "value": "{{ subject.dependency.project | summarize | escape(strategy="json") }}"
         },
         {
           "name": "Component",
-          "value": "{{ subject.dependency.component.toString | escape(strategy="json") }}"
+          "value": "{{ subject.dependency.component | summarize | escape(strategy="json") }}"
         }
       ],
-      {% elseif notification.group == "PROJECT_AUDIT_CHANGE" %}
+      {% elseif notification.group == "GROUP_PROJECT_AUDIT_CHANGE" %}
       "facts": [
         {
           "name": "Analysis Type",
@@ -46,7 +46,7 @@
         },
         {
           "name": "Analysis State",
-          "value": "{{ subject.analysis.analysisState | escape(strategy="json") }}"
+          "value": "{{ subject.analysis.state | escape(strategy="json") }}"
         },
         {
           "name": "Suppressed",
@@ -66,14 +66,14 @@
         },
         {
           "name": "Component",
-          "value": "{{ subject.component.toString | escape(strategy="json") }}"
+          "value": "{{ subject.component | summarize | escape(strategy="json") }}"
         },
         {
           "name": "Project",
-          "value": "{{ subject.project.toString | escape(strategy="json") }}"
+          "value": "{{ subject.project | summarize | escape(strategy="json") }}"
         }
       ],
-      {% elseif notification.group == "POLICY_VIOLATION" %}
+      {% elseif notification.group == "GROUP_POLICY_VIOLATION" %}
       "facts": [
         {
           "name": "Subject",
@@ -89,11 +89,11 @@
         },
         {
           "name": "Component",
-          "value": "{{ subject.component.toString | escape(strategy="json") }}"
+          "value": "{{ subject.component | summarize | escape(strategy="json") }}"
         },
         {
           "name": "Project",
-          "value": "{{ subject.project.toString | escape(strategy="json") }}"
+          "value": "{{ subject.project | summarize | escape(strategy="json") }}"
         }
       ],
       {% else %}

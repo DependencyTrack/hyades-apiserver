@@ -1,4 +1,4 @@
-{% if notification.group == "NEW_VULNERABILITY" %}
+{% if notification.group == "GROUP_NEW_VULNERABILITY" %}
 {
   "blocks": [
     {
@@ -57,7 +57,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.component.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.component | summarize | escape(strategy="json") }}"
 		}
 	  ]
 	},
@@ -86,7 +86,7 @@
 	}
   ]
 }
-{% elseif notification.group == "NEW_VULNERABLE_DEPENDENCY" %}
+{% elseif notification.group == "GROUP_NEW_VULNERABLE_DEPENDENCY" %}
 {
   "blocks": [
     {
@@ -121,7 +121,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.component.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.component | summarize | escape(strategy="json") }}"
 		},
 	    {
 		  "type": "mrkdwn",
@@ -129,7 +129,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.component.project.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.component.project | summarize | escape(strategy="json") }}"
 		}
 	  ]
 	},
@@ -158,7 +158,7 @@
 	}
   ]
 }
-{% elseif notification.group == "PROJECT_AUDIT_CHANGE" %}
+{% elseif notification.group == "GROUP_PROJECT_AUDIT_CHANGE" %}
 {
   "blocks": [
     {
@@ -194,7 +194,7 @@
 		{
 		  "type": "plain_text",
 		  "emoji": true,
-		  "text": "{{ subject.analysis.analysisState | escape(strategy="json") }}"
+		  "text": "{{ subject.analysis.state | escape(strategy="json") }}"
 		},
 		{
 		  "type": "mrkdwn",
@@ -239,7 +239,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.component.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.component | summarize | escape(strategy="json") }}"
 		},
 		{
 		  "type": "mrkdwn",
@@ -247,7 +247,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.project.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.project | summarize | escape(strategy="json") }}"
 		}
 	  ]
 	},
@@ -285,7 +285,7 @@
 	}
   ]
 }
-{% elseif notification.group == "POLICY_VIOLATION" %}
+{% elseif notification.group == "GROUP_POLICY_VIOLATION" %}
 {
   "blocks": [
     {
@@ -346,7 +346,7 @@
 		},
 		{
 		  "type": "plain_text",
-		  "text": "{{ subject.component.toString | escape(strategy="json") }}"
+		  "text": "{{ subject.component | summarize | escape(strategy="json") }}"
 		},
 		{
 		  "type": "mrkdwn",

@@ -1,24 +1,24 @@
 {{ notification.title }}
 
 --------------------------------------------------------------------------------
-{% if notification.group == "NEW_VULNERABILITY" %}
+{% if notification.group == "GROUP_NEW_VULNERABILITY" %}
 Vulnerability ID:  {{ subject.vulnerability.vulnId }}
 Vulnerability URL: {{ baseUrl }}/vulnerability/?source={{ subject.vulnerability.source }}&vulnId={{ subject.vulnerability.vulnId }}
 Severity:          {{ subject.vulnerability.severity }}
 Source:            {{ subject.vulnerability.source }}
-Component:         {{ subject.component.toString }}
+Component:         {{ subject.component | summarize }}
 Component URL:     {{ baseUrl }}/component/?uuid={{ subject.component.uuid }}
-Project:           {{ subject.component.project.name }}
-Version:           {{ subject.component.project.version }}
-Description:       {{ subject.component.project.description }}
-Project URL:       {{ baseUrl }}/projects/{{ subject.component.project.uuid }}
+Project:           {{ subject.project.name }}
+Version:           {{ subject.project.version }}
+Description:       {{ subject.project.description }}
+Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
 --------------------------------------------------------------------------------
 
-Other affected projects: {{ baseUrl }}{{ notification.subject.affectedProjects.frontendUri }}
-{% elseif notification.group == "NEW_VULNERABLE_DEPENDENCY" %}
-Project:           {{ subject.component.project.toString }}
+Other affected projects: {{ baseUrl }}{{ subject.affectedProjectsReference.frontendUri }}
+{% elseif notification.group == "GROUP_NEW_VULNERABLE_DEPENDENCY" %}
+Project:           {{ subject.project | summarize }}
 Project URL:       {{ baseUrl }}/projects/?uuid={{ subject.component.project.uuid }}
-Component:         {{ subject.component.toString }}
+Component:         {{ subject.component | summarize }}
 Component URL:     {{ baseUrl }}/component/?uuid={{ subject.component.uuid }}
 
 Vulnerabilities
@@ -31,47 +31,40 @@ Description:
 {{ vulnerability.description }}
 
 {% endfor %}
-{% elseif notification.group == "PROJECT_AUDIT_CHANGE" %}
+{% elseif notification.group == "GROUP_PROJECT_AUDIT_CHANGE" %}
 Analysis Type:  Project Analysis
 {% if subject.analysis is null %}{% for comment in subject.violationAnalysis.analysisComments %} {% if loop.last and comment.commenter is not null  %}
 Commenter:         {{ comment.commenter}}{% endif %}{% endfor %}
-Violation Analysis State:    {{ subject.violationAnalysis.analysisState }}
+Violation Analysis State:    {{ subject.violationAnalysis.state }}
 Suppressed:        {{ subject.violationAnalysis.suppressed }}
-Policy:            {{ subject.policyViolation.policyCondition.Policy.name }}
-Policy Violation State: {{ subject.policyViolation.policyCondition.Policy.violationState }}
+Policy:            {{ subject.policyViolation.policyCondition.policy.name }}
+Policy Violation State: {{ subject.policyViolation.policyCondition.policy.violationState }}
 Policy Condition:  subject == {{ subject.policyViolation.policyCondition.subject }} && value {{ subject.policyViolation.policyCondition.operator }} {{ subject.policyViolation.policyCondition.value }}
 {% else %}{% for comment in subject.analysis.analysisComments %} {% if loop.last and comment.commenter is not null %}
 Commenter:         {{ comment.commenter}}{% endif %}{% endfor %}
-Analysis State:    {{ subject.analysis.analysisState }}
+Analysis State:    {{ subject.analysis.state }}
 Suppressed:        {{ subject.analysis.suppressed }}
 Vulnerability ID:  {{ subject.vulnerability.vulnId }}
 Vulnerability URL: {{ baseUrl }}/vulnerability/?source={{ subject.vulnerability.source }}&vulnId={{ subject.vulnerability.vulnId }}
 Severity:          {{ subject.vulnerability.severity }}
 Source:            {{ subject.vulnerability.source }}
 {% endif %}
-Component:         {{ subject.component.toString }}
+Component:         {{ subject.component | summarize }}
 Component URL:     {{ baseUrl }}/component/?uuid={{ subject.component.uuid }}
-Project:           {{ subject.component.project.toString }}
-Description:       {{ subject.component.project.description }}
-Project URL:       {{ baseUrl }}/projects/{{ subject.component.project.uuid }}
-{% if  notification.subject.affectedProjects|length > 1%}
---------------------------------------------------------------------------------
-
-Other affected projects:
-{% for affectedProject in notification.subject.affectedProjects %}{% if not (affectedProject.uuid == subject.component.project.uuid) %}
-Project:           [{{ affectedProject.name }} : {{ affectedProject.version }}]
-Project URL:       {{ baseUrl }}/projects/{{ affectedProject.uuid }}
-{% endif %}{% endfor %}{% endif %}{% elseif notification.group == "BOM_CONSUMED" %}
+Project:           {{ subject.project | summarize }}
+Description:       {{ subject.project.description }}
+Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
+{% elseif notification.group == "GROUP_BOM_CONSUMED" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
 Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
-{% elseif notification.group == "BOM_PROCESSED" %}
+{% elseif notification.group == "GROUP_BOM_PROCESSED" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
 Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
-{% elseif notification.group == "BOM_PROCESSING_FAILED" %}
+{% elseif notification.group == "GROUP_BOM_PROCESSING_FAILED" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
@@ -81,17 +74,17 @@ Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
 
 Cause:
 {{ subject.cause }}
-{% elseif notification.group == "VEX_CONSUMED" %}
+{% elseif notification.group == "GROUP_VEX_CONSUMED" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
 Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
-{% elseif notification.group == "VEX_PROCESSED" %}
+{% elseif notification.group == "GROUP_VEX_PROCESSED" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
 Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
-{% elseif notification.group == "POLICY_VIOLATION" %}
+{% elseif notification.group == "GROUP_POLICY_VIOLATION" %}
 Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
