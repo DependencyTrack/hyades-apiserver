@@ -100,12 +100,12 @@ public class NotificationRule implements Serializable {
     private boolean logSuccessfulPublish;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "SCOPE", allowsNull = "false")
+    @Column(name = "SCOPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private NotificationScope scope;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NOTIFICATION_LEVEL")
+    @Column(name = "NOTIFICATION_LEVEL", jdbcType = "CLOB")
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")

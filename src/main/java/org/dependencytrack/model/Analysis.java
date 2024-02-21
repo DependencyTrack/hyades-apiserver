@@ -69,17 +69,17 @@ public class Analysis implements Serializable {
     private Vulnerability vulnerability;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "STATE", allowsNull = "false")
+    @Column(name = "STATE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private AnalysisState analysisState;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "JUSTIFICATION", allowsNull = "true")
+    @Column(name = "JUSTIFICATION", jdbcType = "CLOB", allowsNull = "true")
     @NotNull
     private AnalysisJustification analysisJustification;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "RESPONSE", allowsNull = "true")
+    @Column(name = "RESPONSE", jdbcType = "CLOB", allowsNull = "true")
     @NotNull
     private AnalysisResponse analysisResponse;
 

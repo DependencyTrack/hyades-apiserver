@@ -78,7 +78,7 @@ public class ProjectProperty implements IConfigProperty, Serializable {
     private String propertyValue;
 
     @Persistent
-    @Column(name = "PROPERTYTYPE", allowsNull = "false")
+    @Column(name = "PROPERTYTYPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private PropertyType propertyType;
 

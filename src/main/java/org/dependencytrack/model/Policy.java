@@ -83,7 +83,7 @@ public class Policy implements Serializable {
      * The operator to use when evaluating conditions.
      */
     @Persistent
-    @Column(name = "OPERATOR", allowsNull = "false")
+    @Column(name = "OPERATOR", jdbcType = "CLOB", allowsNull = "false")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
     private Operator operator;
@@ -92,7 +92,7 @@ public class Policy implements Serializable {
      * The state the policy should trigger upon violation.
      */
     @Persistent
-    @Column(name = "VIOLATIONSTATE", allowsNull = "false")
+    @Column(name = "VIOLATIONSTATE", jdbcType = "CLOB", allowsNull = "false")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
     private ViolationState violationState;

@@ -55,7 +55,7 @@ public class Repository implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TYPE", allowsNull = "false")
+    @Column(name = "TYPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private RepositoryType type;
 

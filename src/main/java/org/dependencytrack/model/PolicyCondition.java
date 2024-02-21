@@ -97,13 +97,13 @@ public class PolicyCondition implements Serializable {
     private Policy policy;
 
     @Persistent
-    @Column(name = "OPERATOR", allowsNull = "false")
+    @Column(name = "OPERATOR", jdbcType = "CLOB", allowsNull = "false")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
     private Operator operator;
 
     @Persistent
-    @Column(name = "SUBJECT", allowsNull = "false")
+    @Column(name = "SUBJECT", jdbcType = "CLOB", allowsNull = "false")
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The subject may only contain printable characters")
     private Subject subject;
@@ -115,7 +115,7 @@ public class PolicyCondition implements Serializable {
     private String value;
 
     @Persistent
-    @Column(name = "VIOLATIONTYPE", allowsNull = "true")
+    @Column(name = "VIOLATIONTYPE", jdbcType = "CLOB", allowsNull = "true")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation type may only contain printable characters")
     private PolicyViolation.Type violationType;
 

@@ -95,7 +95,7 @@ public class IntegrityMetaComponent implements Serializable {
     private Date lastFetch;
 
     @Persistent
-    @Column(name = "STATUS")
+    @Column(name = "STATUS", jdbcType = "CLOB")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
 

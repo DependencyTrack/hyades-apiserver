@@ -67,7 +67,7 @@ public class ViolationAnalysis implements Serializable {
     private PolicyViolation policyViolation;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "STATE", allowsNull = "false")
+    @Column(name = "STATE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private ViolationAnalysisState analysisState;
 

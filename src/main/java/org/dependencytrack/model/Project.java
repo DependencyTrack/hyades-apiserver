@@ -191,7 +191,7 @@ public class Project implements Serializable {
     private String version;
 
     @Persistent
-    @Column(name = "CLASSIFIER")
+    @Column(name = "CLASSIFIER", jdbcType = "CLOB")
     @Index(name = "PROJECT_CLASSIFIER_IDX")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private Classifier classifier;
