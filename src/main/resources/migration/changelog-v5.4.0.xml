@@ -9,6 +9,12 @@
             http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet id="v5.4.0-1" author="sahibamittal">
+        <modifyDataType  columnName="SOURCE" newDataType="TEXT" tableName="AFFECTEDVERSIONATTRIBUTION"/>
+
+        <modifyDataType  columnName="STATE" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="JUSTIFICATION" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="RESPONSE" newDataType="TEXT" tableName="ANALYSIS"/>
+
         <modifyDataType  columnName="COMMENTER" newDataType="TEXT" tableName="ANALYSISCOMMENT"/>
 
         <modifyDataType  columnName="BOM_FORMAT" newDataType="TEXT" tableName="BOM"/>
@@ -34,6 +40,13 @@
 
         <modifyDataType  columnName="ALT_ID" newDataType="TEXT" tableName="FINDINGATTRIBUTION"/>
         <modifyDataType  columnName="REFERENCE_URL" newDataType="TEXT" tableName="FINDINGATTRIBUTION"/>
+        <modifyDataType  columnName="ANALYZERIDENTITY" newDataType="TEXT" tableName="FINDINGATTRIBUTION"/>
+
+        <modifyDataType  columnName="INTEGRITY_CHECK_STATUS" newDataType="TEXT" tableName="INTEGRITY_ANALYSIS"/>
+        <modifyDataType  columnName="MD5_HASH_MATCH_STATUS" newDataType="TEXT" tableName="INTEGRITY_ANALYSIS"/>
+        <modifyDataType  columnName="SHA1_HASH_MATCH_STATUS" newDataType="TEXT" tableName="INTEGRITY_ANALYSIS"/>
+        <modifyDataType  columnName="SHA256_HASH_MATCH_STATUS" newDataType="TEXT" tableName="INTEGRITY_ANALYSIS"/>
+        <modifyDataType  columnName="SHA512_HASH_MATCH_STATUS" newDataType="TEXT" tableName="INTEGRITY_ANALYSIS"/>
 
         <modifyDataType  columnName="PURL" newDataType="TEXT" tableName="INTEGRITY_META_COMPONENT"/>
         <modifyDataType  columnName="REPOSITORY_URL" newDataType="TEXT" tableName="INTEGRITY_META_COMPONENT"/>
@@ -51,10 +64,19 @@
         <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="NOTIFICATIONRULE"/>
         <modifyDataType  columnName="MESSAGE" newDataType="TEXT" tableName="NOTIFICATIONRULE"/>
         <modifyDataType  columnName="NOTIFY_ON" newDataType="TEXT" tableName="NOTIFICATIONRULE"/>
+        <modifyDataType  columnName="NOTIFICATION_LEVEL" newDataType="TEXT" tableName="NOTIFICATIONRULE"/>
+        <modifyDataType  columnName="SCOPE" newDataType="TEXT" tableName="NOTIFICATIONRULE"/>
 
         <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="POLICY"/>
+        <modifyDataType  columnName="OPERATOR" newDataType="TEXT" tableName="POLICY"/>
+        <modifyDataType  columnName="VIOLATIONSTATE" newDataType="TEXT" tableName="POLICY"/>
+
+        <modifyDataType  columnName="OPERATOR" newDataType="TEXT" tableName="POLICYCONDITION"/>
+        <modifyDataType  columnName="SUBJECT" newDataType="TEXT" tableName="POLICYCONDITION"/>
+        <modifyDataType  columnName="VIOLATIONTYPE" newDataType="TEXT" tableName="POLICYCONDITION"/>
 
         <modifyDataType  columnName="TEXT" newDataType="TEXT" tableName="POLICYVIOLATION"/>
+        <modifyDataType  columnName="TYPE" newDataType="TEXT" tableName="POLICYVIOLATION"/>
 
         <modifyDataType  columnName="AUTHOR" newDataType="TEXT" tableName="PROJECT"/>
         <modifyDataType  columnName="PUBLISHER" newDataType="TEXT" tableName="PROJECT"/>
@@ -71,15 +93,18 @@
         <modifyDataType  columnName="DESCRIPTION" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
         <modifyDataType  columnName="PROPERTYNAME" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
         <modifyDataType  columnName="PROPERTYVALUE" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
+        <modifyDataType  columnName="PROPERTYTYPE" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
 
         <modifyDataType  columnName="IDENTIFIER" newDataType="TEXT" tableName="REPOSITORY"/>
         <modifyDataType  columnName="PASSWORD" newDataType="TEXT" tableName="REPOSITORY"/>
         <modifyDataType  columnName="URL" newDataType="TEXT" tableName="REPOSITORY"/>
         <modifyDataType  columnName="USERNAME" newDataType="TEXT" tableName="REPOSITORY"/>
+        <modifyDataType  columnName="TYPE" newDataType="TEXT" tableName="REPOSITORY"/>
 
         <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="REPOSITORY_META_COMPONENT"/>
         <modifyDataType  columnName="NAMESPACE" newDataType="TEXT" tableName="REPOSITORY_META_COMPONENT"/>
         <modifyDataType  columnName="LATEST_VERSION" newDataType="TEXT" tableName="REPOSITORY_META_COMPONENT"/>
+        <modifyDataType  columnName="REPOSITORY_TYPE" newDataType="TEXT" tableName="REPOSITORY_META_COMPONENT"/>
 
         <modifyDataType  columnName="GROUP" newDataType="TEXT" tableName="SERVICECOMPONENT"/>
         <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="SERVICECOMPONENT"/>
@@ -94,6 +119,8 @@
 
         <modifyDataType  columnName="COMMENTER" newDataType="TEXT" tableName="VIOLATIONANALYSISCOMMENT"/>
 
+        <modifyDataType  columnName="STATE" newDataType="TEXT" tableName="VIOLATIONANALYSIS"/>
+
         <modifyDataType  columnName="SOURCE" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="FRIENDLYVULNID" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="VULNID" newDataType="TEXT" tableName="VULNERABILITY"/>
@@ -105,6 +132,7 @@
         <modifyDataType  columnName="VULNERABLEVERSIONS" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="PATCHEDVERSIONS" newDataType="TEXT" tableName="VULNERABILITY"/>
         <modifyDataType  columnName="CWES" newDataType="TEXT" tableName="VULNERABILITY"/>
+        <modifyDataType  columnName="SEVERITY" newDataType="TEXT" tableName="VULNERABILITY"/>
 
         <modifyDataType  columnName="CVE_ID" newDataType="TEXT" tableName="VULNERABILITYALIAS"/>
         <modifyDataType  columnName="GHSA_ID" newDataType="TEXT" tableName="VULNERABILITYALIAS"/>
@@ -122,6 +150,8 @@
         <modifyDataType  columnName="URL" newDataType="TEXT" tableName="VULNERABILITY_POLICY_BUNDLE"/>
 
         <modifyDataType  columnName="TOKEN" newDataType="TEXT" tableName="VULNERABILITYSCAN"/>
+        <modifyDataType  columnName="STATUS" newDataType="TEXT" tableName="VULNERABILITYSCAN"/>
+        <modifyDataType  columnName="TARGET_TYPE" newDataType="TEXT" tableName="VULNERABILITYSCAN"/>
 
         <modifyDataType  columnName="PURL" newDataType="TEXT" tableName="VULNERABLESOFTWARE"/>
         <modifyDataType  columnName="PURL_TYPE" newDataType="TEXT" tableName="VULNERABLESOFTWARE"/>
@@ -201,6 +231,10 @@
             ALTER TABLE "POLICY" ADD CONSTRAINT "POLICY_OPERATOR_check"
             CHECK ("OPERATOR"::TEXT = ANY(ARRAY['ALL', 'ANY']));
 
+            ALTER TABLE "POLICY" DROP CONSTRAINT IF EXISTS "POLICY_VIOLATIONSTATE_check";
+            ALTER TABLE "POLICY" ADD CONSTRAINT "POLICY_VIOLATIONSTATE_check"
+            CHECK ("VIOLATIONSTATE"::TEXT = ANY(ARRAY['INFO', 'WARN', 'FAIL']));
+
             ALTER TABLE "POLICYCONDITION" DROP CONSTRAINT IF EXISTS "POLICYCONDITION_OPERATOR_check";
             ALTER TABLE "POLICYCONDITION" ADD CONSTRAINT "POLICYCONDITION_OPERATOR_check"
             CHECK ("OPERATOR"::TEXT = ANY(ARRAY['IS', 'IS_NOT', 'MATCHES', 'NO_MATCH', 'NUMERIC_GREATER_THAN', 'NUMERIC_LESS_THAN', 'NUMERIC_EQUAL', 'NUMERIC_NOT_EQUAL', 'NUMERIC_GREATER_THAN_OR_EQUAL', 'NUMERIC_LESSER_THAN_OR_EQUAL', 'CONTAINS_ALL', 'CONTAINS_ANY']));
@@ -212,10 +246,6 @@
             ALTER TABLE "POLICYCONDITION" DROP CONSTRAINT IF EXISTS "POLICYCONDITION_VIOLATIONTYPE_check";
             ALTER TABLE "POLICYCONDITION" ADD CONSTRAINT "POLICYCONDITION_VIOLATIONTYPE_check"
             CHECK ("VIOLATIONTYPE"::TEXT = ANY(ARRAY['LICENSE', 'SECURITY', 'OPERATIONAL']));
-
-            ALTER TABLE "POLICY" DROP CONSTRAINT IF EXISTS "POLICY_VIOLATIONSTATE_check";
-            ALTER TABLE "POLICY" ADD CONSTRAINT "POLICY_VIOLATIONSTATE_check"
-            CHECK ("VIOLATIONSTATE"::TEXT = ANY(ARRAY['INFO', 'WARN', 'FAIL']));
 
             ALTER TABLE "POLICYVIOLATION" DROP CONSTRAINT IF EXISTS "POLICYVIOLATION_TYPE_check";
             ALTER TABLE "POLICYVIOLATION" ADD CONSTRAINT "POLICYVIOLATION_TYPE_check"
