@@ -97,7 +97,7 @@
         <lib.jackson-databind.version>2.16.1</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.0</lib.jdbi.version>
-        <lib.json-unit.version>3.2.4</lib.json-unit.version>
+        <lib.json-unit.version>3.2.5</lib.json-unit.version>
         <lib.kafka.version>3.6.1</lib.kafka.version>
         <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
         <lib.liquibase.version>4.26.0</lib.liquibase.version>
