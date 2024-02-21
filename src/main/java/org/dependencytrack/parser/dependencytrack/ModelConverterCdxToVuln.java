@@ -1,6 +1,5 @@
 package org.dependencytrack.parser.dependencytrack;
 
-import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.proto.v1_4.Bom;
 import org.cyclonedx.proto.v1_4.ScoreMethod;
 import org.cyclonedx.proto.v1_4.Source;
@@ -48,7 +47,7 @@ public final class ModelConverterCdxToVuln {
         if (cycloneVuln.getPropertiesCount() != 0) {
             var titleProperty = cycloneVuln.getProperties(0);
             if (titleProperty.getName().equals(TITLE_PROPERTY_NAME) && titleProperty.hasValue()) {
-                vuln.setTitle(StringUtils.abbreviate(titleProperty.getValue(), 255));
+                vuln.setTitle(titleProperty.getValue());
             }
         }
         if (cycloneVuln.hasDescription()) {

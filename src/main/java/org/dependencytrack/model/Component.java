@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
@@ -50,7 +49,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -402,7 +400,7 @@ public class Component implements Serializable {
     }
 
     public void setGroup(String group) {
-        this.group = StringUtils.abbreviate(group, 255);
+        this.group = group;
     }
 
     public String getName() {
@@ -410,7 +408,7 @@ public class Component implements Serializable {
     }
 
     public void setName(String name) {
-        this.name = StringUtils.abbreviate(name, 255);
+        this.name = name;
     }
 
     public String getVersion() {
@@ -418,7 +416,7 @@ public class Component implements Serializable {
     }
 
     public void setVersion(String version) {
-        this.version = StringUtils.abbreviate(version, 255);
+        this.version = version;
     }
 
     public Classifier getClassifier() {
@@ -434,7 +432,7 @@ public class Component implements Serializable {
     }
 
     public void setFilename(String filename) {
-        this.filename = StringUtils.abbreviate(filename, 255);
+        this.filename = filename;
     }
 
     public String getExtension() {
@@ -442,7 +440,7 @@ public class Component implements Serializable {
     }
 
     public void setExtension(String extension) {
-        this.extension = StringUtils.abbreviate(extension, 255);
+        this.extension = extension;
     }
 
     public String getMd5() {
@@ -546,7 +544,7 @@ public class Component implements Serializable {
     }
 
     public void setCpe(String cpe) {
-        this.cpe = StringUtils.abbreviate(cpe, 255);
+        this.cpe = cpe;
     }
 
     @JsonSerialize(using = CustomPackageURLSerializer.class)
@@ -621,7 +619,7 @@ public class Component implements Serializable {
     }
 
     public void setDescription(String description) {
-        this.description = StringUtils.abbreviate(description, 1024);
+        this.description = description;
     }
 
     public String getCopyright() {
@@ -629,7 +627,7 @@ public class Component implements Serializable {
     }
 
     public void setCopyright(String copyright) {
-        this.copyright = StringUtils.abbreviate(copyright, 1024);
+        this.copyright = copyright;
     }
 
     public String getLicense() {
@@ -637,7 +635,7 @@ public class Component implements Serializable {
     }
 
     public void setLicense(String license) {
-        this.license = StringUtils.abbreviate(license, 255);
+        this.license = license;
     }
 
     public String getLicenseExpression() {
@@ -653,7 +651,7 @@ public class Component implements Serializable {
     }
 
     public void setLicenseUrl(String licenseUrl) {
-        this.licenseUrl = StringUtils.abbreviate(licenseUrl, 255);
+        this.licenseUrl = licenseUrl;
     }
 
     public License getResolvedLicense() {
