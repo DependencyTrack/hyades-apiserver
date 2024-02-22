@@ -317,7 +317,9 @@ public class BomUploadProcessingTask implements Subscriber {
                         qm.getPersistenceManager().makePersistent(projectMetadata);
                     } else {
                         project.getMetadata().setSupplier(projectMetadata.getSupplier());
-                        project.getMetadata().setAuthors(projectMetadata.getAuthors());
+                        project.getMetadata().setAuthors(projectMetadata.getAuthors() != null
+                                ? new ArrayList<>(projectMetadata.getAuthors())
+                                : null);
                     }
                 }
                 final Map<ComponentIdentity, Component> persistentComponents =
