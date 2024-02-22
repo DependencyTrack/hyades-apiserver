@@ -107,7 +107,7 @@
         <lib.parallel-consumer.version>0.5.2.8</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>3.25.3</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.18.3</lib.testcontainers.version>
+        <lib.testcontainers.version>1.19.6</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.4.1</lib.versatile.version>
