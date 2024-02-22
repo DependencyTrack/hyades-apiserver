@@ -43,7 +43,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
@@ -102,11 +101,10 @@ public class License implements Serializable {
      * The String representation of the license name (i.e. Apache License 2.0).
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "LICENSE_NAME_IDX")
     @JsonProperty(value = "name")
     @NotBlank
-    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
@@ -151,12 +149,11 @@ public class License implements Serializable {
      * The SPDX defined licenseId (i.e. Apache-2.0).
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "LICENSEID")
+    @Column(name = "LICENSEID", jdbcType = "CLOB")
     @Index(name = "LICENSE_LICENSEID_IDX", unique = "true")
     @JsonProperty(value = "licenseId")
     @JsonAlias(value = "licenseExceptionId")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Size(min = 1, max = 255)
     @NotBlank
     @Pattern(regexp = RegexSequence.Definition.STRING_IDENTIFIER, message = "The licenseId may only contain alpha, numeric, and specific symbols _-.+")
     private String licenseId;

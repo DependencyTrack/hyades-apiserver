@@ -53,7 +53,7 @@ public class RepositoryMetaComponent implements Serializable {
      * This is an indirect representation of a the Package URL "type" field.
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REPOSITORY_TYPE", jdbcType = "VARCHAR", allowsNull = "false")
+    @Column(name = "REPOSITORY_TYPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private RepositoryType repositoryType;
 
@@ -61,14 +61,14 @@ public class RepositoryMetaComponent implements Serializable {
      * This is a representation of the Package URL "namespace" field.
      */
     @Persistent
-    @Column(name = "NAMESPACE")
+    @Column(name = "NAMESPACE", jdbcType = "CLOB")
     private String namespace;
 
     /**
      * This is a representation of the Package URL "name" field.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotNull
     private String name;
 
@@ -76,7 +76,7 @@ public class RepositoryMetaComponent implements Serializable {
      * The latest version of the component.
      */
     @Persistent
-    @Column(name = "LATEST_VERSION", allowsNull = "false")
+    @Column(name = "LATEST_VERSION", allowsNull = "false", jdbcType = "CLOB")
     @NotNull
     private String latestVersion;
 

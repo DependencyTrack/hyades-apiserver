@@ -33,7 +33,6 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -73,22 +72,19 @@ public class NotificationPublisher implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String name;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "DESCRIPTION")
-    @Size(min = 0, max = 1024)
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String description;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "PUBLISHER_CLASS", length = 1024, allowsNull = "false")
+    @Column(name = "PUBLISHER_CLASS", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String publisherClass;
 
@@ -98,9 +94,8 @@ public class NotificationPublisher implements Serializable {
     private String template;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false")
+    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String templateMimeType;
 

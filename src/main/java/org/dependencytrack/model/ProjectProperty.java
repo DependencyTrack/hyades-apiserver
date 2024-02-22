@@ -33,7 +33,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 
 /**
@@ -59,36 +58,32 @@ public class ProjectProperty implements IConfigProperty, Serializable {
     private Project project;
 
     @Persistent
-    @Column(name = "GROUPNAME", allowsNull = "false")
+    @Column(name = "GROUPNAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The groupName must not contain control characters")
     private String groupName;
 
     @Persistent
-    @Column(name = "PROPERTYNAME", allowsNull = "false")
+    @Column(name = "PROPERTYNAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The propertyName must not contain control characters")
     private String propertyName;
 
     @Persistent
-    @Column(name = "PROPERTYVALUE", length = 1024)
-    @Size(min = 0, max = 1024)
+    @Column(name = "PROPERTYVALUE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The propertyValue must not contain control characters")
     private String propertyValue;
 
     @Persistent
-    @Column(name = "PROPERTYTYPE", jdbcType = "VARCHAR", allowsNull = "false")
+    @Column(name = "PROPERTYTYPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private PropertyType propertyType;
 
     @Persistent
-    @Column(name = "DESCRIPTION")
-    @Size(max = 255)
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The description must not contain control characters")
     private String description;

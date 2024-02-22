@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
@@ -50,7 +49,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -117,8 +115,7 @@ public class Component implements Serializable {
     private String author;
 
     @Persistent
-    @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "PUBLISHER", jdbcType = "CLOB")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The publisher may only contain printable characters")
     private String publisher;
 
@@ -128,44 +125,39 @@ public class Component implements Serializable {
     private OrganizationalEntity supplier;
 
     @Persistent
-    @Column(name = "GROUP", jdbcType = "VARCHAR")
+    @Column(name = "GROUP", jdbcType = "CLOB")
     @Index(name = "COMPONENT_GROUP_IDX")
-    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
     private String group;
 
     @Persistent
-    @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @Index(name = "COMPONENT_NAME_IDX")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
     @Persistent
-    @Column(name = "VERSION", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "VERSION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
     private String version;
 
     @Persistent
-    @Column(name = "CLASSIFIER", jdbcType = "VARCHAR")
+    @Column(name = "CLASSIFIER", jdbcType = "CLOB")
     @Index(name = "COMPONENT_CLASSIFIER_IDX")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private Classifier classifier;
 
     @Persistent
-    @Column(name = "FILENAME", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "FILENAME", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.FS_DIRECTORY_NAME, message = "The specified filename is not valid and cannot be used as a filename")
     private String filename;
 
     @Persistent
-    @Column(name = "EXTENSION", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "EXTENSION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.FS_FILE_NAME, message = "The specified filename extension is not valid and cannot be used as a extension")
     private String extension;
@@ -244,31 +236,28 @@ public class Component implements Serializable {
 
     @Persistent
     @Index(name = "COMPONENT_CPE_IDX")
-    @Column(name = "CPE")
-    @Size(max = 255)
+    @Column(name = "CPE", jdbcType = "CLOB")
     //Patterns obtained from https://csrc.nist.gov/schema/cpe/2.3/cpe-naming_2.3.xsd
     @Pattern(regexp = "(cpe:2\\.3:[aho\\*\\-](:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\\*\\-]))(:(((\\?*|\\*?)([a-zA-Z0-9\\-\\._]|(\\\\[\\\\\\*\\?!\"#$$%&'\\(\\)\\+,/:;<=>@\\[\\]\\^`\\{\\|}~]))+(\\?*|\\*?))|[\\*\\-])){4})|([c][pP][eE]:/[AHOaho]?(:[A-Za-z0-9\\._\\-~%]*){0,6})", message = "The CPE must conform to the CPE v2.2 or v2.3 specification defined by NIST")
     private String cpe;
 
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_IDX")
-    @Column(name = "PURL", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "PURL", jdbcType = "CLOB")
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
     @Index(name = "COMPONENT_PURL_COORDINATES_IDX")
-    @Size(max = 255)
+    @Column(name = "PURLCOORDINATES", jdbcType = "CLOB")
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String purlCoordinates; // Field should contain only type, namespace, name, and version. Everything up to the qualifiers
 
     @Persistent
-    @Column(name = "SWIDTAGID")
+    @Column(name = "SWIDTAGID", jdbcType = "CLOB")
     @Index(name = "COMPONENT_SWID_TAGID_IDX")
-    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The SWID tagId may only contain printable characters")
     private String swidTagId;
 
@@ -278,22 +267,19 @@ public class Component implements Serializable {
     private Boolean internal;
 
     @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
     private String description;
 
     @Persistent
-    @Column(name = "COPYRIGHT", jdbcType = "VARCHAR", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "COPYRIGHT", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The copyright may only contain printable characters")
     private String copyright;
 
     @Persistent
-    @Column(name = "LICENSE", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "LICENSE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The license may only contain printable characters")
     private String license;
@@ -305,8 +291,7 @@ public class Component implements Serializable {
     private String licenseExpression;
 
     @Persistent
-    @Column(name = "LICENSE_URL", jdbcType = "VARCHAR")
-    @Size(max = 255)
+    @Column(name = "LICENSE_URL", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.URL, message = "The license URL must be a valid URL")
     private String licenseUrl;
@@ -415,7 +400,7 @@ public class Component implements Serializable {
     }
 
     public void setGroup(String group) {
-        this.group = StringUtils.abbreviate(group, 255);
+        this.group = group;
     }
 
     public String getName() {
@@ -423,7 +408,7 @@ public class Component implements Serializable {
     }
 
     public void setName(String name) {
-        this.name = StringUtils.abbreviate(name, 255);
+        this.name = name;
     }
 
     public String getVersion() {
@@ -431,7 +416,7 @@ public class Component implements Serializable {
     }
 
     public void setVersion(String version) {
-        this.version = StringUtils.abbreviate(version, 255);
+        this.version = version;
     }
 
     public Classifier getClassifier() {
@@ -447,7 +432,7 @@ public class Component implements Serializable {
     }
 
     public void setFilename(String filename) {
-        this.filename = StringUtils.abbreviate(filename, 255);
+        this.filename = filename;
     }
 
     public String getExtension() {
@@ -455,7 +440,7 @@ public class Component implements Serializable {
     }
 
     public void setExtension(String extension) {
-        this.extension = StringUtils.abbreviate(extension, 255);
+        this.extension = extension;
     }
 
     public String getMd5() {
@@ -559,7 +544,7 @@ public class Component implements Serializable {
     }
 
     public void setCpe(String cpe) {
-        this.cpe = StringUtils.abbreviate(cpe, 255);
+        this.cpe = cpe;
     }
 
     @JsonSerialize(using = CustomPackageURLSerializer.class)
@@ -634,7 +619,7 @@ public class Component implements Serializable {
     }
 
     public void setDescription(String description) {
-        this.description = StringUtils.abbreviate(description, 1024);
+        this.description = description;
     }
 
     public String getCopyright() {
@@ -642,7 +627,7 @@ public class Component implements Serializable {
     }
 
     public void setCopyright(String copyright) {
-        this.copyright = StringUtils.abbreviate(copyright, 1024);
+        this.copyright = copyright;
     }
 
     public String getLicense() {
@@ -650,7 +635,7 @@ public class Component implements Serializable {
     }
 
     public void setLicense(String license) {
-        this.license = StringUtils.abbreviate(license, 255);
+        this.license = license;
     }
 
     public String getLicenseExpression() {
@@ -666,7 +651,7 @@ public class Component implements Serializable {
     }
 
     public void setLicenseUrl(String licenseUrl) {
-        this.licenseUrl = StringUtils.abbreviate(licenseUrl, 255);
+        this.licenseUrl = licenseUrl;
     }
 
     public License getResolvedLicense() {

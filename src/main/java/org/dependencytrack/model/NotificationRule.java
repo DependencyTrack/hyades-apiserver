@@ -43,7 +43,6 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,9 +73,8 @@ public class NotificationRule implements Serializable {
      * The String representation of the name of the notification.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false")
+    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
-    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
@@ -102,12 +100,12 @@ public class NotificationRule implements Serializable {
     private boolean logSuccessfulPublish;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "SCOPE", jdbcType = "VARCHAR", allowsNull = "false")
+    @Column(name = "SCOPE", jdbcType = "CLOB", allowsNull = "false")
     @NotNull
     private NotificationScope scope;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NOTIFICATION_LEVEL", jdbcType = "VARCHAR")
+    @Column(name = "NOTIFICATION_LEVEL", jdbcType = "CLOB")
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")
@@ -123,12 +121,11 @@ public class NotificationRule implements Serializable {
     private List<Team> teams;
 
     @Persistent
-    @Column(name = "NOTIFY_ON", length = 1024)
+    @Column(name = "NOTIFY_ON", jdbcType = "CLOB")
     private String notifyOn;
 
     @Persistent
-    @Column(name = "MESSAGE", length = 1024)
-    @Size(max = 1024)
+    @Column(name = "MESSAGE", jdbcType = "CLOB")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The message may only contain printable characters")
     private String message;
