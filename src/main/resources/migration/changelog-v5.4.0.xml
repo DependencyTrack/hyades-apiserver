@@ -14,6 +14,10 @@
         <modifyDataType  columnName="STATE" newDataType="TEXT" tableName="ANALYSIS"/>
         <modifyDataType  columnName="JUSTIFICATION" newDataType="TEXT" tableName="ANALYSIS"/>
         <modifyDataType  columnName="RESPONSE" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="SEVERITY" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="CVSSV2VECTOR" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="CVSSV3VECTOR" newDataType="TEXT" tableName="ANALYSIS"/>
+        <modifyDataType  columnName="OWASPVECTOR" newDataType="TEXT" tableName="ANALYSIS"/>
 
         <modifyDataType  columnName="COMMENTER" newDataType="TEXT" tableName="ANALYSISCOMMENT"/>
 
@@ -30,6 +34,7 @@
         <modifyDataType  columnName="DESCRIPTION" newDataType="TEXT" tableName="COMPONENT"/>
         <modifyDataType  columnName="COPYRIGHT" newDataType="TEXT" tableName="COMPONENT"/>
         <modifyDataType  columnName="CPE" newDataType="TEXT" tableName="COMPONENT"/>
+        <modifyDataType  columnName="CLASSIFIER" newDataType="TEXT" tableName="COMPONENT"/>
         <modifyDataType  columnName="EXTENSION" newDataType="TEXT" tableName="COMPONENT"/>
         <modifyDataType  columnName="LICENSE" newDataType="TEXT" tableName="COMPONENT"/>
         <modifyDataType  columnName="LICENSE_URL" newDataType="TEXT" tableName="COMPONENT"/>
@@ -50,6 +55,7 @@
 
         <modifyDataType  columnName="PURL" newDataType="TEXT" tableName="INTEGRITY_META_COMPONENT"/>
         <modifyDataType  columnName="REPOSITORY_URL" newDataType="TEXT" tableName="INTEGRITY_META_COMPONENT"/>
+        <modifyDataType  columnName="STATUS" newDataType="TEXT" tableName="INTEGRITY_META_COMPONENT"/>
 
         <modifyDataType  columnName="NAME" newDataType="TEXT" tableName="LICENSE"/>
         <modifyDataType  columnName="LICENSEID" newDataType="TEXT" tableName="LICENSE"/>
@@ -88,6 +94,7 @@
         <modifyDataType  columnName="DESCRIPTION" newDataType="TEXT" tableName="PROJECT"/>
         <modifyDataType  columnName="LAST_BOM_IMPORTED_FORMAT" newDataType="TEXT" tableName="PROJECT"/>
         <modifyDataType  columnName="VERSION" newDataType="TEXT" tableName="PROJECT"/>
+        <modifyDataType  columnName="CLASSIFIER" newDataType="TEXT" tableName="PROJECT"/>
 
         <modifyDataType  columnName="GROUPNAME" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
         <modifyDataType  columnName="DESCRIPTION" newDataType="TEXT" tableName="PROJECT_PROPERTY"/>
@@ -178,6 +185,9 @@
         <modifyDataType  columnName="VERSIONSTARTINCLUDING" newDataType="TEXT" tableName="VULNERABLESOFTWARE"/>
         <modifyDataType  columnName="VERSION" newDataType="TEXT" tableName="VULNERABLESOFTWARE"/>
 
+        <modifyDataType  columnName="STATUS" newDataType="TEXT" tableName="WORKFLOW_STATE"/>
+        <modifyDataType  columnName="STEP" newDataType="TEXT" tableName="WORKFLOW_STATE"/>
+
         <sql splitStatements="true">
             ALTER TABLE "AFFECTEDVERSIONATTRIBUTION" DROP CONSTRAINT IF EXISTS "AFFECTEDVERSIONATTRIBUTION_SOURCE_check";
             ALTER TABLE "AFFECTEDVERSIONATTRIBUTION" ADD CONSTRAINT "AFFECTEDVERSIONATTRIBUTION_SOURCE_check"
@@ -194,6 +204,14 @@
             ALTER TABLE "ANALYSIS" DROP CONSTRAINT IF EXISTS "ANALYSIS_RESPONSE_check";
             ALTER TABLE "ANALYSIS" ADD CONSTRAINT "ANALYSIS_RESPONSE_check"
             CHECK ("RESPONSE" IS NULL OR "RESPONSE"::TEXT = ANY(ARRAY['CAN_NOT_FIX', 'WILL_NOT_FIX', 'UPDATE', 'ROLLBACK', 'WORKAROUND_AVAILABLE', 'NOT_SET']));
+
+            ALTER TABLE "ANALYSIS" DROP CONSTRAINT IF EXISTS "ANALYSIS_SEVERITY_check";
+            ALTER TABLE "ANALYSIS" ADD CONSTRAINT "ANALYSIS_SEVERITY_check"
+            CHECK ("SEVERITY" IS NULL OR "SEVERITY"::TEXT = ANY(ARRAY['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'UNASSIGNED']));
+
+            ALTER TABLE "COMPONENT" DROP CONSTRAINT IF EXISTS "COMPONENT_CLASSIFIER_check";
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
+            CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'FRAMEWORK', 'LIBRARY', 'CONTAINER', 'OPERATING_SYSTEM', 'DEVICE', 'FIRMWARE', 'FILE', 'PLATFORM', 'DEVICE_DRIVER', 'MACHINE_LEARNING_MODEL', 'DATA']));
 
             ALTER TABLE "FINDINGATTRIBUTION" DROP CONSTRAINT IF EXISTS "FINDINGATTRIBUTION_ANALYZERIDENTITY_check";
             ALTER TABLE "FINDINGATTRIBUTION" ADD CONSTRAINT "FINDINGATTRIBUTION_ANALYZERIDENTITY_check"
