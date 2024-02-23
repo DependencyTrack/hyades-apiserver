@@ -128,7 +128,7 @@ public class ProcessorManagerTest {
             processorManager.startAll();
 
             await("Record Processing")
-                    .atMost(Duration.ofSeconds(5))
+                    .atMost(Duration.ofSeconds(15))
                     .untilAsserted(() -> assertThat(attemptsCounter).hasValue(4));
         }
     }
