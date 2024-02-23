@@ -50,6 +50,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.joining;
@@ -241,7 +242,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(kafka.readValues(ReadKeyValues
                             .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
                             .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class))
+                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                            .withMaxTotalPollTime(5, TimeUnit.SECONDS))
                     ).satisfiesExactly(
                             notification -> {
                                 final ProjectVulnAnalysisCompleteSubject subject =
@@ -405,7 +407,8 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
                     assertThat(kafka.readValues(ReadKeyValues
                             .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
                             .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class))
+                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                            .withMaxTotalPollTime(5, TimeUnit.SECONDS))
                     ).satisfiesExactly(
                             notification -> {
                                 final ProjectVulnAnalysisCompleteSubject subject =
@@ -560,8 +563,10 @@ public class KafkaStreamsTopologyTest extends KafkaStreamsTest {
         // Verify that no notification was sent.
         final List<Notification> notifications = kafka.readValues(ReadKeyValues
                 .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
+                .with(ConsumerConfig.GROUP_ID_CONFIG, "foo")
                 .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class));
+                .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                .withMaxTotalPollTime(5, TimeUnit.SECONDS));
         assertThat(notifications).isEmpty();
 
         // Ensure that Kafka Streams did not terminate due to project not existing.
