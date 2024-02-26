@@ -47,19 +47,23 @@ public class IntegrityMetaInitializerTask implements Subscriber {
         }
     }
 
-    private void dispatchPurls(QueryManager qm, List<IntegrityMetaComponent> integrityMetaPurls) {
-        for (final var integrityMetaPurl : integrityMetaPurls) {
+    private void dispatchPurls(QueryManager qm, List<IntegrityMetaComponent> integrityMetaComponents) {
+        for (final IntegrityMetaComponent integrityMetaComponent : integrityMetaComponents) {
             try {
-                PackageURL purl = new PackageURL(integrityMetaPurl.getPurl());
+                PackageURL purl = new PackageURL(integrityMetaComponent.getPurl());
                 //dispatch for integrity metadata only if purl type is supported
                 if (SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(purl.getType())) {
-                    IntegrityMetaInitializerTask.ComponentProjection componentProjection = qm.getComponentByPurl(integrityMetaPurl.getPurl());
-                    LOGGER.debug("Dispatching purl for integrity metadata: " + integrityMetaPurl.getPurl());
+                    IntegrityMetaInitializerTask.ComponentProjection componentProjection = qm.getComponentByPurl(integrityMetaComponent.getPurl());
+                    if (componentProjection == null) {
+                        LOGGER.debug("No component with PURL %s exists (anymore); Skipping".formatted(integrityMetaComponent.getPurl()));
+                        continue;
+                    }
+                    LOGGER.debug("Dispatching purl for integrity metadata: " + integrityMetaComponent.getPurl());
                     //Initializer will not trigger Integrity Check on component so component uuid is not required
-                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, integrityMetaPurl.getPurl(), componentProjection.internal(), FETCH_META_INTEGRITY_DATA));
+                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, integrityMetaComponent.getPurl(), componentProjection.internal(), FETCH_META_INTEGRITY_DATA));
                 }
             } catch (MalformedPackageURLException packageURLException) {
-                LOGGER.warn("Initializer cannot dispatch for integrity because purl cannot be parse: " + integrityMetaPurl.getPurl());
+                LOGGER.warn("Initializer cannot dispatch for integrity because purl cannot be parse: " + integrityMetaComponent.getPurl());
                 //skip malformed url
             }
         }
