@@ -16,12 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package org.dependencytrack.util;
+package org.dependencytrack.model;
 
 import alpine.common.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.model.PolicyCondition;
-import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -190,7 +188,7 @@ public class VersionDistance implements Comparable<VersionDistance>, Serializabl
                 result.add(new VersionDistance(0, 0, 0, patch));
             }
         } else {
-            throw new NumberFormatException("Invallid version distance: " + combinedDistances);
+            throw new NumberFormatException("Invalid version distance: " + combinedDistances);
         }
         return result;
     }
@@ -380,17 +378,15 @@ public class VersionDistance implements Comparable<VersionDistance>, Serializabl
      * @param versionDistance         the {@link VersionDistance} to evalue
      * @return true if the condition is true for the components versionDistance, false otherwise
      */
-    public static boolean evaluate(final String policyConditionValue, final String policyConditionOperator, final VersionDistance versionDistance) {
+    public static boolean evaluate(final org.dependencytrack.proto.policy.v1.VersionDistance policyConditionValue, final String policyConditionOperator, final VersionDistance versionDistance) {
         final var operator = PolicyCondition.Operator.valueOf(policyConditionOperator);
         final var value = policyConditionValue;
 
-        if (!StringUtils.isEmpty(value)) {
-            final var json = new JSONObject(value);
-            final var epoch = json.optString("epoch", "0");
-            final var major = json.optString("major", "?");
-            final var minor = json.optString("minor", "?");
-            final var patch = json.optString("patch", "?");
-
+        if (policyConditionValue != null) {
+            var epoch = policyConditionValue.getEpoch().equals("") ? "0" : policyConditionValue.getEpoch();
+            var major = policyConditionValue.getMajor().equals("") ? "?" : policyConditionValue.getMajor();
+            var minor = policyConditionValue.getMinor().equals("") ? "?" : policyConditionValue.getMinor();
+            var patch = policyConditionValue.getPatch().equals("") ? "?" : policyConditionValue.getPatch();
             final List<VersionDistance> versionDistanceList;
             try {
                 versionDistanceList = VersionDistance.parse(epoch + ":" + major + "." + minor + "." + patch);
@@ -409,8 +405,5 @@ public class VersionDistance implements Comparable<VersionDistance>, Serializabl
         }
         return false;
 
-
     }
-
-
 }

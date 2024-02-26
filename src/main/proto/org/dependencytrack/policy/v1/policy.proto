@@ -136,3 +136,10 @@ message Vulnerability {
     string source = 2;
   }
 }
+
+message VersionDistance {
+  optional string epoch = 1;
+  optional string major = 2;
+  optional string minor = 3;
+  optional string patch = 4;
+}

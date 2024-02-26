@@ -342,7 +342,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     public void testEvaluateProjectWithPolicyOperatorForVersionDistance() {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.version_distance("NUMERIC_GREATER_THAN_OR_EQUAL", "{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }")
+                component.version_distance(">=", v1.VersionDistance{ major: \"0\", minor: \"1\", patch: \"?\" })
                 """, PolicyViolation.Type.OPERATIONAL);
 
         final var project = new Project();
@@ -371,7 +371,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
-                component.version_distance("NUMERIC_GREATER_THAN_OR_EQUAL", "{ \\"major\\": \\"0\\", \\"minor\\": \\"1\\", \\"patch\\": \\"?\\" }")
+                component.version_distance(">=", v1.VersionDistance{ major: \"0\", minor: \"1\", patch: \"?\" })
                 """);
     }
 

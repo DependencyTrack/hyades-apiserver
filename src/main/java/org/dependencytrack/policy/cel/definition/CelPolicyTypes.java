@@ -5,6 +5,7 @@ import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
+import org.dependencytrack.proto.policy.v1.VersionDistance;
 import org.projectnessie.cel.checker.Decls;
 
 public class CelPolicyTypes {
@@ -17,5 +18,6 @@ public class CelPolicyTypes {
     public static final Type TYPE_VULNERABILITY = Decls.newObjectType(Vulnerability.getDescriptor().getFullName());
     public static final Type TYPE_VULNERABILITIES = Decls.newListType(TYPE_VULNERABILITY);
     public static final Type TYPE_VULNERABILITY_ALIAS = Decls.newObjectType(Vulnerability.Alias.getDescriptor().getFullName());
+    public static final Type TYPE_VERSION_DISTANCE = Decls.newObjectType(VersionDistance.getDescriptor().getFullName());
 
 }
