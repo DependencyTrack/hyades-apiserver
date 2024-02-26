@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 
 public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
@@ -84,4 +85,23 @@ public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history().size()).isEqualTo(1);
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
     }
+
+    @Test
+    public void testIntegrityMetaInitializerWithNonExistentComponent() {
+        // Create a meta component.
+        var integrityMetaExisting = new IntegrityMetaComponent();
+        integrityMetaExisting.setPurl("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
+        qm.persist(integrityMetaExisting);
+
+        // Delete the component such that the meta component's PURL no longer matches
+        // any record in the COMPONENT table.
+        qm.delete(componentPersisted);
+
+        // No exception must be raised.
+        assertThatNoException().isThrownBy(() -> new IntegrityMetaInitializerTask().inform(new IntegrityMetaInitializerEvent()));
+
+        // No Kafka record must be sent.
+        assertThat(kafkaMockProducer.history().size()).isZero();
+    }
+
 }
