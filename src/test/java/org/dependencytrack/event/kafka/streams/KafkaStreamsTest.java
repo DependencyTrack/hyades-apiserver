@@ -20,7 +20,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 abstract class KafkaStreamsTest extends PersistenceCapableTest {
 
@@ -75,7 +76,14 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
         kafkaStreams = new KafkaStreams(topologySupplier.get(), streamsConfig);
         kafkaStreams.start();
 
-        assertConditionWithTimeout(() -> KafkaStreams.State.RUNNING == kafkaStreams.state(), Duration.ofSeconds(5));
+        await("Kafka Streams Readiness")
+                .atMost(Duration.ofSeconds(15))
+                .failFast(() -> assertThat(kafkaStreams.state()).isNotIn(
+                        KafkaStreams.State.ERROR,
+                        KafkaStreams.State.PENDING_ERROR,
+                        KafkaStreams.State.PENDING_SHUTDOWN
+                ))
+                .untilAsserted(() -> assertThat(kafkaStreams.state()).isEqualTo(KafkaStreams.State.RUNNING));
     }
 
     @After

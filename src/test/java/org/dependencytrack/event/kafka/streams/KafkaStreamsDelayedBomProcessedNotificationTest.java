@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -105,7 +106,8 @@ public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStream
                     assertThat(kafka.readValues(ReadKeyValues
                             .from(KafkaTopics.NOTIFICATION_BOM.name(), String.class, Notification.class)
                             .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class))
+                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                            .withMaxTotalPollTime(5, TimeUnit.SECONDS))
                     ).satisfiesExactly(
                             notification -> {
                                 final BomConsumedOrProcessedSubject subject =
@@ -132,7 +134,8 @@ public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStream
                     assertThat(kafka.readValues(ReadKeyValues
                             .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
                             .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class))
+                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                            .withMaxTotalPollTime(5, TimeUnit.SECONDS))
                     ).satisfiesExactly(
                             notification -> {
                                 final ProjectVulnAnalysisCompleteSubject subject =
@@ -203,7 +206,8 @@ public class KafkaStreamsDelayedBomProcessedNotificationTest extends KafkaStream
                     assertThat(kafka.readValues(ReadKeyValues
                             .from(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), String.class, Notification.class)
                             .with(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class))
+                            .with(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, NotificationDeserializer.class)
+                            .withMaxTotalPollTime(5, TimeUnit.SECONDS))
                     ).satisfiesExactly(
                             notification -> {
                                 final ProjectVulnAnalysisCompleteSubject subject =
