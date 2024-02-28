@@ -61,6 +61,8 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
+
 /**
  * JAX-RS resources for processing projects.
  *
@@ -248,21 +250,24 @@ public class ProjectResource extends AlpineResource {
                 Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                 jsonProject.setParent(parent);
             }
-            if (!qm.doesProjectExist(StringUtils.trimToNull(jsonProject.getName()), StringUtils.trimToNull(jsonProject.getVersion()))) {
-                final Project project;
-                try {
-                    project = qm.createProject(jsonProject, jsonProject.getTags(), true);
-                } catch (IllegalArgumentException e) {
-                    LOGGER.debug(e.getMessage());
-                    return Response.status(Response.Status.CONFLICT).entity("An inactive Parent cannot be selected as parent").build();
+            final Project project;
+            try {
+                project = qm.createProject(jsonProject, jsonProject.getTags(), true);
+            } catch (IllegalArgumentException e) {
+                LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
+                return Response.status(Response.Status.CONFLICT).entity("An inactive Parent cannot be selected as parent").build();
+            } catch (RuntimeException e) {
+                if (isUniqueConstraintViolation(e)) {
+                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name already exists.").build();
                 }
-                Principal principal = getPrincipal();
-                qm.updateNewProjectACL(project, principal);
-                LOGGER.info("Project " + project.toString() + " created by " + super.getPrincipal().getName());
-                return Response.status(Response.Status.CREATED).entity(project).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A project with the specified name already exists.").build();
+
+                LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
+            Principal principal = getPrincipal();
+            qm.updateNewProjectACL(project, principal);
+            LOGGER.info("Project " + project.toString() + " created by " + super.getPrincipal().getName());
+            return Response.status(Response.Status.CREATED).entity(project).build();
         }
     }
 
@@ -303,24 +308,25 @@ public class ProjectResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 final String name = StringUtils.trimToNull(jsonProject.getName());
-                final String version = StringUtils.trimToNull(jsonProject.getVersion());
-                final Project tmpProject = qm.getProject(name, version);
-                if (tmpProject == null || (tmpProject.getUuid().equals(project.getUuid()))) {
-                    // Name cannot be empty or null - prevent it
-                    if (name == null) {
-                        jsonProject.setName(project.getName());
-                    }
-                    try {
-                        project = qm.updateProject(jsonProject, true);
-                    } catch (IllegalArgumentException e) {
-                        LOGGER.debug(e.getMessage());
-                        return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
-                    }
-                    LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
-                    return Response.ok(project).build();
-                } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                // Name cannot be empty or null - prevent it
+                if (name == null) {
+                    jsonProject.setName(project.getName());
                 }
+                try {
+                    project = qm.updateProject(jsonProject, true);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.debug("Failed to update project %s".formatted(jsonProject.getUuid()), e);
+                    return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+                } catch (RuntimeException e) {
+                    if (isUniqueConstraintViolation(e)) {
+                        return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                    }
+
+                    LOGGER.error("Failed to update project %s".formatted(jsonProject.getUuid()), e);
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+                }
+                LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
+                return Response.ok(project).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
@@ -369,10 +375,6 @@ public class ProjectResource extends AlpineResource {
                 project = qm.detachWithGroups(project, List.of(FetchGroup.DEFAULT, Project.FetchGroup.PARENT.name()));
                 modified |= setIfDifferent(jsonProject, project, Project::getName, Project::setName);
                 modified |= setIfDifferent(jsonProject, project, Project::getVersion, Project::setVersion);
-                // if either name or version has been changed, verify that this new combination does not already exist
-                if (modified && qm.doesProjectExist(project.getName(), project.getVersion())) {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
-                }
                 modified |= setIfDifferent(jsonProject, project, Project::getAuthor, Project::setAuthor);
                 modified |= setIfDifferent(jsonProject, project, Project::getPublisher, Project::setPublisher);
                 modified |= setIfDifferent(jsonProject, project, Project::getGroup, Project::setGroup);
@@ -407,8 +409,15 @@ public class ProjectResource extends AlpineResource {
                     try {
                         project = qm.updateProject(project, true);
                     } catch (IllegalArgumentException e) {
-                        LOGGER.debug(e.getMessage());
+                        LOGGER.debug("Failed to patch project %s".formatted(uuid));
                         return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+                    } catch (RuntimeException e) {
+                        if (isUniqueConstraintViolation(e)) {
+                            return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                        }
+
+                        LOGGER.error("Failed to patch project %s".formatted(uuid), e);
+                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                     }
                     LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
                     return Response.ok(project).build();
