@@ -42,6 +42,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,25 +89,29 @@ public class ServiceComponent implements Serializable {
     private OrganizationalEntity provider;
 
     @Persistent
-    @Column(name = "GROUP", jdbcType = "CLOB")
+    @Column(name = "GROUP", jdbcType = "VARCHAR")
+    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
     private String group;
 
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
     @Persistent
-    @Column(name = "VERSION", jdbcType = "CLOB")
+    @Column(name = "VERSION", jdbcType = "VARCHAR")
+    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
     private String version;
 
     @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
+    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR", length = 1024)
+    @Size(max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
     private String description;

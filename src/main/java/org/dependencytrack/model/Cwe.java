@@ -32,6 +32,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 
 /**
@@ -57,7 +58,8 @@ public class Cwe implements Serializable {
     private int cweId;
 
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
+    @Size(max = 255)
     @NotNull
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")

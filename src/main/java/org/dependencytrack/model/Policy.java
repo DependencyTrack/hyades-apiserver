@@ -37,6 +37,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,9 +74,10 @@ public class Policy implements Serializable {
      * The String representation of the policy name.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", allowsNull = "false")
     @Index(name = "POLICY_NAME_IDX")
     @NotBlank
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
@@ -83,8 +85,9 @@ public class Policy implements Serializable {
      * The operator to use when evaluating conditions.
      */
     @Persistent
-    @Column(name = "OPERATOR", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "OPERATOR", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
     private Operator operator;
 
@@ -92,8 +95,9 @@ public class Policy implements Serializable {
      * The state the policy should trigger upon violation.
      */
     @Persistent
-    @Column(name = "VIOLATIONSTATE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "VIOLATIONSTATE", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation state may only contain printable characters")
     private ViolationState violationState;
 

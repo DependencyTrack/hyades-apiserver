@@ -63,99 +63,98 @@ public class VulnerableSoftware implements ICpe, Serializable {
     private long id;
 
     @Persistent
-    @Column(name = "PURL", jdbcType = "CLOB")
+    @Column(name = "PURL", jdbcType = "VARCHAR")
     private String purl;
 
     @Persistent
-    @Column(name = "PURL_TYPE", jdbcType = "CLOB")
+    @Column(name = "PURL_TYPE", jdbcType = "VARCHAR")
     private String purlType;
 
     @Persistent
-    @Column(name = "PURL_NAMESPACE", jdbcType = "CLOB")
+    @Column(name = "PURL_NAMESPACE", jdbcType = "VARCHAR")
     private String purlNamespace;
 
     @Persistent
-    @Column(name = "PURL_NAME", jdbcType = "CLOB")
+    @Column(name = "PURL_NAME", jdbcType = "VARCHAR")
     private String purlName;
 
     @Persistent
-    @Column(name = "PURL_VERSION", jdbcType = "CLOB")
+    @Column(name = "PURL_VERSION", jdbcType = "VARCHAR")
     private String purlVersion;
 
     @Persistent
-    @Column(name = "PURL_QUALIFIERS", jdbcType = "CLOB")
+    @Column(name = "PURL_QUALIFIERS", jdbcType = "VARCHAR")
     private String purlQualifiers;
 
     @Persistent
-    @Column(name = "PURL_SUBPATH", jdbcType = "CLOB")
+    @Column(name = "PURL_SUBPATH", jdbcType = "VARCHAR")
     private String purlSubpath;
 
     @Persistent
-    @Column(name = "CPE22", jdbcType = "CLOB")
+    @Column(name = "CPE22", jdbcType = "VARCHAR")
     private String cpe22;
 
     @Persistent
-    @Column(name = "CPE23", jdbcType = "CLOB")
+    @Column(name = "CPE23", jdbcType = "VARCHAR")
     private String cpe23;
 
     @Persistent
-    @Column(name = "PART", jdbcType = "CLOB")
+    @Column(name = "PART", jdbcType = "VARCHAR")
     private String part;
 
     @Persistent
-    @Column(name = "VENDOR", jdbcType = "CLOB")
+    @Column(name = "VENDOR", jdbcType = "VARCHAR")
     private String vendor;
 
     @Persistent
-    @Column(name = "PRODUCT", jdbcType = "CLOB")
+    @Column(name = "PRODUCT", jdbcType = "VARCHAR")
     private String product;
 
     @Persistent
-    @Column(name = "VERSION", jdbcType = "CLOB")
     private String version;
 
     @Persistent
-    @Column(name = "UPDATE", jdbcType = "CLOB")
+    @Column(name = "UPDATE", jdbcType = "VARCHAR")
     private String update;
 
     @Persistent
-    @Column(name = "EDITION", jdbcType = "CLOB")
+    @Column(name = "EDITION", jdbcType = "VARCHAR")
     private String edition;
 
     @Persistent
-    @Column(name = "LANGUAGE", jdbcType = "CLOB")
+    @Column(name = "LANGUAGE", jdbcType = "VARCHAR")
     private String language;
 
     @Persistent
-    @Column(name = "SWEDITION", jdbcType = "CLOB")
+    @Column(name = "SWEDITION", jdbcType = "VARCHAR")
     private String swEdition;
 
     @Persistent
-    @Column(name = "TARGETSW", jdbcType = "CLOB")
+    @Column(name = "TARGETSW", jdbcType = "VARCHAR")
     private String targetSw;
 
     @Persistent
-    @Column(name = "TARGETHW", jdbcType = "CLOB")
+    @Column(name = "TARGETHW", jdbcType = "VARCHAR")
     private String targetHw;
 
     @Persistent
-    @Column(name = "OTHER", jdbcType = "CLOB")
+    @Column(name = "OTHER", jdbcType = "VARCHAR")
     private String other;
 
     @Persistent
-    @Column(name = "VERSIONENDEXCLUDING", jdbcType = "CLOB")
+    @Column(name = "VERSIONENDEXCLUDING")
     private String versionEndExcluding;
 
     @Persistent
-    @Column(name = "VERSIONENDINCLUDING", jdbcType = "CLOB")
+    @Column(name = "VERSIONENDINCLUDING")
     private String versionEndIncluding;
 
     @Persistent
-    @Column(name = "VERSIONSTARTEXCLUDING", jdbcType = "CLOB")
+    @Column(name = "VERSIONSTARTEXCLUDING")
     private String versionStartExcluding;
 
     @Persistent
-    @Column(name = "VERSIONSTARTINCLUDING", jdbcType = "CLOB")
+    @Column(name = "VERSIONSTARTINCLUDING")
     private String versionStartIncluding;
 
     @Persistent

@@ -69,17 +69,17 @@ public class Analysis implements Serializable {
     private Vulnerability vulnerability;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "STATE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "STATE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
     private AnalysisState analysisState;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "JUSTIFICATION", jdbcType = "CLOB", allowsNull = "true")
+    @Column(name = "JUSTIFICATION", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
     private AnalysisJustification analysisJustification;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "RESPONSE", jdbcType = "CLOB", allowsNull = "true")
+    @Column(name = "RESPONSE", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
     private AnalysisResponse analysisResponse;
 
@@ -98,12 +98,12 @@ public class Analysis implements Serializable {
     private boolean suppressed;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "SEVERITY", jdbcType = "CLOB")
+    @Column(name = "SEVERITY")
     @JsonProperty(value = "severity")
     private Severity severity;
 
     @Persistent
-    @Column(name = "CVSSV2VECTOR", jdbcType = "CLOB")
+    @Column(name = "CVSSV2VECTOR")
     @JsonProperty(value = "cvssV2Vector")
     private String cvssV2Vector;
 
@@ -113,7 +113,7 @@ public class Analysis implements Serializable {
     private BigDecimal cvssV2Score;
 
     @Persistent
-    @Column(name = "CVSSV3VECTOR", jdbcType = "CLOB")
+    @Column(name = "CVSSV3VECTOR")
     @JsonProperty(value = "cvssV3Vector")
     private String cvssV3Vector;
 
@@ -123,7 +123,7 @@ public class Analysis implements Serializable {
     private BigDecimal cvssV3Score;
 
     @Persistent
-    @Column(name = "OWASPVECTOR", jdbcType = "CLOB")
+    @Column(name = "OWASPVECTOR")
     @JsonProperty(value = "owaspVector")
     private String owaspVector;
 

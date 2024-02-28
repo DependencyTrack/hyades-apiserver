@@ -55,18 +55,18 @@ public class Repository implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TYPE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "TYPE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
     private RepositoryType type;
 
     @Persistent
-    @Column(name = "IDENTIFIER", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "IDENTIFIER", allowsNull = "false")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String identifier;
 
     @Persistent
-    @Column(name = "URL", jdbcType = "CLOB")
+    @Column(name = "URL")
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String url;
@@ -93,12 +93,12 @@ public class Repository implements Serializable {
     private Boolean authenticationRequired;
 
     @Persistent
-    @Column(name = "USERNAME", jdbcType = "CLOB")
+    @Column(name = "USERNAME")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String username;
 
     @Persistent
-    @Column(name = "PASSWORD", jdbcType = "CLOB")
+    @Column(name = "PASSWORD")
     private String password;
 
     @Persistent(customValueStrategy = "uuid")

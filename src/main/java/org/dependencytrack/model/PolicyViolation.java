@@ -32,6 +32,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.UUID;
@@ -84,7 +85,8 @@ public class PolicyViolation implements Serializable {
     private Date timestamp;
 
     @Persistent
-    @Column(name = "TEXT", jdbcType = "CLOB")
+    @Column(name = "TEXT")
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The text may only contain printable characters")
     private String text;
 
