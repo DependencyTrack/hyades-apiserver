@@ -13,7 +13,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.jdbi.JdbiTestUtil.createLocalVanillaJdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
 public class DefinePaginationTest extends PersistenceCapableTest {
 
@@ -28,7 +28,7 @@ public class DefinePaginationTest extends PersistenceCapableTest {
 
     @Before
     public void setUp() {
-        jdbi = createLocalVanillaJdbi(qm)
+        jdbi = jdbi(qm)
                 .installPlugin(new SqlObjectPlugin())
                 .setTemplateEngine(FreemarkerEngine.instance());
 

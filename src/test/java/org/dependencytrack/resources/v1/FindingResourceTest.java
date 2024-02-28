@@ -72,7 +72,7 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void getFindingsByProjectTest() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1, "Component C", "1.0");
@@ -151,7 +151,7 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void exportFindingsByProjectTest() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1, "Component C", "1.0");
@@ -238,7 +238,7 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void getFindingsByProjectWithComponentLatestVersionTest() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
         RepositoryMetaComponent r1 = new RepositoryMetaComponent();
