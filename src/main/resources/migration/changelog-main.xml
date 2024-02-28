@@ -10,6 +10,5 @@
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <!-- Use separate changelogs per release. -->
     <include file="migration/changelog-v5.3.0.xml"/>
-    <include file="migration/changelog-v5.4.0.xml"/>
     <include file="migration/changelog-procedures.xml"/>
 </databaseChangeLog>
