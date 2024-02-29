@@ -2,6 +2,9 @@ package org.dependencytrack.model.mapping;
 
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 
@@ -19,6 +22,43 @@ import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
  * Utility class to map objects from Dependency-Track's internal data model to Policy protocol buffers.
  */
 public class PolicyProtoMapper {
+
+    public static org.dependencytrack.proto.policy.v1.Component mapToProto(final Component component) {
+        if (component == null) {
+            return org.dependencytrack.proto.policy.v1.Component.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(component, "component must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.Component.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.Component.newBuilder();
+        maybeSet(asString(component.getUuid()), protoBuilder::setUuid);
+        maybeSet(component::getGroup, protoBuilder::setGroup);
+        maybeSet(component::getName, protoBuilder::setName);
+        maybeSet(component::getVersion, protoBuilder::setVersion);
+        maybeSet(asString(component.getClassifier()), protoBuilder::setClassifier);
+        maybeSet(component::getCpe, protoBuilder::setCpe);
+        maybeSet(component::getPurl, purl -> protoBuilder.setPurl(purl.canonicalize()));
+        maybeSet(component::getSwidTagId, protoBuilder::setSwidTagId);
+        maybeSet(component::isInternal, protoBuilder::setIsInternal);
+        maybeSet(component::getMd5, protoBuilder::setMd5);
+        maybeSet(component::getSha1, protoBuilder::setSha1);
+        maybeSet(component::getSha256, protoBuilder::setSha256);
+        maybeSet(component::getSha384, protoBuilder::setSha384);
+        maybeSet(component::getSha512, protoBuilder::setSha512);
+        maybeSet(component::getSha3_256, protoBuilder::setSha3256);
+        maybeSet(component::getSha3_384, protoBuilder::setSha3384);
+        maybeSet(component::getSha3_512, protoBuilder::setSha3512);
+        maybeSet(component::getBlake2b_256, protoBuilder::setBlake2B256);
+        maybeSet(component::getBlake2b_384, protoBuilder::setBlake2B384);
+        maybeSet(component::getBlake2b_512, protoBuilder::setBlake2B512);
+        maybeSet(component::getBlake3, protoBuilder::setBlake3);
+        maybeSet(component::getResolvedLicense, license -> protoBuilder.setResolvedLicense(mapToProto(license)));
+
+        return protoBuilder.build();
+    }
 
     public static org.dependencytrack.proto.policy.v1.Vulnerability mapToProto(final Vulnerability vuln) {
         if (vuln == null) {
@@ -58,6 +98,46 @@ public class PolicyProtoMapper {
         maybeSet(asDouble(vuln.getEpssScore()), protoBuilder::setEpssScore);
         maybeSet(asDouble(vuln.getEpssPercentile()), protoBuilder::setEpssPercentile);
 
+        return protoBuilder.build();
+    }
+
+    private static org.dependencytrack.proto.policy.v1.License mapToProto(final License license) {
+        if (license == null) {
+            return org.dependencytrack.proto.policy.v1.License.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(license, "license must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.License.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.License.newBuilder();
+        maybeSet(asString(license.getUuid()), protoBuilder::setUuid);
+        maybeSet(license::getLicenseId, protoBuilder::setId);
+        maybeSet(license::getName, protoBuilder::setName);
+        maybeSet(license::isOsiApproved, protoBuilder::setIsOsiApproved);
+        maybeSet(license::isFsfLibre, protoBuilder::setIsFsfLibre);
+        maybeSet(license::isDeprecatedLicenseId, protoBuilder::setIsDeprecatedId);
+        maybeSet(license::isCustomLicense, protoBuilder::setIsCustom);
+        maybeSet(license::getLicenseGroups, licenseGroups -> licenseGroups.stream()
+                .map(PolicyProtoMapper::mapToProto).forEach(protoBuilder::addGroups));
+
+        return protoBuilder.build();
+    }
+
+    private static org.dependencytrack.proto.policy.v1.License.Group mapToProto(final LicenseGroup licenseGroup) {
+        if (licenseGroup == null) {
+            return org.dependencytrack.proto.policy.v1.License.Group.getDefaultInstance();
+        }
+
+        // An object attached to a persistence context could do lazy loading of fields when accessing them.
+        // Ensure this can't happen, as it could cause massive performance degradation.
+        assertNonPersistent(licenseGroup, "licenseGroup must not be persistent");
+
+        final org.dependencytrack.proto.policy.v1.License.Group.Builder protoBuilder =
+                org.dependencytrack.proto.policy.v1.License.Group.newBuilder();
+        maybeSet(asString(licenseGroup.getUuid()), protoBuilder::setUuid);
+        maybeSet(licenseGroup::getName, protoBuilder::setName);
         return protoBuilder.build();
     }
 

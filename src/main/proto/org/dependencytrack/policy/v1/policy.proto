@@ -97,6 +97,11 @@ message Project {
   optional string purl = 10;
   optional string swid_tag_id = 11;
   optional google.protobuf.Timestamp last_bom_import = 12;
+  optional Metadata metadata = 13;
+
+  message Metadata {
+    optional Tools tools = 1;
+  }
 
   message Property {
     string group = 1;
@@ -104,6 +109,13 @@ message Project {
     optional string value = 3;
     string type = 4;
   }
+}
+
+message Tools {
+  // Components used as tools.
+  repeated Component components = 1;
+
+  // TODO: Add services.
 }
 
 message Vulnerability {

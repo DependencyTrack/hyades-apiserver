@@ -8,8 +8,9 @@
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
             http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <!-- Use separate changelogs per release. -->
-    <include file="migration/changelog-v5.3.0.xml"/>
-    <include file="migration/changelog-v5.4.0.xml"/>
-    <include file="migration/changelog-procedures.xml"/>
+    <changeSet id="v5.4.0-1" author="nscuro@protonmail.com">
+        <addColumn tableName="PROJECT_METADATA">
+            <column name="TOOLS" type="TEXT"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

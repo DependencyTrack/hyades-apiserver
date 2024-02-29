@@ -112,7 +112,7 @@ public class PolicyProtoMapperTest extends PersistenceCapableTest {
 
     @Test
     public void testMapVulnerabilityToProtoWhenNull() {
-        assertThat(PolicyProtoMapper.mapToProto(null))
+        assertThat(PolicyProtoMapper.mapToProto((Vulnerability) null))
                 .isEqualTo(org.dependencytrack.proto.policy.v1.Vulnerability.getDefaultInstance());
     }
 

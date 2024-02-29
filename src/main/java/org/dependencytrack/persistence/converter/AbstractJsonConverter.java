@@ -19,22 +19,35 @@
 package org.dependencytrack.persistence.converter;
 
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import javax.jdo.AttributeConverter;
+import java.io.IOException;
 
 /**
  * @since 4.10.0
  */
 abstract class AbstractJsonConverter<T> implements AttributeConverter<T, String> {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final JsonMapper JSON_MAPPER = JsonMapper.builder()
+            .disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+            .build();
 
     private final TypeReference<T> typeReference;
+    private final Class<?> jsonView;
 
     AbstractJsonConverter(final TypeReference<T> typeReference) {
+        this(typeReference, null);
+    }
+
+    AbstractJsonConverter(final TypeReference<T> typeReference, final Class<?> jsonView) {
         this.typeReference = typeReference;
+        this.jsonView = jsonView;
     }
 
     @Override
@@ -43,8 +56,15 @@ abstract class AbstractJsonConverter<T> implements AttributeConverter<T, String>
             return null;
         }
 
+        final ObjectWriter objectWriter;
+        if (jsonView == null) {
+            objectWriter = JSON_MAPPER.writer();
+        } else {
+            objectWriter = JSON_MAPPER.writerWithView(jsonView);
+        }
+
         try {
-            return OBJECT_MAPPER.writeValueAsString(attributeValue);
+            return objectWriter.writeValueAsString(attributeValue);
         } catch (JacksonException e) {
             throw new RuntimeException(e);
         }
@@ -56,9 +76,17 @@ abstract class AbstractJsonConverter<T> implements AttributeConverter<T, String>
             return null;
         }
 
+        final ObjectReader objectReader;
+        if (jsonView == null) {
+            objectReader = JSON_MAPPER.reader();
+        } else {
+            objectReader = JSON_MAPPER.readerWithView(jsonView);
+        }
+
         try {
-            return OBJECT_MAPPER.readValue(datastoreValue, typeReference);
-        } catch (JacksonException e) {
+            final JsonParser jsonParser = objectReader.createParser(datastoreValue);
+            return objectReader.readValue(jsonParser, typeReference);
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

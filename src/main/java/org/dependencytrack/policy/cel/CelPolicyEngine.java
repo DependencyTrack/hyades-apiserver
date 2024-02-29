@@ -42,8 +42,6 @@ import org.dependencytrack.policy.cel.compat.VersionDistanceCelScriptBuilder;
 import org.dependencytrack.policy.cel.compat.VulnerabilityIdCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.policy.cel.persistence.CelPolicyDao;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
@@ -381,52 +379,6 @@ public class CelPolicyEngine {
                 })
                 .filter(Objects::nonNull)
                 .toList();
-    }
-
-    private static org.dependencytrack.proto.policy.v1.Project mapToProto(final ProjectProjection projection) {
-        final org.dependencytrack.proto.policy.v1.Project.Builder builder = org.dependencytrack.proto.policy.v1.Project.newBuilder()
-                .setUuid(trimToEmpty(projection.uuid))
-                .setGroup(trimToEmpty(projection.group))
-                .setName(trimToEmpty(projection.name))
-                .setVersion(trimToEmpty(projection.version))
-                .setClassifier(trimToEmpty(projection.classifier))
-                .setCpe(trimToEmpty(projection.cpe))
-                .setPurl(trimToEmpty(projection.purl))
-                .setSwidTagId(trimToEmpty(projection.swidTagId));
-        Optional.ofNullable(projection.isActive).ifPresent(builder::setIsActive);
-        Optional.ofNullable(projection.lastBomImport).map(Timestamps::fromDate).ifPresent(builder::setLastBomImport);
-
-        if (projection.propertiesJson != null) {
-            try {
-                final List<ProjectPropertyProjection> properties =
-                        OBJECT_MAPPER.readValue(projection.propertiesJson, new TypeReference<>() {
-                        });
-                for (final ProjectPropertyProjection property : properties) {
-                    builder.addProperties(org.dependencytrack.proto.policy.v1.Project.Property.newBuilder()
-                            .setGroup(trimToEmpty(property.group))
-                            .setName(trimToEmpty(property.name))
-                            .setValue(trimToEmpty(property.value))
-                            .setType(trimToEmpty(property.type))
-                            .build());
-                }
-            } catch (JacksonException e) {
-                LOGGER.warn("Failed to parse properties from %s for project %s"
-                        .formatted(projection.propertiesJson, projection.id), e);
-            }
-        }
-
-        if (projection.tagsJson != null) {
-            try {
-                final List<String> tags = OBJECT_MAPPER.readValue(projection.tagsJson, new TypeReference<>() {
-                });
-                builder.addAllTags(tags);
-            } catch (JacksonException e) {
-                LOGGER.warn("Failed to parse tags from %s for project %s"
-                        .formatted(projection.tagsJson, projection.id), e);
-            }
-        }
-
-        return builder.build();
     }
 
     private static org.dependencytrack.proto.policy.v1.Component mapToProto(final ComponentProjection projection,

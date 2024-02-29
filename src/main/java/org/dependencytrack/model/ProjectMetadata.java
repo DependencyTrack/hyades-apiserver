@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
+import org.dependencytrack.persistence.converter.ToolsJsonConverter;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
@@ -66,6 +67,11 @@ public class ProjectMetadata {
     @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
     private List<OrganizationalContact> authors;
 
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(ToolsJsonConverter.class)
+    @Column(name = "TOOLS", jdbcType = "CLOB", allowsNull = "true")
+    private Tools tools;
+
     public long getId() {
         return id;
     }
@@ -96,6 +102,14 @@ public class ProjectMetadata {
 
     public void setAuthors(final List<OrganizationalContact> authors) {
         this.authors = authors;
+    }
+
+    public Tools getTools() {
+        return tools;
+    }
+
+    public void setTools(final Tools tools) {
+        this.tools = tools;
     }
 
 }

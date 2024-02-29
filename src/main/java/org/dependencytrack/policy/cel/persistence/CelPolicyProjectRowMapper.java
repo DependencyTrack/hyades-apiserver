@@ -3,8 +3,10 @@ package org.dependencytrack.policy.cel.persistence;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.protobuf.util.JsonFormat;
+import org.dependencytrack.model.mapping.PolicyProtoMapper;
 import org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil;
 import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.Tools;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.result.UnableToProduceResultException;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.OBJECT_MAPPER;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 public class CelPolicyProjectRowMapper implements RowMapper<Project> {
@@ -37,10 +40,44 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "last_bom_import", RowMapperUtil::nullableTimestamp, builder::setLastBomImport);
         maybeSet(rs, "tags", RowMapperUtil::stringArray, builder::addAllTags);
         maybeSet(rs, "properties", CelPolicyProjectRowMapper::maybeConvertProperties, builder::addAllProperties);
+
+        if (hasColumn(rs, "metadata_tools")) {
+            builder.setMetadata(Project.Metadata.newBuilder()
+                    .setTools(convertMetadataTools(rs))
+                    .build());
+        }
+
         return builder.build();
     }
 
-    private static List<Project.Property> maybeConvertProperties(final ResultSet rs, String columnName) throws SQLException {
+    private static Tools convertMetadataTools(final ResultSet rs) throws SQLException {
+        final String jsonString = rs.getString("metadata_tools");
+        if (isBlank(jsonString)) {
+            return Tools.getDefaultInstance();
+        }
+
+        final org.dependencytrack.model.Tools modelTools;
+        try {
+            modelTools = OBJECT_MAPPER.readValue(jsonString, org.dependencytrack.model.Tools.class);
+        } catch (IOException e) {
+            throw new UnableToProduceResultException(e);
+        }
+
+        if (modelTools == null) {
+            return Tools.getDefaultInstance();
+        }
+
+        final var toolsBuilder = Tools.newBuilder();
+        if (modelTools.components() != null) {
+            modelTools.components().stream()
+                    .map(PolicyProtoMapper::mapToProto)
+                    .forEach(toolsBuilder::addComponents);
+        }
+
+        return toolsBuilder.build();
+    }
+
+    private static List<Project.Property> maybeConvertProperties(final ResultSet rs, final String columnName) throws SQLException {
         final String jsonString = rs.getString(columnName);
         if (isBlank(jsonString)) {
             return Collections.emptyList();
