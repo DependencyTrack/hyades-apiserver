@@ -64,6 +64,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -387,6 +392,42 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
         Assert.assertEquals("A project with the specified name already exists.", body);
+    }
+
+    @Test
+    public void createProjectDuplicateRaceConditionTest() throws Exception {
+        final ExecutorService executor = Executors.newFixedThreadPool(10);
+        final var countDownLatch = new CountDownLatch(1);
+
+        final var responses = new ArrayBlockingQueue<Response>(50);
+        for (int i = 0; i < 50; i++) {
+            executor.submit(() -> {
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                final Response response = target(V1_PROJECT)
+                        .request()
+                        .header(X_API_KEY, apiKey)
+                        .put(Entity.entity("""
+                                {
+                                  "name": "acme-app",
+                                  "version": "1.0.0"
+                                }
+                                """, MediaType.APPLICATION_JSON));
+                responses.offer(response);
+            });
+        }
+
+        countDownLatch.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(15, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(responses).hasSize(50);
+        assertThat(responses).satisfiesOnlyOnce(response -> assertThat(response.getStatus()).isEqualTo(201));
+        assertThat(responses.stream().map(Response::getStatus).filter(status -> status != 201)).containsOnly(409);
     }
 
     @Test

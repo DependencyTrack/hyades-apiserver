@@ -85,10 +85,9 @@ public final class PersistenceUtil {
     }
 
     public static boolean isUniqueConstraintViolation(final Throwable throwable) {
-        // TODO: DataNucleus doesn't map constraint violation exceptions very well,
-        // so we have to depend on the exception of the underlying JDBC driver to
-        // tell us what happened. We currently only handle PostgreSQL, but we'll have
-        // to do the same for at least H2 and MSSQL.
+        // NB: DataNucleus doesn't map constraint violation exceptions very well,
+        //   so we have to depend on the exception of the underlying JDBC driver to
+        //   tell us what happened.
         return ExceptionUtils.getRootCause(throwable) instanceof final SQLException se
                 && PSQLState.UNIQUE_VIOLATION.getState().equals(se.getSQLState());
     }
