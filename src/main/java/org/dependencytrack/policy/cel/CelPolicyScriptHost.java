@@ -33,6 +33,7 @@ import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_INTRODUCED_BY;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
@@ -154,7 +155,7 @@ public class CelPolicyScriptHost {
         // TODO: This should be restructured to be more generic.
         for (final FunctionSignature functionSignature : visitor.getUsedFunctionSignatures()) {
             switch (functionSignature.function()) {
-                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF, FUNC_IS_EXCLUSIVE_DEPENDENCY_OF -> {
+                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF, FUNC_IS_EXCLUSIVE_DEPENDENCY_OF, FUNC_IS_INTRODUCED_BY -> {
                     if (TYPE_PROJECT.equals(functionSignature.targetType())) {
                         requirements.put(TYPE_PROJECT, "uuid");
                     } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
@@ -170,9 +171,7 @@ public class CelPolicyScriptHost {
                 }
                 case FUNC_COMPARE_VERSION_DISTANCE ->
                         requirements.putAll(TYPE_COMPONENT, List.of("purl", "uuid", "version", "latest_version"));
-
                 case FUNC_COMPARE_AGE -> requirements.putAll(TYPE_COMPONENT, List.of("purl", "published_at"));
-
             }
         }
 

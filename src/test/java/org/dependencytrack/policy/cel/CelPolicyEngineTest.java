@@ -1419,6 +1419,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         componentSpringCore.setProject(project);
         componentSpringCore.setName("spring-core");
         qm.persist(componentSpringCore);
+
         //                                                     /-------------------------------------------\
         //                                                    /                                            v
         //                                                   /               /-----------------------------\
@@ -1608,6 +1609,102 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsIntroducedByComponent() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentSpringBootStarter = new Component();
+        componentSpringBootStarter.setProject(project);
+        componentSpringBootStarter.setName("spring-boot-starter");
+        qm.persist(componentSpringBootStarter);
+
+        final var componentSpringBoot = new Component();
+        componentSpringBoot.setProject(project);
+        componentSpringBoot.setName("spring-boot");
+        qm.persist(componentSpringBoot);
+
+        final var componentSpringContext = new Component();
+        componentSpringContext.setProject(project);
+        componentSpringContext.setName("spring-context");
+        qm.persist(componentSpringContext);
+
+        final var componentSpringAop = new Component();
+        componentSpringAop.setProject(project);
+        componentSpringAop.setName("spring-aop");
+        qm.persist(componentSpringAop);
+
+        final var componentSpringBeans = new Component();
+        componentSpringBeans.setProject(project);
+        componentSpringBeans.setName("spring-beans");
+        qm.persist(componentSpringBeans);
+
+        final var componentSpringExpression = new Component();
+        componentSpringExpression.setProject(project);
+        componentSpringExpression.setName("spring-expression");
+        qm.persist(componentSpringExpression);
+
+        final var componentSpringCore = new Component();
+        componentSpringCore.setProject(project);
+        componentSpringCore.setName("spring-core");
+        qm.persist(componentSpringCore);
+
+        //                                                     /-------------------------------------------\
+        //                                                    /                                            v
+        //                                                   /               /-----------------------------\
+        //                                                  /               /                              v
+        // * -> spring-boot-starter -> spring-boot -> spring-context -> spring-aop -> spring-beans -> spring-core
+        //                                   \              \                                               ^
+        //                                    \              \---------> spring-expression ----------------/
+        //                                     \                                                            ^
+        //                                      \----------------------------------------------------------/
+        project.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringBootStarter).toJSON()));
+        componentSpringBootStarter.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringBoot).toJSON()));
+        componentSpringBoot.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentSpringCore).toJSON(),
+                new ComponentIdentity(componentSpringContext).toJSON())
+        );
+        componentSpringContext.setDirectDependencies("[%s, %s, %s]".formatted(
+                new ComponentIdentity(componentSpringAop).toJSON(),
+                new ComponentIdentity(componentSpringExpression).toJSON(),
+                new ComponentIdentity(componentSpringCore).toJSON()
+        ));
+        componentSpringAop.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentSpringCore).toJSON(),
+                new ComponentIdentity(componentSpringBeans).toJSON()
+        ));
+        componentSpringBeans.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringCore).toJSON()));
+        componentSpringExpression.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentSpringCore).toJSON()));
+        qm.persist(project);
+        qm.persist(componentSpringBootStarter);
+        qm.persist(componentSpringBoot);
+        qm.persist(componentSpringContext);
+        qm.persist(componentSpringAop);
+        qm.persist(componentSpringBeans);
+        qm.persist(componentSpringExpression);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively through spring-boot-starter?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_introduced_by([
+                          v1.Component{name: "spring-context"},
+                          v1.Component{name: "spring-boot"}
+                        ])
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentSpringBootStarter)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringBoot)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringContext)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringAop)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringBeans)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentSpringExpression)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentSpringCore)).isEmpty();
     }
 
     @Test

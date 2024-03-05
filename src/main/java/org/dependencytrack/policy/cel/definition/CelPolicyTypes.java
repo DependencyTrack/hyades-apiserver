@@ -12,6 +12,7 @@ import org.projectnessie.cel.checker.Decls;
 public class CelPolicyTypes {
 
     public static final Type TYPE_COMPONENT = Decls.newObjectType(Component.getDescriptor().getFullName());
+    public static final Type TYPE_COMPONENTS = Decls.newListType(TYPE_COMPONENT);
     public static final Type TYPE_LICENSE = Decls.newObjectType(License.getDescriptor().getFullName());
     public static final Type TYPE_LICENSE_GROUP = Decls.newObjectType(License.Group.getDescriptor().getFullName());
     public static final Type TYPE_PROJECT = Decls.newObjectType(Project.getDescriptor().getFullName());

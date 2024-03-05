@@ -22,6 +22,7 @@ import org.projectnessie.cel.ProgramOption;
 import org.projectnessie.cel.checker.Decls;
 import org.projectnessie.cel.common.types.BoolT;
 import org.projectnessie.cel.common.types.Err;
+import org.projectnessie.cel.common.types.ListT;
 import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
@@ -33,6 +34,7 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -41,11 +43,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENTS;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
 
@@ -56,6 +62,7 @@ public class CelCommonPolicyLibrary implements Library {
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_IS_EXCLUSIVE_DEPENDENCY_OF = "is_exclusive_dependency_of";
+    static final String FUNC_IS_INTRODUCED_BY = "is_introduced_by";
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
@@ -89,6 +96,15 @@ public class CelCommonPolicyLibrary implements Library {
                                 Decls.newInstanceOverload(
                                         "component_is_exclusive_dependency_of_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
+                                        Decls.Bool
+                                )
+                        ),
+                        Decls.newFunction(
+                                FUNC_IS_INTRODUCED_BY,
+                                // component.is_introduced_by([v1.Component{name: "foo"}, v1.Component{name: "bar"}])
+                                Decls.newInstanceOverload(
+                                        "component_is_introduced_by_components_bool",
+                                        List.of(TYPE_COMPONENT, TYPE_COMPONENTS),
                                         Decls.Bool
                                 )
                         ),
@@ -156,13 +172,21 @@ public class CelCommonPolicyLibrary implements Library {
                                 CelCommonPolicyLibrary::isExclusiveDependencyOfFunc
                         ),
                         Overload.binary(
+                                FUNC_IS_INTRODUCED_BY,
+                                CelCommonPolicyLibrary::isIntroducedByFunc
+                        ),
+                        Overload.binary(
                                 FUNC_MATCHES_RANGE,
                                 CelCommonPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.function(FUNC_COMPARE_AGE,
-                                CelCommonPolicyLibrary::isComponentOldFunc),
-                        Overload.function(FUNC_COMPARE_VERSION_DISTANCE,
-                                CelCommonPolicyLibrary::matchesVersionDistanceFunc)
+                        Overload.function(
+                                FUNC_COMPARE_AGE,
+                                CelCommonPolicyLibrary::isComponentOldFunc
+                        ),
+                        Overload.function(
+                                FUNC_COMPARE_VERSION_DISTANCE,
+                                CelCommonPolicyLibrary::matchesVersionDistanceFunc
+                        )
                 )
         );
     }
@@ -248,6 +272,22 @@ public class CelCommonPolicyLibrary implements Library {
 
         if (rhs.value() instanceof final Component rootComponent) {
             return Types.boolOf(isExclusiveDependencyOf(leafComponent, rootComponent));
+        }
+
+        return Err.maybeNoSuchOverloadErr(rhs);
+    }
+
+    private static Val isIntroducedByFunc(final Val lhs, final Val rhs) {
+        final Component leafComponent;
+        if (lhs.value() instanceof final Component lhsValue) {
+            leafComponent = lhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        if (rhs instanceof final ListT rhsValue) {
+            final List<Component> components = Arrays.asList(rhsValue.convertToNative(Component[].class));
+            return Types.boolOf(isIntroducedBy(leafComponent, components));
         }
 
         return Err.maybeNoSuchOverloadErr(rhs);
@@ -371,7 +411,7 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(component);
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(component, CompositeDependencyNodeFilter.Evaluation.HYBRID);
         if (!compositeNodeFilter.hasSqlFilters()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from component %s; \
@@ -443,7 +483,7 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent);
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent, CompositeDependencyNodeFilter.Evaluation.HYBRID);
         if (!compositeNodeFilter.hasSqlFilters()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from root component %s; \
@@ -619,7 +659,7 @@ public class CelCommonPolicyLibrary implements Library {
             return false;
         }
 
-        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent);
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(rootComponent, CompositeDependencyNodeFilter.Evaluation.HYBRID);
         if (!compositeNodeFilter.hasSqlFilters()) {
             LOGGER.warn("""
                     %s: Unable to construct filter expression from root component %s; \
@@ -744,6 +784,180 @@ public class CelCommonPolicyLibrary implements Library {
         }
     }
 
+    private static boolean isIntroducedBy(final Component leafComponent, final List<Component> pathComponents) {
+        if (leafComponent.getUuid().isBlank()) {
+            // Need a UUID for our starting point.
+            LOGGER.warn("%s: leaf component does not have a UUID; Unable to evaluate, returning false"
+                    .formatted(FUNC_IS_INTRODUCED_BY));
+            return false;
+        }
+        if (pathComponents.isEmpty()) {
+            return false;
+        }
+
+        final Component rootComponent = pathComponents.get(pathComponents.size() - 1);
+        final var compositeRootNodeFilter = CompositeDependencyNodeFilter.of(rootComponent, CompositeDependencyNodeFilter.Evaluation.HYBRID);
+        if (!compositeRootNodeFilter.hasSqlFilters()) {
+            LOGGER.warn("""
+                    %s: Unable to construct filter expression from root component %s; \
+                    Unable to evaluate, returning false""".formatted(FUNC_IS_INTRODUCED_BY, rootComponent));
+            return false;
+        }
+
+        final var compositePathNodeFilters = new ArrayList<CompositeDependencyNodeFilter>(pathComponents.size() - 1);
+        for (int i = 0; i < (pathComponents.size() - 1); i++) {
+            compositePathNodeFilters.add(CompositeDependencyNodeFilter.of(pathComponents.get(i), CompositeDependencyNodeFilter.Evaluation.IN_MEMORY));
+        }
+
+        final List<String> sqlSelectColumns = Stream.concat(Stream.of(compositeRootNodeFilter), compositePathNodeFilters.stream())
+                .flatMap(nodeFilter -> nodeFilter.sqlSelectColumns().stream())
+                .sorted().distinct().toList();
+
+        // TODO: Result can / should likely be cached based on filter and params.
+
+        try (final var qm = new QueryManager();
+             final Handle jdbiHandle = jdbi(qm).open()) {
+            // If the component is a direct dependency of the project,
+            // it can no longer be a dependency exclusively introduced
+            // through another component.
+            if (isDirectDependency(jdbiHandle, leafComponent)) {
+                return false;
+            }
+
+            final Query query = jdbiHandle.createQuery("""
+                     -- Determine the project the given leaf component is part of.
+                    WITH RECURSIVE
+                    "CTE_PROJECT" AS (
+                      SELECT
+                        "PROJECT_ID" AS "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "UUID" = :leafComponentUuid
+                    ),
+                    -- Identify the IDs of all components in the project that
+                    -- match the desired criteria.
+                    "CTE_MATCHES" AS (
+                      SELECT
+                        "ID"
+                      FROM
+                        "COMPONENT"
+                      WHERE
+                        "PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                        -- Do not consider other leaf nodes (typically the majority of components).
+                        -- Because we're looking for parent nodes, they MUST have direct dependencies defined.
+                        AND "DIRECT_DEPENDENCIES" IS NOT NULL
+                        AND ${filters}
+                    ),
+                    "CTE_DEPENDENCIES" ("ID", "UUID", "PROJECT_ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH") AS (
+                      SELECT
+                        "C"."ID"                                         AS "ID",
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select columns required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        "C".${columnName}                                AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY ["C"."ID"]::BIGINT[]                       AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      WHERE
+                        -- Short-circuit the recursive query if we don't have any matches at all.
+                        EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        -- Otherwise, find components of which the given leaf component is a direct dependency.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                      UNION ALL
+                      SELECT
+                        "C"."ID"                                         AS "ID",
+                        "C"."UUID"                                       AS "UUID",
+                        "C"."PROJECT_ID"                                 AS "PROJECT_ID",
+                        -- Select columns required for in-memory filtering, but only if the
+                        -- SQL filters already matched.
+                        <#list selectColumnNames as columnName>
+                        "C".${columnName}                                AS ${columnName},
+                        </#list>
+                        ("C"."ID" = ANY(SELECT "ID" FROM "CTE_MATCHES")) AS "FOUND",
+                        ARRAY_APPEND("PREVIOUS"."PATH", "C"."ID")        AS "PATH"
+                      FROM
+                        "COMPONENT" AS "C"
+                      INNER JOIN
+                        "CTE_DEPENDENCIES" AS "PREVIOUS" ON "PREVIOUS"."PROJECT_ID" = "C"."PROJECT_ID"
+                      WHERE
+                        -- NB: No short-circuiting based on "PREVIOUS"."FOUND" here!
+                        --     There might be more matching components on this path
+                        --     for which in-memory filters need to be evaluated.
+                        -- Ensure we haven't seen this component before, to prevent cycles.
+                        NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
+                        -- Otherwise, the previous component must appear in the current direct dependencies.
+                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                    )
+                    SELECT "ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH" FROM "CTE_DEPENDENCIES";
+                     """);
+
+            final List<DependencyNode> nodes = query
+                    .define("filters", compositeRootNodeFilter.sqlFiltersConjunctive())
+                    .define("selectColumnNames", sqlSelectColumns)
+                    .bind("leafComponentUuid", leafComponent.getUuid())
+                    .bindMap(compositeRootNodeFilter.sqlFilterParams())
+                    .map(ConstructorMapper.of(DependencyNode.class))
+                    .list();
+            if (nodes.isEmpty()) {
+                // No component matches the filter criteria.
+                return false;
+            }
+
+            final Set<Long> matchedRootNodeIds = nodes.stream()
+                    .filter(node -> node.found() != null && node.found())
+                    .filter(compositeRootNodeFilter.inMemoryFiltersConjunctive())
+                    .map(DependencyNode::id)
+                    .collect(Collectors.toSet());
+            if (matchedRootNodeIds.isEmpty()) {
+                // None of the nodes matches the filter criteria.
+                return false;
+            }
+
+            final var nodesById = new HashMap<Long, DependencyNode>();
+            for (final DependencyNode node : nodes) {
+                nodesById.put(node.id(), node);
+            }
+
+            final List<List<Long>> paths = reducePaths(nodes);
+
+            return paths.stream().allMatch(path -> {
+                final var matchedRootNodeIndexes = new ArrayList<Integer>();
+                for (int i = 0; i < path.size(); i++) {
+                    if (matchedRootNodeIds.contains(path.get(i))) {
+                        matchedRootNodeIndexes.add(i);
+                    }
+                }
+
+                // No matched root nodes on this path.
+                if (matchedRootNodeIndexes.isEmpty()) {
+                    return false;
+                }
+
+                // Requested path is longer.
+                final int maxDistance = matchedRootNodeIndexes.stream().max(Integer::compareTo).map(distance -> distance + 1).orElse(0);
+                if (compositePathNodeFilters.size() > maxDistance) {
+                    return false;
+                }
+
+                for (int i = 0; i < compositePathNodeFilters.size(); i++) {
+                    final CompositeDependencyNodeFilter filter = compositePathNodeFilters.get(i);
+                    final DependencyNode node = nodesById.get(path.get(i));
+
+                    if (!filter.inMemoryFiltersConjunctive().test(node)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+    }
+
     private static boolean matchesRange(final String version, final String versStr) {
         try {
             return Vers.parse(versStr).contains(version);
@@ -791,8 +1005,10 @@ public class CelCommonPolicyLibrary implements Library {
         };
     }
 
-    public record DependencyNode(@Nullable Long id, @Nullable String version,
-                                 @Nullable Boolean found, @Nullable List<Long> path) {
+    public record DependencyNode(@Nullable Long id, @Nullable String uuid,
+                                 @Nullable String group, @Nullable String name,
+                                 @Nullable String version, @Nullable Boolean found,
+                                 @Nullable List<Long> path) {
     }
 
     private record CompositeDependencyNodeFilter(List<String> sqlFilters,
@@ -800,35 +1016,67 @@ public class CelCommonPolicyLibrary implements Library {
                                                  List<String> sqlSelectColumns,
                                                  List<Predicate<DependencyNode>> inMemoryFilters) {
 
+        private enum Evaluation {
+            HYBRID,
+            IN_MEMORY
+        }
+
         private static final String VALUE_PREFIX_REGEX = "re:";
         private static final String VALUE_PREFIX_VERS = "vers:";
 
-        private static CompositeDependencyNodeFilter of(final Component component) {
+        private static CompositeDependencyNodeFilter of(final Component component, final Evaluation evaluation) {
+            requireNonNull(evaluation, "evaluation must not be null");
+
             final var sqlFilters = new ArrayList<String>();
             final var sqlFilterParams = new HashMap<String, Object>();
             final var sqlSelectColumns = new ArrayList<String>();
             final var inMemoryFilters = new ArrayList<Predicate<DependencyNode>>();
 
             if (!component.getUuid().isBlank()) {
-                sqlFilters.add("\"UUID\" = :uuid");
-                sqlFilterParams.put("uuid", component.getUuid());
+                if (evaluation == Evaluation.HYBRID) {
+                    sqlFilters.add("\"UUID\" = :uuid");
+                    sqlFilterParams.put("uuid", component.getUuid());
+                } else if (evaluation == Evaluation.IN_MEMORY) {
+                    sqlSelectColumns.add("\"UUID\"");
+                    inMemoryFilters.add(node -> Objects.equals(component.getUuid(), node.uuid()));
+                }
             }
             if (!component.getGroup().isBlank()) {
                 if (component.getGroup().startsWith(VALUE_PREFIX_REGEX)) {
-                    sqlFilters.add("\"GROUP\" ~ :groupRegex");
-                    sqlFilterParams.put("groupRegex", substringAfter(component.getGroup(), VALUE_PREFIX_REGEX));
+                    if (evaluation == Evaluation.HYBRID) {
+                        sqlFilters.add("\"GROUP\" ~ :groupRegex");
+                        sqlFilterParams.put("groupRegex", substringAfter(component.getGroup(), VALUE_PREFIX_REGEX));
+                    } else if (evaluation == Evaluation.IN_MEMORY) {
+                        sqlSelectColumns.add("\"GROUP\"");
+                        inMemoryFilters.add(node -> Pattern.matches(substringAfter(component.getGroup(), VALUE_PREFIX_REGEX), node.group()));
+                    }
                 } else {
-                    sqlFilters.add("\"GROUP\" = :group");
-                    sqlFilterParams.put("group", component.getGroup());
+                    if (evaluation == Evaluation.HYBRID) {
+                        sqlFilters.add("\"GROUP\" = :group");
+                        sqlFilterParams.put("group", component.getGroup());
+                    } else if (evaluation == Evaluation.IN_MEMORY) {
+                        sqlSelectColumns.add("\"GROUP\"");
+                        inMemoryFilters.add(node -> Objects.equals(component.getGroup(), node.group()));
+                    }
                 }
             }
             if (!component.getName().isBlank()) {
                 if (component.getName().startsWith(VALUE_PREFIX_REGEX)) {
-                    sqlFilters.add("\"NAME\" ~ :nameRegex");
-                    sqlFilterParams.put("nameRegex", substringAfter(component.getName(), VALUE_PREFIX_REGEX));
+                    if (evaluation == Evaluation.HYBRID) {
+                        sqlFilters.add("\"NAME\" ~ :nameRegex");
+                        sqlFilterParams.put("nameRegex", substringAfter(component.getName(), VALUE_PREFIX_REGEX));
+                    } else if (evaluation == Evaluation.IN_MEMORY) {
+                        sqlSelectColumns.add("\"NAME\"");
+                        inMemoryFilters.add(node -> Pattern.matches(substringAfter(component.getName(), VALUE_PREFIX_REGEX), node.name()));
+                    }
                 } else {
-                    sqlFilters.add("\"NAME\" = :name");
-                    sqlFilterParams.put("name", component.getName());
+                    if (evaluation == Evaluation.HYBRID) {
+                        sqlFilters.add("\"NAME\" = :name");
+                        sqlFilterParams.put("name", component.getName());
+                    } else if (evaluation == Evaluation.IN_MEMORY) {
+                        sqlSelectColumns.add("\"NAME\"");
+                        inMemoryFilters.add(node -> Objects.equals(component.getName(), node.name()));
+                    }
                 }
             }
             if (!component.getVersion().isBlank()) {
