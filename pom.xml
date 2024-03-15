@@ -133,6 +133,8 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+        <!-- open-vulnerability-clients -->
+        <lib.open.vulnerability.clients.version>6.0.0</lib.open.vulnerability.clients.version>
     </properties>
 
     <repositories>
@@ -441,6 +443,12 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${lib.minio.version}</version>
+        </dependency>
+        <!-- open-vulnerability-clients -->
+        <dependency>
+            <groupId>io.github.jeremylong</groupId>
+            <artifactId>open-vulnerability-clients</artifactId>
+            <version>${lib.open.vulnerability.clients.version}</version>
         </dependency>
 
         <!-- Test Dependencies -->

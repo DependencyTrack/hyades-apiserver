@@ -23,6 +23,7 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.streams.processor.DelayedBomProcessedNotificationProcessor;
+import org.dependencytrack.event.kafka.streams.processor.MirrorEpssProcessor;
 import org.dependencytrack.event.kafka.streams.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.streams.processor.VulnerabilityScanResultProcessor;
@@ -229,6 +230,12 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
+
+        streamsBuilder
+                .stream(KafkaTopics.VULNERABILITY_MIRROR_EPSS.name(),
+                        Consumed.with(KafkaTopics.VULNERABILITY_MIRROR_EPSS.keySerde(), KafkaTopics.VULNERABILITY_MIRROR_EPSS.valueSerde())
+                                .withName("consume_from_%s_topic".formatted(KafkaTopics.VULNERABILITY_MIRROR_EPSS.name())))
+                .process(MirrorEpssProcessor::new, Named.as("process_mirror_epss_data"));
 
         return streamsBuilder.build(streamsProperties);
     }

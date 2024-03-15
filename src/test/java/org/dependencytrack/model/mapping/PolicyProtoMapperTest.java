@@ -49,8 +49,6 @@ public class PolicyProtoMapperTest extends PersistenceCapableTest {
         vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(7.7));
         vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(8.8));
         vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(9.9));
-        vuln.setEpssScore(BigDecimal.valueOf(0.6));
-        vuln.setEpssPercentile(BigDecimal.valueOf(0.7));
 
         assertThatJson(JsonFormat.printer().print(PolicyProtoMapper.mapToProto(vuln)))
                 .withOptions(Option.IGNORING_ARRAY_ORDER)

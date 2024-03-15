@@ -28,4 +28,25 @@
                 WHERE "VERSION" IS NULL;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.4.0-3" author="sahibamittal">
+        <dropColumn tableName="VULNERABILITY">
+            <column name="EPSSSCORE" type="numeric"/>
+            <column name="EPSSPERCENTILE" type="numeric"/>
+        </dropColumn>
+        <createTable tableName="EPSS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="EPSS_CVE_PK"/>
+            </column>
+            <column name="CVE" type="TEXT">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="PERCENTILE" type="numeric"/>
+            <column name="SCORE" type="numeric"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="ID" baseTableName="EPSS"
+                                 constraintName="VULNERABILITY_EPSS_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+    </changeSet>
 </databaseChangeLog>

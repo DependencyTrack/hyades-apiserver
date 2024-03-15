@@ -4,7 +4,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
-import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.persistence.QueryManager;
@@ -32,7 +31,6 @@ public class NistMirrorTask implements LoggableSubscriber {
                 new KafkaEventDispatcher().dispatchBlocking(new NistMirrorEvent());
                 final long end = System.currentTimeMillis();
                 LOGGER.info("NIST mirroring complete. Time spent (total): " + (end - start) + "ms");
-                Event.dispatch(new EpssMirrorEvent());
             } catch (Exception ex) {
                 LOGGER.error("An unexpected error occurred while triggering NIST mirroring", ex);
             }
