@@ -82,6 +82,9 @@
     </ciManagement>
 
     <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.0</lib.awaitility.version>
