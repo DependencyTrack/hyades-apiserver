@@ -23,6 +23,7 @@ import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
+import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
@@ -30,6 +31,7 @@ import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.Classifier;
@@ -46,7 +48,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.util.NotificationUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -488,14 +489,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final List<Tag> resolvedTags = resolveTags(tags);
         bind(project, resolvedTags);
 
-        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
-                NotificationScope.PORTFOLIO,
-                NotificationGroup.PROJECT_CREATED,
-                NotificationConstants.Title.PROJECT_CREATED,
-                result.getName() + " was created",
-                NotificationLevel.INFORMATIONAL,
-                pm.detachCopy(result)
-        );
+        new KafkaEventDispatcher().dispatchNotification(new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.PROJECT_CREATED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .title(NotificationConstants.Title.PROJECT_CREATED)
+                .content(result.getName() + " was created")
+                .subject(pm.detachCopy(result)));
         return result;
     }
 
@@ -519,14 +519,13 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final List<Tag> resolvedTags = resolveTags(tags);
         bind(project, resolvedTags);
 
-        NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(),
-                NotificationScope.PORTFOLIO,
-                NotificationGroup.PROJECT_CREATED,
-                NotificationConstants.Title.PROJECT_CREATED,
-                result.getName() + " was created",
-                NotificationLevel.INFORMATIONAL,
-                pm.detachCopy(result)
-        );
+        new KafkaEventDispatcher().dispatchNotification(new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.PROJECT_CREATED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .title(NotificationConstants.Title.PROJECT_CREATED)
+                .content(result.getName() + " was created")
+                .subject(pm.detachCopy(result)));
         return result;
     }
 
