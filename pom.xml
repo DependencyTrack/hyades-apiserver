@@ -88,7 +88,7 @@
         <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
         <lib.checkstyle.version>10.13.0</lib.checkstyle.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.16.0</lib.cloud-sql-postgres-socket-factory.version>
-        <lib.commons-compress.version>1.26.0</lib.commons-compress.version>
+        <lib.commons-compress.version>1.26.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -642,6 +642,16 @@
                         <version>${maven.surefire.plugin.version}</version>
                     </dependency>
                 </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>org/cyclonedx/proto/**/*</exclude>
+                        <exclude>org/dependencytrack/proto/**/*</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
