@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -67,7 +67,7 @@ public class ViolationAnalysis implements Serializable {
     private PolicyViolation policyViolation;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "STATE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "STATE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
     private ViolationAnalysisState analysisState;
 

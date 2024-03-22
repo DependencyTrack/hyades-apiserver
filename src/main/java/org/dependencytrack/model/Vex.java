@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -74,11 +74,11 @@ public class Vex implements Serializable {
     private Date imported;
 
     @Persistent
-    @Column(name = "VEX_FORMAT", jdbcType = "CLOB")
+    @Column(name = "VEX_FORMAT")
     private String vexFormat;
 
     @Persistent
-    @Column(name = "SPEC_VERSION", jdbcType = "CLOB")
+    @Column(name = "SPEC_VERSION")
     private String specVersion;
 
     @Persistent
@@ -86,7 +86,7 @@ public class Vex implements Serializable {
     private Integer vexVersion;
 
     @Persistent
-    @Column(name = "SERIAL_NUMBER", jdbcType = "CLOB")
+    @Column(name = "SERIAL_NUMBER")
     private String serialNumber;
 
     @Persistent(defaultFetchGroup = "true")

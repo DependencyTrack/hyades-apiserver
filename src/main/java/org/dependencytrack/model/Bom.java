@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -76,11 +76,11 @@ public class Bom implements Serializable {
     private Date imported;
 
     @Persistent
-    @Column(name = "BOM_FORMAT", jdbcType = "CLOB")
+    @Column(name = "BOM_FORMAT")
     private String bomFormat;
 
     @Persistent
-    @Column(name = "SPEC_VERSION", jdbcType = "CLOB")
+    @Column(name = "SPEC_VERSION")
     private String specVersion;
 
     @Persistent
@@ -88,7 +88,7 @@ public class Bom implements Serializable {
     private Integer bomVersion;
 
     @Persistent
-    @Column(name = "SERIAL_NUMBER", jdbcType = "CLOB")
+    @Column(name = "SERIAL_NUMBER")
     private String serialNumber;
 
     @Persistent(defaultFetchGroup = "true")

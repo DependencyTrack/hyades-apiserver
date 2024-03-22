@@ -14,13 +14,14 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
 import alpine.common.validation.RegexSequence;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.validation.constraints.NotBlank;
@@ -38,14 +39,17 @@ public class ExternalReference implements Serializable {
 
     private static final long serialVersionUID = -5885851731192037664L;
 
+    @JsonView(JsonViews.MetadataTools.class)
     private org.cyclonedx.model.ExternalReference.Type type;
 
     @NotBlank
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
+    @JsonView(JsonViews.MetadataTools.class)
     private String url;
 
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The comment may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String comment;
 
     public org.cyclonedx.model.ExternalReference.Type getType() {

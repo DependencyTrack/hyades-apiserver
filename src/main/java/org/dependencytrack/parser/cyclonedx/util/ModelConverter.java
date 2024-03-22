@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.parser.cyclonedx.util;
 
@@ -27,6 +27,7 @@ import org.cyclonedx.model.Hash;
 import org.cyclonedx.model.LicenseChoice;
 import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Swid;
+import org.cyclonedx.model.Tool;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -43,6 +44,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
@@ -83,14 +85,49 @@ public class ModelConverter {
     }
 
     public static ProjectMetadata convertToProjectMetadata(final Metadata cdxMetadata) {
+        if (cdxMetadata == null) {
+            return null;
+        }
+
         final var projectMetadata = new ProjectMetadata();
         projectMetadata.setSupplier(ModelConverter.convert(cdxMetadata.getSupplier()));
         projectMetadata.setAuthors(ModelConverter.convertCdxContacts(cdxMetadata.getAuthors()));
+
+        final var toolComponents = new ArrayList<Component>();
+        final var toolServices = new ArrayList<ServiceComponent>();
+        if (cdxMetadata.getTools() != null) {
+            cdxMetadata.getTools().stream().map(ModelConverter::convert).forEach(toolComponents::add);
+        }
+        if (cdxMetadata.getToolChoice() != null) {
+            if (cdxMetadata.getToolChoice().getComponents() != null) {
+                cdxMetadata.getToolChoice().getComponents().stream().map(ModelConverter::convertComponent).forEach(toolComponents::add);
+            }
+            if (cdxMetadata.getToolChoice().getServices() != null) {
+                cdxMetadata.getToolChoice().getServices().stream().map(ModelConverter::convertService).forEach(toolServices::add);
+            }
+        }
+        if (!toolComponents.isEmpty() || !toolServices.isEmpty()) {
+            projectMetadata.setTools(new Tools(
+                    toolComponents.isEmpty() ? null : toolComponents,
+                    toolServices.isEmpty() ? null : toolServices
+            ));
+        }
+
         return projectMetadata;
     }
 
-    public static Project convertToProject(final Metadata cdxMetadata, final ProjectMetadata projectMetadata) {
-        final var cdxComponent = cdxMetadata.getComponent();
+    public static Project convertToProject(final org.cyclonedx.model.Metadata cdxMetadata) {
+        if (cdxMetadata == null || cdxMetadata.getComponent() == null) {
+            return null;
+        }
+
+        final Project project = convertToProject(cdxMetadata.getComponent());
+        project.setManufacturer(convert(cdxMetadata.getManufacture()));
+
+        return project;
+    }
+
+    public static Project convertToProject(final org.cyclonedx.model.Component cdxComponent) {
         final var project = new Project();
         project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
@@ -100,9 +137,7 @@ public class ModelConverter {
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
-        project.setManufacturer(ModelConverter.convert(cdxMetadata.getManufacture()));
         project.setSupplier(ModelConverter.convert(cdxComponent.getSupplier()));
-        project.setMetadata(projectMetadata);
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -224,6 +259,47 @@ public class ModelConverter {
             }
 
             component.setChildren(children);
+        }
+
+        return component;
+    }
+
+    private static Component convert(@SuppressWarnings("deprecation") final Tool tool) {
+        if (tool == null) {
+            return null;
+        }
+
+        final var component = new Component();
+        if (tool.getVendor() != null && !tool.getVendor().isBlank()) {
+            final var supplier = new OrganizationalEntity();
+            supplier.setName(trimToNull(tool.getVendor()));
+            component.setSupplier(supplier);
+        }
+        component.setName(trimToNull(tool.getName()));
+        component.setVersion(trimToNull(tool.getVersion()));
+        component.setExternalReferences(convertExternalReferences(tool.getExternalReferences()));
+
+        if (tool.getHashes() != null && !tool.getHashes().isEmpty()) {
+            for (final org.cyclonedx.model.Hash cdxHash : tool.getHashes()) {
+                final Consumer<String> hashSetter = switch (cdxHash.getAlgorithm().toLowerCase()) {
+                    case "md5" -> component::setMd5;
+                    case "sha-1" -> component::setSha1;
+                    case "sha-256" -> component::setSha256;
+                    case "sha-384" -> component::setSha384;
+                    case "sha-512" -> component::setSha512;
+                    case "sha3-256" -> component::setSha3_256;
+                    case "sha3-384" -> component::setSha3_384;
+                    case "sha3-512" -> component::setSha3_512;
+                    case "blake2b-256" -> component::setBlake2b_256;
+                    case "blake2b-384" -> component::setBlake2b_384;
+                    case "blake2b-512" -> component::setBlake2b_512;
+                    case "blake3" -> component::setBlake3;
+                    default -> null;
+                };
+                if (hashSetter != null) {
+                    hashSetter.accept(cdxHash.getValue());
+                }
+            }
         }
 
         return component;

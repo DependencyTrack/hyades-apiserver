@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.resources.v1;
 
@@ -49,6 +49,7 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -64,6 +65,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -390,6 +396,42 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createProjectDuplicateRaceConditionTest() throws Exception {
+        final ExecutorService executor = Executors.newFixedThreadPool(10);
+        final var countDownLatch = new CountDownLatch(1);
+
+        final var responses = new ArrayBlockingQueue<Response>(50);
+        for (int i = 0; i < 50; i++) {
+            executor.submit(() -> {
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                final Response response = target(V1_PROJECT)
+                        .request()
+                        .header(X_API_KEY, apiKey)
+                        .put(Entity.entity("""
+                                {
+                                  "name": "acme-app",
+                                  "version": "1.0.0"
+                                }
+                                """, MediaType.APPLICATION_JSON));
+                responses.offer(response);
+            });
+        }
+
+        countDownLatch.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(15, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(responses).hasSize(50);
+        assertThat(responses).satisfiesOnlyOnce(response -> assertThat(response.getStatus()).isEqualTo(201));
+        assertThat(responses.stream().map(Response::getStatus).filter(status -> status != 201)).containsOnly(409);
+    }
+
+    @Test
     public void createProjectEmptyTest() {
         Project project = new Project();
         project.setName(" ");
@@ -598,9 +640,24 @@ public class ProjectResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
 
-        final JsonObject responseJson = parseJsonObject(response);
-        assertThat(responseJson.getString("uuid")).isEqualTo(project.getUuid().toString());
-        assertThat(responseJson.getJsonObject("parent")).isNull(); // Parents are currently not returned
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", CoreMatchers.equalTo(project.getUuid().toString()))
+                .withMatcher("parentProjectUuid", CoreMatchers.equalTo(newParent.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "name": "DEF",
+                          "version": "2.0",
+                          "uuid": "${json-unit.matches:projectUuid}",
+                          "parent": {
+                            "name": "GHI",
+                            "version": "3.0",
+                            "uuid": "${json-unit.matches:parentProjectUuid}"
+                          },
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
 
         // Ensure the parent was updated.
         qm.getPersistenceManager().refresh(project);

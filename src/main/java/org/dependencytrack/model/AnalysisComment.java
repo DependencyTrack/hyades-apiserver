@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -66,7 +66,7 @@ public class AnalysisComment implements Serializable {
     private String comment;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "COMMENTER", jdbcType = "CLOB")
+    @Column(name = "COMMENTER")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String commenter;
 

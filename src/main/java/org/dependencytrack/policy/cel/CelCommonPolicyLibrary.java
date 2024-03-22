@@ -10,6 +10,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.Tools;
 import org.dependencytrack.proto.policy.v1.VersionDistance;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.jdbi.v3.core.Handle;
@@ -128,7 +129,9 @@ public class CelCommonPolicyLibrary implements Library {
                         License.getDefaultInstance(),
                         License.Group.getDefaultInstance(),
                         Project.getDefaultInstance(),
+                        Project.Metadata.getDefaultInstance(),
                         Project.Property.getDefaultInstance(),
+                        Tools.getDefaultInstance(),
                         Vulnerability.getDefaultInstance(),
                         Vulnerability.Alias.getDefaultInstance(),
                         VersionDistance.getDefaultInstance()

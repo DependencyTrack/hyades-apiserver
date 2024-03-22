@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -23,6 +23,7 @@ import alpine.server.json.TrimmedStringArrayDeserializer;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import javax.jdo.annotations.Column;
@@ -42,6 +43,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,49 +87,62 @@ public class ServiceComponent implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "PROVIDER_ID")
     @Serialized
+    @JsonView(JsonViews.MetadataTools.class)
     private OrganizationalEntity provider;
 
     @Persistent
-    @Column(name = "GROUP", jdbcType = "CLOB")
+    @Column(name = "GROUP", jdbcType = "VARCHAR")
+    @Size(max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The group may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String group;
 
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String name;
 
     @Persistent
-    @Column(name = "VERSION", jdbcType = "CLOB")
+    @Column(name = "VERSION", jdbcType = "VARCHAR")
+    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String version;
 
     @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
+    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR", length = 1024)
+    @Size(max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The description may only contain printable characters")
+    @JsonView(JsonViews.MetadataTools.class)
     private String description;
 
     @Persistent(defaultFetchGroup = "true")
     @Serialized
     @Column(name = "ENDPOINTS", jdbcType = "LONGVARBINARY")
     @JsonDeserialize(using = TrimmedStringArrayDeserializer.class)
+    @JsonView(JsonViews.MetadataTools.class)
     private String[] endpoints;
 
     @Persistent
     @Column(name = "AUTHENTICATED")
+    @JsonView(JsonViews.MetadataTools.class)
     private Boolean authenticated;
 
     @Persistent
     @Column(name = "X_TRUST_BOUNDARY")
+    @JsonView(JsonViews.MetadataTools.class)
     private Boolean crossesTrustBoundary;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "DATA")
     @Serialized
+    @JsonView(JsonViews.MetadataTools.class)
     private List<DataClassification> data;
 
     //TODO add license support once Component license support is refactored
@@ -135,6 +150,7 @@ public class ServiceComponent implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "EXTERNAL_REFERENCES")
     @Serialized
+    @JsonView(JsonViews.MetadataTools.class)
     private List<ExternalReference> externalReferences;
 
     @Persistent

@@ -14,10 +14,11 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.tasks;
 
+import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
@@ -216,6 +217,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        PackageURL packageUrl = new PackageURL("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
         var integrityMeta = new IntegrityMetaComponent();
         integrityMeta.setPurl("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
         integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
@@ -903,6 +905,63 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         assertThat(qm.getAllComponents(project)).isNotEmpty();
         assertThat(qm.getAllServiceComponents(project)).isNotEmpty();
+    }
+
+    @Test
+    public void informWithBomContainingMetadataToolsDeprecatedTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-tool-deprecated.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getMetadata()).isNotNull();
+        assertThat(project.getMetadata().getTools()).isNotNull();
+        assertThat(project.getMetadata().getTools().components()).satisfiesExactly(component -> {
+            assertThat(component.getSupplier()).isNotNull();
+            assertThat(component.getSupplier().getName()).isEqualTo("Awesome Vendor");
+            assertThat(component.getName()).isEqualTo("Awesome Tool");
+            assertThat(component.getVersion()).isEqualTo("9.1.2");
+            assertThat(component.getSha1()).isEqualTo("25ed8e31b995bb927966616df2a42b979a2717f0");
+            assertThat(component.getSha256()).isEqualTo("a74f733635a19aefb1f73e5947cef59cd7440c6952ef0f03d09d974274cbd6df");
+        });
+        assertThat(project.getMetadata().getTools().services()).isNull();
+    }
+
+    @Test
+    public void informWithBomContainingMetadataToolsTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-tool.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getMetadata()).isNotNull();
+        assertThat(project.getMetadata().getTools()).isNotNull();
+        assertThat(project.getMetadata().getTools().components()).satisfiesExactly(component -> {
+            assertThat(component.getGroup()).isEqualTo("Awesome Vendor");
+            assertThat(component.getName()).isEqualTo("Awesome Tool");
+            assertThat(component.getVersion()).isEqualTo("9.1.2");
+            assertThat(component.getSha1()).isEqualTo("25ed8e31b995bb927966616df2a42b979a2717f0");
+            assertThat(component.getSha256()).isEqualTo("a74f733635a19aefb1f73e5947cef59cd7440c6952ef0f03d09d974274cbd6df");
+        });
+        assertThat(project.getMetadata().getTools().services()).satisfiesExactly(service -> {
+            assertThat(service.getProvider()).isNotNull();
+            assertThat(service.getProvider().getName()).isEqualTo("Acme Org");
+            assertThat(service.getProvider().getUrls()).containsOnly("https://example.com");
+            assertThat(service.getGroup()).isEqualTo("com.example");
+            assertThat(service.getName()).isEqualTo("Acme Signing Server");
+            assertThat(service.getDescription()).isEqualTo("Signs artifacts");
+            assertThat(service.getEndpoints()).containsExactlyInAnyOrder(
+                    "https://example.com/sign",
+                    "https://example.com/verify",
+                    "https://example.com/tsa"
+            );
+        });
     }
 
     private void assertBomProcessedNotification() throws Exception {

@@ -38,7 +38,4 @@ public class ProjectProjection {
     @MappedField(protoFieldName = "last_bom_import", sqlColumnName = "LAST_BOM_IMPORTED")
     public Date lastBomImport;
 
-    public String propertiesJson;
-    public String tagsJson;
-
 }

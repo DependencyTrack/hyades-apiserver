@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -76,11 +76,11 @@ public class FindingAttribution implements Serializable {
     private Vulnerability vulnerability;
 
     @Persistent
-    @Column(name = "ALT_ID", allowsNull = "true", jdbcType = "CLOB")
+    @Column(name = "ALT_ID", allowsNull = "true")
     private String alternateIdentifier;
 
     @Persistent
-    @Column(name = "REFERENCE_URL", allowsNull = "true", jdbcType = "CLOB")
+    @Column(name = "REFERENCE_URL", allowsNull = "true")
     private String referenceUrl;
 
     @Persistent(customValueStrategy = "uuid")

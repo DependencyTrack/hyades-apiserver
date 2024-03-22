@@ -15,7 +15,7 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.persistence.jdbi.JdbiTestUtil.createLocalVanillaJdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 
 public class PaginatedResultRowReducerTest extends PersistenceCapableTest {
 
@@ -48,7 +48,7 @@ public class PaginatedResultRowReducerTest extends PersistenceCapableTest {
 
     @Before
     public void setUp() {
-        jdbi = createLocalVanillaJdbi(qm)
+        jdbi = jdbi(qm)
                 .installPlugin(new SqlObjectPlugin())
                 .setTemplateEngine(FreemarkerEngine.instance())
                 .registerRowMapper(String.class, (rs, ctx) -> rs.getString("NAME"));

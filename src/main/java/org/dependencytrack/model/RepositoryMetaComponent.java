@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -53,7 +53,7 @@ public class RepositoryMetaComponent implements Serializable {
      * This is an indirect representation of a the Package URL "type" field.
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REPOSITORY_TYPE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "REPOSITORY_TYPE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
     private RepositoryType repositoryType;
 
@@ -61,14 +61,14 @@ public class RepositoryMetaComponent implements Serializable {
      * This is a representation of the Package URL "namespace" field.
      */
     @Persistent
-    @Column(name = "NAMESPACE", jdbcType = "CLOB")
+    @Column(name = "NAMESPACE")
     private String namespace;
 
     /**
      * This is a representation of the Package URL "name" field.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", allowsNull = "false")
     @NotNull
     private String name;
 
@@ -76,7 +76,7 @@ public class RepositoryMetaComponent implements Serializable {
      * The latest version of the component.
      */
     @Persistent
-    @Column(name = "LATEST_VERSION", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "LATEST_VERSION", allowsNull = "false")
     @NotNull
     private String latestVersion;
 

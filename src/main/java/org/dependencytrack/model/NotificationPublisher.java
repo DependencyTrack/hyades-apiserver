@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -33,6 +33,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -72,19 +73,22 @@ public class NotificationPublisher implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String name;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "DESCRIPTION", jdbcType = "CLOB")
+    @Column(name = "DESCRIPTION")
+    @Size(min = 0, max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String description;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "PUBLISHER_CLASS", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "PUBLISHER_CLASS", length = 1024, allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String publisherClass;
 
@@ -94,8 +98,9 @@ public class NotificationPublisher implements Serializable {
     private String template;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String templateMimeType;
 

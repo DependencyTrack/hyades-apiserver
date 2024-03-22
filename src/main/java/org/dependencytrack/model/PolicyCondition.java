@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -32,6 +32,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -97,25 +98,29 @@ public class PolicyCondition implements Serializable {
     private Policy policy;
 
     @Persistent
-    @Column(name = "OPERATOR", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "OPERATOR", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The operator may only contain printable characters")
     private Operator operator;
 
     @Persistent
-    @Column(name = "SUBJECT", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "SUBJECT", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The subject may only contain printable characters")
     private Subject subject;
 
     @Persistent
     @Column(name = "VALUE", allowsNull = "false", jdbcType = "CLOB")
     @NotBlank
+    @Size(min = 1)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The value may only contain printable characters")
     private String value;
 
     @Persistent
-    @Column(name = "VIOLATIONTYPE", jdbcType = "CLOB", allowsNull = "true")
+    @Column(name = "VIOLATIONTYPE", allowsNull = "true")
+    @Size(min = 1, max = 255)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The violation type may only contain printable characters")
     private PolicyViolation.Type violationType;
 

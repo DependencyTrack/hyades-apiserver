@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
@@ -41,6 +42,10 @@ public interface CelPolicyDao {
               ${fetchColumns?join(", ")}
             FROM
               "PROJECT" AS "P"
+            <#if fetchColumns?filter(col -> col?contains("\\"metadata_tools\\""))?size gt 0>
+              INNER JOIN
+                "PROJECT_METADATA" AS "PM" ON "PM"."PROJECT_ID" = "P"."ID"
+            </#if>
             <#if fetchPropertyColumns?size gt 0>
               LEFT JOIN LATERAL (
                 SELECT
@@ -154,6 +159,13 @@ public interface CelPolicyDao {
                 .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
                 .map(fieldMapping -> "\"P\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
                 .collect(Collectors.toList());
+
+        if (fieldsToLoad.contains("metadata")
+            && requirements.containsKey(TYPE_PROJECT_METADATA)
+            && requirements.get(TYPE_PROJECT_METADATA).contains("tools")) {
+            sqlSelectColumns.add("\"PM\".\"TOOLS\" AS \"metadata_tools\"");
+        }
+
         final var sqlPropertySelectColumns = new ArrayList<String>();
         if (fieldsToLoad.contains("properties") && requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
             sqlSelectColumns.add("\"properties\"");

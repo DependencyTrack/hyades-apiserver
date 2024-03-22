@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -43,6 +43,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,8 +74,9 @@ public class NotificationRule implements Serializable {
      * The String representation of the name of the notification.
      */
     @Persistent
-    @Column(name = "NAME", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "NAME", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
@@ -100,12 +102,12 @@ public class NotificationRule implements Serializable {
     private boolean logSuccessfulPublish;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "SCOPE", jdbcType = "CLOB", allowsNull = "false")
+    @Column(name = "SCOPE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
     private NotificationScope scope;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "NOTIFICATION_LEVEL", jdbcType = "CLOB")
+    @Column(name = "NOTIFICATION_LEVEL", jdbcType = "VARCHAR")
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")
@@ -121,11 +123,12 @@ public class NotificationRule implements Serializable {
     private List<Team> teams;
 
     @Persistent
-    @Column(name = "NOTIFY_ON", jdbcType = "CLOB")
+    @Column(name = "NOTIFY_ON", length = 1024)
     private String notifyOn;
 
     @Persistent
-    @Column(name = "MESSAGE", jdbcType = "CLOB")
+    @Column(name = "MESSAGE", length = 1024)
+    @Size(max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The message may only contain printable characters")
     private String message;

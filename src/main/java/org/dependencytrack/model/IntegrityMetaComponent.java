@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
@@ -33,6 +33,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -74,8 +75,9 @@ public class IntegrityMetaComponent implements Serializable {
     private String sha512;
 
     @Persistent
-    @Column(name = "PURL", allowsNull = "false", jdbcType = "CLOB")
+    @Column(name = "PURL", allowsNull = "false", jdbcType = "VARCHAR", length = 1024)
     @Index(name = "PURL_IDX")
+    @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Unique
@@ -95,12 +97,12 @@ public class IntegrityMetaComponent implements Serializable {
     private Date lastFetch;
 
     @Persistent
-    @Column(name = "STATUS", jdbcType = "CLOB")
+    @Column(name = "STATUS", jdbcType = "VARCHAR", length = 64)
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
     private FetchStatus status;
 
     @Persistent
-    @Column(name = "REPOSITORY_URL", jdbcType = "CLOB")
+    @Column(name = "REPOSITORY_URL", jdbcType = "VARCHAR", length = 1024)
     private String repositoryUrl;
 
 

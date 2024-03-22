@@ -14,11 +14,12 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
 
 import java.io.Serializable;
 
@@ -50,7 +51,10 @@ public class DataClassification implements Serializable {
         }
     }
 
+    @JsonView(JsonViews.MetadataTools.class)
     private Direction direction;
+
+    @JsonView(JsonViews.MetadataTools.class)
     private String name;
 
     public Direction getDirection() {
