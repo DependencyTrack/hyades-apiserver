@@ -1,6 +1,7 @@
 package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 
 import javax.servlet.ServletContextEvent;
@@ -16,7 +17,8 @@ public class ProcessorInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing processors");
 
-        // TODO: Register processor here!
+        PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
+                KafkaTopics.NEW_VULNERABILITY, new VulnerabilityMirrorProcessor());
 
         PROCESSOR_MANAGER.startAll();
     }
