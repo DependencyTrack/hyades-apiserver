@@ -231,12 +231,6 @@ class KafkaStreamsTopologyFactory {
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
                 .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
-        streamsBuilder
-                .stream(KafkaTopics.VULNERABILITY_MIRROR_EPSS.name(),
-                        Consumed.with(KafkaTopics.VULNERABILITY_MIRROR_EPSS.keySerde(), KafkaTopics.VULNERABILITY_MIRROR_EPSS.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.VULNERABILITY_MIRROR_EPSS.name())))
-                .process(MirrorEpssProcessor::new, Named.as("process_mirror_epss_data"));
-
         return streamsBuilder.build(streamsProperties);
     }
 
