@@ -42,11 +42,7 @@
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="PERCENTILE" type="numeric"/>
-            <column name="SCORE" type="numeric"/>
+            <column name="EPSS" type="numeric"/>
         </createTable>
-        <addForeignKeyConstraint baseColumnNames="ID" baseTableName="EPSS"
-                                 constraintName="VULNERABILITY_EPSS_FK" deferrable="true"
-                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
     </changeSet>
 </databaseChangeLog>

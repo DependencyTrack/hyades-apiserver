@@ -10,8 +10,8 @@ public final class EpssModelConverter {
     public static Epss convert(final EpssItem epssItem) {
         final Epss epss = new Epss();
         epss.setCve(epssItem.getCve());
-        epss.setEpss(new BigDecimal(epssItem.getEpss()));
-        epss.setPercentile(new BigDecimal(epssItem.getPercentile()));
+        epss.setEpss(BigDecimal.valueOf(epssItem.getEpss()));
+        epss.setPercentile(BigDecimal.valueOf(epssItem.getPercentile()));
         return epss;
     }
 }
