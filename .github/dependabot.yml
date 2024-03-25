@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: daily
+    ignore:
+    # Jetty >= 11 is currently not supported by Alpine.
+    # https://github.com/stevespringett/Alpine/issues/402
+    - dependency-name: "org.eclipse.jetty:jetty-maven-plugin"
+      update-types:
+      - version-update:semver-major
+  - package-ecosystem: docker
+    directory: /src/main/docker
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: bundler
+    directory: /docs
+    schedule:
+      interval: daily

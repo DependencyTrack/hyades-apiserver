@@ -1,0 +1,9 @@
+.github/
+.idea/
+docs/
+scripts/
+# The source directory is required by Dockerfile.demo
+# src/
+target/
+!target/*.jar
+/*.md
