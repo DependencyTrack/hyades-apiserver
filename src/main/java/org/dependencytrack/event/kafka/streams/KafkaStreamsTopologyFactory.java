@@ -1,3 +1,21 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
 package org.dependencytrack.event.kafka.streams;
 
 import alpine.Config;
@@ -23,8 +41,6 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.streams.processor.DelayedBomProcessedNotificationProcessor;
-import org.dependencytrack.event.kafka.streams.processor.MirrorEpssProcessor;
-import org.dependencytrack.event.kafka.streams.processor.MirrorVulnerabilityProcessor;
 import org.dependencytrack.event.kafka.streams.processor.RepositoryMetaResultProcessor;
 import org.dependencytrack.event.kafka.streams.processor.VulnerabilityScanResultProcessor;
 import org.dependencytrack.model.VulnerabilityScan;
@@ -224,12 +240,6 @@ class KafkaStreamsTopologyFactory {
                         Consumed.with(KafkaTopics.REPO_META_ANALYSIS_RESULT.keySerde(), KafkaTopics.REPO_META_ANALYSIS_RESULT.valueSerde())
                                 .withName("consume_from_%s_topic".formatted(KafkaTopics.REPO_META_ANALYSIS_RESULT.name())))
                 .process(RepositoryMetaResultProcessor::new, Named.as("process_repo_meta_analysis_result"));
-
-        streamsBuilder
-                .stream(KafkaTopics.NEW_VULNERABILITY.name(),
-                        Consumed.with(KafkaTopics.NEW_VULNERABILITY.keySerde(), KafkaTopics.NEW_VULNERABILITY.valueSerde())
-                                .withName("consume_from_%s_topic".formatted(KafkaTopics.NEW_VULNERABILITY.name())))
-                .process(MirrorVulnerabilityProcessor::new, Named.as("process_mirror_vulnerability"));
 
         return streamsBuilder.build(streamsProperties);
     }

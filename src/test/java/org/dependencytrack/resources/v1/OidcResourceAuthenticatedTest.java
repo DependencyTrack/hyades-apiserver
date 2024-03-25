@@ -14,14 +14,15 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
 import alpine.model.MappedOidcGroup;
 import alpine.model.OidcGroup;
 import alpine.model.Team;
+import alpine.server.filters.ApiFilter;
+import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
 import org.glassfish.jersey.server.ResourceConfig;
