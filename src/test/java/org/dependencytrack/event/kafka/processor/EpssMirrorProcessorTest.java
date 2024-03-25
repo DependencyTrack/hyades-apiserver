@@ -18,14 +18,13 @@
  */
 package org.dependencytrack.event.kafka.processor;
 
-import org.dependencytrack.event.kafka.streams.processor.MirrorEpssProcessor;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class MirrorEpssProcessorTest extends AbstractProcessorTest {
+public class EpssMirrorProcessorTest extends AbstractProcessorTest {
 
     @Before
     public void before() throws Exception {
@@ -36,7 +35,7 @@ public class MirrorEpssProcessorTest extends AbstractProcessorTest {
     public void testProcessEpssRecord() {
         final var epssRecord = EpssItem.newBuilder()
                 .setCve("CVE-333").setEpss(2.3).setPercentile(5.6).build();
-        final var processor = new MirrorEpssProcessor();
+        final var processor = new EpssMirrorProcessor();
         processor.process(aConsumerRecord("CVE-333", epssRecord).build());
         final var epss = qm.getEpssByCveId("CVE-333");
         assertThat(epss).isNotNull();
@@ -46,7 +45,7 @@ public class MirrorEpssProcessorTest extends AbstractProcessorTest {
 
     @Test
     public void testProcessEpssRecordd() {
-        final var processor = new MirrorEpssProcessor();
+        final var processor = new EpssMirrorProcessor();
         processor.process(aConsumerRecord("CVE-333", EpssItem.newBuilder().build()).build());
         final var epss = qm.getEpssByCveId("CVE-333");
         assertThat(epss).isNull();

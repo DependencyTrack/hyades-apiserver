@@ -21,7 +21,6 @@ package org.dependencytrack.event.kafka.processor;
 import alpine.common.logging.Logger;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
-import org.dependencytrack.event.kafka.streams.processor.MirrorEpssProcessor;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -39,8 +38,8 @@ public class ProcessorInitializer implements ServletContextListener {
         PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
                 KafkaTopics.NEW_VULNERABILITY, new VulnerabilityMirrorProcessor());
 
-        PROCESSOR_MANAGER.registerProcessor(MirrorEpssProcessor.PROCESSOR_NAME,
-                KafkaTopics.VULNERABILITY_MIRROR_EPSS, new MirrorEpssProcessor());
+        PROCESSOR_MANAGER.registerProcessor(EpssMirrorProcessor.PROCESSOR_NAME,
+                KafkaTopics.VULNERABILITY_MIRROR_EPSS, new EpssMirrorProcessor());
 
         PROCESSOR_MANAGER.startAll();
     }

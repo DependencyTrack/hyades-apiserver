@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event.kafka.streams.processor;
+package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -27,10 +27,10 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 
 
-public class MirrorEpssProcessor implements Processor<String, EpssItem> {
+public class EpssMirrorProcessor implements Processor<String, EpssItem> {
 
     public static final String PROCESSOR_NAME = "vuln.mirror";
-    private static final Logger LOGGER = Logger.getLogger(MirrorEpssProcessor.class);
+    private static final Logger LOGGER = Logger.getLogger(EpssMirrorProcessor.class);
 
     @Override
     public void process(ConsumerRecord<String, EpssItem> record) {
