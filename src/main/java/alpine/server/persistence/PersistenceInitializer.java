@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package alpine.server.persistence;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-
 
 public class PersistenceInitializer implements ServletContextListener {
 

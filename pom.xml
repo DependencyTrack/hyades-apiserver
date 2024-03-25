@@ -584,6 +584,7 @@
                 <version>${plugin.checkstyle.version}</version>
                 <configuration>
                     <configLocation>${project.basedir}/.checkstyle.xml</configLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
                 </configuration>
