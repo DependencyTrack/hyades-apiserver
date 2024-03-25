@@ -1,0 +1,45 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.event.kafka.processor;
+
+import alpine.common.logging.Logger;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.dependencytrack.event.kafka.processor.api.Processor;
+import org.dependencytrack.model.Epss;
+import org.dependencytrack.parser.dependencytrack.EpssModelConverter;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.mirror.v1.EpssItem;
+
+
+public class EpssMirrorProcessor implements Processor<String, EpssItem> {
+
+    public static final String PROCESSOR_NAME = "vuln.mirror";
+    private static final Logger LOGGER = Logger.getLogger(EpssMirrorProcessor.class);
+
+    @Override
+    public void process(ConsumerRecord<String, EpssItem> record) {
+        try (QueryManager qm = new QueryManager()) {
+            LOGGER.debug("Synchronizing Mirrored EPSS data for CVE : " + record.key());
+            EpssItem epssItem = record.value();
+            final Epss epss = EpssModelConverter.convert(epssItem);
+            final Epss synchronizedEpss = qm.synchronizeEpss(epss);
+            qm.persist(synchronizedEpss);
+        }
+    }
+}

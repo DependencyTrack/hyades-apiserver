@@ -38,6 +38,9 @@ public class ProcessorInitializer implements ServletContextListener {
         PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
                 KafkaTopics.NEW_VULNERABILITY, new VulnerabilityMirrorProcessor());
 
+        PROCESSOR_MANAGER.registerProcessor(EpssMirrorProcessor.PROCESSOR_NAME,
+                KafkaTopics.VULNERABILITY_MIRROR_EPSS, new EpssMirrorProcessor());
+
         PROCESSOR_MANAGER.startAll();
     }
 
