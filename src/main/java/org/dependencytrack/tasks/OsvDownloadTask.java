@@ -72,7 +72,7 @@ public class OsvDownloadTask implements LoggableSubscriber {
     public void inform(Event e) {
         if (e instanceof OsvMirrorEvent) {
             if (this.ecosystems != null && !this.ecosystems.isEmpty()) {
-                new KafkaEventDispatcher().dispatchBlocking(new OsvMirrorEvent(String.join(",", ecosystems)));
+                new KafkaEventDispatcher().dispatchEvent(new OsvMirrorEvent(String.join(",", ecosystems))).join();
             }
             else {
                 LOGGER.info("Google OSV mirroring is disabled. No ecosystem selected.");

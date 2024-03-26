@@ -30,6 +30,7 @@ import alpine.notification.NotificationLevel;
 import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.model.Dependency;
@@ -84,6 +85,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -154,7 +156,7 @@ public class BomUploadProcessingTask implements Subscriber {
             } catch (BomConsumptionException ex) {
                 LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
+                kafkaEventDispatcher.dispatchNotification(new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
                         .level(NotificationLevel.ERROR)
@@ -166,7 +168,7 @@ public class BomUploadProcessingTask implements Subscriber {
             } catch (BomProcessingException ex) {
                 LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchAsync(ex.ctx.project.getUuid(), new Notification()
+                kafkaEventDispatcher.dispatchNotification(new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
                         .level(NotificationLevel.ERROR)
@@ -179,7 +181,7 @@ public class BomUploadProcessingTask implements Subscriber {
             } catch (Exception ex) {
                 LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
                 updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+                kafkaEventDispatcher.dispatchNotification(new Notification()
                         .scope(NotificationScope.PORTFOLIO)
                         .group(NotificationGroup.BOM_PROCESSING_FAILED)
                         .level(NotificationLevel.ERROR)
@@ -256,7 +258,7 @@ public class BomUploadProcessingTask implements Subscriber {
             }
         }
 
-        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+        kafkaEventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_CONSUMED)
                 .level(NotificationLevel.INFORMATIONAL)
@@ -358,21 +360,25 @@ public class BomUploadProcessingTask implements Subscriber {
             // the following persistence operations.
             pm.evictAll();
 
-            var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
+            final var dispatchedEvents = new ArrayList<CompletableFuture<?>>();
+            final var vulnAnalysisState = qm.getWorkflowStateByTokenAndStep(ctx.uploadToken, WorkflowStep.VULN_ANALYSIS);
             if (!vulnAnalysisEvents.isEmpty()) {
                 qm.createVulnerabilityScan(TargetType.PROJECT, ctx.project.getUuid(), ctx.uploadToken.toString(), vulnAnalysisEvents.size());
-
-                vulnAnalysisEvents.forEach(event -> kafkaEventDispatcher.dispatchAsync(event, (metadata, exception) -> {
-                    if (exception != null) {
-                        // Include context in the log message to make log correlation easier.
-                        LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), exception);
-                    }
-                }));
-
                 // Initiate vuln-analysis workflow for the token
                 if (vulnAnalysisState != null) {
                     vulnAnalysisState.setStartedAt(Date.from(Instant.now()));
                     qm.persist(vulnAnalysisState);
+                }
+
+                for (final ComponentVulnerabilityAnalysisEvent event : vulnAnalysisEvents) {
+                    final CompletableFuture<RecordMetadata> future = kafkaEventDispatcher.dispatchEvent(event)
+                            .whenComplete((ignored, throwable) -> {
+                                if (throwable != null) {
+                                    // Include context in the log message to make log correlation easier.
+                                    LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(event, ctx), throwable);
+                                }
+                            });
+                    dispatchedEvents.add(future);
                 }
             } else {
                 // No components to be sent for vulnerability analysis.
@@ -414,14 +420,18 @@ public class BomUploadProcessingTask implements Subscriber {
                     eventToSend = event;
                 }
 
-                kafkaEventDispatcher.dispatchAsync(eventToSend, (metadata, exception) -> {
-                    if (exception != null) {
-                        // Include context in the log message to make log correlation easier.
-                        LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(eventToSend, ctx), exception);
-                    }
-                });
+                final CompletableFuture<RecordMetadata> future = kafkaEventDispatcher.dispatchEvent(eventToSend)
+                        .whenComplete((ignored, throwable) -> {
+                            if (throwable != null) {
+                                // Include context in the log message to make log correlation easier.
+                                LOGGER.error("Failed to produce %s to Kafka (%s)".formatted(eventToSend, ctx), throwable);
+                            }
+                        });
+                dispatchedEvents.add(future);
             }
-            // TODO: Trigger index updates
+
+            // Before proceeding, wait for all events to be delivered successfully.
+            CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
         }
     }
 
@@ -1013,7 +1023,7 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void dispatchBomProcessedNotification(final Context ctx) {
-        kafkaEventDispatcher.dispatchAsync(ctx.project.getUuid(), new Notification()
+        kafkaEventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_PROCESSED)
                 .level(NotificationLevel.INFORMATIONAL)

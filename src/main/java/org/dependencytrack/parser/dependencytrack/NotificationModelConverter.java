@@ -143,7 +143,7 @@ public final class NotificationModelConverter {
         final NotificationGroup groupEnum;
         try {
             groupEnum = NotificationGroup.valueOf(group);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             return GROUP_UNSPECIFIED;
         }
 

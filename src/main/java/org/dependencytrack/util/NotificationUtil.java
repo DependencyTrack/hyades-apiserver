@@ -80,27 +80,6 @@ public final class NotificationUtil {
     private NotificationUtil() {
     }
 
-    public static void dispatchExceptionNotifications(NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level) {
-        sendNotificationToKafka(null, new Notification()
-                .scope(scope)
-                .group(group)
-                .title(title)
-                .content(content)
-                .level(level)
-        );
-    }
-
-    public static void dispatchNotificationsWithSubject(UUID projectUuid, NotificationScope scope, NotificationGroup group, String title, String content, NotificationLevel level, Object subject) {
-        sendNotificationToKafka(projectUuid, new Notification()
-                .scope(scope)
-                .group(group)
-                .title(title)
-                .content(content)
-                .level(level)
-                .subject(subject)
-        );
-    }
-
     public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
         // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
@@ -120,15 +99,13 @@ public final class NotificationUtil {
             // Aliases are lost during the detach above
             analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
 
-            sendNotificationToKafka(project.getUuid(), new Notification()
+            new KafkaEventDispatcher().dispatchNotification(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
                     .level(NotificationLevel.INFORMATIONAL)
                     .content(generateNotificationContent(analysis))
-                    .subject(new AnalysisDecisionChange(analysis.getVulnerability(),
-                            analysis.getComponent(), analysis.getProject(), analysis))
-            );
+                    .subject(new AnalysisDecisionChange(analysis.getVulnerability(), analysis.getComponent(), analysis.getProject(), analysis)));
         }
     }
 
@@ -207,20 +184,14 @@ public final class NotificationUtil {
             violationAnalysis.getComponent().setProject(project); // Project of component is lost after the detach above
             violationAnalysis.setPolicyViolation(policyViolation); // PolicyCondition and policy of policyViolation is lost after the detach above
 
-            sendNotificationToKafka(project.getUuid(), new Notification()
+            new KafkaEventDispatcher().dispatchNotification(new Notification()
                     .scope(NotificationScope.PORTFOLIO)
                     .group(notificationGroup)
                     .title(generateNotificationTitle(title, violationAnalysis.getComponent().getProject()))
                     .level(NotificationLevel.INFORMATIONAL)
                     .content(generateNotificationContent(violationAnalysis))
-                    .subject(new ViolationAnalysisDecisionChange(violationAnalysis.getPolicyViolation(),
-                            violationAnalysis.getComponent(), violationAnalysis))
-            );
+                    .subject(new ViolationAnalysisDecisionChange(violationAnalysis.getPolicyViolation(), violationAnalysis.getComponent(), violationAnalysis)));
         }
-    }
-
-    public static void analyzeNotificationCriteria(final QueryManager qm, final PolicyViolation policyViolation) {
-        analyzeNotificationCriteria(qm, policyViolation.getId());
     }
 
     public static void analyzeNotificationCriteria(final QueryManager qm, final Long violationId) {
@@ -339,14 +310,13 @@ public final class NotificationUtil {
         violation.setType(PolicyViolation.Type.valueOf(projection.violationType));
         violation.setTimestamp(projection.violationTimestamp);
 
-        sendNotificationToKafka(project.getUuid(), new Notification()
+        new KafkaEventDispatcher().dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.POLICY_VIOLATION)
                 .title(generateNotificationTitle(NotificationConstants.Title.POLICY_VIOLATION, project))
                 .level(NotificationLevel.INFORMATIONAL)
                 .content(generateNotificationContent(violation))
-                .subject(new PolicyViolationIdentified(violation, component, project))
-        );
+                .subject(new PolicyViolationIdentified(violation, component, project)));
     }
 
     public static void loadDefaultNotificationPublishers(QueryManager qm) throws IOException {
@@ -447,10 +417,6 @@ public final class NotificationUtil {
         }
 
         return messageType + " on Project: [" + projectStr + "]";
-    }
-
-    private static void sendNotificationToKafka(UUID projectUuid, Notification notification) {
-        new KafkaEventDispatcher().dispatchAsync(projectUuid, notification);
     }
 
     public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, UUID token, ProjectVulnAnalysisStatus status) {

@@ -21,28 +21,22 @@ package org.dependencytrack.event.kafka;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.notification.Notification;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
-import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.model.Vulnerability;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
-import static java.util.Objects.requireNonNullElseGet;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 /**
  * An {@link Event} dispatcher that wraps a Kafka {@link Producer}.
@@ -57,123 +51,72 @@ public class KafkaEventDispatcher {
         this(KafkaProducerInitializer.getProducer());
     }
 
-    /**
-     * Constructor for unit tests.
-     * <p>
-     * The intention is to be able to provide {@link org.apache.kafka.clients.producer.MockProducer}
-     * instances here for testing purposes.
-     *
-     * @param producer The {@link Producer} to use
-     */
+    @VisibleForTesting
     KafkaEventDispatcher(final Producer<byte[], byte[]> producer) {
         this.producer = producer;
     }
 
-    /**
-     * Asynchronously dispatch a given {@link Event} to Kafka.
-     *
-     * @param event    The {@link Event} to dispatch
-     * @param callback A {@link Callback} to execute once the record has been acknowledged by the broker,
-     *                 or sending the record failed; When {@code null}, {@link KafkaDefaultProducerCallback}
-     *                 will be used
-     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched event,
-     * or {@code null} when the event was not dispatched
-     * @throws IllegalArgumentException When dispatching the given {@link Event} to Kafka is not supported
-     * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord, Callback)
-     */
-    public Future<RecordMetadata> dispatchAsync(final Event event, final Callback callback) {
-        if (event instanceof final ComponentVulnerabilityAnalysisEvent e) {
-            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
-        } else if (event instanceof final ComponentRepositoryMetaAnalysisEvent e) {
-            LOGGER.debug("Dispatch internal called for component: " + e.purlCoordinates() + " Component is internal: " + e.internal());
-            return dispatchAsyncInternal(KafkaEventConverter.convert(e), callback);
-        } else if (event instanceof final OsvMirrorEvent e) {
-            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.OSV.name(), e.ecosystem(), null), callback);
-        } else if (event instanceof NistMirrorEvent) {
-            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.NVD.name(), "", null), callback);
-        } else if (event instanceof GitHubAdvisoryMirrorEvent) {
-            return dispatchAsyncInternal(new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, Vulnerability.Source.GITHUB.name(), "", null), callback);
-        }
-
-        throw new IllegalArgumentException("Cannot publish event of type " + event.getClass().getName() + " to Kafka");
-    }
-
-    /**
-     * Asynchronously dispatch a given {@link Event} to Kafka.
-     *
-     * @param event The {@link Event} to dispatch
-     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched event,
-     * or {@code null} when the event was not dispatched
-     * @see #dispatchAsync(Event, Callback)
-     */
-    public Future<RecordMetadata> dispatchAsync(final Event event) {
-        return dispatchAsync(event, null);
-    }
-
-    /**
-     * Dispatch a given {@link Event} to Kafka, and wait for the broker to acknowledge it.
-     * <p>
-     * Should only be used when successful delivery must be guaranteed, as it will have a
-     * negative impact on the producer's internal batching mechanism.
-     *
-     * @param event The {@link Event} to dispatch
-     * @return A {@link RecordMetadata} instance for the dispatched event, or {@code null} when the event was not dispatched
-     */
-    public RecordMetadata dispatchBlocking(final Event event) {
-        try {
-            return dispatchAsync(event, null).get();
-        } catch (ExecutionException | InterruptedException e) {
-            throw new KafkaException(e);
-        }
-    }
-
-    /**
-     * Asynchronously dispatch a given {@link Notification} to Kafka.
-     *
-     * @param alpineNotification The {@link Notification} to dispatch
-     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched notification,
-     * or {@code null} when the event was not dispatched
-     * @see org.apache.kafka.clients.producer.KafkaProducer#send(ProducerRecord)
-     */
-    public Future<RecordMetadata> dispatchAsync(final UUID projectUuid, final Notification alpineNotification) {
-        return dispatchAsyncInternal(KafkaEventConverter.convert(projectUuid, alpineNotification), null);
-    }
-
-    /**
-     * Asynchronously dispatch a given {@link org.dependencytrack.proto.notification.v1.Notification} to Kafka.
-     *
-     * @param key          The event key to use
-     * @param notification The {@link org.dependencytrack.proto.notification.v1.Notification} to dispatch
-     * @return A {@link Future} holding a {@link RecordMetadata} instance for the dispatched notification,
-     * or {@code null} when the event was not dispatched
-     */
-    public Future<RecordMetadata> dispatchAsync(final String key, final org.dependencytrack.proto.notification.v1.Notification notification) {
-        return dispatchAsyncInternal(KafkaEventConverter.convert(key, notification), null);
-    }
-
-    private <K, V> Future<RecordMetadata> dispatchAsyncInternal(final KafkaEvent<K, V> event, final Callback callback) {
+    public CompletableFuture<RecordMetadata> dispatchEvent(final Event event) {
         if (event == null) {
-            if (callback != null) {
-                // Callers are expecting that their callback will be executed,
-                // no matter if sending the record failed or succeeded.
-                callback.onCompletion(null, null);
-            }
-
-            return CompletableFuture.completedFuture(null);
+            return completedFuture(null);
         }
 
+        final KafkaEvent<?, ?> kafkaEvent = KafkaEventConverter.convert(event);
+        return dispatchAll(List.of(kafkaEvent)).getFirst();
+    }
+
+    public CompletableFuture<RecordMetadata> dispatchNotification(final Notification notification) {
+        if (notification == null) {
+            return completedFuture(null);
+        }
+
+        final KafkaEvent<?, ?> kafkaEvent = KafkaEventConverter.convert(notification);
+        return dispatchAll(List.of(kafkaEvent)).getFirst();
+    }
+
+    public List<CompletableFuture<RecordMetadata>> dispatchAllNotificationProtos(final Collection<org.dependencytrack.proto.notification.v1.Notification> notifications) {
+        final List<KafkaEvent<?, ?>> kafkaEvents = KafkaEventConverter.convertAllNotificationProtos(notifications);
+        return dispatchAll(kafkaEvents);
+    }
+
+    public List<CompletableFuture<RecordMetadata>> dispatchAll(final Collection<KafkaEvent<?, ?>> events) {
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final var records = new ArrayList<ProducerRecord<byte[], byte[]>>(events.size());
+        for (final KafkaEvent<?, ?> event : events) {
+            records.add(convert(event));
+        }
+
+        final var futures = new ArrayList<CompletableFuture<RecordMetadata>>(records.size());
+        for (final ProducerRecord<byte[], byte[]> record : records) {
+            final CompletableFuture<RecordMetadata> future = new CompletableFuture<>();
+            final Callback producerCallback = (metadata, exception) -> {
+                if (exception != null) {
+                    LOGGER.error("Failed to produce record to topic %s".formatted(record.topic()), exception);
+                    future.completeExceptionally(exception);
+                } else {
+                    future.complete(metadata);
+                }
+            };
+
+            producer.send(record, producerCallback);
+            futures.add(future);
+        }
+
+        return futures;
+    }
+
+    private static <K, V> ProducerRecord<byte[], byte[]> convert(final KafkaEvent<K, V> event) {
         final byte[] keyBytes;
         try (final Serde<K> keySerde = event.topic().keySerde()) {
             keyBytes = keySerde.serializer().serialize(event.topic().name(), event.key());
-        } catch (SerializationException e) {
-            throw new KafkaException("Failed to serialize key", e);
         }
 
         final byte[] valueBytes;
         try (final Serde<V> valueSerde = event.topic().valueSerde()) {
             valueBytes = valueSerde.serializer().serialize(event.topic().name(), event.value());
-        } catch (SerializationException e) {
-            throw new KafkaException("Failed to serialize value", e);
         }
 
         final var record = new ProducerRecord<>(event.topic().name(), keyBytes, valueBytes);
@@ -183,8 +126,7 @@ public class KafkaEventDispatcher {
             }
         }
 
-        return producer.send(record, requireNonNullElseGet(callback,
-                () -> new KafkaDefaultProducerCallback(LOGGER, record.topic(), event.key())));
+        return record;
     }
 
 }

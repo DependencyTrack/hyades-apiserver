@@ -21,10 +21,12 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.event.VexUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vex;
@@ -36,7 +38,6 @@ import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.parser.cyclonedx.CycloneDXVexImporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.CompressUtil;
-import org.dependencytrack.util.NotificationUtil;
 
 import java.util.Base64;
 import java.util.Date;
@@ -51,6 +52,8 @@ import java.util.List;
 public class VexUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(VexUploadProcessingTask.class);
+
+    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     /**
      * {@inheritDoc}
@@ -94,15 +97,25 @@ public class VexUploadProcessingTask implements Subscriber {
                 final Project copyOfProject = qm.detach(Project.class, qm.getObjectById(Project.class, project.getId()).getId());
                 String content = "A " + vexFormat.getFormatShortName() + " VEX was consumed and will be processed";
                 Object subject = new VexConsumedOrProcessed(copyOfProject, Base64.getEncoder().encodeToString(vexBytes), vexFormat, vexSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(), NotificationScope.PORTFOLIO, NotificationGroup.VEX_CONSUMED, NotificationConstants.Title.VEX_CONSUMED, content, NotificationLevel.INFORMATIONAL, subject);
+                eventDispatcher.dispatchNotification(new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.VEX_CONSUMED)
+                        .level(NotificationLevel.INFORMATIONAL)
+                        .title(NotificationConstants.Title.VEX_CONSUMED)
+                        .content(content)
+                        .subject(subject));
                 qm.createVex(project, new Date(), vexFormat, vexSpecVersion, vexVersion, serialNumnber);
 
                 final Project detachedProject = qm.detach(Project.class, project.getId());
                 content = "A " + vexFormat.getFormatShortName() + " VEX was processed";
                 subject = new VexConsumedOrProcessed(detachedProject, Base64.getEncoder().encodeToString(vexBytes), vexFormat, vexSpecVersion);
-                NotificationUtil.dispatchNotificationsWithSubject(project.getUuid(), NotificationScope.PORTFOLIO, NotificationGroup.VEX_PROCESSED, NotificationConstants.Title.VEX_PROCESSED, content, NotificationLevel.INFORMATIONAL, subject);
-
-
+                eventDispatcher.dispatchNotification(new Notification()
+                        .scope(NotificationScope.PORTFOLIO)
+                        .group(NotificationGroup.VEX_PROCESSED)
+                        .level(NotificationLevel.INFORMATIONAL)
+                        .title(NotificationConstants.Title.VEX_PROCESSED)
+                        .content(content)
+                        .subject(subject));
             } catch (Exception ex) {
                 LOGGER.error("Error while processing vex", ex);
             }
