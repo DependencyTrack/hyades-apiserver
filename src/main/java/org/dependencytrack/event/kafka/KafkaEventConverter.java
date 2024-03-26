@@ -57,7 +57,7 @@ import static org.apache.commons.lang3.ObjectUtils.requireNonEmpty;
  * Utility class to convert {@link alpine.event.framework.Event}s and {@link alpine.notification.Notification}s
  * to {@link KafkaEvent}s.
  */
-final class KafkaEventConverter {
+public final class KafkaEventConverter {
 
     private KafkaEventConverter() {
     }
@@ -78,7 +78,7 @@ final class KafkaEventConverter {
         return convert(protoNotification);
     }
 
-    static KafkaEvent<?, ?> convert(final Notification notification) {
+    public static KafkaEvent<?, ?> convert(final Notification notification) {
         final Topic<String, Notification> topic = extractDestinationTopic(notification);
 
         final String recordKey;
