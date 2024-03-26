@@ -83,7 +83,7 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
         kafka.createTopic(TopicConfig
-                .withName(KafkaTopics.VULNERABILITY_MIRROR_EPSS.name())
+                .withName(KafkaTopics.NEW_EPSS.name())
                 .withNumberOfPartitions(3)
                 .withNumberOfReplicas(1));
 

@@ -55,7 +55,7 @@ public final class KafkaTopics {
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
 
     public static final Topic<String, Notification> NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
-    public static final Topic<String, EpssItem> VULNERABILITY_MIRROR_EPSS;
+    public static final Topic<String, EpssItem> NEW_EPSS;
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
@@ -79,7 +79,7 @@ public final class KafkaTopics {
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));
         NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE = new Topic<>("dtrack.notification.project-vuln-analysis-complete", Serdes.String(), NOTIFICATION_SERDE);
-        VULNERABILITY_MIRROR_EPSS = new Topic<>("dtrack.vulnerability.mirror.epss", Serdes.String(), new KafkaProtobufSerde<>(EpssItem.parser()));
+        NEW_EPSS = new Topic<>("dtrack.epss", Serdes.String(), new KafkaProtobufSerde<>(EpssItem.parser()));
     }
 
     public record Topic<K, V>(String name, Serde<K> keySerde, Serde<V> valueSerde) {
