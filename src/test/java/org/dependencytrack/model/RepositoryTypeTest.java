@@ -83,4 +83,29 @@ public class RepositoryTypeTest {
         PackageURL purl = new PackageURL("pkg:cpan/artifact@1.0.0");
         Assert.assertEquals(RepositoryType.CPAN, RepositoryType.resolve(purl));
     }
+
+    @Test
+    public void testResolveComposer() throws Exception {
+        final var purl = new PackageURL("pkg:composer/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.COMPOSER, RepositoryType.resolve(purl));
+    }
+
+    @Test
+    public void testResolveCargo() throws Exception {
+        final var purl = new PackageURL("pkg:cargo/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.CARGO, RepositoryType.resolve(purl));
+    }
+
+    @Test
+    public void testResolveGoModules() throws Exception {
+        final var purl = new PackageURL("pkg:golang/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.GO_MODULES, RepositoryType.resolve(purl));
+    }
+
+    @Test
+    public void testResolveGitHub() throws Exception {
+        final var purl = new PackageURL("pkg:github/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.GITHUB, RepositoryType.resolve(purl));
+    }
+
 } 
