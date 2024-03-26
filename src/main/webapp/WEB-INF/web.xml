@@ -50,9 +50,9 @@
     <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
     </listener>
-    <listener>
+    <!--<listener>
         <listener-class>org.dependencytrack.event.kafka.streams.KafkaStreamsInitializer</listener-class>
-    </listener>
+    </listener>-->
     <listener>
         <listener-class>org.dependencytrack.event.PurlMigrator</listener-class>
     </listener>

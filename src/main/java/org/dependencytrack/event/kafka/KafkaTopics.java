@@ -52,6 +52,7 @@ public final class KafkaTopics {
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
     public static final Topic<ScanKey, ScanResult> VULN_ANALYSIS_RESULT;
+    public static final Topic<String, ScanResult> VULN_ANALYSIS_RESULT_PROCESSED;
 
     public static final Topic<String, Notification> NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
@@ -76,6 +77,7 @@ public final class KafkaTopics {
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));
         VULN_ANALYSIS_RESULT = new Topic<>("dtrack.vuln-analysis.result", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanResult.parser()));
+        VULN_ANALYSIS_RESULT_PROCESSED = new Topic<>("dtrack.vuln-analysis.result.processed", Serdes.String(), new KafkaProtobufSerde<>(ScanResult.parser()));
         NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE = new Topic<>("dtrack.notification.project-vuln-analysis-complete", Serdes.String(), NOTIFICATION_SERDE);
     }
 
