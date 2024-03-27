@@ -52,27 +52,5 @@
             <column name="PERCENTILE" type="numeric"/>
             <column name="EPSS" type="numeric"/>
         </createTable>
-        <createTable tableName="VULNERABILITY_EPSS">
-            <column name="VULN_ID" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="EPSS_ID" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-<!--        <createIndex indexName="VULNERABILITY_EPSS_VULN_ID_IDX" tableName="VULNERABILITY_EPSS">-->
-<!--            <column name="VULN_ID"/>-->
-<!--        </createIndex>-->
-<!--        <createIndex indexName="VULNERABILITY_EPSS_EPSS_ID_IDX" tableName="VULNERABILITY_EPSS">-->
-<!--            <column name="EPSS_ID"/>-->
-<!--        </createIndex>-->
-<!--        <addForeignKeyConstraint baseColumnNames="VULN_ID" baseTableName="VULNERABILITY_EPSS"-->
-<!--                                 constraintName="VULNERABILITY_EPSS_VULN_FK" deferrable="true" initiallyDeferred="true"-->
-<!--                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"-->
-<!--                                 referencedTableName="VULNERABILITY" validate="true"/>-->
-<!--        <addForeignKeyConstraint baseColumnNames="EPSS_ID" baseTableName="VULNERABILITY_EPSS"-->
-<!--                                 constraintName="VULNERABILITY_EPSS_EPSS_FK" deferrable="true" initiallyDeferred="true"-->
-<!--                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"-->
-<!--                                 referencedTableName="EPSS" validate="true"/>-->
     </changeSet>
 </databaseChangeLog>
