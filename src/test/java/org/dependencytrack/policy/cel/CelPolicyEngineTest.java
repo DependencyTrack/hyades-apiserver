@@ -28,6 +28,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
@@ -238,6 +239,12 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         vulnAlias.setSonatypeId("SONATYPE-001");
         vulnAlias.setVulnDbId("VULNDB-001");
         qm.synchronizeVulnerabilityAlias(vulnAlias);
+
+        final var epss = new Epss();
+        epss.setCve("CVE-001");
+        epss.setEpss(BigDecimal.valueOf(0.6));
+        epss.setPercentile(BigDecimal.valueOf(0.2));
+        qm.synchronizeEpss(epss);
 
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.INFO);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """

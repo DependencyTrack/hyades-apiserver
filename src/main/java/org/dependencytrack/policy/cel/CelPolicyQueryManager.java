@@ -319,6 +319,12 @@ class CelPolicyQueryManager implements AutoCloseable {
         if (protoFieldNames.contains("aliases")) {
             sqlSelectColumns += ", \"aliasesJson\"";
         }
+        if (protoFieldNames.contains("epss_score")) {
+            sqlSelectColumns += ", \"EP\".\"EPSS\" AS \"epssScore\"";
+        }
+        if (protoFieldNames.contains("epss_percentile")) {
+            sqlSelectColumns += ", \"EP\".\"PERCENTILE\" AS \"epssPercentile\"";
+        }
 
         final Query<?> query = pm.newQuery(Query.SQL, """
                 SELECT DISTINCT
@@ -353,12 +359,14 @@ class CelPolicyQueryManager implements AutoCloseable {
                       OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
                       OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
                 ) AS "aliases" ON :shouldFetchAliases
+                LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE" AND :shouldFetchEpss
                 WHERE
                   "C"."PROJECT_ID" = :projectId
                 """.formatted(sqlSelectColumns));
         query.setNamedParameters(Map.of(
                 "shouldFetchAliases", protoFieldNames.contains("aliases"),
-                "projectId", projectId
+                "projectId", projectId,
+                "shouldFetchEpss", protoFieldNames.contains("epss_score") || protoFieldNames.contains("epss_percentile")
         ));
         try {
             return List.copyOf(query.executeResultList(VulnerabilityProjection.class));
