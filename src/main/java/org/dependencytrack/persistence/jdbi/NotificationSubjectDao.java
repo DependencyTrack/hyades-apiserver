@@ -23,10 +23,12 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectBomConsumedOrProcessedRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerabilityRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerableDependencyRowReducer;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectProjectAuditChangeRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationVulnerabilityRowMapper;
+import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
 import org.dependencytrack.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
@@ -375,6 +377,33 @@ public interface NotificationSubjectDao extends SqlObject {
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
     Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid, AnalysisState analysisState, boolean isSuppressed);
+
+    @SqlQuery("""
+            SELECT "P"."UUID" AS "projectUuid"
+                 , "P"."NAME"        AS "projectName"
+                 , "P"."VERSION"     AS "projectVersion"
+                 , "P"."DESCRIPTION" AS "projectDescription"
+                 , "P"."PURL"        AS "projectPurl"
+                 , (SELECT ARRAY_AGG(DISTINCT "T"."NAME")
+                      FROM "TAG" AS "T"
+                     INNER JOIN "PROJECTS_TAGS" AS "PT"
+                        ON "PT"."TAG_ID" = "T"."ID"
+                     WHERE "PT"."PROJECT_ID" = "P"."ID"
+                   ) AS "projectTags"
+                 , 'CycloneDX'       AS "bomFormat"
+                 , '(Unknown)'       AS "bomSpecVersion"
+                 , '(Omitted)'       AS "bomContent"
+              FROM "VULNERABILITYSCAN" AS "VS"
+             INNER JOIN "PROJECT" AS "P"
+                ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
+             INNER JOIN "WORKFLOW_STATE" AS "WFS"
+                ON "WFS"."TOKEN" = "VS"."TOKEN"
+               AND "WFS"."STEP" = 'BOM_PROCESSING'
+               AND "WFS"."STATUS" = 'COMPLETED'
+             WHERE "VS"."TOKEN" = ANY(:tokens)
+            """)
+    @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
+    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<String> workflowTokens);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
