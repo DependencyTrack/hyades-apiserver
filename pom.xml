@@ -288,16 +288,7 @@
             <artifactId>kafka-clients</artifactId>
             <version>${lib.kafka.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
-            <version>${lib.kafka.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams-test-utils</artifactId>
-            <version>${lib.kafka.version}</version>
-        </dependency>
+
         <!-- shedlock dependencies -->
         <dependency>
             <groupId>net.javacrumbs.shedlock</groupId>
