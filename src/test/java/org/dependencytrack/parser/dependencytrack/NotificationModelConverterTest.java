@@ -33,11 +33,9 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
-import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.CweImporter;
@@ -54,8 +52,6 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysis;
 import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
@@ -83,7 +79,6 @@ import static org.dependencytrack.proto.notification.v1.Group.GROUP_NEW_VULNERAB
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_POLICY_VIOLATION;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_REPOSITORY;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_CONSUMED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_PROCESSED;
@@ -738,36 +733,4 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertThat(policyViolation.getTimestamp().getSeconds()).isEqualTo(1679326314);
     }
 
-    @Test
-    public void testConvertComponentVulnAnalysisCompleteSubject() throws Exception {
-        final var token = UUID.randomUUID();
-        final org.dependencytrack.model.Project project = createProject();
-        final org.dependencytrack.model.Component component = createComponent(project);
-        final org.dependencytrack.model.Vulnerability vulnerability = createVulnerability();
-        ComponentVulnAnalysisComplete componentVulnAnalysisComplete = new ComponentVulnAnalysisComplete(List.of(vulnerability), component);
-        final var alpineNotification = new alpine.notification.Notification();
-        alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
-        alpineNotification.setLevel(NotificationLevel.INFORMATIONAL);
-        alpineNotification.setGroup(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE.name());
-        alpineNotification.setTitle("Foo");
-        alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new ProjectVulnAnalysisComplete(token, project, List.of(componentVulnAnalysisComplete), ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED));
-
-        final Notification notification = NotificationModelConverter.convert(alpineNotification);
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_VULN_ANALYSIS_COMPLETE);
-        assertThat(notification.getTitle()).isEqualTo("Foo");
-        assertThat(notification.getContent()).isEqualTo("Bar");
-        assertThat(notification.getTimestamp().getSeconds()).isNotZero();
-        assertThat(notification.hasSubject()).isTrue();
-        assertThat(notification.getSubject().is(ProjectVulnAnalysisCompleteSubject.class)).isTrue();
-
-        final var subject = notification.getSubject().unpack(ProjectVulnAnalysisCompleteSubject.class);
-        assertProject(subject.getProject());
-        assertThat(subject.getToken()).isEqualTo(token.toString());
-        assertComponent(subject.getFindingsList().get(0).getComponent());
-        assertVulnerability(subject.getFindingsList().get(0).getVulnerabilities(0));
-        assertThat(subject.getStatus()).isEqualTo(ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED);
-    }
 }
