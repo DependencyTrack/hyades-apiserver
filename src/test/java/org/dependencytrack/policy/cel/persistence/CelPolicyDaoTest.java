@@ -27,6 +27,7 @@ import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
@@ -240,6 +241,12 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         alias.setCveId("CVE-001");
         alias.setGhsaId("GHSA-001");
         qm.synchronizeVulnerabilityAlias(alias);
+
+        final var epss = new Epss();
+        epss.setCve("CVE-001");
+        epss.setEpss(BigDecimal.valueOf(0.6));
+        epss.setPercentile(BigDecimal.valueOf(0.2));
+        qm.synchronizeEpss(epss);
 
         final var requirements = new HashSetValuedHashMap<Type, String>();
         requirements.putAll(TYPE_VULNERABILITY, org.dependencytrack.proto.policy.v1.Vulnerability.getDescriptor().getFields().stream()
