@@ -37,21 +37,14 @@ public interface WorkflowDao {
                  , "UPDATED_AT" = NOW()
              WHERE "TOKEN" = :token
                AND "STEP" = :step
-            RETURNING "ID"
-                     , "PARENT_STEP_ID"
-                     , "TOKEN"
-                     , "STEP"
-                     , "STATUS"
-                     , "FAILURE_REASON"
-                     , "STARTED_AT"
-                     , "UPDATED_AT"
+            RETURNING *
             """)
-    @GetGeneratedKeys({"ID", "PARENT_STEP_ID", "TOKEN", "STEP", "STATUS", "FAILURE_REASON", "STARTED_AT", "UPDATED_AT"})
+    @GetGeneratedKeys("*")
     @RegisterBeanMapper(WorkflowState.class)
-    List<WorkflowState> updateAllSteps(@Bind WorkflowStep step,
-                                       @Bind("token") List<String> tokens,
-                                       @Bind("status") List<WorkflowStatus> statuses,
-                                       @Bind("failureReason") List<String> failureReasons);
+    List<WorkflowState> updateAllStates(@Bind WorkflowStep step,
+                                        @Bind("token") List<String> tokens,
+                                        @Bind("status") List<WorkflowStatus> statuses,
+                                        @Bind("failureReason") List<String> failureReasons);
 
     @SqlBatch("""
             WITH RECURSIVE
