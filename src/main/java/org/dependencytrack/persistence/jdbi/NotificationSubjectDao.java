@@ -393,7 +393,7 @@ public interface NotificationSubjectDao extends SqlObject {
                      WHERE "PT"."PROJECT_ID" = "P"."ID"
                    ) AS "projectTags"
                  , 'CycloneDX'       AS "bomFormat"
-                 , '(Unknown)'       AS "bomSpecVersion"
+                 , 'Unknown'         AS "bomSpecVersion"
                  , '(Omitted)'       AS "bomContent"
                  , "WFS"."TOKEN"     AS "token"
               FROM "VULNERABILITYSCAN" AS "VS"
