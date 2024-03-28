@@ -48,8 +48,6 @@ public class WorkflowState implements Serializable {
     @Column(name = "PARENT_STEP_ID" , allowsNull = "true")
     private WorkflowState parent;
 
-    private transient long parentId;
-
     @Persistent
     @Column(name = "TOKEN", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
     @NotNull
@@ -93,14 +91,6 @@ public class WorkflowState implements Serializable {
 
     public void setParent(WorkflowState parent) {
         this.parent = parent;
-    }
-
-    public long getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(long parentId) {
-        this.parentId = parentId;
     }
 
     public UUID getToken() {
