@@ -47,6 +47,23 @@ public interface WorkflowDao {
                                         @Bind("failureReason") List<String> failureReasons);
 
     @SqlBatch("""
+            UPDATE "WORKFLOW_STATE"
+               SET "STATUS" = :status
+                 , "FAILURE_REASON" = :failureReason
+                 , "UPDATED_AT" = NOW()
+             WHERE "TOKEN" = :token
+               AND "STEP" = :step
+               AND "STATUS" = 'PENDING'
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterBeanMapper(WorkflowState.class)
+    List<WorkflowState> updateAllStatesIfPending(@Bind WorkflowStep step,
+                                                 @Bind("token") List<String> tokens,
+                                                 @Bind("status") List<WorkflowStatus> statuses,
+                                                 @Bind("failureReason") List<String> failureReasons);
+
+    @SqlBatch("""
             WITH RECURSIVE
             "CTE_PARENT" ("ID") AS (
               SELECT "ID"
