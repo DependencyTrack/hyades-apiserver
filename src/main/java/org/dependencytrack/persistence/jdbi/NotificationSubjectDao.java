@@ -21,6 +21,7 @@ package org.dependencytrack.persistence.jdbi;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.persistence.jdbi.mapping.NotificationBomRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectBomConsumedOrProcessedRowMapper;
@@ -56,6 +57,7 @@ import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatu
 import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
 
 @RegisterRowMappers({
+        @RegisterRowMapper(NotificationBomRowMapper.class),
         @RegisterRowMapper(NotificationComponentRowMapper.class),
         @RegisterRowMapper(NotificationProjectRowMapper.class),
         @RegisterRowMapper(NotificationVulnerabilityRowMapper.class)
@@ -393,6 +395,7 @@ public interface NotificationSubjectDao extends SqlObject {
                  , 'CycloneDX'       AS "bomFormat"
                  , '(Unknown)'       AS "bomSpecVersion"
                  , '(Omitted)'       AS "bomContent"
+                 , "WFS"."TOKEN"     AS "token"
               FROM "VULNERABILITYSCAN" AS "VS"
              INNER JOIN "PROJECT" AS "P"
                 ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
@@ -400,7 +403,7 @@ public interface NotificationSubjectDao extends SqlObject {
                 ON "WFS"."TOKEN" = "VS"."TOKEN"
                AND "WFS"."STEP" = 'BOM_PROCESSING'
                AND "WFS"."STATUS" = 'COMPLETED'
-             WHERE "VS"."TOKEN" = ANY(:tokens)
+             WHERE "VS"."TOKEN" = ANY(:workflowTokens)
             """)
     @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
     List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<String> workflowTokens);
