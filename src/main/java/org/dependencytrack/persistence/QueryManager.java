@@ -1928,4 +1928,8 @@ public class QueryManager extends AlpineQueryManager {
     public Epss getEpssByCveId(String cveId) {
         return getEpssQueryManager().getEpssByCveId(cveId);
     }
+
+    public List<Epss> getEpssForCveIds(List<String> cveIds) {
+        return getEpssQueryManager().getEpssForCveIds(cveIds);
+    }
 }

@@ -22,6 +22,7 @@ import org.dependencytrack.model.Epss;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.util.List;
 
 final class EpssQueryManager extends QueryManager implements IQueryManager {
 
@@ -69,5 +70,16 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
         final Query<Epss> query = pm.newQuery(Epss.class, "cve == :cveId");
         query.setRange(0, 1);
         return singleResult(query.execute(cveId));
+    }
+
+    /**
+     * Returns a list of Epss records matching list of CVE ids.
+     * @param cveIds List of CVE ids to match
+     * @return the matching list of Epss, or null if not found
+     */
+    public List<Epss> getEpssForCveIds(List<String> cveIds) {
+        final Query<Epss> query = pm.newQuery(Epss.class);
+        query.setFilter(":cveList.contains(cve)");
+        return (List<Epss>) query.execute(cveIds);
     }
 }

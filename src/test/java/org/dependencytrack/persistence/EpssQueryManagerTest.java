@@ -23,6 +23,7 @@ import org.dependencytrack.model.Epss;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -82,6 +83,32 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
                 epssSynchronized -> {
                     assertThat(epssSynchronized.getEpss()).isEqualByComparingTo("0.01");
                     assertThat(epssSynchronized.getPercentile()).isEqualByComparingTo("0.02");
+                }
+        );
+    }
+
+    @Test
+    public void testGetEpssForCveIds() {
+        Epss epss1 = new Epss();
+        epss1.setCve("CVE-000");
+        epss1.setEpss(BigDecimal.valueOf(0.01));
+        epss1.setPercentile(BigDecimal.valueOf(0.02));
+        Epss epss2 = new Epss();
+        epss2.setCve("CVE-999");
+        epss2.setEpss(BigDecimal.valueOf(0.08));
+        epss2.setPercentile(BigDecimal.valueOf(0.09));
+        qm.persist(List.of(epss1, epss2));
+
+        assertThat(qm.getEpssForCveIds(List.of("CVE-000", "CVE-999"))).satisfiesExactlyInAnyOrder(
+                epssRecord -> {
+                    assertThat(epssRecord.getCve()).isEqualTo("CVE-000");
+                    assertThat(epssRecord.getEpss()).isEqualByComparingTo("0.01");
+                    assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.02");
+                },
+                epssRecord -> {
+                    assertThat(epssRecord.getCve()).isEqualTo("CVE-999");
+                    assertThat(epssRecord.getEpss()).isEqualByComparingTo("0.08");
+                    assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.09");
                 }
         );
     }
