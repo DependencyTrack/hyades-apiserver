@@ -30,11 +30,9 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
-import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.parser.common.resolver.CweResolver;
@@ -42,7 +40,6 @@ import org.dependencytrack.proto.notification.v1.BackReference;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
-import org.dependencytrack.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.proto.notification.v1.Group;
 import org.dependencytrack.proto.notification.v1.Level;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
@@ -55,7 +52,6 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysis;
 import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 import org.dependencytrack.proto.notification.v1.Scope;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
@@ -66,7 +62,6 @@ import org.dependencytrack.util.VulnerabilityUtil;
 import java.math.BigDecimal;
 import java.time.ZoneOffset;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -185,8 +180,6 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
             return Optional.of(Any.pack(convert(pvi)));
-        } else if (subject instanceof final ProjectVulnAnalysisComplete pac) {
-            return Optional.of(Any.pack(convert(pac)));
         } else if (subject instanceof final org.dependencytrack.model.Project p) {
             return Optional.of(Any.pack(convert(p)));
         }
@@ -321,26 +314,6 @@ public final class NotificationModelConverter {
                 .map(Tag::getName)
                 .forEach(builder::addTags);
 
-        return builder.build();
-    }
-
-    private static ComponentVulnAnalysisCompleteSubject convert(ComponentVulnAnalysisComplete componentVulnAnalysisComplete) {
-
-        Component component = convert(componentVulnAnalysisComplete.getComponent());
-        ComponentVulnAnalysisCompleteSubject.Builder builder = ComponentVulnAnalysisCompleteSubject.newBuilder();
-        builder.setComponent(component);
-        List<Vulnerability> vulnerabilities = componentVulnAnalysisComplete.getVulnerabilityList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllVulnerabilities(vulnerabilities);
-        return builder.build();
-    }
-
-    private static ProjectVulnAnalysisCompleteSubject convert(ProjectVulnAnalysisComplete notification) {
-        ProjectVulnAnalysisCompleteSubject.Builder builder = ProjectVulnAnalysisCompleteSubject.newBuilder();
-        builder.setToken(notification.getToken().toString());
-        builder.setProject(convert(notification.getProject()));
-        List<ComponentVulnAnalysisCompleteSubject> componentAnalysisCompleteSubjects = notification.getComponentAnalysisCompleteList().stream().map(NotificationModelConverter::convert).toList();
-        builder.addAllFindings(componentAnalysisCompleteSubjects);
-        builder.setStatus(notification.getStatus());
         return builder.build();
     }
 
