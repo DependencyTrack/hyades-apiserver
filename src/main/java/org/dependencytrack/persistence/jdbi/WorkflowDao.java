@@ -25,8 +25,13 @@ import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public interface WorkflowDao {
 
@@ -46,22 +51,28 @@ public interface WorkflowDao {
                                         @Bind("status") List<WorkflowStatus> statuses,
                                         @Bind("failureReason") List<String> failureReasons);
 
-    @SqlBatch("""
-            UPDATE "WORKFLOW_STATE"
-               SET "STATUS" = :status
-                 , "FAILURE_REASON" = :failureReason
-                 , "UPDATED_AT" = NOW()
-             WHERE "TOKEN" = :token
-               AND "STEP" = :step
-               AND "STATUS" = 'PENDING'
-            RETURNING *
+    default Optional<WorkflowState> updateState(final WorkflowStep step,
+                                                final String token,
+                                                final WorkflowStatus status,
+                                                final String failureReason) {
+        final List<WorkflowState> updatedStates = updateAllStates(step, List.of(token), List.of(status), Collections.singletonList(failureReason));
+        if (updatedStates.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(updatedStates.getFirst());
+    }
+
+    @SqlQuery("""
+            SELECT "TOKEN"
+              FROM "WORKFLOW_STATE"
+             WHERE "STEP" = :step
+               AND "STATUS" = :status
+               AND "TOKEN" = ANY(:tokens)
             """)
-    @GetGeneratedKeys("*")
-    @RegisterBeanMapper(WorkflowState.class)
-    List<WorkflowState> updateAllStatesIfPending(@Bind WorkflowStep step,
-                                                 @Bind("token") List<String> tokens,
-                                                 @Bind("status") List<WorkflowStatus> statuses,
-                                                 @Bind("failureReason") List<String> failureReasons);
+    Set<String> getTokensByStepAndStateAndTokenAnyOf(@Bind WorkflowStep step,
+                                                     @Bind WorkflowStatus status,
+                                                     @Bind Collection<String> tokens);
 
     @SqlBatch("""
             WITH RECURSIVE
