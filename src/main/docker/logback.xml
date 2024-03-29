@@ -69,7 +69,7 @@
         <appender-ref ref="EMBEDDED_SERVER" />
     </logger>
 
-    <logger name="org.apache.kafka" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
+    <logger name="org.apache.kafka" level="WARN" additivity="false">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="FILE" />
     </logger>
