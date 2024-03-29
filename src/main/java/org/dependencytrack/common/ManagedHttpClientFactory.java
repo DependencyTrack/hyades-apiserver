@@ -90,7 +90,7 @@ public final class ManagedHttpClientFactory {
                 + SystemUtil.getOsName() + "; "
                 + SystemUtil.getOsVersion()
                 + ") ManagedHttpClient/"
-                + Config.getInstance().getSystemUuid();
+                + ClusterInfo.getClusterId();
     }
 
     private ManagedHttpClientFactory() { }

@@ -38,6 +38,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Arrays;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Override
@@ -213,6 +215,30 @@ public class ConfigPropertyResourceTest extends ResourceTest {
     }
 
     @Test
+    public void updateConfigPropertyReadOnlyTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getGroupName(),
+                ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getPropertyName(),
+                ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getDefaultPropertyValue(),
+                ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getPropertyType(),
+                ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getDescription()
+        );
+
+        final Response response = target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity("""
+                        {
+                          "groupName": "internal",
+                          "propertyName": "cluster.id",
+                          "propertyValue": "foobar"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("The property internal.cluster.id can not be modified");
+    }
+
+    @Test
     public void updateConfigPropertiesAggregateTest() {
         ConfigProperty prop1 = qm.createConfigProperty("my.group", "my.string1", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty prop2 = qm.createConfigProperty("my.group", "my.string2", "DEF", IConfigProperty.PropertyType.STRING, "A string");
@@ -239,4 +265,5 @@ public class ConfigPropertyResourceTest extends ResourceTest {
         String body = json.getString(3);
         Assert.assertEquals("A Task scheduler cadence ("+prop4.getPropertyName()+") cannot be inferior to one hour.A value of -2 was provided.", body);
     }
+
 }
