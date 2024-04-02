@@ -19,17 +19,11 @@
 package org.dependencytrack.event.kafka.processor;
 
 import org.dependencytrack.proto.mirror.v1.EpssItem;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class EpssMirrorProcessorTest extends AbstractProcessorTest {
-
-    @Before
-    public void before() throws Exception {
-        super.before();
-    }
 
     @Test
     public void testProcessEpssRecord() {
@@ -44,7 +38,7 @@ public class EpssMirrorProcessorTest extends AbstractProcessorTest {
     }
 
     @Test
-    public void testProcessEpssRecordd() {
+    public void testProcessNullEpssRecord() {
         final var processor = new EpssMirrorProcessor();
         processor.process(aConsumerRecord("CVE-333", EpssItem.newBuilder().build()).build());
         final var epss = qm.getEpssByCveId("CVE-333");

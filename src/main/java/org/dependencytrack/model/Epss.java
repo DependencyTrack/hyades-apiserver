@@ -50,7 +50,7 @@ public class Epss implements Serializable {
 
     @Persistent
     @Column(name = "PERCENTILE", scale = 5)
-    private BigDecimal Percentile;
+    private BigDecimal percentile;
 
     public long getId() {
         return id;
@@ -77,10 +77,10 @@ public class Epss implements Serializable {
     }
 
     public BigDecimal getPercentile() {
-        return Percentile;
+        return percentile;
     }
 
     public void setPercentile(BigDecimal percentile) {
-        Percentile = percentile;
+        this.percentile = percentile;
     }
 }

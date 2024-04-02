@@ -52,5 +52,8 @@
             <column name="PERCENTILE" type="numeric"/>
             <column name="SCORE" type="numeric"/>
         </createTable>
+        <createIndex indexName="EPSS_CVE_IDX" tableName="EPSS" unique="true">
+            <column name="CVE"/>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>
