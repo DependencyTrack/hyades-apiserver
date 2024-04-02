@@ -45,8 +45,8 @@ public class Epss implements Serializable {
     private String cve;
 
     @Persistent
-    @Column(name = "EPSS", scale = 5)
-    private BigDecimal epss;
+    @Column(name = "SCORE", scale = 5)
+    private BigDecimal score;
 
     @Persistent
     @Column(name = "PERCENTILE", scale = 5)
@@ -68,12 +68,12 @@ public class Epss implements Serializable {
         this.cve = cve;
     }
 
-    public BigDecimal getEpss() {
-        return epss;
+    public BigDecimal getScore() {
+        return score;
     }
 
-    public void setEpss(BigDecimal epss) {
-        this.epss = epss;
+    public void setScore(BigDecimal score) {
+        this.score = score;
     }
 
     public BigDecimal getPercentile() {

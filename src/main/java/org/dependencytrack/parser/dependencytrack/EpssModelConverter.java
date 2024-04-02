@@ -28,7 +28,7 @@ public final class EpssModelConverter {
     public static Epss convert(final EpssItem epssItem) {
         final Epss epss = new Epss();
         epss.setCve(epssItem.getCve());
-        epss.setEpss(BigDecimal.valueOf(epssItem.getEpss()));
+        epss.setScore(BigDecimal.valueOf(epssItem.getEpss()));
         epss.setPercentile(BigDecimal.valueOf(epssItem.getPercentile()));
         return epss;
     }

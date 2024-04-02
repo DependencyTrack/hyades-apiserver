@@ -48,7 +48,7 @@ public class PolicyProtoMapperTest extends PersistenceCapableTest {
 
         final var epss = new Epss();
         epss.setCve("CVE-100");
-        epss.setEpss(BigDecimal.valueOf(0.6));
+        epss.setScore(BigDecimal.valueOf(0.6));
         epss.setPercentile(BigDecimal.valueOf(0.7));
 
         final var vuln = new Vulnerability();

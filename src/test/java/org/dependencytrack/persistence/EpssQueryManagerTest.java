@@ -33,13 +33,13 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
     public void testGetEpssByCveId() {
         Epss epss = new Epss();
         epss.setCve("CVE-000");
-        epss.setEpss(BigDecimal.valueOf(0.01));
+        epss.setScore(BigDecimal.valueOf(0.01));
         epss.setPercentile(BigDecimal.valueOf(0.02));
         qm.persist(epss);
 
         assertThat(qm.getEpssByCveId("CVE-000")).satisfies(
                 epssRecord -> {
-                    assertThat(epssRecord.getEpss()).isEqualByComparingTo("0.01");
+                    assertThat(epssRecord.getScore()).isEqualByComparingTo("0.01");
                     assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.02");
                 }
         );
@@ -54,19 +54,19 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
     public void testExistingEpssIsSynchronized() {
         Epss epss = new Epss();
         epss.setCve("CVE-000");
-        epss.setEpss(BigDecimal.valueOf(0.01));
+        epss.setScore(BigDecimal.valueOf(0.01));
         epss.setPercentile(BigDecimal.valueOf(0.02));
         qm.persist(epss);
 
         Epss epssNew = new Epss();
         epssNew.setCve("CVE-000");
-        epssNew.setEpss(BigDecimal.valueOf(0.01));
+        epssNew.setScore(BigDecimal.valueOf(0.01));
         epssNew.setPercentile(BigDecimal.valueOf(1.02));
         qm.synchronizeEpss(epssNew);
 
         assertThat(qm.getEpssByCveId("CVE-000")).satisfies(
                 epssSynchronized -> {
-                    assertThat(epssSynchronized.getEpss()).isEqualByComparingTo("0.01");
+                    assertThat(epssSynchronized.getScore()).isEqualByComparingTo("0.01");
                     assertThat(epssSynchronized.getPercentile()).isEqualByComparingTo("1.02");
                 }
         );
@@ -76,12 +76,12 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
     public void testNewEpssIsSynchronized() {
         Epss epss = new Epss();
         epss.setCve("CVE-000");
-        epss.setEpss(BigDecimal.valueOf(0.01));
+        epss.setScore(BigDecimal.valueOf(0.01));
         epss.setPercentile(BigDecimal.valueOf(0.02));
         qm.synchronizeEpss(epss);
         assertThat(qm.getEpssByCveId("CVE-000")).satisfies(
                 epssSynchronized -> {
-                    assertThat(epssSynchronized.getEpss()).isEqualByComparingTo("0.01");
+                    assertThat(epssSynchronized.getScore()).isEqualByComparingTo("0.01");
                     assertThat(epssSynchronized.getPercentile()).isEqualByComparingTo("0.02");
                 }
         );
@@ -91,23 +91,23 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
     public void testGetEpssForCveIds() {
         Epss epss1 = new Epss();
         epss1.setCve("CVE-000");
-        epss1.setEpss(BigDecimal.valueOf(0.01));
+        epss1.setScore(BigDecimal.valueOf(0.01));
         epss1.setPercentile(BigDecimal.valueOf(0.02));
         Epss epss2 = new Epss();
         epss2.setCve("CVE-999");
-        epss2.setEpss(BigDecimal.valueOf(0.08));
+        epss2.setScore(BigDecimal.valueOf(0.08));
         epss2.setPercentile(BigDecimal.valueOf(0.09));
         qm.persist(List.of(epss1, epss2));
 
         assertThat(qm.getEpssForCveIds(List.of("CVE-000", "CVE-999"))).satisfiesExactlyInAnyOrder(
                 epssRecord -> {
                     assertThat(epssRecord.getCve()).isEqualTo("CVE-000");
-                    assertThat(epssRecord.getEpss()).isEqualByComparingTo("0.01");
+                    assertThat(epssRecord.getScore()).isEqualByComparingTo("0.01");
                     assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.02");
                 },
                 epssRecord -> {
                     assertThat(epssRecord.getCve()).isEqualTo("CVE-999");
-                    assertThat(epssRecord.getEpss()).isEqualByComparingTo("0.08");
+                    assertThat(epssRecord.getScore()).isEqualByComparingTo("0.08");
                     assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.09");
                 }
         );

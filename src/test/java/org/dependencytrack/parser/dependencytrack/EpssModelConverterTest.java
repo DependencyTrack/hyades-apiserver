@@ -33,7 +33,7 @@ public class EpssModelConverterTest extends PersistenceCapableTest {
                 .setEpss(2.2).setPercentile(3.3).build();
         final Epss epssConverted = EpssModelConverter.convert(epssItemInput);
         assertThat(epssConverted.getCve()).isEqualTo("CVE-111");
-        assertThat(epssConverted.getEpss()).isEqualByComparingTo("2.2");
+        assertThat(epssConverted.getScore()).isEqualByComparingTo("2.2");
         assertThat(epssConverted.getPercentile()).isEqualByComparingTo("3.3");
     }
 }

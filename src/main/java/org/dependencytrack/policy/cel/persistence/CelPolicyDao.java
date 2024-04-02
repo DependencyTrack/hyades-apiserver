@@ -154,7 +154,7 @@ public interface CelPolicyDao {
                     OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
               ) AS "aliases" ON TRUE
             </#if>
-            <#if fetchColumns?seq_contains("\\"EP\\".\\"EPSS\\" AS \\"epss_score\\"") || fetchColumns?seq_contains("\\"EP\\".\\"PERCENTILE\\" AS \\"epss_percentile\\"")>
+            <#if fetchColumns?seq_contains("\\"EP\\".\\"SCORE\\" AS \\"epss_score\\"") || fetchColumns?seq_contains("\\"EP\\".\\"PERCENTILE\\" AS \\"epss_percentile\\"")>
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE"
             </#if>
             WHERE
@@ -268,7 +268,7 @@ public interface CelPolicyDao {
             sqlSelectColumns.add("\"aliases\"");
         }
         if (fieldsToLoad.contains("epss_score")) {
-            sqlSelectColumns.add("\"EP\".\"EPSS\" AS \"epss_score\"");
+            sqlSelectColumns.add("\"EP\".\"SCORE\" AS \"epss_score\"");
         }
         if (fieldsToLoad.contains("epss_percentile")) {
             sqlSelectColumns.add("\"EP\".\"PERCENTILE\" AS \"epss_percentile\"");

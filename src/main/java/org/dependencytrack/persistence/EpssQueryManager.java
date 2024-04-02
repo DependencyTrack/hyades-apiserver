@@ -54,7 +54,7 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
     private Epss updateEpss(Epss epss) {
         var epssExisting = getEpssByCveId(epss.getCve());
         if (epssExisting != null) {
-            epssExisting.setEpss(epss.getEpss());
+            epssExisting.setScore(epss.getScore());
             epssExisting.setPercentile(epss.getPercentile());
             return epssExisting;
         }

@@ -244,7 +244,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
 
         final var epss = new Epss();
         epss.setCve("CVE-001");
-        epss.setEpss(BigDecimal.valueOf(0.6));
+        epss.setScore(BigDecimal.valueOf(0.6));
         epss.setPercentile(BigDecimal.valueOf(0.2));
         qm.synchronizeEpss(epss);
 

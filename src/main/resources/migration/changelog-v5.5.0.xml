@@ -50,7 +50,7 @@
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="PERCENTILE" type="numeric"/>
-            <column name="EPSS" type="numeric"/>
+            <column name="SCORE" type="numeric"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

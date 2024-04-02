@@ -320,7 +320,7 @@ class CelPolicyQueryManager implements AutoCloseable {
             sqlSelectColumns += ", \"aliasesJson\"";
         }
         if (protoFieldNames.contains("epss_score")) {
-            sqlSelectColumns += ", \"EP\".\"EPSS\" AS \"epssScore\"";
+            sqlSelectColumns += ", \"EP\".\"SCORE\" AS \"epssScore\"";
         }
         if (protoFieldNames.contains("epss_percentile")) {
             sqlSelectColumns += ", \"EP\".\"PERCENTILE\" AS \"epssPercentile\"";

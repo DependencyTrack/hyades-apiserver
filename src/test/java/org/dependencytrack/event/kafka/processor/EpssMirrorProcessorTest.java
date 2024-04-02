@@ -39,7 +39,7 @@ public class EpssMirrorProcessorTest extends AbstractProcessorTest {
         processor.process(aConsumerRecord("CVE-333", epssRecord).build());
         final var epss = qm.getEpssByCveId("CVE-333");
         assertThat(epss).isNotNull();
-        assertThat(epss.getEpss()).isEqualByComparingTo("2.3");
+        assertThat(epss.getScore()).isEqualByComparingTo("2.3");
         assertThat(epss.getPercentile()).isEqualByComparingTo("5.6");
     }
 
