@@ -99,16 +99,14 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
         epss2.setPercentile(BigDecimal.valueOf(0.09));
         qm.persist(List.of(epss1, epss2));
 
-        assertThat(qm.getEpssForCveIds(List.of("CVE-000", "CVE-999"))).satisfiesExactlyInAnyOrder(
-                epssRecord -> {
-                    assertThat(epssRecord.getCve()).isEqualTo("CVE-000");
-                    assertThat(epssRecord.getScore()).isEqualByComparingTo("0.01");
-                    assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.02");
-                },
-                epssRecord -> {
-                    assertThat(epssRecord.getCve()).isEqualTo("CVE-999");
-                    assertThat(epssRecord.getScore()).isEqualByComparingTo("0.08");
-                    assertThat(epssRecord.getPercentile()).isEqualByComparingTo("0.09");
+        assertThat(qm.getEpssForCveIds(List.of("CVE-000", "CVE-999"))).satisfies(
+                epssRecords -> {
+                    var value = epssRecords.get("CVE-000");
+                    assertThat(value.getScore()).isEqualByComparingTo("0.01");
+                    assertThat(value.getPercentile()).isEqualByComparingTo("0.02");
+                    value = epssRecords.get("CVE-999");
+                    assertThat(value.getScore()).isEqualByComparingTo("0.08");
+                    assertThat(value.getPercentile()).isEqualByComparingTo("0.09");
                 }
         );
     }
