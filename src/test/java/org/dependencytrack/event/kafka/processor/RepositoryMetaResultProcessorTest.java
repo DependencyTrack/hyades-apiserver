@@ -16,18 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event.kafka.streams.processor;
+package org.dependencytrack.event.kafka.processor;
 
 import com.google.protobuf.Timestamp;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.streams.TestInputTopic;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.TopologyTestDriver;
-import org.apache.kafka.streams.test.TestRecord;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
-import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -37,7 +28,6 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 import org.dependencytrack.proto.repometaanalysis.v1.IntegrityMeta;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -52,37 +42,20 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
+public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
-    private TopologyTestDriver testDriver;
-    private TestInputTopic<String, AnalysisResult> inputTopic;
-
     @Before
-    public void setUp() {
+    public void before() throws Exception {
+        super.before();
+
         environmentVariables.set("INTEGRITY_CHECK_ENABLED", "true");
-        final var topology = new Topology();
-        topology.addSource("sourceProcessor",
-                new StringDeserializer(), new KafkaProtobufDeserializer<>(AnalysisResult.parser()), "input-topic");
-        topology.addProcessor("metaResultProcessor",
-                RepositoryMetaResultProcessor::new, "sourceProcessor");
-
-        testDriver = new TopologyTestDriver(topology);
-        inputTopic = testDriver.createInputTopic("input-topic",
-                new StringSerializer(), new KafkaProtobufSerializer<>());
-    }
-
-    @After
-    public void tearDown() {
-        if (testDriver != null) {
-            testDriver.close();
-        }
     }
 
     @Test
-    public void processNewMetaModelTest() {
+    public void processNewMetaModelTest() throws Exception {
         final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
 
         final var result = AnalysisResult.newBuilder()
@@ -93,7 +66,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setSeconds(published.getEpochSecond()))
                 .build();
 
-        inputTopic.pipeInput("pkg:maven/foo/bar", result);
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         final RepositoryMetaComponent metaComponent =
                 qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
@@ -106,14 +80,15 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processWithoutComponentDetailsTest() {
+    public void processWithoutComponentDetailsTest() throws Exception {
         final var result = AnalysisResult.newBuilder()
                 .setLatestVersion("1.2.4")
                 .setPublished(Timestamp.newBuilder()
                         .setSeconds(Instant.now().getEpochSecond()))
                 .build();
 
-        inputTopic.pipeInput("foo", result);
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         final Query<RepositoryMetaComponent> query = qm.getPersistenceManager().newQuery(RepositoryMetaComponent.class);
         query.setResult("count(this)");
@@ -122,7 +97,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateExistingMetaModelTest() {
+    public void processUpdateExistingMetaModelTest() throws Exception {
         final var metaComponent = new RepositoryMetaComponent();
         metaComponent.setRepositoryType(RepositoryType.MAVEN);
         metaComponent.setNamespace("foo");
@@ -142,7 +117,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setSeconds(published.getEpochSecond()))
                 .build();
 
-        inputTopic.pipeInput("pkg:maven/foo/bar", result);
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -154,7 +130,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateOutOfOrderMetaModelTest() {
+    public void processUpdateOutOfOrderMetaModelTest() throws Exception {
         final var testStartTime = new Date();
 
         final var metaComponent = new RepositoryMetaComponent();
@@ -177,7 +153,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                 .build();
 
         // Pipe in a record that was produced 10 seconds ago, 5 seconds before metaComponent's lastCheck.
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now().minusSeconds(10)));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).withTimestamp(Instant.now().minusSeconds(10)).build());
 
         qm.getPersistenceManager().refresh(metaComponent);
         assertThat(metaComponent).isNotNull();
@@ -190,7 +167,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateIntegrityResultTest() {
+    public void processUpdateIntegrityResultTest() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -222,7 +199,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -243,7 +221,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testIntegrityCheckWhenComponentHashIsMissing() {
+    public void testIntegrityCheckWhenComponentHashIsMissing() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -274,7 +252,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -293,7 +272,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testIntegrityAnalysisWillNotBePerformedIfNoIntegrityDataInResult() {
+    public void testIntegrityAnalysisWillNotBePerformedIfNoIntegrityDataInResult() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -324,14 +303,15 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNull();
     }
 
     @Test
-    public void testIntegrityCheckWillNotBeDoneIfComponentUuidAndIntegrityDataIsMissing() {
+    public void testIntegrityCheckWillNotBeDoneIfComponentUuidAndIntegrityDataIsMissing() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -362,14 +342,15 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                 //component uuid has not been set
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNull();
     }
 
     @Test
-    public void testIntegrityIfResultHasIntegrityDataAndComponentUuidIsMissing() {
+    public void testIntegrityIfResultHasIntegrityDataAndComponentUuidIsMissing() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -401,7 +382,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                 //component uuid has not been set
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(analysis).isNotNull();
@@ -411,7 +393,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
 
     @Test
-    public void testIntegrityCheckWillNotBeDoneIfComponentIsNotInDb() {
+    public void testIntegrityCheckWillNotBeDoneIfComponentIsNotInDb() throws Exception {
 
         UUID uuid = UUID.randomUUID();
 
@@ -431,14 +413,15 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
 
         IntegrityAnalysis analysis = qm.getIntegrityAnalysisByComponentUuid(uuid);
         assertThat(analysis).isNull();
     }
 
     @Test
-    public void testIntegrityCheckShouldReturnComponentHashMissing() {
+    public void testIntegrityCheckShouldReturnComponentHashMissing() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -468,7 +451,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -487,7 +471,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testIntegrityCheckShouldReturnComponentHashMissingAndMatchUnknown() {
+    public void testIntegrityCheckShouldReturnComponentHashMissingAndMatchUnknown() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -516,7 +500,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -533,7 +518,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testIntegrityCheckShouldFailIfNoHashMatch() {
+    public void testIntegrityCheckShouldFailIfNoHashMatch() throws Exception {
         // Create an active project with one component.
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
         final var componentProjectA = new Component();
@@ -566,7 +551,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -585,7 +571,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateIntegrityResultNotAvailableTest() {
+    public void processUpdateIntegrityResultNotAvailableTest() throws Exception {
         var integrityMetaComponent = new IntegrityMetaComponent();
         integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
         integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
@@ -600,7 +586,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                 .setIntegrityMeta(IntegrityMeta.newBuilder().setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -612,7 +599,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateOldIntegrityResultSent() {
+    public void processUpdateOldIntegrityResultSent() throws Exception {
 
         Date date = Date.from(Instant.now().minus(15, ChronoUnit.MINUTES));
         var integrityMetaComponent = new IntegrityMetaComponent();
@@ -631,7 +618,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setSha1("a94a8fe5ccb19ba61c4c0873d391e587982fbbd3").setMetaSourceUrl("test2").build())
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();
@@ -644,7 +632,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
 
 
     @Test
-    public void processBothMetaModelAndIntegrityMeta() {
+    public void processBothMetaModelAndIntegrityMeta() throws Exception {
         final var published = Instant.now().minus(5, ChronoUnit.MINUTES);
         var integrityMetaComponent = new IntegrityMetaComponent();
         integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
@@ -664,7 +652,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setMetaSourceUrl("test").build())
                 .build();
 
-        inputTopic.pipeInput("pkg:maven/foo/bar", result);
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         final RepositoryMetaComponent metaComponent =
                 qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar");
@@ -684,7 +673,7 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void processUpdateIntegrityResultNotSentTest() {
+    public void processUpdateIntegrityResultNotSentTest() throws Exception {
         var integrityMetaComponent = new IntegrityMetaComponent();
         integrityMetaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
         integrityMetaComponent.setStatus(FetchStatus.IN_PROGRESS);
@@ -698,7 +687,8 @@ public class RepositoryMetaResultProcessorTest extends PersistenceCapableTest {
                         .setPurl("pkg:maven/foo/bar@1.2.3"))
                 .build();
 
-        inputTopic.pipeInput(new TestRecord<>("pkg:maven/foo/bar@1.2.3", result, Instant.now()));
+        final var processor = new RepositoryMetaResultProcessor();
+        processor.process(aConsumerRecord("pkg:maven/foo/bar@1.2.3", result).build());
         qm.getPersistenceManager().refresh(integrityMetaComponent);
         integrityMetaComponent = qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3");
         assertThat(integrityMetaComponent).isNotNull();

@@ -44,8 +44,8 @@ public class EpssMirrorTask implements LoggableSubscriber {
      */
     public void inform(final Event e) {
         if (e instanceof EpssMirrorEvent && this.isEnabled) {
-                LOGGER.info("Starting EPSS mirroring task");
-                new KafkaEventDispatcher().dispatchBlocking(new EpssMirrorEvent());
+            LOGGER.info("Starting EPSS mirroring task");
+            new KafkaEventDispatcher().dispatchEvent(new EpssMirrorEvent()).join();
         }
     }
 }

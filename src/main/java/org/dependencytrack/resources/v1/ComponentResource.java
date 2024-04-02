@@ -426,7 +426,7 @@ public class ComponentResource extends AlpineResource {
             }
             final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
             qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
-            kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
+            kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
     }
@@ -540,7 +540,7 @@ public class ComponentResource extends AlpineResource {
                 }
                 final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
                 qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
-                kafkaEventDispatcher.dispatchBlocking(vulnAnalysisEvent);
+                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                 return Response.ok(component).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

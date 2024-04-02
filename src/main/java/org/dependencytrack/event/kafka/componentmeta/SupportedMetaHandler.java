@@ -47,21 +47,21 @@ public class SupportedMetaHandler extends AbstractMetaHandler {
         IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(componentProjection.purl().toString());
         if (persistentIntegrityMetaComponent == null) {
             IntegrityMetaComponent integrityMetaComponent = queryManager.createIntegrityMetaComponent(createIntegrityMetaComponent(componentProjection.purl().toString()));
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return integrityMetaComponent;
         }
         if (persistentIntegrityMetaComponent.getStatus() == PROCESSED || persistentIntegrityMetaComponent.getStatus() == NOT_AVAILABLE) {
             //only fetch the latest version because integrity data (hashes) is present
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
             return persistentIntegrityMetaComponent;
         }
         if (persistentIntegrityMetaComponent.getStatus() == null || (persistentIntegrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS && Date.from(Instant.now()).getTime() - persistentIntegrityMetaComponent.getLastFetch().getTime() > TIME_SPAN)) {
             persistentIntegrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             IntegrityMetaComponent updateIntegrityMetaComponent = queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return updateIntegrityMetaComponent;
         } else {
-            kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(componentProjection.componentUuid(), componentProjection.purl().canonicalize(), componentProjection.internal(), fetchMeta));
             return persistentIntegrityMetaComponent;
         }
     }

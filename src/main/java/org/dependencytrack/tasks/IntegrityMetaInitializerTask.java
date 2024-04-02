@@ -78,7 +78,7 @@ public class IntegrityMetaInitializerTask implements Subscriber {
                     }
                     LOGGER.debug("Dispatching purl for integrity metadata: " + integrityMetaComponent.getPurl());
                     //Initializer will not trigger Integrity Check on component so component uuid is not required
-                    kafkaEventDispatcher.dispatchAsync(new ComponentRepositoryMetaAnalysisEvent(null, integrityMetaComponent.getPurl(), componentProjection.internal(), FETCH_META_INTEGRITY_DATA));
+                    kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(null, integrityMetaComponent.getPurl(), componentProjection.internal(), FETCH_META_INTEGRITY_DATA));
                 }
             } catch (MalformedPackageURLException packageURLException) {
                 LOGGER.warn("Initializer cannot dispatch for integrity because purl cannot be parse: " + integrityMetaComponent.getPurl());

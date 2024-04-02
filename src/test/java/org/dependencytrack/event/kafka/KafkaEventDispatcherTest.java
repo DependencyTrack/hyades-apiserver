@@ -23,20 +23,24 @@ import alpine.notification.NotificationLevel;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -44,72 +48,193 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class KafkaEventDispatcherTest {
 
     private MockProducer<byte[], byte[]> mockProducer;
+    private KafkaEventDispatcher eventDispatcher;
 
     @Before
     public void setUp() {
-        mockProducer = new MockProducer<>(true, new ByteArraySerializer(), new ByteArraySerializer());
+        mockProducer = new MockProducer<>(false, new ByteArraySerializer(), new ByteArraySerializer());
+        eventDispatcher = new KafkaEventDispatcher(mockProducer);
     }
 
     @Test
-    public void testDispatchAsyncCallback() throws Exception {
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
-        component.setName("foobar");
-
-        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, false);
-        final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final var countDownLatch = new CountDownLatch(1);
-        dispatcher.dispatchAsync(event, (metadata, exception) -> countDownLatch.countDown());
-        assertThat(countDownLatch.await(5, TimeUnit.SECONDS)).isTrue();
+    public void testDispatchEventWithNull() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(null);
+        assertThat(mockProducer.completeNext()).isFalse();
+        assertThat(future).isCompletedWithValue(null);
     }
 
     @Test
-    public void testDispatchBlocking() {
-        final var component = new Component();
-        component.setUuid(UUID.randomUUID());
-        component.setName("foobar");
+    public void testDispatchEventWithComponentRepositoryMetaAnalysisEvent() {
+        final var event = new ComponentRepositoryMetaAnalysisEvent(UUID.randomUUID(),
+                "pkg:maven/foo/bar@1.2.3", /* internal */ false, FetchMeta.FETCH_META_LATEST_VERSION);
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(event);
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
-        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, false);
-
-        final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final RecordMetadata recordMeta = dispatcher.dispatchBlocking(event);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-        assertThat(mockProducer.history()).hasSize(1);
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+            assertThat(record.key()).asString().isEqualTo("pkg:maven/foo/bar@1.2.3");
+            assertThat(record.value()).isNotNull();
+            assertThat(record.headers()).isEmpty();
+        });
     }
 
     @Test
-    public void testDispatchBlockingMirrorEvents() {
-        final var eventOsv = new OsvMirrorEvent("npm");
-        var dispatcher = new KafkaEventDispatcher(mockProducer);
-        RecordMetadata recordMeta = dispatcher.dispatchBlocking(eventOsv);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
-        assertThat(mockProducer.history()).hasSize(1);
+    public void testDispatchEventWithComponentVulnerabilityAnalysisEvent() {
+        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), UUID.randomUUID(),
+                "purl", "cpe", "swidTagId", /* internal */ false,
+                VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, /* isNew */ true);
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(event);
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
-        final var eventNvd = new NistMirrorEvent();
-        dispatcher = new KafkaEventDispatcher(mockProducer);
-        recordMeta = dispatcher.dispatchBlocking(eventNvd);
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
-        assertThat(mockProducer.history()).hasSize(2);
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
+            assertThat(record.key()).isNotNull();
+            assertThat(record.value()).isNotNull();
+            assertThat(record.headers()).satisfiesExactlyInAnyOrder(
+                    header -> {
+                        assertThat(header.key()).isEqualTo(KafkaEventHeaders.VULN_ANALYSIS_LEVEL);
+                        assertThat(header.value()).asString().isEqualTo("BOM_UPLOAD_ANALYSIS");
+                    },
+                    header -> {
+                        assertThat(header.key()).isEqualTo(KafkaEventHeaders.IS_NEW_COMPONENT);
+                        assertThat(header.value()).asString().isEqualTo("true");
+                    }
+            );
+        });
     }
 
     @Test
-    public void testDispatchAsyncWithUnsupportedEvent() {
-        final var dispatcher = new KafkaEventDispatcher(mockProducer);
+    public void testDispatchEventWithGitHubAdvisoryMirrorEvent() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new GitHubAdvisoryMirrorEvent());
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
+
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.key()).asString().isEqualTo("GITHUB");
+            assertThat(record.value()).isNull();
+            assertThat(record.headers()).isEmpty();
+        });
+    }
+
+    @Test
+    public void testDispatchEventWithNistMirrorEvent() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new NistMirrorEvent());
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
+
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.key()).asString().isEqualTo("NVD");
+            assertThat(record.value()).isNull();
+            assertThat(record.headers()).isEmpty();
+        });
+    }
+
+    @Test
+    public void testDispatchEventWithOsvMirrorEvent() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new OsvMirrorEvent("Maven"));
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
+
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.key()).asString().isEqualTo("OSV");
+            assertThat(record.value()).asString().isEqualTo("Maven");
+            assertThat(record.headers()).isEmpty();
+        });
+    }
+
+    @Test
+    public void testDispatchEventWithUnsupportedType() {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> dispatcher.dispatchAsync(new PortfolioMetricsUpdateEvent()));
-        assertThat(mockProducer.history()).isEmpty();
+                .isThrownBy(() -> eventDispatcher.dispatchEvent(new PortfolioMetricsUpdateEvent()))
+                .withMessageStartingWith("Unable to convert event");
     }
 
     @Test
-    public void testDispatchAsyncNotification() throws Exception {
+    public void testDispatchEventWithException() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new NistMirrorEvent());
+        assertThat(mockProducer.errorNext(new IllegalStateException())).isTrue();
+        assertThat(future).isCompletedExceptionally();
+    }
+
+    @Test
+    public void testDispatchNotificationWithNull() {
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchNotification(null);
+        assertThat(mockProducer.completeNext()).isFalse();
+        assertThat(future).isCompletedWithValue(null);
+    }
+
+    @Test
+    public void testDispatchNotification() {
         final var notification = new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.NEW_VULNERABILITY)
+                .scope(NotificationScope.SYSTEM)
+                .group(NotificationGroup.ANALYZER)
+                .level(NotificationLevel.ERROR);
+        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchNotification(notification);
+        assertThat(mockProducer.completeNext()).isTrue();
+        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
+
+        assertThat(mockProducer.history()).satisfiesExactly(record -> {
+            assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_ANALYZER.name());
+            assertThat(record.key()).isNull();
+            assertThat(record.value()).isNotNull();
+            assertThat(record.headers()).isEmpty();
+        });
+    }
+
+    @Test
+    public void testDispatchNotificationWithoutGroup() {
+        final var notification = new Notification()
+                .scope(NotificationScope.SYSTEM)
+                .level(NotificationLevel.ERROR);
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
+                .withMessage("""
+                        Unable to determine destination topic because the notification does not \
+                        specify a notification group: GROUP_UNSPECIFIED""");
+    }
+
+    @Test
+    public void testDispatchNotificationWitMissingSubject() {
+        final var notification = new Notification()
+                .scope(NotificationScope.SYSTEM)
+                .group(NotificationGroup.BOM_CONSUMED)
                 .level(NotificationLevel.INFORMATIONAL);
 
-        final var dispatcher = new KafkaEventDispatcher(mockProducer);
-        final RecordMetadata recordMeta = dispatcher.dispatchAsync(UUID.randomUUID(), notification).get();
-        assertThat(recordMeta.topic()).isEqualTo(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name());
-        assertThat(mockProducer.history()).hasSize(1);
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
+                .withMessage("""
+                        Expected subject of type matching any of [class org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject], \
+                        but notification has no subject""");
     }
+
+    @Test
+    public void testDispatchNotificationWithSubjectMismatch() {
+        final var project = new Project();
+        project.setUuid(UUID.randomUUID());
+        project.setName("foo");
+
+        final var notification = new Notification()
+                .scope(NotificationScope.SYSTEM)
+                .group(NotificationGroup.BOM_CONSUMED)
+                .level(NotificationLevel.INFORMATIONAL)
+                .subject(project);
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
+                .withMessage("""
+                        Expected subject of type matching any of [class org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject], \
+                        but is type.googleapis.com/org.dependencytrack.notification.v1.Project""");
+    }
+
+    @Test
+    public void testDispatchAllNotificationProtosWithEmptyCollection() {
+        assertThat(eventDispatcher.dispatchAllNotificationProtos(Collections.emptyList())).isEmpty();
+    }
+
 }
