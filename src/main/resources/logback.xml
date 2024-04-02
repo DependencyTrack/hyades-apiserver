@@ -67,6 +67,11 @@
         <appender-ref ref="EMBEDDED_SERVER" />
     </logger>
 
+    <logger name="org.apache.kafka" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
+
     <root level="WARN">
         <appender-ref ref="FILE" />
         <appender-ref ref="SECURITY_CONSOLE" />

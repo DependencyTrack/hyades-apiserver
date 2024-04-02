@@ -29,7 +29,7 @@
         <appender-ref ref="JSON_STDOUT" />
     </logger>
 
-    <logger name="org.apache.kafka" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
+    <logger name="org.apache.kafka" level="WARN" additivity="false">
         <appender-ref ref="JSON_STDOUT" />
     </logger>
 
