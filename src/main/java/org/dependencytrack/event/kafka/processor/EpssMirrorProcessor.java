@@ -29,7 +29,7 @@ import org.dependencytrack.proto.mirror.v1.EpssItem;
 
 public class EpssMirrorProcessor implements Processor<String, EpssItem> {
 
-    public static final String PROCESSOR_NAME = "vuln.mirror";
+    public static final String PROCESSOR_NAME = "epss.mirror";
     private static final Logger LOGGER = Logger.getLogger(EpssMirrorProcessor.class);
 
     @Override
@@ -38,8 +38,7 @@ public class EpssMirrorProcessor implements Processor<String, EpssItem> {
             LOGGER.debug("Synchronizing Mirrored EPSS data for CVE : " + record.key());
             EpssItem epssItem = record.value();
             final Epss epss = EpssModelConverter.convert(epssItem);
-            final Epss synchronizedEpss = qm.synchronizeEpss(epss);
-            qm.persist(synchronizedEpss);
+            qm.synchronizeEpss(epss);
         }
     }
 }
