@@ -113,7 +113,7 @@ public class PolicyProtoMapper {
         maybeSet(asDouble(vuln.getOwaspRRLikelihoodScore()), protoBuilder::setOwaspRrLikelihoodScore);
         maybeSet(asDouble(vuln.getOwaspRRTechnicalImpactScore()), protoBuilder::setOwaspRrTechnicalImpactScore);
         maybeSet(vuln::getOwaspRRVector, protoBuilder::setOwaspRrVector);
-
+        // TODO: Add mapping with Epss score and percentile
         return protoBuilder.build();
     }
 

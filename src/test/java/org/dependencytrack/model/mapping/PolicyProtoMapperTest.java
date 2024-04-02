@@ -108,9 +108,7 @@ public class PolicyProtoMapperTest extends PersistenceCapableTest {
                           "owaspRrLikelihoodScore": 8.8,
                           "owaspRrTechnicalImpactScore": 9.9,
                           "owaspRrBusinessImpactScore": 7.7,
-                          "owaspRrVector": "owaspRrVector",
-                          "epssScore": 0.6,
-                          "epssPercentile": 0.7
+                          "owaspRrVector": "owaspRrVector"
                         }
                         """);
     }
