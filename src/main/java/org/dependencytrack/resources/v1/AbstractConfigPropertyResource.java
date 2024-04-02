@@ -24,6 +24,7 @@ import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import alpine.server.resources.AlpineResource;
+import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -55,6 +56,14 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
     }
 
     private Response updatePropertyValueInternal(IConfigProperty json, IConfigProperty property) {
+        final ConfigPropertyConstants wellKnownProperty = ConfigPropertyConstants.ofProperty(property);
+        if (wellKnownProperty != null && wellKnownProperty.getAccessMode() == ConfigPropertyAccessMode.READ_ONLY) {
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("The property %s.%s can not be modified".formatted(property.getGroupName(), property.getPropertyName()))
+                    .build();
+        }
+
         if (property.getPropertyType() == IConfigProperty.PropertyType.BOOLEAN) {
             property.setPropertyValue(String.valueOf(BooleanUtil.valueOf(json.getPropertyValue())));
         } else if (property.getPropertyType() == IConfigProperty.PropertyType.INTEGER) {

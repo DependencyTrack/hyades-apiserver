@@ -25,6 +25,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -33,6 +34,11 @@ public class ManagedHttpClientFactoryTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    @BeforeClass
+    public static void beforeClass() {
+        Config.enableUnitTests();
+    }
 
     @Before
     public void before() {

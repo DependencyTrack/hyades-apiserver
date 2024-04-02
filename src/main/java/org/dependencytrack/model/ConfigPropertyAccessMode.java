@@ -16,25 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.common;
+package org.dependencytrack.model;
 
-import alpine.Config;
-import io.jsonwebtoken.lang.Assert;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.junit.BeforeClass;
-import org.junit.Test;
+public enum ConfigPropertyAccessMode {
 
-public class HttpClientPoolTest {
+    READ_ONLY,
 
-    @BeforeClass
-    public static void beforeClass() {
-        Config.enableUnitTests();
-    }
-
-    @Test
-    public void getClientTest() {
-        CloseableHttpClient client = HttpClientPool.getClient();
-        Assert.notNull(client);
-    }
+    READ_WRITE
 
 }
