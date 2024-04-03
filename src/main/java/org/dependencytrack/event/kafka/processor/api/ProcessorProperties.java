@@ -36,6 +36,8 @@ final class ProcessorProperties {
     static final double PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT = 0.3;
     static final String PROPERTY_RETRY_MAX_DELAY_MS = "retry.max.delay.ms";
     static final long PROPERTY_RETRY_MAX_DELAY_MS_DEFAULT = 60 * 1000; // 60s
+    static final String PROPERTY_SHUTDOWN_TIMEOUT_MS = "shutdown.timeout.ms";
+    static final long PROPERTY_SHUTDOWN_TIMEOUT_MS_DEFAULT = 10 * 1000; // 10s
 
     private ProcessorProperties() {
     }

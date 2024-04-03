@@ -78,6 +78,8 @@ import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.
 import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.PROPERTY_RETRY_MULTIPLIER_DEFAULT;
 import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.PROPERTY_RETRY_RANDOMIZATION_FACTOR;
 import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.PROPERTY_RETRY_RANDOMIZATION_FACTOR_DEFAULT;
+import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.PROPERTY_SHUTDOWN_TIMEOUT_MS;
+import static org.dependencytrack.event.kafka.processor.api.ProcessorProperties.PROPERTY_SHUTDOWN_TIMEOUT_MS_DEFAULT;
 
 public class ProcessorManager implements AutoCloseable {
 
@@ -288,6 +290,11 @@ public class ProcessorManager implements AutoCloseable {
             final long delayMillis = retryIntervalFunction.apply(recordCtx.getNumberOfFailedAttempts());
             return Duration.ofMillis(delayMillis);
         });
+
+        final long shutdownTimeoutMs = Optional.ofNullable(properties.get(PROPERTY_SHUTDOWN_TIMEOUT_MS))
+                .map(Long::parseLong)
+                .orElse(PROPERTY_SHUTDOWN_TIMEOUT_MS_DEFAULT);
+        optionsBuilder.shutdownTimeout(Duration.ofMillis(shutdownTimeoutMs));
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             optionsBuilder
