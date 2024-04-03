@@ -20,25 +20,36 @@ package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.dependencytrack.event.kafka.processor.api.Processor;
+import org.dependencytrack.event.kafka.processor.api.BatchProcessor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.parser.dependencytrack.EpssModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 
+import java.util.ArrayList;
+import java.util.List;
 
-public class EpssMirrorProcessor implements Processor<String, EpssItem> {
+
+public class EpssMirrorProcessor implements BatchProcessor<String, EpssItem> {
 
     public static final String PROCESSOR_NAME = "epss.mirror";
     private static final Logger LOGGER = Logger.getLogger(EpssMirrorProcessor.class);
 
     @Override
-    public void process(ConsumerRecord<String, EpssItem> record) {
+    public void process(List<ConsumerRecord<String, EpssItem>> consumerRecords) throws ProcessingException {
         try (QueryManager qm = new QueryManager()) {
-            LOGGER.debug("Synchronizing Mirrored EPSS data for CVE : " + record.key());
-            EpssItem epssItem = record.value();
-            final Epss epss = EpssModelConverter.convert(epssItem);
-            qm.synchronizeEpss(epss);
+            LOGGER.debug("Synchronizing batch of %s mirrored EPSS records.".formatted(consumerRecords.size()));
+            List<Epss> epssList = new ArrayList<>();
+            consumerRecords.forEach(record -> {
+                EpssItem epssItem = record.value();
+                epssList.add(EpssModelConverter.convert(epssItem));
+            });
+            if (!epssList.isEmpty()) {
+                qm.synchronizeAllEpss(epssList);
+            }
+        } catch (Exception e) {
+            throw new ProcessingException(e);
         }
     }
 }

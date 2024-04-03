@@ -18,19 +18,22 @@
  */
 package org.dependencytrack.event.kafka.processor;
 
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 import org.junit.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class EpssMirrorProcessorTest extends AbstractProcessorTest {
 
     @Test
-    public void testProcessEpssRecord() {
+    public void testProcessEpssRecord() throws ProcessingException {
         final var epssRecord = EpssItem.newBuilder()
                 .setCve("CVE-333").setEpss(2.3).setPercentile(5.6).build();
         final var processor = new EpssMirrorProcessor();
-        processor.process(aConsumerRecord("CVE-333", epssRecord).build());
+        processor.process(List.of(aConsumerRecord("CVE-333", epssRecord).build()));
         final var epss = qm.getEpssByCveId("CVE-333");
         assertThat(epss).isNotNull();
         assertThat(epss.getScore()).isEqualByComparingTo("2.3");
@@ -38,9 +41,9 @@ public class EpssMirrorProcessorTest extends AbstractProcessorTest {
     }
 
     @Test
-    public void testProcessNullEpssRecord() {
+    public void testProcessNullEpssRecord() throws ProcessingException {
         final var processor = new EpssMirrorProcessor();
-        processor.process(aConsumerRecord("CVE-333", EpssItem.newBuilder().build()).build());
+        processor.process(List.of(aConsumerRecord("CVE-333", EpssItem.newBuilder().build()).build()));
         final var epss = qm.getEpssByCveId("CVE-333");
         assertThat(epss).isNull();
     }

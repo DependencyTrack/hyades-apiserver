@@ -53,6 +53,18 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
         return result;
     }
 
+    /**
+     * Synchronizes a batch of Epss records.
+     * @param epssList the batch of Epss records to synchronize
+     */
+    public void synchronizeAllEpss(List<Epss> epssList) {
+        for (final Epss epss : epssList) {
+            runInTransaction(() -> {
+                synchronizeEpss(epss);
+            });
+        }
+    }
+
     private Epss updateEpss(Epss epss) {
         var epssExisting = getEpssByCveId(epss.getCve());
         if (epssExisting != null) {

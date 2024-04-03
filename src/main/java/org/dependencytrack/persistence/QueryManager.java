@@ -1925,6 +1925,10 @@ public class QueryManager extends AlpineQueryManager {
         return getEpssQueryManager().synchronizeEpss(epss);
     }
 
+    public void synchronizeAllEpss(List<Epss> epssList) {
+        getEpssQueryManager().synchronizeAllEpss(epssList);
+    }
+
     public Epss getEpssByCveId(String cveId) {
         return getEpssQueryManager().getEpssByCveId(cveId);
     }
