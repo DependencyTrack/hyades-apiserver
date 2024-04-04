@@ -73,18 +73,19 @@ public class Finding implements Serializable {
             "\"VULNERABILITY\".\"OWASPRRLIKELIHOODSCORE\"," +
             "\"VULNERABILITY\".\"OWASPRRTECHNICALIMPACTSCORE\"," +
             "\"VULNERABILITY\".\"OWASPRRBUSINESSIMPACTSCORE\"," +
-            "\"VULNERABILITY\".\"EPSSSCORE\"," +
-            "\"VULNERABILITY\".\"EPSSPERCENTILE\"," +
             "\"VULNERABILITY\".\"CWES\"," +
             "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\"," +
             "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"," +
             "\"FINDINGATTRIBUTION\".\"ALT_ID\"," +
             "\"FINDINGATTRIBUTION\".\"REFERENCE_URL\"," +
             "\"ANALYSIS\".\"STATE\"," +
-            "\"ANALYSIS\".\"SUPPRESSED\" " +
+            "\"ANALYSIS\".\"SUPPRESSED\"," +
+            "\"EPSS\".\"SCORE\"," +
+            "\"EPSS\".\"PERCENTILE\" " +
             "FROM \"COMPONENT\" " +
             "INNER JOIN \"COMPONENTS_VULNERABILITIES\" ON (\"COMPONENT\".\"ID\" = \"COMPONENTS_VULNERABILITIES\".\"COMPONENT_ID\") " +
             "INNER JOIN \"VULNERABILITY\" ON (\"COMPONENTS_VULNERABILITIES\".\"VULNERABILITY_ID\" = \"VULNERABILITY\".\"ID\") " +
+            "LEFT JOIN \"EPSS\" ON (\"VULNERABILITY\".\"VULNID\" = \"EPSS\".\"CVE\") " +
             "INNER JOIN \"FINDINGATTRIBUTION\" ON (\"COMPONENT\".\"ID\" = \"FINDINGATTRIBUTION\".\"COMPONENT_ID\") AND (\"VULNERABILITY\".\"ID\" = \"FINDINGATTRIBUTION\".\"VULNERABILITY_ID\")" +
             "LEFT JOIN \"ANALYSIS\" ON (\"COMPONENT\".\"ID\" = \"ANALYSIS\".\"COMPONENT_ID\") AND (\"VULNERABILITY\".\"ID\" = \"ANALYSIS\".\"VULNERABILITY_ID\") AND (\"COMPONENT\".\"PROJECT_ID\" = \"ANALYSIS\".\"PROJECT_ID\") " +
             "WHERE \"COMPONENT\".\"PROJECT_ID\" = ?";
@@ -127,22 +128,22 @@ public class Finding implements Serializable {
         optValue(vulnerability, "owaspBusinessImpactScore", o[18]);
         optValue(vulnerability, "severity", severity.name());
         optValue(vulnerability, "severityRank", severity.ordinal());
-        optValue(vulnerability, "epssScore", o[19]);
-        optValue(vulnerability, "epssPercentile", o[20]);
-        final List<Cwe> cwes = getCwes(o[21]);
+        final List<Cwe> cwes = getCwes(o[19]);
         if (cwes != null && !cwes.isEmpty()) {
             // Ensure backwards-compatibility with DT < 4.5.0. Remove this in v5!
             optValue(vulnerability, "cweId", cwes.get(0).getCweId());
             optValue(vulnerability, "cweName", cwes.get(0).getName());
         }
         optValue(vulnerability, "cwes", cwes);
-        optValue(attribution, "analyzerIdentity", o[22]);
-        optValue(attribution, "attributedOn", o[23]);
-        optValue(attribution, "alternateIdentifier", o[24]);
-        optValue(attribution, "referenceUrl", o[25]);
+        optValue(attribution, "analyzerIdentity", o[20]);
+        optValue(attribution, "attributedOn", o[21]);
+        optValue(attribution, "alternateIdentifier", o[22]);
+        optValue(attribution, "referenceUrl", o[23]);
 
-        optValue(analysis, "state", o[26]);
-        optValue(analysis, "isSuppressed", o[27], false);
+        optValue(analysis, "state", o[24]);
+        optValue(analysis, "isSuppressed", o[25], false);
+        optValue(vulnerability, "epssScore", o[26]);
+        optValue(vulnerability, "epssPercentile", o[27]);
     }
 
     public Map getComponent() {
