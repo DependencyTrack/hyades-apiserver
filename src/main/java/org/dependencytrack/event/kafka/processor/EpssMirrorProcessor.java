@@ -48,8 +48,6 @@ public class EpssMirrorProcessor implements BatchProcessor<String, EpssItem> {
             if (!epssList.isEmpty()) {
                 qm.synchronizeAllEpss(epssList);
             }
-        } catch (Exception e) {
-            throw new ProcessingException(e);
         }
     }
 }

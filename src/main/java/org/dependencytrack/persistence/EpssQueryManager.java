@@ -22,9 +22,10 @@ import org.dependencytrack.model.Epss;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 final class EpssQueryManager extends QueryManager implements IQueryManager {
 
@@ -47,7 +48,7 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
     public Epss synchronizeEpss(Epss epss) {
         Epss result = updateEpss(epss);
         if (result == null) {
-            final Epss epssNew = persist(epss);
+            final Epss epssNew = pm.makePersistent(epss);
             return epssNew;
         }
         return result;
@@ -58,11 +59,11 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
      * @param epssList the batch of Epss records to synchronize
      */
     public void synchronizeAllEpss(List<Epss> epssList) {
-        for (final Epss epss : epssList) {
-            runInTransaction(() -> {
+        runInTransaction(() -> {
+            for (final Epss epss : epssList) {
                 synchronizeEpss(epss);
-            });
-        }
+            }
+        });
     }
 
     private Epss updateEpss(Epss epss) {
@@ -95,8 +96,7 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
     public Map<String, Epss> getEpssForCveIds(List<String> cveIds) {
         final Query<Epss> query = pm.newQuery(Epss.class);
         query.setFilter(":cveList.contains(cve)");
-        Map<String, Epss> epssMap = new HashMap<>();
-        ((List<Epss>) query.execute(cveIds)).stream().forEach(epss -> epssMap.put(epss.getCve(), epss));
-        return epssMap;
+        return ((List<Epss>) query.execute(cveIds)).stream()
+                .collect(Collectors.toMap(Epss::getCve, Function.identity()));
     }
 }
