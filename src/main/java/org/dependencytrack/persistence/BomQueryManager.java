@@ -53,7 +53,7 @@ final class BomQueryManager extends QueryManager implements IQueryManager {
      * @param imported the Date when the bom was imported
      * @return a new Bom object
      */
-    public Bom createBom(Project project, Date imported, Bom.Format format, String specVersion, Integer bomVersion, String serialNumber, final UUID uploadToken) {
+    public Bom createBom(Project project, Date imported, Bom.Format format, String specVersion, Integer bomVersion, String serialNumber, final UUID uploadToken, Date bomGenerated) {
         final Bom bom = new Bom();
         bom.setImported(imported);
         bom.setProject(project);
@@ -61,6 +61,7 @@ final class BomQueryManager extends QueryManager implements IQueryManager {
         bom.setSpecVersion(specVersion);
         bom.setBomVersion(bomVersion);
         bom.setSerialNumber(serialNumber);
+        bom.setBomGenerated(bomGenerated);
         return persist(bom);
     }
 

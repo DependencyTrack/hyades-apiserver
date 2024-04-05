@@ -323,8 +323,11 @@ public class BomUploadProcessingTask implements Subscriber {
                 final Map<ComponentIdentity, ServiceComponent> persistentServices =
                         processServices(qm, persistentProject, services, identitiesByBomRef, bomRefsByIdentity);
                 processDependencyGraph(ctx, pm, cdxBom, persistentProject, persistentComponents, persistentServices, identitiesByBomRef);
-                recordBomImport(ctx, pm, persistentProject);
-
+                Date bomGeneratedTimestamp = null;
+                if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getTimestamp() != null) {
+                    bomGeneratedTimestamp = cdxBom.getMetadata().getTimestamp();
+                }
+                recordBomImport(ctx, pm, persistentProject, bomGeneratedTimestamp);
                 // BOM ref <-> ComponentIdentity indexes are no longer needed.
                 // Let go of their contents to make it eligible for GC sooner.
                 identitiesByBomRef.clear();
@@ -484,6 +487,7 @@ public class BomUploadProcessingTask implements Subscriber {
             ctx.bomSerialNumber = bom.getSerialNumber().replaceFirst("urn:uuid:", "");
         }
         ctx.bomVersion = bom.getVersion();
+
 
         return bom;
     }
@@ -798,7 +802,7 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static void recordBomImport(final Context ctx, final PersistenceManager pm, final Project project) {
+    private static void recordBomImport(final Context ctx, final PersistenceManager pm, final Project project, Date bomGeneratedTimestamp) {
         assertPersistent(project, "Project must be persistent");
 
         final var bomImportDate = new Date();
@@ -810,6 +814,7 @@ public class BomUploadProcessingTask implements Subscriber {
         bom.setSerialNumber(ctx.bomSerialNumber);
         bom.setBomVersion(ctx.bomVersion);
         bom.setImported(bomImportDate);
+        bom.setBomGenerated(bomGeneratedTimestamp);
         pm.makePersistent(bom);
 
         project.setLastBomImport(bomImportDate);

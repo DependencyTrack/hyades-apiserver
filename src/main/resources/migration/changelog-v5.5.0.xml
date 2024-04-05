@@ -36,4 +36,10 @@
             <column name="PURL"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.5.0-3" author="sahibamittal">
+        <addColumn tableName="BOM">
+            <column name="BOM_GENERATED" type="TIMESTAMP WITH TIME ZONE"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

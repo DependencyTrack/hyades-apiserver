@@ -59,11 +59,12 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "tags", RowMapperUtil::stringArray, builder::addAllTags);
         maybeSet(rs, "properties", CelPolicyProjectRowMapper::maybeConvertProperties, builder::addAllProperties);
 
+        final Project.Metadata.Builder metadataBuilder = Project.Metadata.newBuilder();
         if (hasColumn(rs, "metadata_tools")) {
-            builder.setMetadata(Project.Metadata.newBuilder()
-                    .setTools(convertMetadataTools(rs))
-                    .build());
+            metadataBuilder.setTools(convertMetadataTools(rs));
         }
+        maybeSet(rs, "bom_generated", RowMapperUtil::nullableTimestamp, metadataBuilder::setBomGenerated);
+        builder.setMetadata(metadataBuilder.build());
 
         return builder.build();
     }
