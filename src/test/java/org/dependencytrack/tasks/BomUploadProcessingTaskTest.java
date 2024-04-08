@@ -973,7 +973,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         var boms = qm.getAllBoms(project);
-        assertThat(boms.get(0).getBomGenerated()).isEqualTo("2021-02-09T20:40:32Z");
+        assertThat(boms.get(0).getGenerated()).isEqualTo("2021-02-09T20:40:32Z");
     }
 
     private void assertBomProcessedNotification() throws Exception {

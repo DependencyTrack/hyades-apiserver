@@ -111,7 +111,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
 
         final var bom = new Bom();
         bom.setProject(project);
-        bom.setBomGenerated(new java.util.Date(999));
+        bom.setGenerated(new java.util.Date(999));
         bom.setImported(new Date());
         qm.persist(bom);
 

@@ -79,7 +79,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
 
         var bom = new Bom();
         bom.setProject(project);
-        bom.setBomGenerated(new Date());
+        bom.setGenerated(new Date());
         bom.setImported(new Date());
         qm.persist(bom);
 

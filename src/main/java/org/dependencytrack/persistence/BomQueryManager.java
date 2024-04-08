@@ -61,7 +61,7 @@ final class BomQueryManager extends QueryManager implements IQueryManager {
         bom.setSpecVersion(specVersion);
         bom.setBomVersion(bomVersion);
         bom.setSerialNumber(serialNumber);
-        bom.setBomGenerated(bomGenerated);
+        bom.setGenerated(bomGenerated);
         return persist(bom);
     }
 

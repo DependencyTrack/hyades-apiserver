@@ -814,7 +814,7 @@ public class BomUploadProcessingTask implements Subscriber {
         bom.setSerialNumber(ctx.bomSerialNumber);
         bom.setBomVersion(ctx.bomVersion);
         bom.setImported(bomImportDate);
-        bom.setBomGenerated(bomGeneratedTimestamp);
+        bom.setGenerated(bomGeneratedTimestamp);
         pm.makePersistent(bom);
 
         project.setLastBomImport(bomImportDate);

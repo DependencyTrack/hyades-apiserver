@@ -103,8 +103,8 @@ public class Bom implements Serializable {
     private UUID uuid;
 
     @Persistent
-    @Column(name = "BOM_GENERATED")
-    private Date bomGenerated;
+    @Column(name = "GENERATED")
+    private Date generated;
 
     public long getId() {
         return id;
@@ -170,11 +170,11 @@ public class Bom implements Serializable {
         this.uuid = uuid;
     }
 
-    public Date getBomGenerated() {
-        return bomGenerated;
+    public Date getGenerated() {
+        return generated;
     }
 
-    public void setBomGenerated(Date bomGenerated) {
-        this.bomGenerated = bomGenerated;
+    public void setGenerated(Date generated) {
+        this.generated = generated;
     }
 }

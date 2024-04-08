@@ -188,7 +188,7 @@ public interface CelPolicyDao {
                 sqlSelectColumns.add("\"PM\".\"TOOLS\" AS \"metadata_tools\"");
             }
             if (requirements.get(TYPE_PROJECT_METADATA).contains("bom_generated")) {
-                sqlSelectColumns.add("\"BM\".\"BOM_GENERATED\" AS \"bom_generated\"");
+                sqlSelectColumns.add("\"BM\".\"GENERATED\" AS \"bom_generated\"");
             }
         }
 
