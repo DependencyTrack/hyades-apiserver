@@ -24,6 +24,7 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -107,6 +108,12 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         project.setSwidTagId("projectSwidTagId");
         project.setLastBomImport(new java.util.Date());
         qm.persist(project);
+
+        final var bom = new Bom();
+        bom.setProject(project);
+        bom.setGenerated(new java.util.Date(999));
+        bom.setImported(new Date());
+        qm.persist(bom);
 
         final var toolComponentLicense = new License();
         toolComponentLicense.setUuid(UUID.randomUUID());
@@ -288,6 +295,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
                   && project.purl == "projectPurl"
                   && project.swid_tag_id == "projectSwidTagId"
                   && has(project.last_bom_import)
+                  && project.metadata.bom_generated == timestamp("1970-01-01T00:00:00.999Z")
                   && project.metadata.tools.components.all(tool,
                        tool.group == "toolComponentGroup"
                          && tool.name == "toolComponentName"

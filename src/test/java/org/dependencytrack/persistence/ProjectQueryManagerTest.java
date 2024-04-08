@@ -148,7 +148,7 @@ public class ProjectQueryManagerTest extends PersistenceCapableTest {
         qm.persist(projectMetrics);
 
         // Create a BOM.
-        final Bom bom = qm.createBom(project, new Date(), Bom.Format.CYCLONEDX, "1.4", 1, "serialNumber", UUID.randomUUID());
+        final Bom bom = qm.createBom(project, new Date(), Bom.Format.CYCLONEDX, "1.4", 1, "serialNumber", UUID.randomUUID(), null);
 
         // Create a child project with an accompanying component.
         final var projectChild = new Project();
