@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
+
 final class EpssQueryManager extends QueryManager implements IQueryManager {
 
     /**
@@ -69,8 +71,8 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
     private Epss updateEpss(Epss epss) {
         var epssExisting = getEpssByCveId(epss.getCve());
         if (epssExisting != null) {
-            epssExisting.setScore(epss.getScore());
-            epssExisting.setPercentile(epss.getPercentile());
+            applyIfChanged(epssExisting, epss, Epss::getScore, epssExisting::setScore);
+            applyIfChanged(epssExisting, epss, Epss::getPercentile, epssExisting::setPercentile);
             return epssExisting;
         }
         return null;
