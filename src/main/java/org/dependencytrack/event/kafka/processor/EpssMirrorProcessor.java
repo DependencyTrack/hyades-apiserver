@@ -27,7 +27,6 @@ import org.dependencytrack.parser.dependencytrack.EpssModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -40,11 +39,10 @@ public class EpssMirrorProcessor implements BatchProcessor<String, EpssItem> {
     public void process(List<ConsumerRecord<String, EpssItem>> consumerRecords) throws ProcessingException {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.debug("Synchronizing batch of %s mirrored EPSS records.".formatted(consumerRecords.size()));
-            List<Epss> epssList = new ArrayList<>();
-            consumerRecords.forEach(record -> {
-                EpssItem epssItem = record.value();
-                epssList.add(EpssModelConverter.convert(epssItem));
-            });
+            List<Epss> epssList = consumerRecords.stream()
+                    .map(ConsumerRecord::value)
+                    .map(EpssModelConverter::convert)
+                    .toList();
             if (!epssList.isEmpty()) {
                 qm.synchronizeAllEpss(epssList);
             }
