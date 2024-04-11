@@ -38,6 +38,12 @@
     </changeSet>
 
     <changeSet id="v5.5.0-3" author="sahibamittal">
+        <addColumn tableName="BOM">
+            <column name="GENERATED" type="TIMESTAMP WITH TIME ZONE"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="v5.5.0-4" author="sahibamittal">
         <dropColumn tableName="VULNERABILITY">
             <column name="EPSSSCORE" type="numeric"/>
             <column name="EPSSPERCENTILE" type="numeric"/>

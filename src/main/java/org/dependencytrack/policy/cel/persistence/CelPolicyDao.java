@@ -64,6 +64,10 @@ public interface CelPolicyDao {
               INNER JOIN
                 "PROJECT_METADATA" AS "PM" ON "PM"."PROJECT_ID" = "P"."ID"
             </#if>
+            <#if fetchColumns?filter(col -> col?contains("\\"bom_generated\\""))?size gt 0>
+              INNER JOIN
+                "BOM" AS "BM" ON "BM"."PROJECT_ID" = "P"."ID"
+            </#if>
             <#if fetchPropertyColumns?size gt 0>
               LEFT JOIN LATERAL (
                 SELECT
@@ -182,9 +186,13 @@ public interface CelPolicyDao {
                 .collect(Collectors.toList());
 
         if (fieldsToLoad.contains("metadata")
-            && requirements.containsKey(TYPE_PROJECT_METADATA)
-            && requirements.get(TYPE_PROJECT_METADATA).contains("tools")) {
-            sqlSelectColumns.add("\"PM\".\"TOOLS\" AS \"metadata_tools\"");
+            && requirements.containsKey(TYPE_PROJECT_METADATA)) {
+            if (requirements.get(TYPE_PROJECT_METADATA).contains("tools")) {
+                sqlSelectColumns.add("\"PM\".\"TOOLS\" AS \"metadata_tools\"");
+            }
+            if (requirements.get(TYPE_PROJECT_METADATA).contains("bom_generated")) {
+                sqlSelectColumns.add("\"BM\".\"GENERATED\" AS \"bom_generated\"");
+            }
         }
 
         final var sqlPropertySelectColumns = new ArrayList<String>();

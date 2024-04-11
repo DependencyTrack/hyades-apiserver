@@ -101,6 +101,7 @@ message Project {
 
   message Metadata {
     optional Tools tools = 1;
+    optional google.protobuf.Timestamp bom_generated = 2;
   }
 
   message Property {

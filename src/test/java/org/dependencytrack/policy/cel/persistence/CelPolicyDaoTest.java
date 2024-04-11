@@ -25,6 +25,7 @@ import com.google.protobuf.util.JsonFormat;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Epss;
@@ -48,6 +49,7 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMP
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY_ALIAS;
@@ -76,6 +78,12 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 qm.createTag("projectTagB")
         ));
 
+        var bom = new Bom();
+        bom.setProject(project);
+        bom.setGenerated(new Date());
+        bom.setImported(new Date());
+        qm.persist(bom);
+
         final var requirements = new HashSetValuedHashMap<Type, String>();
         requirements.putAll(TYPE_PROJECT, org.dependencytrack.proto.policy.v1.Project.getDescriptor().getFields().stream()
                 .map(Descriptors.FieldDescriptor::getName)
@@ -83,6 +91,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         requirements.putAll(TYPE_PROJECT_PROPERTY, org.dependencytrack.proto.policy.v1.Project.Property.getDescriptor().getFields().stream()
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
+        requirements.put(TYPE_PROJECT_METADATA, "bom_generated");
 
         final var protoProject = org.dependencytrack.proto.policy.v1.Project.newBuilder()
                 .setUuid(project.getUuid().toString())
@@ -108,7 +117,10 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                           "cpe": "projectCpe",
                           "purl": "projectPurl",
                           "swidTagId": "projectSwidTagId",
-                          "lastBomImport": "${json-unit.any-string}"
+                          "lastBomImport": "${json-unit.any-string}",
+                          "metadata": {
+                            "bomGenerated": "${json-unit.any-string}"
+                          }
                         }
                         """);
     }
