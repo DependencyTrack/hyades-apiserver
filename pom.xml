@@ -84,23 +84,23 @@
     <properties>
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
-        <lib.awaitility.version>4.2.0</lib.awaitility.version>
+        <lib.awaitility.version>4.2.1</lib.awaitility.version>
         <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
-        <lib.checkstyle.version>10.13.0</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.16.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.checkstyle.version>10.15.0</lib.checkstyle.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.17.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.26.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>8.0.3</lib.cyclonedx-java.version>
-        <lib.jackson.version>2.16.1</lib.jackson.version>
-        <lib.jackson-databind.version>2.16.1</lib.jackson-databind.version>
+        <lib.jackson.version>2.17.0</lib.jackson.version>
+        <lib.jackson-databind.version>2.17.0</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
-        <lib.jdbi.version>3.45.0</lib.jdbi.version>
+        <lib.jdbi.version>3.45.1</lib.jdbi.version>
         <lib.json-unit.version>3.2.7</lib.json-unit.version>
-        <lib.kafka.version>3.6.1</lib.kafka.version>
+        <lib.kafka.version>3.6.2</lib.kafka.version>
         <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
-        <lib.liquibase.version>4.26.0</lib.liquibase.version>
+        <lib.liquibase.version>4.27.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.9</lib.minio.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
@@ -111,13 +111,13 @@
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.6.1</lib.versatile.version>
-        <lib.woodstox.version>6.6.0</lib.woodstox.version>
+        <lib.woodstox.version>6.6.2</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.12</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>5.13.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.2</lib.jdbc-driver.postgresql.version>
+        <lib.jdbc-driver.postgresql.version>42.7.3</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
