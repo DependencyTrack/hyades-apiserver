@@ -28,6 +28,7 @@ public final class MdcKeys {
     public static final String MDC_KAFKA_RECORD_PARTITION = "kafkaRecordPartition";
     public static final String MDC_KAFKA_RECORD_OFFSET = "kafkaRecordOffset";
     public static final String MDC_KAFKA_RECORD_KEY = "kafkaRecordKey";
+    public static final String MDC_PROJECT_UUID = "projectUuid";
     public static final String MDC_SCAN_TOKEN = "scanToken";
 
     private MdcKeys() {

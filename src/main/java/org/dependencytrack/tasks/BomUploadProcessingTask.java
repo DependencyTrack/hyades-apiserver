@@ -20,14 +20,12 @@ package org.dependencytrack.tasks;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -117,9 +115,6 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
-    static final Timer TIMER = Timer.builder("bom_upload_processing")
-            .description("Time taken to process / ingest uploaded Bill of Materials")
-            .register(Metrics.getRegistry());
     private static final int FLUSH_THRESHOLD = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD);
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
@@ -140,7 +135,6 @@ public class BomUploadProcessingTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final BomUploadEvent event) {
             final var ctx = new Context(event.getProject(), event.getChainIdentifier());
-            final Timer.Sample timerSample = Timer.start();
             try {
                 processBom(ctx, event.getFile());
                 LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
@@ -189,8 +183,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         .content("An error occurred while processing a BOM")
                         // FIXME: Add reference to BOM after we have dedicated BOM server
                         .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ctx.bomFormat /* (may be null) */, ctx.bomSpecVersion /* (may be null) */)));
-            } finally {
-                timerSample.stop(TIMER);
             }
         }
     }
