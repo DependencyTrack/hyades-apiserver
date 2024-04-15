@@ -20,6 +20,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'feature-**'
       - '[0-9]+.[0-9]+.x' # Release branches
     paths-ignore:
       - '**/*.md'
@@ -27,6 +28,7 @@ on:
   pull_request:
     branches:
       - 'main'
+      - 'feature-**'
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -40,6 +42,7 @@ jobs:
     with:
       app-version: "snapshot"
       publish-container: ${{ github.ref == 'refs/heads/main' }}
+      ref-name: ${{ github.ref_name }}
     permissions:
       packages: write # Required to push images to ghcr.io
       security-events: write # Required to upload trivy's SARIF output
