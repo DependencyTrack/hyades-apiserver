@@ -64,7 +64,7 @@
     </changeSet>
 
     <changeSet id="v5.5.0-5" author="sahibamittal">
-        <createTable tableName="VULNERABILITY_TAGS">
+        <createTable tableName="VULNERABILITIES_TAGS">
             <column name="TAG_ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -72,19 +72,19 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <createIndex indexName="VULNERABILITY_TAGS_VULNERABILITY_ID_IDX" tableName="VULNERABILITY_TAGS">
+        <createIndex indexName="VULNERABILITIES_TAGS_VULNERABILITY_ID_IDX" tableName="VULNERABILITIES_TAGS">
             <column name="VULNERABILITY_ID"/>
         </createIndex>
-        <createIndex indexName="VULNERABILITY_TAGS_TAG_ID_IDX" tableName="VULNERABILITY_TAGS">
+        <createIndex indexName="VULNERABILITIES_TAGS_TAG_ID_IDX" tableName="VULNERABILITIES_TAGS">
             <column name="TAG_ID"/>
         </createIndex>
-        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="VULNERABILITY_TAGS"
-                                 constraintName="VULNERABILITY_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="VULNERABILITIES_TAGS"
+                                 constraintName="VULNERABILITIES_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TAG" validate="true"/>
 
-        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABILITY_TAGS"
-                                 constraintName="VULNERABILITY_TAGS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABILITIES_TAGS"
+                                 constraintName="VULNERABILITIES_TAGS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
     </changeSet>
