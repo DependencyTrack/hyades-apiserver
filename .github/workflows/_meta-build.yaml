@@ -27,6 +27,10 @@ on:
         required: false
         default: false
         description: "publish and scan the container image once its built"
+      ref-name:
+        type: string
+        required: true
+        description: "Short ref name of the branch or tag that triggered the workflow run"
     secrets:
       registry-0-usr:
         required: true
@@ -111,9 +115,17 @@ jobs:
       - name: Set Container Tags
         id: tags
         run: |-
-          TAGS="ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}"
-          if [[ "${{ inputs.app-version }}" != "snapshot" ]]; then
-            TAGS="${TAGS},ghcr.io/dependencytrack/hyades-apiserver:latest"
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/hyades-apiserver"
+          REF_NAME="${{ inputs.ref-name }}"
+          TAGS=""
+          
+          if [[ $REF_NAME == feature-* ]]; then
+            TAGS="${IMAGE_NAME}:${REF_NAME,,}"
+          else
+            TAGS="${IMAGE_NAME}:${{ inputs.app-version }}"
+            if [[ "${{ inputs.app-version }}" != "snapshot" ]]; then
+              TAGS="${TAGS},${IMAGE_NAME}:latest"
+            fi
           fi
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
