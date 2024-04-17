@@ -84,6 +84,7 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityPolicyBundle;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.VulnerabilityTag;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -148,11 +149,10 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
     private IntegrityMetaQueryManager integrityMetaQueryManager;
-
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
-
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private VulnerabilityTagQueryManager vulnerabilityTagQueryManager;
 
     /**
      * Default constructor.
@@ -420,6 +420,13 @@ public class QueryManager extends AlpineQueryManager {
             integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
         }
         return integrityAnalysisQueryManager;
+    }
+
+    private VulnerabilityTagQueryManager getVulnerabilityTagQueryManager() {
+        if (vulnerabilityTagQueryManager == null) {
+            vulnerabilityTagQueryManager = (request == null) ? new VulnerabilityTagQueryManager(getPersistenceManager()) : new VulnerabilityTagQueryManager(getPersistenceManager(), request);
+        }
+        return vulnerabilityTagQueryManager;
     }
 
     /**
@@ -1935,5 +1942,13 @@ public class QueryManager extends AlpineQueryManager {
 
     public Map<String, Epss> getEpssForCveIds(List<String> cveIds) {
         return getEpssQueryManager().getEpssForCveIds(cveIds);
+    }
+
+    public List<VulnerabilityTag> resolveVulnerabilityTags(final List<VulnerabilityTag> tags) {
+        return getVulnerabilityTagQueryManager().resolveVulnerabilityTags(tags);
+    }
+
+    public void bindTagsToVulnerability(final Vulnerability vulnerability, final List<VulnerabilityTag> tags) {
+        getVulnerabilityTagQueryManager().bindTagsToVulnerability(vulnerability, tags);
     }
 }
