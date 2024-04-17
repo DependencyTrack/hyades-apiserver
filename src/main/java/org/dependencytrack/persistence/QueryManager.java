@@ -84,7 +84,6 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityPolicyBundle;
 import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.VulnerabilityTag;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -152,7 +151,6 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
-    private VulnerabilityTagQueryManager vulnerabilityTagQueryManager;
 
     /**
      * Default constructor.
@@ -422,13 +420,6 @@ public class QueryManager extends AlpineQueryManager {
         return integrityAnalysisQueryManager;
     }
 
-    private VulnerabilityTagQueryManager getVulnerabilityTagQueryManager() {
-        if (vulnerabilityTagQueryManager == null) {
-            vulnerabilityTagQueryManager = (request == null) ? new VulnerabilityTagQueryManager(getPersistenceManager()) : new VulnerabilityTagQueryManager(getPersistenceManager(), request);
-        }
-        return vulnerabilityTagQueryManager;
-    }
-
     /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
@@ -556,11 +547,11 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public Tag getTagByName(final String name) {
-        return getProjectQueryManager().getTagByName(name);
+        return getTagQueryManager().getTagByName(name);
     }
 
     public Tag createTag(final String name) {
-        return getProjectQueryManager().createTag(name);
+        return getTagQueryManager().createTag(name);
     }
 
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, boolean active, boolean commitIndex) {
@@ -1944,11 +1935,11 @@ public class QueryManager extends AlpineQueryManager {
         return getEpssQueryManager().getEpssForCveIds(cveIds);
     }
 
-    public List<VulnerabilityTag> resolveVulnerabilityTags(final List<VulnerabilityTag> tags) {
-        return getVulnerabilityTagQueryManager().resolveVulnerabilityTags(tags);
+    public List<Tag> resolveTags(final List<Tag> tags) {
+        return getTagQueryManager().resolveTags(tags);
     }
 
-    public void bindTagsToVulnerability(final Vulnerability vulnerability, final List<VulnerabilityTag> tags) {
-        getVulnerabilityTagQueryManager().bindTagsToVulnerability(vulnerability, tags);
+    public void bind(Vulnerability vulnerability, List<Tag> tags) {
+        getVulnerabilityQueryManager().bind(vulnerability, tags);
     }
 }

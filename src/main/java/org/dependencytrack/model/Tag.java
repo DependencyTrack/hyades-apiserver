@@ -68,6 +68,10 @@ public class Tag implements Serializable {
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Project> projects;
 
+    @Persistent
+    @JsonIgnore
+    private List<Vulnerability> vulnerabilities;
+
     public long getId() {
         return id;
     }
@@ -90,6 +94,14 @@ public class Tag implements Serializable {
 
     public void setProjects(List<Project> projects) {
         this.projects = projects;
+    }
+
+    public List<Vulnerability> getVulnerabilities() {
+        return vulnerabilities;
+    }
+
+    public void setVulnerabilities(List<Vulnerability> vulnerabilities) {
+        this.vulnerabilities = vulnerabilities;
     }
 
     @Override
