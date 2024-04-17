@@ -18,227 +18,34 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
-import org.apache.commons.io.FileUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.parser.epss.EpssParser;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.LockProvider;
-
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.util.zip.GZIPInputStream;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_FEEDS_URL;
-import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
 
 public class EpssMirrorTask implements LoggableSubscriber {
-
-    public static final String MIRROR_DIR = Config.getInstance().getDataDirectorty().getAbsolutePath() + File.separator + "first";
-    private static final String FILENAME = "epss_scores-current.csv.gz";
     private static final Logger LOGGER = Logger.getLogger(EpssMirrorTask.class);
+    private final boolean isEnabled;
 
-    private String feedUrl;
-    private File outputDir;
-    private long metricParseTime;
-    private long metricDownloadTime;
-    private boolean mirroredWithoutErrors = true;
+    public EpssMirrorTask() {
+        try (final QueryManager qm = new QueryManager()) {
+            final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(), VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName());
+            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
+        }
+    }
 
     /**
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof EpssMirrorEvent) {
-            try (final QueryManager qm = new QueryManager()) {
-                final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(), VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName());
-                final boolean isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-                if (!isEnabled) {
-                    return;
-                }
-
-                this.feedUrl = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(), VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName()).getPropertyValue();
-                if (this.feedUrl.endsWith("/")) {
-                    this.feedUrl = this.feedUrl.substring(0, this.feedUrl.length() - 1);
-                }
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while mirroring EPSS", ex);
-                return;
-            }
-
-            LockProvider.executeWithLock(EPSS_MIRROR_TASK_LOCK, (Runnable) () -> getAllFiles());
-        }
-    }
-
-    /**
-     * Defines the output directory where the mirrored files will be stored.
-     * Creates the directory if non-existent.
-     *
-     * @param outputDirPath the target output directory path
-     */
-    private void setOutputDir(final String outputDirPath) {
-        outputDir = new File(outputDirPath);
-        if (!outputDir.exists()) {
-            if (outputDir.mkdirs()) {
-                LOGGER.info("Mirrored data directory created successfully");
-            }
-        }
-    }
-
-    /**
-     * Download all EPSS files
-     */
-    private void getAllFiles() {
-        final long start = System.currentTimeMillis();
-        LOGGER.info("Starting EPSS mirroring task");
-        final File mirrorPath = new File(MIRROR_DIR);
-        setOutputDir(mirrorPath.getAbsolutePath());
-        doDownload(this.feedUrl + "/" + FILENAME);
-        if (mirroredWithoutErrors) {
-            new KafkaEventDispatcher().dispatchNotification(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .level(NotificationLevel.ERROR)
-                    .title(NotificationConstants.Title.EPSS_MIRROR)
-                    .content("Mirroring of the Exploit Prediction Scoring System completed successfully"));
-        }
-        LOGGER.info("EPSS mirroring complete");
-        final long end = System.currentTimeMillis();
-        LOGGER.info("Time spent (d/l):   " + metricDownloadTime + "ms");
-        LOGGER.info("Time spent (parse): " + metricParseTime + "ms");
-        LOGGER.info("Time spent (total): " + (end - start) + "ms");
-    }
-
-    /**
-     * Performs a download of specified URL.
-     *
-     * @param urlString the URL contents to download
-     */
-    private void doDownload(final String urlString) {
-        File file;
-        try {
-            final URL url = new URL(urlString);
-            String filename = url.getFile();
-            filename = filename.substring(filename.lastIndexOf('/') + 1);
-            file = new File(outputDir, filename).getAbsoluteFile();
-            if (file.exists()) {
-                // Update EPSS scores every other day
-                if (System.currentTimeMillis() < ((86400000 * 2) + file.lastModified())) {
-                    LOGGER.info("Retrieval of " + filename + " not necessary.");
-                    return;
-                }
-            }
-            final long start = System.currentTimeMillis();
-            LOGGER.info("Initiating download of " + url.toExternalForm());
-            final HttpUriRequest request = new HttpGet(urlString);
-            try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                final StatusLine status = response.getStatusLine();
-                final long end = System.currentTimeMillis();
-                metricDownloadTime += end - start;
-                if (status.getStatusCode() == HttpStatus.SC_OK) {
-                    LOGGER.info("Downloading...");
-                    try (InputStream in = response.getEntity().getContent()) {
-                        file = new File(outputDir, filename);
-                        FileUtils.copyInputStreamToFile(in, file);
-                        // Sets the last modified date to 0. Upon a successful parse, it will be set back to its original date.
-                        file.setLastModified(0);
-                        if (file.getName().endsWith(".gz")) {
-                            uncompress(file);
-                        }
-                    }
-                } else {
-                    mirroredWithoutErrors = false;
-                    LOGGER.warn("Unable to download - HTTP Response " + status.getStatusCode() + ": " + status.getReasonPhrase());
-                    new KafkaEventDispatcher().dispatchNotification(new Notification()
-                            .scope(NotificationScope.SYSTEM)
-                            .group(NotificationGroup.DATASOURCE_MIRRORING)
-                            .level(NotificationLevel.ERROR)
-                            .title(NotificationConstants.Title.EPSS_MIRROR)
-                            .content("""
-                                    An error occurred mirroring the contents of the Exploit Prediction Scoring System. \
-                                    Check log for details. HTTP Response: %s""".formatted(status.getStatusCode())));
-                }
-            }
-        } catch (IOException e) {
-            mirroredWithoutErrors = false;
-            LOGGER.error("Download failed : " + e.getMessage());
-            new KafkaEventDispatcher().dispatchNotification(new Notification()
-                    .scope(NotificationScope.SYSTEM)
-                    .group(NotificationGroup.DATASOURCE_MIRRORING)
-                    .level(NotificationLevel.ERROR)
-                    .title(NotificationConstants.Title.EPSS_MIRROR)
-                    .content("""
-                            An error occurred mirroring the contents of the Exploit Prediction Scoring System. \
-                            Check log for details. %s""".formatted(e)));
-        }
-    }
-
-    /**
-     * Extracts a GZip file.
-     *
-     * @param file the file to extract
-     */
-    private void uncompress(final File file) {
-        final byte[] buffer = new byte[1024];
-        GZIPInputStream gzis = null;
-        OutputStream out = null;
-        try {
-            LOGGER.info("Uncompressing " + file.getName());
-            gzis = new GZIPInputStream(Files.newInputStream(file.toPath()));
-            final File uncompressedFile = new File(file.getAbsolutePath().replaceAll(".gz", ""));
-            out = Files.newOutputStream(uncompressedFile.toPath());
-            int len;
-            while ((len = gzis.read(buffer)) > 0) {
-                out.write(buffer, 0, len);
-            }
-            final long start = System.currentTimeMillis();
-            final EpssParser parser = new EpssParser();
-            parser.parse(uncompressedFile);
-            file.setLastModified(start);
-            final long end = System.currentTimeMillis();
-            metricParseTime += end - start;
-        } catch (IOException ex) {
-            mirroredWithoutErrors = false;
-            LOGGER.error("An error occurred uncompressing EPSS payload", ex);
-        } finally {
-            close(gzis);
-            close(out);
-        }
-    }
-
-    /**
-     * Closes a closable object.
-     *
-     * @param object the object to close
-     */
-    private void close(final Closeable object) {
-        if (object != null) {
-            try {
-                object.close();
-            } catch (IOException e) {
-                LOGGER.warn("Error closing stream", e);
-            }
+        if (e instanceof EpssMirrorEvent && this.isEnabled) {
+            LOGGER.info("Starting EPSS mirroring task");
+            new KafkaEventDispatcher().dispatchEvent(new EpssMirrorEvent()).join();
         }
     }
 }

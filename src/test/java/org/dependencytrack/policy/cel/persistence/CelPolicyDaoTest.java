@@ -28,6 +28,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
@@ -246,14 +247,18 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.0));
         vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.75));
         vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
-        vuln.setEpssScore(BigDecimal.valueOf(0.6));
-        vuln.setEpssPercentile(BigDecimal.valueOf(0.2));
         qm.persist(vuln);
 
         final var alias = new VulnerabilityAlias();
         alias.setCveId("CVE-001");
         alias.setGhsaId("GHSA-001");
         qm.synchronizeVulnerabilityAlias(alias);
+
+        final var epss = new Epss();
+        epss.setCve("CVE-001");
+        epss.setScore(BigDecimal.valueOf(0.6));
+        epss.setPercentile(BigDecimal.valueOf(0.2));
+        qm.synchronizeEpss(epss);
 
         final var requirements = new HashSetValuedHashMap<Type, String>();
         requirements.putAll(TYPE_VULNERABILITY, org.dependencytrack.proto.policy.v1.Vulnerability.getDescriptor().getFields().stream()

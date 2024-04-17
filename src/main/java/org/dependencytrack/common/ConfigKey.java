@@ -55,6 +55,7 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK("task.cron.metrics.portfolio", "10 * * * *"),
     CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK("task.cron.metrics.vulnerability", "40 * * * *"),
     CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK("task.cron.componentIdentification", "25 */6 * * *"),
+    CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK("task.cron.mirror.epss", "0 1 * * *"),
     CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK("task.cron.mirror.github", "0 2 * * *"),
     CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK("task.cron.mirror.osv", "0 3 * * *"),
     CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK("task.cron.mirror.nist", "0 4 * * *"),

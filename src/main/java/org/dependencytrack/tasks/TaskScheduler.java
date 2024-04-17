@@ -27,6 +27,7 @@ import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
+import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_LDAP_SYNC_TASK;
@@ -88,6 +90,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new NistMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
                     Map.entry(new OsvMirrorEvent(null), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
                     Map.entry(new GitHubAdvisoryMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
+                    Map.entry(new EpssMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK))),
                     Map.entry(new PortfolioMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
                     Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
                     Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),

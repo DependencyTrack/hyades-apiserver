@@ -190,6 +190,10 @@ public final class ModelConverterCdxToVuln {
             vuln.setAliases(cycloneVuln.getReferencesList().stream()
                     .map(alias -> convert(cycloneVuln, alias)).toList());
         }
+
+        // EPSS is an additional enrichment that no scanner currently provides.
+        // TODO: Add mapping of EPSS score and percentile when needed.
+
         return vuln;
     }
 
