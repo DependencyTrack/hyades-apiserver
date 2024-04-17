@@ -45,7 +45,7 @@ abstract class KafkaStreamsTest extends PersistenceCapableTest {
 
     @Rule
     public RedpandaContainer container = new RedpandaContainer(DockerImageName
-            .parse("docker.redpanda.com/vectorized/redpanda:v23.3.6"));
+            .parse("docker.redpanda.com/vectorized/redpanda:v23.3.11"));
 
     KafkaStreams kafkaStreams;
     ExternalKafkaCluster kafka;
