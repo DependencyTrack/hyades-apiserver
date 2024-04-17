@@ -1,0 +1,2497 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="nscuro@protonmail.com" id="v5.3.0-1">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="SCHEMAVERSION"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="WORKFLOW_STATE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_STATE_PK"/>
+            </column>
+            <column name="FAILURE_REASON" type="TEXT"/>
+            <column name="PARENT_STEP_ID" type="BIGINT"/>
+            <column name="STARTED_AT" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="STATUS" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STEP" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TOKEN" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="COMPONENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="COMPONENT_PK"/>
+            </column>
+            <column name="AUTHOR" type="TEXT"/>
+            <column name="BLAKE2B_256" type="VARCHAR(64)"/>
+            <column name="BLAKE2B_384" type="VARCHAR(96)"/>
+            <column name="BLAKE2B_512" type="VARCHAR(128)"/>
+            <column name="BLAKE3" type="VARCHAR(255)"/>
+            <column name="CLASSIFIER" type="VARCHAR(255)"/>
+            <column name="COPYRIGHT" type="VARCHAR(1024)"/>
+            <column name="CPE" type="VARCHAR(255)"/>
+            <column name="DESCRIPTION" type="VARCHAR(1024)"/>
+            <column name="DIRECT_DEPENDENCIES" type="TEXT"/>
+            <column name="EXTENSION" type="VARCHAR(255)"/>
+            <column name="EXTERNAL_REFERENCES" type="BYTEA"/>
+            <column name="FILENAME" type="VARCHAR(255)"/>
+            <column name="GROUP" type="VARCHAR(255)"/>
+            <column name="INTERNAL" type="BOOLEAN"/>
+            <column name="LAST_RISKSCORE" type="FLOAT8"/>
+            <column name="LICENSE" type="VARCHAR(255)"/>
+            <column name="LICENSE_EXPRESSION" type="TEXT"/>
+            <column name="LICENSE_URL" type="VARCHAR(255)"/>
+            <column name="MD5" type="VARCHAR(32)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEXT" type="TEXT"/>
+            <column name="PARENT_COMPONENT_ID" type="BIGINT"/>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLISHER" type="VARCHAR(255)"/>
+            <column name="PURL" type="VARCHAR(1024)"/>
+            <column name="PURLCOORDINATES" type="VARCHAR(255)"/>
+            <column name="LICENSE_ID" type="BIGINT"/>
+            <column name="SHA1" type="VARCHAR(40)"/>
+            <column name="SHA_256" type="VARCHAR(64)"/>
+            <column name="SHA_384" type="VARCHAR(96)"/>
+            <column name="SHA3_256" type="VARCHAR(64)"/>
+            <column name="SHA3_384" type="VARCHAR(96)"/>
+            <column name="SHA3_512" type="VARCHAR(128)"/>
+            <column name="SHA_512" type="VARCHAR(128)"/>
+            <column name="SWIDTAGID" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="EVENTSERVICELOG">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="EVENTSERVICELOG_PK"/>
+            </column>
+            <column name="SUBSCRIBERCLASS" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="STARTED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="COMPLETED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <createTable tableName="LICENSEGROUP">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSEGROUP_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RISKWEIGHT" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="LICENSE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="LICENSE_PK"/>
+            </column>
+            <column name="COMMENT" type="TEXT"/>
+            <column name="ISCUSTOMLICENSE" type="BOOLEAN"/>
+            <column name="ISDEPRECATED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FSFLIBRE" type="BOOLEAN"/>
+            <column name="HEADER" type="TEXT"/>
+            <column name="LICENSEID" type="VARCHAR(255)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ISOSIAPPROVED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SEEALSO" type="BYTEA"/>
+            <column name="TEMPLATE" type="TEXT"/>
+            <column name="TEXT" type="TEXT"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="ANALYSISCOMMENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ANALYSISCOMMENT_PK"/>
+            </column>
+            <column name="ANALYSIS_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMMENT" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMMENTER" type="VARCHAR(255)"/>
+            <column name="TIMESTAMP" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VIOLATIONANALYSISCOMMENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VIOLATIONANALYSISCOMMENT_PK"/>
+            </column>
+            <column name="COMMENT" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMMENTER" type="VARCHAR(255)"/>
+            <column name="TIMESTAMP" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VIOLATIONANALYSIS_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="REPOSITORY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_PK"/>
+            </column>
+            <column name="AUTHENTICATIONREQUIRED" type="BOOLEAN"/>
+            <column name="ENABLED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="IDENTIFIER" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="INTERNAL" type="BOOLEAN"/>
+            <column name="PASSWORD" type="VARCHAR(255)"/>
+            <column name="RESOLUTION_ORDER" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="URL" type="VARCHAR(255)"/>
+            <column name="USERNAME" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)"/>
+        </createTable>
+
+        <createTable tableName="VULNERABILITYSCAN">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYSCAN_PK"/>
+            </column>
+            <column name="EXPECTED_RESULTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FAILURE_THRESHOLD" type="FLOAT8"/>
+            <column name="RECEIVED_RESULTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SCAN_FAILED" type="BIGINT"/>
+            <column name="SCAN_TOTAL" type="BIGINT"/>
+            <column name="STARTED_AT" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TARGET_IDENTIFIER" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TARGET_TYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TOKEN" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VULNERABILITYMETRICS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYMETRICS_PK"/>
+            </column>
+            <column name="COUNT" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MEASURED_AT" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MONTH" type="INTEGER"/>
+            <column name="YEAR" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="PROJECT_PROPERTY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_PROPERTY_PK"/>
+            </column>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="GROUPNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYTYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
+        </createTable>
+
+        <createTable tableName="NOTIFICATIONPUBLISHER">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONPUBLISHER_PK"/>
+            </column>
+            <column name="DEFAULT_PUBLISHER" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLISHER_CLASS" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEMPLATE" type="TEXT"/>
+            <column name="TEMPLATE_MIME_TYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="PORTFOLIOMETRICS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PORTFOLIOMETRICS_PK"/>
+            </column>
+            <column name="COMPONENTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CRITICAL" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FINDINGS_AUDITED" type="INTEGER"/>
+            <column name="FINDINGS_TOTAL" type="INTEGER"/>
+            <column name="FINDINGS_UNAUDITED" type="INTEGER"/>
+            <column name="FIRST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HIGH" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RISKSCORE" type="FLOAT8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LOW" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MEDIUM" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="POLICYVIOLATIONS_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_FAIL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_INFO" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_WARN" type="INTEGER"/>
+            <column name="PROJECTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUPPRESSED" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UNASSIGNED_SEVERITY" type="INTEGER"/>
+            <column name="VULNERABILITIES" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLECOMPONENTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLEPROJECTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="CWE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CWE_PK"/>
+            </column>
+            <column name="CWEID" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="INTEGRITY_ANALYSIS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="INTEGRITY_ANALYSIS_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="INTEGRITY_CHECK_STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MD5_HASH_MATCH_STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SHA1_HASH_MATCH_STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SHA256_HASH_MATCH_STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SHA512_HASH_MATCH_STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="DEPENDENCYMETRICS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="DEPENDENCYMETRICS_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CRITICAL" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FINDINGS_AUDITED" type="INTEGER"/>
+            <column name="FINDINGS_TOTAL" type="INTEGER"/>
+            <column name="FINDINGS_UNAUDITED" type="INTEGER"/>
+            <column name="FIRST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HIGH" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RISKSCORE" type="FLOAT8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LOW" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MEDIUM" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="POLICYVIOLATIONS_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_FAIL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_INFO" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_WARN" type="INTEGER"/>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUPPRESSED" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UNASSIGNED_SEVERITY" type="INTEGER"/>
+            <column name="VULNERABILITIES" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="POLICY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="POLICY_PK"/>
+            </column>
+            <column name="INCLUDE_CHILDREN" type="BOOLEAN"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OPERATOR" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VIOLATIONSTATE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="LDAPUSER">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="LDAPUSER_PK"/>
+            </column>
+            <column name="DN" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EMAIL" type="VARCHAR(255)"/>
+            <column name="USERNAME" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="VULNERABLESOFTWARE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABLESOFTWARE_PK"/>
+            </column>
+            <column name="CPE22" type="VARCHAR(255)"/>
+            <column name="CPE23" type="VARCHAR(255)"/>
+            <column name="EDITION" type="VARCHAR(255)"/>
+            <column name="LANGUAGE" type="VARCHAR(255)"/>
+            <column name="OTHER" type="VARCHAR(255)"/>
+            <column name="PART" type="VARCHAR(255)"/>
+            <column name="PRODUCT" type="VARCHAR(255)"/>
+            <column name="PURL" type="VARCHAR(255)"/>
+            <column name="PURL_NAME" type="VARCHAR(255)"/>
+            <column name="PURL_NAMESPACE" type="VARCHAR(255)"/>
+            <column name="PURL_QUALIFIERS" type="VARCHAR(255)"/>
+            <column name="PURL_SUBPATH" type="VARCHAR(255)"/>
+            <column name="PURL_TYPE" type="VARCHAR(255)"/>
+            <column name="PURL_VERSION" type="VARCHAR(255)"/>
+            <column name="SWEDITION" type="VARCHAR(255)"/>
+            <column name="TARGETHW" type="VARCHAR(255)"/>
+            <column name="TARGETSW" type="VARCHAR(255)"/>
+            <column name="UPDATE" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VENDOR" type="VARCHAR(255)"/>
+            <column name="VERSION" type="VARCHAR(255)"/>
+            <column name="VERSIONENDEXCLUDING" type="VARCHAR(255)"/>
+            <column name="VERSIONENDINCLUDING" type="VARCHAR(255)"/>
+            <column name="VERSIONSTARTEXCLUDING" type="VARCHAR(255)"/>
+            <column name="VERSIONSTARTINCLUDING" type="VARCHAR(255)"/>
+            <column name="VULNERABLE" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="ANALYSIS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ANALYSIS_PK"/>
+            </column>
+            <column name="DETAILS" type="TEXT"/>
+            <column name="JUSTIFICATION" type="VARCHAR(255)"/>
+            <column name="RESPONSE" type="VARCHAR(255)"/>
+            <column name="STATE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT"/>
+            <column name="PROJECT_ID" type="BIGINT"/>
+            <column name="SUPPRESSED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VEX">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VEX_PK"/>
+            </column>
+            <column name="IMPORTED" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SERIAL_NUMBER" type="VARCHAR(255)"/>
+            <column name="SPEC_VERSION" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VEX_FORMAT" type="VARCHAR(255)"/>
+            <column name="VEX_VERSION" type="INTEGER"/>
+        </createTable>
+
+        <createTable tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="AFFECTEDVERSIONATTRIBUTION_PK"/>
+            </column>
+            <column name="FIRST_SEEN" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_SEEN" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SOURCE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLE_SOFTWARE" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="TEAM">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="TEAM_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="OIDCUSER">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="OIDCUSER_PK"/>
+            </column>
+            <column name="EMAIL" type="VARCHAR(255)"/>
+            <column name="SUBJECT_IDENTIFIER" type="VARCHAR(255)"/>
+            <column name="USERNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="MANAGEDUSER">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="MANAGEDUSER_PK"/>
+            </column>
+            <column name="EMAIL" type="VARCHAR(255)"/>
+            <column name="FORCE_PASSWORD_CHANGE" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FULLNAME" type="VARCHAR(255)"/>
+            <column name="LAST_PASSWORD_CHANGE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NON_EXPIRY_PASSWORD" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PASSWORD" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUSPENDED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USERNAME" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="OIDCGROUP">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="OIDCGROUP_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VULNERABILITYALIAS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYALIAS_PK"/>
+            </column>
+            <column name="CVE_ID" type="VARCHAR(255)"/>
+            <column name="GHSA_ID" type="VARCHAR(255)"/>
+            <column name="GSD_ID" type="VARCHAR(255)"/>
+            <column name="INTERNAL_ID" type="VARCHAR(255)"/>
+            <column name="OSV_ID" type="VARCHAR(255)"/>
+            <column name="SNYK_ID" type="VARCHAR(255)"/>
+            <column name="SONATYPE_ID" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNDB_ID" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="CPE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CPE_PK"/>
+            </column>
+            <column name="CPE22" type="VARCHAR(255)"/>
+            <column name="CPE23" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EDITION" type="VARCHAR(255)"/>
+            <column name="LANGUAGE" type="VARCHAR(255)"/>
+            <column name="OTHER" type="VARCHAR(255)"/>
+            <column name="PART" type="VARCHAR(255)"/>
+            <column name="PRODUCT" type="VARCHAR(255)"/>
+            <column name="SWEDITION" type="VARCHAR(255)"/>
+            <column name="TARGETHW" type="VARCHAR(255)"/>
+            <column name="TARGETSW" type="VARCHAR(255)"/>
+            <column name="TITLE" type="VARCHAR(255)"/>
+            <column name="UPDATE" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VENDOR" type="VARCHAR(255)"/>
+            <column name="VERSION" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="TAG">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="TAG_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="REPOSITORY_META_COMPONENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="REPOSITORY_META_COMPONENT_PK"/>
+            </column>
+            <column name="LAST_CHECK" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LATEST_VERSION" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAMESPACE" type="VARCHAR(255)"/>
+            <column name="PUBLISHED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="REPOSITORY_TYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="PERMISSION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PERMISSION_PK"/>
+            </column>
+            <column name="DESCRIPTION" type="TEXT"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VIOLATIONANALYSIS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VIOLATIONANALYSIS_PK"/>
+            </column>
+            <column name="STATE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT"/>
+            <column name="POLICYVIOLATION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT"/>
+            <column name="SUPPRESSED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="APIKEY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="APIKEY_PK"/>
+            </column>
+            <column name="APIKEY" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="FINDINGATTRIBUTION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="FINDINGATTRIBUTION_PK"/>
+            </column>
+            <column name="ALT_ID" type="VARCHAR(255)"/>
+            <column name="ANALYZERIDENTITY" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ATTRIBUTED_ON" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REFERENCE_URL" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="INTEGRITY_META_COMPONENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="INTEGRITY_META_COMPONENT_PK"/>
+            </column>
+            <column name="LAST_FETCH" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="MD5" type="VARCHAR(32)"/>
+            <column name="PUBLISHED_AT" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="PURL" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REPOSITORY_URL" type="VARCHAR(1024)"/>
+            <column name="SHA1" type="VARCHAR(40)"/>
+            <column name="SHA256" type="VARCHAR(64)"/>
+            <column name="SHA512" type="VARCHAR(128)"/>
+            <column name="STATUS" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="POLICYVIOLATION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="POLICYVIOLATION_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="POLICYCONDITION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEXT" type="VARCHAR(255)"/>
+            <column name="TIMESTAMP" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="POLICYCONDITION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="POLICYCONDITION_PK"/>
+            </column>
+            <column name="OPERATOR" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="POLICY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUBJECT" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VALUE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VIOLATIONTYPE" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="NOTIFICATIONRULE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="NOTIFICATIONRULE_PK"/>
+            </column>
+            <column name="ENABLED" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MESSAGE" type="VARCHAR(1024)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NOTIFICATION_LEVEL" type="VARCHAR(255)"/>
+            <column name="NOTIFY_CHILDREN" type="BOOLEAN"/>
+            <column name="NOTIFY_ON" type="VARCHAR(1024)"/>
+            <column name="PUBLISHER" type="BIGINT"/>
+            <column name="PUBLISHER_CONFIG" type="TEXT"/>
+            <column name="SCOPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="SERVICECOMPONENT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="SERVICECOMPONENT_PK"/>
+            </column>
+            <column name="AUTHENTICATED" type="BOOLEAN"/>
+            <column name="X_TRUST_BOUNDARY" type="BOOLEAN"/>
+            <column name="DATA" type="BYTEA"/>
+            <column name="DESCRIPTION" type="VARCHAR(1024)"/>
+            <column name="ENDPOINTS" type="BYTEA"/>
+            <column name="EXTERNAL_REFERENCES" type="BYTEA"/>
+            <column name="GROUP" type="VARCHAR(255)"/>
+            <column defaultValueNumeric="0.0" name="LAST_RISKSCORE" type="FLOAT8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEXT" type="TEXT"/>
+            <column name="PARENT_SERVICECOMPONENT_ID" type="BIGINT"/>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROVIDER_ID" type="BYTEA"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="MAPPEDOIDCGROUP">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="MAPPEDOIDCGROUP_PK"/>
+            </column>
+            <column name="GROUP_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="MAPPEDLDAPGROUP">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="MAPPEDLDAPGROUP_PK"/>
+            </column>
+            <column name="DN" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VULNERABILITY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITY_PK"/>
+            </column>
+            <column name="CREATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="CREDITS" type="TEXT"/>
+            <column name="CVSSV2BASESCORE" type="numeric"/>
+            <column name="CVSSV2EXPLOITSCORE" type="numeric"/>
+            <column name="CVSSV2IMPACTSCORE" type="numeric"/>
+            <column name="CVSSV2VECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3BASESCORE" type="numeric"/>
+            <column name="CVSSV3EXPLOITSCORE" type="numeric"/>
+            <column name="CVSSV3IMPACTSCORE" type="numeric"/>
+            <column name="CVSSV3VECTOR" type="VARCHAR(255)"/>
+            <column name="CWES" type="VARCHAR(255)"/>
+            <column name="DESCRIPTION" type="TEXT"/>
+            <column name="DETAIL" type="TEXT"/>
+            <column name="EPSSPERCENTILE" type="numeric"/>
+            <column name="EPSSSCORE" type="numeric"/>
+            <column name="FRIENDLYVULNID" type="VARCHAR(255)"/>
+            <column name="OWASPRRBUSINESSIMPACTSCORE" type="numeric"/>
+            <column name="OWASPRRLIKELIHOODSCORE" type="numeric"/>
+            <column name="OWASPRRTECHNICALIMPACTSCORE" type="numeric"/>
+            <column name="OWASPRRVECTOR" type="VARCHAR(255)"/>
+            <column name="PATCHEDVERSIONS" type="VARCHAR(255)"/>
+            <column name="PUBLISHED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="RECOMMENDATION" type="TEXT"/>
+            <column name="REFERENCES" type="TEXT"/>
+            <column name="SEVERITY" type="VARCHAR(255)"/>
+            <column name="SOURCE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUBTITLE" type="VARCHAR(255)"/>
+            <column name="TITLE" type="VARCHAR(255)"/>
+            <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNID" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLEVERSIONS" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="BOM">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="BOM_PK"/>
+            </column>
+            <column name="BOM_FORMAT" type="VARCHAR(255)"/>
+            <column name="BOM_VERSION" type="INTEGER"/>
+            <column name="IMPORTED" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SERIAL_NUMBER" type="VARCHAR(255)"/>
+            <column name="SPEC_VERSION" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="PROJECT">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_PK"/>
+            </column>
+            <column name="ACTIVE" type="BOOLEAN"/>
+            <column name="AUTHOR" type="VARCHAR(255)"/>
+            <column name="CLASSIFIER" type="VARCHAR(255)"/>
+            <column name="CPE" type="VARCHAR(255)"/>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="DIRECT_DEPENDENCIES" type="TEXT"/>
+            <column name="EXTERNAL_REFERENCES" type="BYTEA"/>
+            <column name="GROUP" type="VARCHAR(255)"/>
+            <column name="LAST_BOM_IMPORTED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="LAST_BOM_IMPORTED_FORMAT" type="VARCHAR(255)"/>
+            <column name="LAST_RISKSCORE" type="FLOAT8"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PARENT_PROJECT_ID" type="BIGINT"/>
+            <column name="PUBLISHER" type="VARCHAR(255)"/>
+            <column name="PURL" type="VARCHAR(255)"/>
+            <column name="SWIDTAGID" type="VARCHAR(255)"/>
+            <column name="UUID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="PROJECTMETRICS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECTMETRICS_PK"/>
+            </column>
+            <column name="COMPONENTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CRITICAL" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FINDINGS_AUDITED" type="INTEGER"/>
+            <column name="FINDINGS_TOTAL" type="INTEGER"/>
+            <column name="FINDINGS_UNAUDITED" type="INTEGER"/>
+            <column name="FIRST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HIGH" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RISKSCORE" type="FLOAT8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LOW" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MEDIUM" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="POLICYVIOLATIONS_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_FAIL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_INFO" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_LICENSE_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_AUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_SECURITY_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_TOTAL" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_UNAUDITED" type="INTEGER"/>
+            <column name="POLICYVIOLATIONS_WARN" type="INTEGER"/>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUPPRESSED" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UNASSIGNED_SEVERITY" type="INTEGER"/>
+            <column name="VULNERABILITIES" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLECOMPONENTS" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="LICENSEGROUP_LICENSE">
+            <column name="LICENSEGROUP_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LICENSE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="OIDCUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OIDCUSER_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="COMPONENTS_VULNERABILITIES">
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="OIDCUSERS_TEAMS">
+            <column name="OIDCUSERS_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="LDAPUSERS_PERMISSIONS">
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="SERVICECOMPONENTS_VULNERABILITIES">
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SERVICECOMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABLESOFTWARE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="NOTIFICATIONRULE_TEAMS">
+            <column name="NOTIFICATIONRULE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEAM_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="PROJECTS_TAGS">
+            <column name="TAG_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="LDAPUSERS_TEAMS">
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="MANAGEDUSERS_PERMISSIONS">
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="TEAMS_PERMISSIONS">
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="NOTIFICATIONRULE_PROJECTS">
+            <column name="NOTIFICATIONRULE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="APIKEYS_TEAMS">
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="APIKEY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="PROJECT_ACCESS_TEAMS">
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEAM_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="MANAGEDUSERS_TEAMS">
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="POLICY_PROJECTS">
+            <column name="POLICY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="POLICY_TAGS">
+            <column name="POLICY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TAG_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="SCHEMAVERSION">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="SCHEMAVERSION_PK"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="INSTALLEDUPGRADES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="INSTALLEDUPGRADES_PK"/>
+            </column>
+            <column name="ENDTIME" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="STARTTIME" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="UPGRADECLASS" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="CONFIGPROPERTY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CONFIGPROPERTY_PK"/>
+            </column>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="GROUPNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYTYPE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYVALUE" type="VARCHAR(1024)"/>
+        </createTable>
+
+        <createIndex indexName="WORKFLOW_STATE_PARENT_STEP_ID_IDX" tableName="WORKFLOW_STATE">
+            <column name="PARENT_STEP_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="TOKEN, STEP" constraintName="WORKFLOW_STATE_COMPOSITE_IDX"
+                             tableName="WORKFLOW_STATE"/>
+
+        <createIndex indexName="COMPONENT_GROUP_IDX" tableName="COMPONENT">
+            <column name="GROUP"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_PARENT_COMPONENT_ID_IDX" tableName="COMPONENT">
+            <column name="PARENT_COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_BLAKE3_IDX" tableName="COMPONENT">
+            <column name="BLAKE3"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_PURL_IDX" tableName="COMPONENT">
+            <column name="PURL"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA3_512_IDX" tableName="COMPONENT">
+            <column name="SHA3_512"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_CPE_IDX" tableName="COMPONENT">
+            <column name="CPE"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_LAST_RISKSCORE_IDX" tableName="COMPONENT">
+            <column name="LAST_RISKSCORE"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA512_IDX" tableName="COMPONENT">
+            <column name="SHA_512"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA3_256_IDX" tableName="COMPONENT">
+            <column name="SHA3_256"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_MD5_IDX" tableName="COMPONENT">
+            <column name="MD5"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA384_IDX" tableName="COMPONENT">
+            <column name="SHA_384"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_BLAKE2B_384_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_384"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_CLASSIFIER_IDX" tableName="COMPONENT">
+            <column name="CLASSIFIER"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SWID_TAGID_IDX" tableName="COMPONENT">
+            <column name="SWIDTAGID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_PURL_COORDINATES_IDX" tableName="COMPONENT">
+            <column name="PURLCOORDINATES"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_BLAKE2B_512_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_512"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_LICENSE_ID_IDX" tableName="COMPONENT">
+            <column name="LICENSE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_NAME_IDX" tableName="COMPONENT">
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA1_IDX" tableName="COMPONENT">
+            <column name="SHA1"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_PROJECT_ID_IDX" tableName="COMPONENT">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA3_384_IDX" tableName="COMPONENT">
+            <column name="SHA3_384"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_BLAKE2B_256_IDX" tableName="COMPONENT">
+            <column name="BLAKE2B_256"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENT_SHA256_IDX" tableName="COMPONENT">
+            <column name="SHA_256"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="COMPONENT_UUID_IDX" tableName="COMPONENT"/>
+
+        <!--
+          Note: The original index as defined in Alpine is not prefixed with the table name.
+          https://github.com/stevespringett/Alpine/blob/92fdb7de7e5623b8c986de08997480036af5f472/alpine-model/src/main/java/alpine/model/EventServiceLog.java#L50C27-L50C27
+        -->
+        <createIndex tableName="EVENTSERVICELOG" indexName="SUBSCRIBERCLASS_IDX">
+            <column name="SUBSCRIBERCLASS"/>
+        </createIndex>
+
+        <createIndex indexName="LICENSEGROUP_NAME_IDX" tableName="LICENSEGROUP">
+            <column name="NAME"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="LICENSEGROUP_UUID_IDX" tableName="LICENSEGROUP"/>
+
+        <createIndex indexName="LICENSE_LICENSEID_IDX" tableName="LICENSE" unique="true">
+            <column name="LICENSEID"/>
+        </createIndex>
+
+        <createIndex indexName="LICENSE_NAME_IDX" tableName="LICENSE">
+            <column name="NAME"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="LICENSE_UUID_IDX" tableName="LICENSE"/>
+
+        <createIndex indexName="ANALYSISCOMMENT_ANALYSIS_ID_IDX" tableName="ANALYSISCOMMENT">
+            <column name="ANALYSIS_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_ID_IDX" tableName="VIOLATIONANALYSISCOMMENT">
+            <column name="VIOLATIONANALYSIS_ID"/>
+        </createIndex>
+
+        <createIndex indexName="REPOSITORY_UUID_IDX" tableName="REPOSITORY">
+            <column name="UUID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="TYPE, IDENTIFIER" constraintName="REPOSITORY_COMPOUND_IDX"
+                             tableName="REPOSITORY"/>
+
+        <addUniqueConstraint columnNames="TOKEN" constraintName="VULNERABILITY_SCAN_TOKEN_IDX"
+                             tableName="VULNERABILITYSCAN"/>
+
+        <createIndex indexName="PROJECT_PROPERTY_PROJECT_ID_IDX" tableName="PROJECT_PROPERTY">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="PROJECT_ID, GROUPNAME, PROPERTYNAME"
+                             constraintName="PROJECT_PROPERTY_KEYS_IDX" tableName="PROJECT_PROPERTY"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONPUBLISHER_UUID_IDX"
+                             tableName="NOTIFICATIONPUBLISHER"/>
+
+        <createIndex indexName="PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+
+        <createIndex indexName="PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX" tableName="PORTFOLIOMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="CWEID" constraintName="CWE_CWEID_IDX" tableName="CWE"/>
+
+        <createIndex indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" tableName="INTEGRITY_ANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+
+        <createIndex indexName="DEPENDENCYMETRICS_COMPONENT_ID_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="DEPENDENCYMETRICS_COMPOSITE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="PROJECT_ID"/>
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX" tableName="DEPENDENCYMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+
+        <createIndex indexName="POLICY_NAME_IDX" tableName="POLICY">
+            <column name="NAME"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICY_UUID_IDX" tableName="POLICY"/>
+
+        <addUniqueConstraint columnNames="USERNAME" constraintName="LDAPUSER_USERNAME_IDX" tableName="LDAPUSER"/>
+
+        <createIndex indexName="VULNERABLESOFTWARE_PART_VENDOR_PRODUCT_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PART"/>
+            <column name="VENDOR"/>
+            <column name="PRODUCT"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_CPE_PURL_PARTS_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PART"/>
+            <column name="VENDOR"/>
+            <column name="PRODUCT"/>
+            <column name="PURL_TYPE"/>
+            <column name="PURL_NAMESPACE"/>
+            <column name="PURL_NAME"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_PURL_TYPE_NS_NAME_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PURL_TYPE"/>
+            <column name="PURL_NAMESPACE"/>
+            <column name="PURL_NAME"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_PURL_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="PURL"/>
+            <column name="VERSIONENDEXCLUDING"/>
+            <column name="VERSIONENDINCLUDING"/>
+            <column name="VERSIONSTARTEXCLUDING"/>
+            <column name="VERSIONSTARTINCLUDING"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_CPE23_VERSION_RANGE_IDX" tableName="VULNERABLESOFTWARE">
+            <column name="CPE23"/>
+            <column name="VERSIONENDEXCLUDING"/>
+            <column name="VERSIONENDINCLUDING"/>
+            <column name="VERSIONSTARTEXCLUDING"/>
+            <column name="VERSIONSTARTINCLUDING"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABLESOFTWARE_UUID_IDX"
+                             tableName="VULNERABLESOFTWARE"/>
+
+        <createIndex indexName="ANALYSIS_VULNERABILITY_ID_IDX" tableName="ANALYSIS">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="ANALYSIS_PROJECT_ID_IDX" tableName="ANALYSIS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="ANALYSIS_COMPONENT_ID_IDX" tableName="ANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, VULNERABILITY_ID"
+                             constraintName="ANALYSIS_COMPOSITE_IDX" tableName="ANALYSIS"/>
+
+        <createIndex indexName="VEX_PROJECT_ID_IDX" tableName="VEX">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="VEX_UUID_IDX" tableName="VEX"/>
+
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABLE_SOFTWARE_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABLE_SOFTWARE"/>
+        </createIndex>
+
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_KEYS_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABILITY"/>
+            <column name="VULNERABLE_SOFTWARE"/>
+        </createIndex>
+
+        <createIndex indexName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_IDX" tableName="AFFECTEDVERSIONATTRIBUTION">
+            <column name="VULNERABILITY"/>
+        </createIndex>
+
+
+        <addUniqueConstraint columnNames="UUID" constraintName="AFFECTEDVERSIONATTRIBUTION_UUID_IDX"
+                             tableName="AFFECTEDVERSIONATTRIBUTION"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="TEAM_UUID_IDX" tableName="TEAM"/>
+
+        <addUniqueConstraint columnNames="USERNAME" constraintName="OIDCUSER_USERNAME_IDX" tableName="OIDCUSER"/>
+
+        <addUniqueConstraint columnNames="USERNAME" constraintName="MANAGEDUSER_USERNAME_IDX" tableName="MANAGEDUSER"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="OIDCGROUP_UUID_IDX" tableName="OIDCGROUP"/>
+
+        <createIndex indexName="VULNERABILITYALIAS_INTERNAL_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="INTERNAL_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_SONATYPE_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="SONATYPE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_OSV_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="OSV_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_GSD_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="GSD_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_VULNDB_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="VULNDB_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_GHSA_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="GHSA_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_CVE_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="CVE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITYALIAS_SNYK_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="SNYK_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITYALIAS_UUID_IDX"
+                             tableName="VULNERABILITYALIAS"/>
+
+        <createIndex indexName="CPE_CPE22_IDX" tableName="CPE">
+            <column name="CPE22"/>
+        </createIndex>
+
+        <createIndex indexName="CPE_PRODUCT_IDX" tableName="CPE">
+            <column name="PRODUCT"/>
+        </createIndex>
+
+        <createIndex indexName="CPE_VENDOR_IDX" tableName="CPE">
+            <column name="VENDOR"/>
+        </createIndex>
+
+        <createIndex indexName="CPE_CPE23_IDX" tableName="CPE" unique="true">
+            <column name="CPE23"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="CPE_UUID_IDX" tableName="CPE"/>
+
+        <createIndex indexName="REPOSITORY_META_COMPONENT_COMPOUND_IDX" tableName="REPOSITORY_META_COMPONENT"
+                     unique="true">
+            <column name="REPOSITORY_TYPE"/>
+            <column name="NAMESPACE"/>
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex indexName="REPOSITORY_META_COMPONENT_LASTCHECK_IDX" tableName="REPOSITORY_META_COMPONENT">
+            <column name="LAST_CHECK"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="NAME" constraintName="PERMISSION_IDX" tableName="PERMISSION"/>
+
+        <createIndex indexName="VIOLATIONANALYSIS_COMPONENT_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VIOLATIONANALYSIS_PROJECT_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VIOLATIONANALYSIS_POLICYVIOLATION_ID_IDX" tableName="VIOLATIONANALYSIS">
+            <column name="POLICYVIOLATION_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="PROJECT_ID, COMPONENT_ID, POLICYVIOLATION_ID"
+                             constraintName="VIOLATIONANALYSIS_COMPOSITE_IDX" tableName="VIOLATIONANALYSIS"/>
+
+        <addUniqueConstraint columnNames="APIKEY" constraintName="APIKEY_IDX" tableName="APIKEY"/>
+
+        <createIndex indexName="FINDINGATTRIBUTION_PROJECT_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="FINDINGATTRIBUTION_COMPONENT_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="FINDINGATTRIBUTION_COMPOUND_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="FINDINGATTRIBUTION_VULNERABILITY_ID_IDX" tableName="FINDINGATTRIBUTION">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="FINDINGATTRIBUTION_UUID_IDX"
+                             tableName="FINDINGATTRIBUTION"/>
+
+        <createIndex indexName="PURL_IDX" tableName="INTEGRITY_META_COMPONENT">
+            <column name="PURL"/>
+        </createIndex>
+
+        <createIndex indexName="LAST_FETCH_IDX" tableName="INTEGRITY_META_COMPONENT">
+            <column name="LAST_FETCH"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="PURL" constraintName="INTEGRITY_META_COMPONENT_U1"
+                             tableName="INTEGRITY_META_COMPONENT"/>
+
+        <createIndex indexName="POLICYVIOLATION_PROJECT_IDX" tableName="POLICYVIOLATION">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX" tableName="POLICYVIOLATION">
+            <column name="POLICYCONDITION_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICYVIOLATION_COMPONENT_IDX" tableName="POLICYVIOLATION">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICYVIOLATION_UUID_IDX" tableName="POLICYVIOLATION"/>
+
+        <createIndex indexName="POLICYCONDITION_POLICY_ID_IDX" tableName="POLICYCONDITION">
+            <column name="POLICY_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="POLICYCONDITION_UUID_IDX" tableName="POLICYCONDITION"/>
+
+        <createIndex indexName="NOTIFICATIONRULE_PUBLISHER_IDX" tableName="NOTIFICATIONRULE">
+            <column name="PUBLISHER"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="NOTIFICATIONRULE_UUID_IDX"
+                             tableName="NOTIFICATIONRULE"/>
+
+        <createIndex indexName="SERVICECOMPONENT_LAST_RISKSCORE_IDX" tableName="SERVICECOMPONENT">
+            <column defaultValueNumeric="0.0" name="LAST_RISKSCORE"/>
+        </createIndex>
+
+        <createIndex indexName="SERVICECOMPONENT_PROJECT_ID_IDX" tableName="SERVICECOMPONENT">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="SERVICECOMPONENT_PARENT_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENT">
+            <column name="PARENT_SERVICECOMPONENT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="SERVICECOMPONENT_UUID_IDX"
+                             tableName="SERVICECOMPONENT"/>
+
+        <createIndex indexName="MAPPEDOIDCGROUP_TEAM_ID_IDX" tableName="MAPPEDOIDCGROUP">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="MAPPEDOIDCGROUP_GROUP_ID_IDX" tableName="MAPPEDOIDCGROUP">
+            <column name="GROUP_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="TEAM_ID, GROUP_ID" constraintName="MAPPEDOIDCGROUP_U1"
+                             tableName="MAPPEDOIDCGROUP"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDOIDCGROUP_UUID_IDX" tableName="MAPPEDOIDCGROUP"/>
+
+        <createIndex indexName="MAPPEDLDAPGROUP_TEAM_ID_IDX" tableName="MAPPEDLDAPGROUP">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="TEAM_ID, DN" constraintName="MAPPEDLDAPGROUP_U1" tableName="MAPPEDLDAPGROUP"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="MAPPEDLDAPGROUP_UUID_IDX" tableName="MAPPEDLDAPGROUP"/>
+
+        <createIndex indexName="VULNERABILITY_VULNID_IDX" tableName="VULNERABILITY">
+            <column name="VULNID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITY_PUBLISHED_IDX" tableName="VULNERABILITY">
+            <column name="PUBLISHED"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITY_UPDATED_IDX" tableName="VULNERABILITY">
+            <column name="UPDATED"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABILITY_CREATED_IDX" tableName="VULNERABILITY">
+            <column name="CREATED"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="VULNID, SOURCE" constraintName="VULNERABILITY_U1" tableName="VULNERABILITY"/>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="VULNERABILITY_UUID_IDX" tableName="VULNERABILITY"/>
+
+        <createIndex indexName="BOM_PROJECT_ID_IDX" tableName="BOM">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="BOM_UUID_IDX" tableName="BOM"/>
+
+        <createIndex indexName="PROJECT_SWID_TAGID_IDX" tableName="PROJECT">
+            <column name="SWIDTAGID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_CPE_IDX" tableName="PROJECT">
+            <column name="CPE"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_PURL_IDX" tableName="PROJECT">
+            <column name="PURL"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_CLASSIFIER_IDX" tableName="PROJECT">
+            <column name="CLASSIFIER"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_GROUP_IDX" tableName="PROJECT">
+            <column name="GROUP"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_LAST_RISKSCORE_IDX" tableName="PROJECT">
+            <column name="LAST_RISKSCORE"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_LASTBOMIMPORT_IDX" tableName="PROJECT">
+            <column name="LAST_BOM_IMPORTED"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_LASTBOMIMPORT_FORMAT_IDX" tableName="PROJECT">
+            <column name="LAST_BOM_IMPORTED_FORMAT"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_NAME_IDX" tableName="PROJECT">
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_VERSION_IDX" tableName="PROJECT">
+            <column name="VERSION"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_PARENT_PROJECT_ID_IDX" tableName="PROJECT">
+            <column name="PARENT_PROJECT_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="UUID" constraintName="PROJECT_UUID_IDX" tableName="PROJECT"/>
+
+        <createIndex indexName="PROJECTMETRICS_PROJECT_ID_IDX" tableName="PROJECTMETRICS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECTMETRICS_FIRST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
+            <column name="FIRST_OCCURRENCE"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECTMETRICS_LAST_OCCURRENCE_IDX" tableName="PROJECTMETRICS">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSE_ID_IDX" tableName="LICENSEGROUP_LICENSE">
+            <column name="LICENSE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX" tableName="LICENSEGROUP_LICENSE">
+            <column name="LICENSEGROUP_ID"/>
+        </createIndex>
+
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
+            <column name="OIDCUSER_ID"/>
+        </createIndex>
+
+        <createIndex indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="OIDCUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPONENT_ID_IDX" tableName="COMPONENTS_VULNERABILITIES">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" tableName="OIDCUSERS_TEAMS">
+            <column name="OIDCUSERS_ID"/>
+        </createIndex>
+
+        <createIndex indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" tableName="OIDCUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
+            <column name="LDAPUSER_ID"/>
+        </createIndex>
+
+        <createIndex indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="LDAPUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+            <column name="SERVICECOMPONENT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="SERVICECOMPONENTS_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_ID_IDX" tableName="VULNERABLESOFTWARE_VULNERABILITIES">
+            <column name="VULNERABLESOFTWARE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" tableName="NOTIFICATIONRULE_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECTS_TAGS_PROJECT_ID_IDX" tableName="PROJECTS_TAGS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECTS_TAGS_TAG_ID_IDX" tableName="PROJECTS_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+
+        <createIndex indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" tableName="LDAPUSERS_TEAMS">
+            <column name="LDAPUSER_ID"/>
+        </createIndex>
+
+        <createIndex indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" tableName="LDAPUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
+            <column name="MANAGEDUSER_ID"/>
+        </createIndex>
+
+        <createIndex indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" tableName="MANAGEDUSERS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+
+        <createIndex indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" tableName="TEAMS_PERMISSIONS">
+            <column name="PERMISSION_ID"/>
+        </createIndex>
+
+        <createIndex indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" tableName="TEAMS_PERMISSIONS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_PROJECTS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+
+        <createIndex indexName="APIKEYS_TEAMS_TEAM_ID_IDX" tableName="APIKEYS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" tableName="APIKEYS_TEAMS">
+            <column name="APIKEY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX" tableName="PROJECT_ACCESS_TEAMS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
+            <column name="TEAM_ID"/>
+        </createIndex>
+
+        <createIndex indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" tableName="MANAGEDUSERS_TEAMS">
+            <column name="MANAGEDUSER_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICY_PROJECTS_POLICY_ID_IDX" tableName="POLICY_PROJECTS">
+            <column name="POLICY_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICY_PROJECTS_PROJECT_ID_IDX" tableName="POLICY_PROJECTS">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICY_TAGS_TAG_ID_IDX" tableName="POLICY_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+
+        <createIndex indexName="POLICY_TAGS_POLICY_ID_IDX" tableName="POLICY_TAGS">
+            <column name="POLICY_ID"/>
+        </createIndex>
+
+        <addUniqueConstraint columnNames="GROUPNAME, PROPERTYNAME" constraintName="CONFIGPROPERTY_U1"
+                             tableName="CONFIGPROPERTY"/>
+
+        <createTable tableName="shedlock">
+            <column name="name" type="VARCHAR(64)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="shedlock_pk"/>
+            </column>
+            <column name="lock_until" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
+                                 constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="ANALYSIS" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
+                                 constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
+                                 constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
+                                 constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="APIKEY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES"
+                                 constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES"
+                                 constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT"
+                                 constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS"
+                                 constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS"
+                                 constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LDAPUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS"
+                                 constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS"
+                                 constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS"
+                                 constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LDAPUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LICENSEGROUP" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LICENSE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS"
+                                 constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS"
+                                 constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="MANAGEDUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP"
+                                 constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP"
+                                 constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCGROUP" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP"
+                                 constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE"
+                                 constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS"
+                                 constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS"
+                                 constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS"
+                                 constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCUSER" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS"
+                                 constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION"
+                                 constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICYCONDITION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS"
+                                 constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS"
+                                 constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS"
+                                 constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS"
+                                 constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS"
+                                 constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS"
+                                 constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS"
+                                 constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT"
+                                 constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY"
+                                 constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT"
+                                 constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="SERVICECOMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT"
+                                 constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS"
+                                 constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS"
+                                 constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT"
+                                 constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICYVIOLATION" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID"
+                                 baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE"
+                                 constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="WORKFLOW_STATE" validate="true"/>
+    </changeSet>
+
+    <changeSet id="v5.3.0-2" author="nscuro@protonmail.com">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="SCHEMAVERSION"/>
+        </preConditions>
+
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameNumberedIndexesChange"/>
+    </changeSet>
+    <changeSet id="v5.3.0-3" author="VithikaS">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="SCHEMAVERSION"/>
+        </preConditions>
+
+        <customChange class="org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange"/>
+    </changeSet>
+
+    <changeSet id="v5.3.0-4" author="VithikaS">
+        <createTable tableName="VULNERABILITY_POLICY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITYPOLICY_PK"/>
+            </column>
+            <column name="ANALYSIS" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="AUTHOR" type="VARCHAR(255)"/>
+            <column name="CONDITIONS" type="TEXT[]">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RATINGS" type="JSONB"/>
+            <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="VALID_FROM" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="VALID_UNTIL" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="v5.3.0-5" author="VithikaS">
+        <createIndex indexName="VULNERABILITY_POLICY_NAME_IDX" tableName="VULNERABILITY_POLICY" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="v5.3.0-6" author="sahibamittal">
+        <preConditions onFail="MARK_RAN">
+                <tableExists tableName="ANALYSIS"/>
+        </preConditions>
+        <addColumn tableName="ANALYSIS">
+            <column name="CVSSV2VECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3SCORE" type="numeric"/>
+            <column name="OWASPSCORE" type="numeric"/>
+            <column name="CVSSV2SCORE" type="numeric"/>
+            <column name="OWASPVECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV3VECTOR" type="VARCHAR(255)"/>
+            <column name="SEVERITY" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="v5.3.0-7" author="nscuro@protonmail.com">
+        <!-- The existing index does not enforce uniqueness, but it is required for batch upserts. -->
+        <dropIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX"/>
+        <createIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+
+        <!-- The unique index is required to support batch upserts. -->
+        <createIndex indexName="COMPONENTS_VULNERABILITIES_COMPOSITE_IDX" tableName="COMPONENTS_VULNERABILITIES" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.3.0-8" author="nscuro@protonmail.com">
+        <addColumn tableName="ANALYSIS">
+            <column name="VULNERABILITY_POLICY_ID" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="ANALYSIS"
+                baseColumnNames="VULNERABILITY_POLICY_ID"
+                constraintName="ANALYSIS_VULNERABILITY_POLICY_ID_FK"
+                referencedTableName="VULNERABILITY_POLICY"
+                referencedColumnNames="ID"/>
+    </changeSet>
+
+    <changeSet id="v5.3.0-9" author="VithikaS">
+        <createTable tableName="VULNERABILITY_POLICY_BUNDLE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="VULNERABILITY_POLICY_BUNDLE_PK"/>
+            </column>
+            <column name="URL" type="VARCHAR(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HASH" type="VARCHAR(255)"/>
+            <column name="LAST_SUCCESSFUL_SYNC" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="CREATED" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="UPDATED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v5.3.0-10" author="sahibamittal">
+        <addColumn tableName="NOTIFICATIONRULE">
+            <column name="LOG_SUCCESSFUL_PUBLISH" type="BOOLEAN"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="v5.3.0-11" author="nscuro@protonmail.com">
+        <sql splitStatements="true">
+            ALTER TABLE "COMPONENT" DROP CONSTRAINT IF EXISTS "COMPONENT_CLASSIFIER_check";
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DEVICE', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'OPERATING_SYSTEM']));
+
+            ALTER TABLE "INTEGRITY_META_COMPONENT" DROP CONSTRAINT IF EXISTS "INTEGRITY_META_COMPONENT_STATUS_check";
+            ALTER TABLE "INTEGRITY_META_COMPONENT" ADD CONSTRAINT "INTEGRITY_META_COMPONENT_STATUS_check"
+                CHECK ("STATUS" IS NULL OR "STATUS"::TEXT = ANY(ARRAY['IN_PROGRESS', 'NOT_AVAILABLE', 'PROCESSED']));
+
+            ALTER TABLE "PROJECT" DROP CONSTRAINT IF EXISTS "PROJECT_CLASSIFIER_check";
+            ALTER TABLE "PROJECT" ADD CONSTRAINT "PROJECT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DEVICE', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'OPERATING_SYSTEM']));
+
+            ALTER TABLE "WORKFLOW_STATE" DROP CONSTRAINT IF EXISTS "WORKFLOW_STATE_STEP_check";
+            ALTER TABLE "WORKFLOW_STATE" ADD CONSTRAINT "WORKFLOW_STATE_STEP_check"
+                CHECK ("STEP"::TEXT = ANY(ARRAY['BOM_CONSUMPTION', 'BOM_PROCESSING', 'METRICS_UPDATE', 'POLICY_BUNDLE_SYNC', 'POLICY_EVALUATION', 'REPO_META_ANALYSIS', 'VULN_ANALYSIS']));
+
+            ALTER TABLE "WORKFLOW_STATE" DROP CONSTRAINT IF EXISTS "WORKFLOW_STATE_STATUS_check";
+            ALTER TABLE "WORKFLOW_STATE" ADD CONSTRAINT "WORKFLOW_STATE_STATUS_check"
+                CHECK ("STATUS"::TEXT = ANY(ARRAY['CANCELLED', 'COMPLETED', 'FAILED', 'NOT_APPLICABLE', 'PENDING', 'TIMED_OUT']));
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.3.0-12" author="sahibamittal">
+        <dropTable tableName="CPE"/>
+    </changeSet>
+
+    <changeSet id="v5.3.0-13" author="nscuro@protonmail.com">
+        <!--
+          CREATE EXTENSION requires SUPERUSER (Postgres < 13) or CREATE privileges (Postgres >= 13).
+          Either configure a migration user with sufficient privileges via database.migration.username
+          and database.migration.password, or create the extension manually. The below statement will
+          not fail if the extension already exists, even though the user might now have sufficient
+          privileges to create it.
+        -->
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS PG_TRGM;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.3.0-14" author="nscuro@protonmail.com" runInTransaction="false">
+        <!--
+          Create a GIN index to support LIKE '%foo%' queries for dependency graph traversal.
+          Creating this index on an existing database might take a while, so do it concurrently
+          to not block writes on the "COMPONENT" table. Index creation cannot run in a transaction
+          when using CONCURRENTLY.
+        -->
+        <sql>
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS "COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"
+                ON "COMPONENT" USING GIN ("DIRECT_DEPENDENCIES" GIN_TRGM_OPS);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.3.0-15" author="sahibamittal">
+        <createTable tableName="PROJECT_METADATA">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_METADATA_PK"/>
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUPPLIER" type="TEXT"/>
+            <column name="AUTHORS" type="TEXT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="PROJECT_METADATA" baseColumnNames="PROJECT_ID"
+                constraintName="PROJECT_METADATA_PROJECT_ID_FK" deferrable="true" initiallyDeferred="true"
+                referencedTableName="PROJECT" referencedColumnNames="ID"
+                onDelete="NO ACTION" onUpdate="NO ACTION" validate="true"/>
+        <addColumn tableName="COMPONENT">
+            <column name="SUPPLIER" type="TEXT"/>
+        </addColumn>
+        <addColumn tableName="PROJECT">
+            <column name="SUPPLIER" type="TEXT"/>
+            <column name="MANUFACTURER" type="TEXT"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

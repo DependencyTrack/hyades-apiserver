@@ -1,0 +1,756 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This file is part of Dependency-Track.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~ Copyright (c) OWASP Foundation. All Rights Reserved.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <parent>
+        <groupId>us.springett</groupId>
+        <artifactId>alpine-parent</artifactId>
+        <version>2.2.5</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.dependencytrack</groupId>
+    <artifactId>dependency-track</artifactId>
+    <packaging>war</packaging>
+    <version>5.5.0-SNAPSHOT</version>
+
+    <name>Dependency-Track</name>
+    <url>https://dependencytrack.org/</url>
+    <description>Dependency-Track is an intelligent component analysis platform that allows organizations to identify
+        and reduce risk in the software supply chain.
+    </description>
+    <inceptionYear>2013</inceptionYear>
+    <organization>
+        <name>OWASP</name>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Steve Springett</name>
+            <email>Steve.Springett@owasp.org</email>
+            <organization>OWASP</organization>
+            <organizationUrl>http://www.owasp.org/</organizationUrl>
+            <roles>
+                <role>Architect</role>
+                <role>Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:DependencyTrack/dependency-track.git</connection>
+        <url>https://github.com/DependencyTrack/dependency-track.git</url>
+        <developerConnection>scm:git:git@github.com:DependencyTrack/dependency-track.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/DependencyTrack/dependency-track/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>github-actions</system>
+        <url>https://github.com/DependencyTrack/dependency-track/actions</url>
+    </ciManagement>
+
+    <properties>
+        <!-- Dependency Versions -->
+        <lib.alpine.version>${project.parent.version}</lib.alpine.version>
+        <lib.awaitility.version>4.2.0</lib.awaitility.version>
+        <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
+        <lib.checkstyle.version>10.13.0</lib.checkstyle.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.16.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.commons-compress.version>1.26.1</lib.commons-compress.version>
+        <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
+        <lib.cvss-calculator.version>1.4.2</lib.cvss-calculator.version>
+        <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
+        <lib.cyclonedx-java.version>8.0.3</lib.cyclonedx-java.version>
+        <lib.jackson.version>2.16.1</lib.jackson.version>
+        <lib.jackson-databind.version>2.16.1</lib.jackson-databind.version>
+        <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
+        <lib.jdbi.version>3.45.0</lib.jdbi.version>
+        <lib.json-unit.version>3.2.7</lib.json-unit.version>
+        <lib.kafka.version>3.6.1</lib.kafka.version>
+        <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
+        <lib.liquibase.version>4.26.0</lib.liquibase.version>
+        <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
+        <lib.minio.version>8.5.9</lib.minio.version>
+        <lib.packageurl.version>1.5.0</lib.packageurl.version>
+        <lib.parallel-consumer.version>0.5.2.8</lib.parallel-consumer.version>
+        <lib.pebble.version>3.2.2</lib.pebble.version>
+        <lib.protobuf-java.version>3.25.3</lib.protobuf-java.version>
+        <lib.testcontainers.version>1.19.7</lib.testcontainers.version>
+        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
+        <lib.system-rules.version>1.19.0</lib.system-rules.version>
+        <lib.versatile.version>0.6.0</lib.versatile.version>
+        <lib.woodstox.version>6.6.0</lib.woodstox.version>
+        <lib.junit-params.version>1.1.1</lib.junit-params.version>
+        <lib.log4j-over-slf4j.version>2.0.12</lib.log4j-over-slf4j.version>
+        <lib.httpclient.version>4.5.14</lib.httpclient.version>
+        <lib.net.javacrumbs.shedlock.version>5.13.0</lib.net.javacrumbs.shedlock.version>
+        <lib.javacron.version>1.4.0</lib.javacron.version>
+        <lib.jdbc-driver.postgresql.version>42.7.2</lib.jdbc-driver.postgresql.version>
+        <!-- Maven Plugin Properties -->
+        <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
+        <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
+        <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
+        <!-- Maven Plugin Versions -->
+        <plugin.checkstyle.version>3.3.1</plugin.checkstyle.version>
+        <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
+        <plugin.jetty.version>10.0.20</plugin.jetty.version>
+        <!-- SonarCloud properties -->
+        <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
+        <!-- Tool Versions -->
+        <tool.protoc.version>com.google.protobuf:protoc:${lib.protobuf-java.version}</tool.protoc.version>
+        <!-- CycloneDX CLI -->
+        <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
+        <services.bom.merge.skip>true</services.bom.merge.skip>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>ossrh-snapshot</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots>
+                <updatePolicy>always</updatePolicy>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- Alpine -->
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>alpine-common</artifactId>
+            <version>${lib.alpine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>alpine-model</artifactId>
+            <version>${lib.alpine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>alpine-infra</artifactId>
+            <version>${lib.alpine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>alpine-server</artifactId>
+            <version>${lib.alpine.version}</version>
+            <exclusions>
+                <!-- this exclusion done to get rid of vulnerability in the project as this transitive dependency is not being used in the project
+                Vulnerability : CVE-2022-1471 (https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-1471 ) -->
+                <exclusion>
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Common Expression Language (CEL) -->
+        <dependency>
+            <groupId>org.projectnessie.cel</groupId>
+            <artifactId>cel-tools</artifactId>
+            <version>${lib.cel-tools.version}</version>
+        </dependency>
+        <!-- CVSS Calculator -->
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>cvss-calculator</artifactId>
+            <version>${lib.cvss-calculator.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-core</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-jackson2</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-sqlobject</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-postgres</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-freemarker</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <!-- OWASP Risk Rating calculator -->
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>owasp-risk-rating-calculator</artifactId>
+            <version>${lib.owasp-rr-calculator.version}</version>
+        </dependency>
+        <!-- CPE Parser -->
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>cpe-parser</artifactId>
+            <version>${lib.cpe-parser.version}</version>
+        </dependency>
+        <!-- CycloneDX -->
+        <dependency>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-core-java</artifactId>
+            <version>${lib.cyclonedx-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>${lib.jaxb.runtime.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>javax.activation-api</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- org.json
+        This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
+        in favor of their own API compatible replacement. Therefore, it was necessary to directly include org.json.
+        Removal of org.json is documented in https://github.com/DependencyTrack/dependency-track/issues/1113 -->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-json-org</artifactId>
+            <version>${lib.jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${lib.jackson.version}</version>
+        </dependency>
+
+        <!-- Package URL -->
+        <dependency>
+            <groupId>com.github.package-url</groupId>
+            <artifactId>packageurl-java</artifactId>
+            <version>${lib.packageurl.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.confluent.parallelconsumer</groupId>
+            <artifactId>parallel-consumer-core</artifactId>
+            <version>${lib.parallel-consumer.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${lib.kafka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-streams</artifactId>
+            <version>${lib.kafka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-streams-test-utils</artifactId>
+            <version>${lib.kafka.version}</version>
+        </dependency>
+        <!-- shedlock dependencies -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc</artifactId>
+            <version>${lib.net.javacrumbs.shedlock.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-internal</artifactId>
+            <version>${lib.net.javacrumbs.shedlock.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.asahaf.javacron</groupId>
+            <artifactId>javacron</artifactId>
+            <version>${lib.javacron.version}</version>
+        </dependency>
+        <!-- Micrometer Metrics -->
+        <dependency>
+            <groupId>io.github.mweirauch</groupId>
+            <artifactId>micrometer-jvm-extras</artifactId>
+            <version>${lib.micrometer-jvm-extras.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.micrometer</groupId>
+                    <artifactId>micrometer-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Pebble templating engine -->
+        <dependency>
+            <groupId>io.pebbletemplates</groupId>
+            <artifactId>pebble</artifactId>
+            <version>${lib.pebble.version}</version>
+        </dependency>
+        <!-- Protobuf -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${lib.protobuf-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>${lib.protobuf-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${lib.httpclient.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>${lib.httpclient.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.woodstox</groupId>
+            <artifactId>woodstox-core</artifactId>
+            <version>${lib.woodstox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.nscuro</groupId>
+            <artifactId>versatile</artifactId>
+            <version>${lib.versatile.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-artifact</artifactId>
+            <version>3.9.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8</artifactId>
+            <version>3.0.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Bundle JDBC drivers -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${lib.jdbc-driver.postgresql.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud.sql</groupId>
+            <artifactId>postgres-socket-factory</artifactId>
+            <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${lib.liquibase.version}</version>
+        </dependency>
+
+        <!-- Xerces -->
+        <dependency>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>2.12.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>xml-apis</groupId>
+                    <artifactId>xml-apis</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Commons Compress -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>${lib.commons-compress.version}</version>
+        </dependency>
+        <!-- Resilience4J -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-retry</artifactId>
+            <version>${lib.resilience4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+            <version>${lib.resilience4j.version}</version>
+        </dependency>
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${lib.log4j-over-slf4j.version}</version>
+        </dependency>
+        <!-- YAML -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${lib.jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${lib.minio.version}</version>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${lib.junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>pl.pragmatists</groupId>
+            <artifactId>JUnitParams</artifactId>
+            <version>${lib.junit-params.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+            <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+            <version>${lib.jersey.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.connectors</groupId>
+            <artifactId>jersey-grizzly-connector</artifactId>
+            <version>${lib.jersey.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${lib.mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.stefanbirkner</groupId>
+            <artifactId>system-rules</artifactId>
+            <version>${lib.system-rules.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${lib.assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.json-unit</groupId>
+            <artifactId>json-unit-assertj</artifactId>
+            <version>${lib.json-unit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.mguenther.kafka</groupId>
+            <artifactId>kafka-junit</artifactId>
+            <version>${lib.kafka-junit.version}</version>
+            <scope>test</scope>
+            <!--
+                kafka-junit pulls in the entire Kafka application as dependency.
+                Some transitive dependencies of Kafka do not play well with Jersey / Grizzly.
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>jackson-module-scala_2.13</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.dataformat</groupId>
+                    <artifactId>jackson-dataformat-csv</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-jdk8</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>redpanda</artifactId>
+            <version>${lib.testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${lib.testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${lib.awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.version</include>
+                </includes>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>
+                        <arg>-Xlint:all</arg>
+                        <arg>-Xlint:-processing</arg>
+                        <arg>-Xlint:-serial</arg>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${plugin.checkstyle.version}</version>
+                <configuration>
+                    <configLocation>${project.basedir}/.checkstyle.xml</configLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <includeResources>false</includeResources>
+                    <includeTestResources>false</includeTestResources>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${lib.checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>com.github.os72</groupId>
+                <artifactId>protoc-jar-maven-plugin</artifactId>
+                <version>${plugin.protoc-jar.version}</version>
+                <executions>
+                    <execution>
+                        <id>protobuf</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <includeMavenTypes>direct</includeMavenTypes>
+                            <inputDirectories>
+                                <inputDirectory>src/main/proto</inputDirectory>
+                            </inputDirectories>
+                            <includeDirectories>
+                                <includeDirectory>src/main/proto</includeDirectory>
+                            </includeDirectories>
+                            <protocArtifact>${tool.protoc.version}</protocArtifact>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit4</artifactId>
+                        <version>${maven.surefire.plugin.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>org/cyclonedx/proto/**/*</exclude>
+                        <exclude>org/dependencytrack/proto/**/*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>merge-services-bom</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${cyclonedx-cli.path}</executable>
+                            <arguments>
+                                <argument>merge</argument>
+                                <argument>--input-files</argument>
+                                <argument>${project.build.directory}/bom.json</argument>
+                                <argument>${project.basedir}/src/main/resources/services.bom.json</argument>
+                                <argument>--output-file</argument>
+                                <argument>${project.build.directory}/bom.json</argument>
+                            </arguments>
+                            <skip>${services.bom.merge.skip}</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>deploy-bom</id>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <copy file="${project.build.directory}/bom.json"
+                                      tofile="${project.build.directory}/${project.artifactId}/.well-known/sbom"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${plugin.jetty.version}</version>
+                <configuration>
+                    <webApp>
+                        <contextPath>/</contextPath>
+                    </webApp>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <version>${lib.liquibase.version}</version>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>clean-exclude-wars</id>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-clean-plugin</artifactId>
+                            <version>3.3.2</version>
+                            <configuration>
+                                <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                <filesets>
+                                    <fileset>
+                                        <directory>target</directory>
+                                        <followSymlinks>false</followSymlinks>
+                                        <useDefaultExcludes>false</useDefaultExcludes>
+                                        <includes>
+                                            <include>*/</include>
+                                        </includes>
+                                        <excludes>
+                                            <exclude>dependency-track*.jar</exclude>
+                                        </excludes>
+                                    </fileset>
+                                </filesets>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+        <profile>
+            <id>embedded-jetty</id>
+            <activation>
+                <property>
+                    <name>env.ACTIVATE_EMBEDDED_JETTY</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <war-embedded-finalname>${project.build.finalName}-apiserver</war-embedded-finalname>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>
