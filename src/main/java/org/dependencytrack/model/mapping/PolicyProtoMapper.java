@@ -115,7 +115,6 @@ public class PolicyProtoMapper {
         maybeSet(vuln::getOwaspRRVector, protoBuilder::setOwaspRrVector);
         maybeSet(asDouble(vuln.getEpssScore()), protoBuilder::setEpssScore);
         maybeSet(asDouble(vuln.getEpssPercentile()), protoBuilder::setEpssPercentile);
-
         return protoBuilder.build();
     }
 

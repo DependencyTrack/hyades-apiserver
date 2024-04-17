@@ -16,15 +16,20 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.parser.dependencytrack;
 
-import alpine.event.framework.Event;
+import org.dependencytrack.model.Epss;
+import org.dependencytrack.proto.mirror.v1.EpssItem;
 
-/**
- * Defines an event used to start a mirror of EPSS.
- *
- * @author Steve Springett
- * @since 4.5.0
- */
-public class EpssMirrorEvent implements Event {
+import java.math.BigDecimal;
+
+public final class EpssModelConverter {
+
+    public static Epss convert(final EpssItem epssItem) {
+        final Epss epss = new Epss();
+        epss.setCve(epssItem.getCve());
+        epss.setScore(BigDecimal.valueOf(epssItem.getEpss()));
+        epss.setPercentile(BigDecimal.valueOf(epssItem.getPercentile()));
+        return epss;
+    }
 }

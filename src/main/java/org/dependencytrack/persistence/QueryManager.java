@@ -53,6 +53,7 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -151,6 +152,7 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
 
     private TagQueryManager tagQueryManager;
+    private EpssQueryManager epssQueryManager;
 
     /**
      * Default constructor.
@@ -313,6 +315,18 @@ public class QueryManager extends AlpineQueryManager {
             vulnerabilityQueryManager = (request == null) ? new VulnerabilityQueryManager(getPersistenceManager()) : new VulnerabilityQueryManager(getPersistenceManager(), request);
         }
         return vulnerabilityQueryManager;
+    }
+
+    /**
+     * Lazy instantiation of EpssQueryManager.
+     *
+     * @return a EpssQueryManager object
+     */
+    private EpssQueryManager getEpssQueryManager() {
+        if (epssQueryManager == null) {
+            epssQueryManager = (request == null) ? new EpssQueryManager(getPersistenceManager()) : new EpssQueryManager(getPersistenceManager());
+        }
+        return epssQueryManager;
     }
 
     /**
@@ -1905,5 +1919,21 @@ public class QueryManager extends AlpineQueryManager {
         final Query<VulnerabilityPolicyBundle> query = pm.newQuery(VulnerabilityPolicyBundle.class);
         query.setRange(0, 1);
         return singleResult(query.execute());
+    }
+
+    public Epss synchronizeEpss(Epss epss) {
+        return getEpssQueryManager().synchronizeEpss(epss);
+    }
+
+    public void synchronizeAllEpss(List<Epss> epssList) {
+        getEpssQueryManager().synchronizeAllEpss(epssList);
+    }
+
+    public Epss getEpssByCveId(String cveId) {
+        return getEpssQueryManager().getEpssByCveId(cveId);
+    }
+
+    public Map<String, Epss> getEpssForCveIds(List<String> cveIds) {
+        return getEpssQueryManager().getEpssForCveIds(cveIds);
     }
 }
