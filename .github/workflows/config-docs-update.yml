@@ -19,9 +19,9 @@ name: Update Config Documentation
 on:
   push:
     branches:
-      - main
+    - main
     paths:
-      - src/main/resources/application.properties
+    - src/main/resources/application.properties
 
 permissions: { }
 
@@ -32,11 +32,11 @@ jobs:
     timeout-minutes: 5
     if: "${{ github.repository_owner == 'DependencyTrack' }}"
     steps:
-      - name: Dispatch Update Event
-        env:
-          # NB: The default GITHUB_TOKEN is scoped to the repository where
-          # the workflow is running, thus can't trigger workflows in other
-          # repos. Requires a PAT with `write` role to the target instead.
-          GH_TOKEN: "${{ secrets.BOT_RELEASE_TOKEN }}"
-        run: |-
-          gh workflow run update-config-docs.yml -R DependencyTrack/hyades
+    - name: Dispatch Update Event
+      env:
+        # NB: The default GITHUB_TOKEN is scoped to the repository where
+        # the workflow is running, thus can't trigger workflows in other
+        # repos. Requires a PAT with `write` role to the target instead.
+        GH_TOKEN: "${{ secrets.BOT_RELEASE_TOKEN }}"
+      run: |-
+        gh workflow run update-config-docs.yml -R DependencyTrack/hyades
