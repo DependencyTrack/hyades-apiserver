@@ -70,7 +70,7 @@ public class Tag implements Serializable {
 
     @Persistent
     @JsonIgnore
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "vulnId ASC"))
     private List<Vulnerability> vulnerabilities;
 
     public long getId() {
