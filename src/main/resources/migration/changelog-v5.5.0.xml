@@ -62,4 +62,16 @@
             <column name="CVE"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.5.0-5" author="nscuro">
+        <dropIndex tableName="VULNERABLESOFTWARE" indexName="VULNERABLESOFTWARE_CPE_PURL_PARTS_IDX"/>
+        <createIndex tableName="VULNERABLESOFTWARE" indexName="VULNERABLESOFTWARE_CPE_PURL_PARTS_IDX">
+            <column name="LOWER(&quot;PART&quot;)" computed="true"/>
+            <column name="LOWER(&quot;VENDOR&quot;)" computed="true"/>
+            <column name="LOWER(&quot;PRODUCT&quot;)" computed="true"/>
+            <column name="PURL_TYPE"/>
+            <column name="PURL_NAMESPACE"/>
+            <column name="PURL_NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
