@@ -41,6 +41,10 @@ public class ProcessorInitializer implements ServletContextListener {
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
         PROCESSOR_MANAGER.registerBatchProcessor(EpssMirrorProcessor.PROCESSOR_NAME,
                 KafkaTopics.NEW_EPSS, new EpssMirrorProcessor());
+        PROCESSOR_MANAGER.registerProcessor(VulnerabilityScanResultProcessor.PROCESSOR_NAME,
+                KafkaTopics.VULN_ANALYSIS_RESULT, new VulnerabilityScanResultProcessor());
+        PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
+                KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED, new ProcessedVulnerabilityScanResultProcessor());
 
         PROCESSOR_MANAGER.startAll();
     }

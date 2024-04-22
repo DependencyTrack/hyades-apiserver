@@ -28,7 +28,6 @@ import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -37,20 +36,14 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
-import org.dependencytrack.notification.vo.ComponentVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
-import org.dependencytrack.notification.vo.ProjectVulnAnalysisComplete;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.Query;
@@ -58,17 +51,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -417,93 +405,6 @@ public final class NotificationUtil {
         }
 
         return messageType + " on Project: [" + projectStr + "]";
-    }
-
-    public static Notification createProjectVulnerabilityAnalysisCompleteNotification(VulnerabilityScan vulnScan, UUID token, ProjectVulnAnalysisStatus status) {
-        // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
-        //   See #analyzeNotificationCriteria(QueryManager, PolicyViolation) for an example.
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, vulnScan.getTargetIdentifier());
-            if (project == null) {
-                // This can happen when the project was deleted before completion of the vuln scan is detected.
-                throw new NoSuchElementException("Project with UUID %s does not exist".formatted(vulnScan.getTargetIdentifier()));
-            }
-
-            List<Finding> findings = qm.getFindings(project);
-            List<Component> componentList = new ArrayList<>();
-            ConcurrentHashMap<String, List<Vulnerability>> map = new ConcurrentHashMap<>();
-            for (Finding finding : findings) {
-                final var componentUuid = (String) finding.getComponent().get("uuid");
-                Component component = qm.getObjectByUuid(Component.class, componentUuid);
-                if (component == null) {
-                    // This can happen when the project was deleted while this method is executing.
-                    throw new NoSuchElementException("Component with UUID %s does not exist in project %s"
-                            .formatted(componentUuid, project.getUuid()));
-                }
-                final var vulnerabilityUuid = (String) finding.getVulnerability().get("uuid");
-                Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, vulnerabilityUuid);
-                if (vulnerability == null) {
-                    // Unlikely to happen, but when in doubt it's still better to raise this exception
-                    // instead of running into a generic NPE.
-                    throw new NoSuchElementException("Vulnerability with UUID %s does not exist".formatted(vulnerabilityUuid));
-                }
-                final List<VulnerabilityAlias> aliases = qm.detach(qm.getVulnerabilityAliases(vulnerability));
-                vulnerability.setAliases(aliases);
-                if (map.containsKey(component.getUuid().toString())) {
-                    List<Vulnerability> temp1 = new ArrayList<>();
-                    temp1.add(vulnerability);
-                    temp1.addAll(map.get(component.getUuid().toString()));
-                    map.remove(component.getUuid().toString());
-                    map.put(component.getUuid().toString(), temp1);
-                } else {
-                    //component should be added to list only if not present in map
-                    componentList.add(component);
-                    map.put(component.getUuid().toString(), List.of(vulnerability));
-                }
-            }
-
-
-            List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = createList(componentList, map);
-            return new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(NotificationGroup.PROJECT_VULN_ANALYSIS_COMPLETE)
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .title(NotificationConstants.Title.PROJECT_VULN_ANALYSIS_COMPLETE)
-                    .content("project analysis complete for project " + project.getName() + " with id: " + project.getUuid() + " and with version: " + project.getVersion() + ". Vulnerability details added to subject ")
-                    .subject(new ProjectVulnAnalysisComplete(token, project, componentAnalysisCompleteList, status));
-        }
-    }
-
-    public static List<ComponentVulnAnalysisComplete> createList(List<Component> componentList, Map<String, List<Vulnerability>> map) {
-        List<ComponentVulnAnalysisComplete> componentAnalysisCompleteList = new ArrayList<>();
-        for (Component component : componentList) {
-            List<Vulnerability> vulnerabilities = map.get(component.getUuid().toString());
-            List<Vulnerability> result = new ArrayList<>();
-            for (Vulnerability vulnerability : vulnerabilities) {
-                Vulnerability vulnerability1 = new Vulnerability();
-                vulnerability1.setId(vulnerability.getId());
-                vulnerability1.setVulnId(vulnerability.getVulnId());
-                vulnerability1.setSource(vulnerability.getSource());
-                vulnerability1.setTitle(vulnerability.getTitle());
-                vulnerability1.setSubTitle(vulnerability.getSubTitle());
-                vulnerability1.setRecommendation(vulnerability.getRecommendation());
-                vulnerability1.setSeverity(vulnerability.getSeverity());
-                vulnerability1.setCvssV2BaseScore(vulnerability.getCvssV2BaseScore());
-                vulnerability1.setCvssV3BaseScore(vulnerability.getCvssV3BaseScore());
-                vulnerability1.setOwaspRRLikelihoodScore(vulnerability.getOwaspRRLikelihoodScore());
-                vulnerability1.setOwaspRRTechnicalImpactScore(vulnerability.getOwaspRRTechnicalImpactScore());
-                vulnerability1.setOwaspRRBusinessImpactScore(vulnerability.getOwaspRRBusinessImpactScore());
-                vulnerability1.setCwes(vulnerability.getCwes());
-                vulnerability1.setUuid(vulnerability.getUuid());
-                vulnerability1.setVulnerableSoftware(vulnerability.getVulnerableSoftware());
-                if (vulnerability.getAliases() != null && !vulnerability.getAliases().isEmpty()) {
-                    vulnerability1.setAliases(vulnerability.getAliases());
-                }
-                result.add(vulnerability1);
-            }
-            componentAnalysisCompleteList.add(new ComponentVulnAnalysisComplete(result, component));
-        }
-        return componentAnalysisCompleteList;
     }
 
     public static class PolicyViolationNotificationProjection {
