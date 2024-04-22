@@ -1942,4 +1942,8 @@ public class QueryManager extends AlpineQueryManager {
     public void bind(Vulnerability vulnerability, List<Tag> tags) {
         getVulnerabilityQueryManager().bind(vulnerability, tags);
     }
+
+    public PaginatedResult getVulnerabilities(final Tag tag) {
+        return getVulnerabilityQueryManager().getVulnerabilities(tag);
+    }
 }
