@@ -1939,6 +1939,10 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().resolveTags(tags);
     }
 
+    public List<Tag> resolveTagsByName(final List<String> tagNames) {
+        return getTagQueryManager().resolveTagsByName(tagNames);
+    }
+
     public void bind(Vulnerability vulnerability, List<Tag> tags) {
         getVulnerabilityQueryManager().bind(vulnerability, tags);
     }

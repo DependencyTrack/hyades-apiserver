@@ -89,13 +89,18 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
      * @return List of resolved Tags
      */
     public synchronized List<Tag> resolveTags(final List<Tag> tags) {
+         List<String> tagNames = tags.stream().map(tag -> tag.getName()).toList();
+         return resolveTagsByName(tagNames);
+    }
+
+    public synchronized List<Tag> resolveTagsByName(final List<String> tags) {
         if (tags == null) {
             return new ArrayList<>();
         }
         final List<Tag> resolvedTags = new ArrayList<>();
         final List<String> unresolvedTags = new ArrayList<>();
-        for (final Tag tag : tags) {
-            final String trimmedTag = StringUtils.trimToNull(tag.getName());
+        for (final String tag : tags) {
+            final String trimmedTag = StringUtils.trimToNull(tag);
             if (trimmedTag != null) {
                 final Tag resolvedTag = getTagByName(trimmedTag);
                 if (resolvedTag != null) {

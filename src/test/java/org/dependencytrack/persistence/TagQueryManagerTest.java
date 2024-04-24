@@ -73,4 +73,20 @@ public class TagQueryManagerTest extends PersistenceCapableTest {
                 tag -> assertThat(tag.getName()).isEqualTo(tag2.getName())
         );
     }
+
+    @Test
+    public void testTagsAreResolvedByName() {
+
+        // Resolve empty list of tags
+        assertThat(qm.resolveTagsByName(Collections.emptyList())).isEmpty();
+
+        Tag tag1 = qm.createTag("test-tag-1");
+        Tag tag2 = new Tag();
+        tag2.setName("test-tag-2");
+
+        assertThat(qm.resolveTagsByName(List.of("test-tag-1", "test-tag-2"))).satisfiesExactlyInAnyOrder(
+                tag -> assertThat(tag.getName()).isEqualTo(tag1.getName()),
+                tag -> assertThat(tag.getName()).isEqualTo(tag2.getName())
+        );
+    }
 }
