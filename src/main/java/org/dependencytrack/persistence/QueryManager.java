@@ -148,9 +148,7 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
     private IntegrityMetaQueryManager integrityMetaQueryManager;
-
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
-
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
 
@@ -549,11 +547,11 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public Tag getTagByName(final String name) {
-        return getProjectQueryManager().getTagByName(name);
+        return getTagQueryManager().getTagByName(name);
     }
 
     public Tag createTag(final String name) {
-        return getProjectQueryManager().createTag(name);
+        return getTagQueryManager().createTag(name);
     }
 
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, boolean active, boolean commitIndex) {
@@ -1935,5 +1933,21 @@ public class QueryManager extends AlpineQueryManager {
 
     public Map<String, Epss> getEpssForCveIds(List<String> cveIds) {
         return getEpssQueryManager().getEpssForCveIds(cveIds);
+    }
+
+    public List<Tag> resolveTags(final List<Tag> tags) {
+        return getTagQueryManager().resolveTags(tags);
+    }
+
+    public List<Tag> resolveTagsByName(final List<String> tagNames) {
+        return getTagQueryManager().resolveTagsByName(tagNames);
+    }
+
+    public void bind(Vulnerability vulnerability, List<Tag> tags) {
+        getVulnerabilityQueryManager().bind(vulnerability, tags);
+    }
+
+    public PaginatedResult getVulnerabilities(final Tag tag) {
+        return getVulnerabilityQueryManager().getVulnerabilities(tag);
     }
 }
