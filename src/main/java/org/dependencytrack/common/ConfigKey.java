@@ -26,22 +26,17 @@ public enum ConfigKey implements Config.Key {
 
     ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION("alpine.worker.pool.drain.timeout.duration", "PT30S"),
 
-    APPLICATION_ID("application.id", "dependencytrack-apiserver"),
-    KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
     KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
-
-    KAFKA_TLS_PROTOCOL("kafka.security.protocol", ""),
-
-    KAFKA_TLS_ENABLED("kafka.tls.enabled", false),
+    KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
+    KAFKA_KEY_STORE_PASSWORD("kafka.keystore.password", ""),
+    KAFKA_KEY_STORE_PATH("kafka.keystore.path", ""),
     KAFKA_MTLS_ENABLED("kafka.mtls.enabled", false),
-    TRUST_STORE_PATH("kafka.truststore.path", ""),
-
-    TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
-    KEY_STORE_PATH("kafka.keystore.path", ""),
-
-    KEY_STORE_PASSWORD("kafka.keystore.password", ""),
-    KAFKA_TOPIC_PREFIX("kafka.topic.prefix", ""),
     KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION("kafka.producer.drain.timeout.duration", "PT30S"),
+    KAFKA_TLS_ENABLED("kafka.tls.enabled", false),
+    KAFKA_TLS_PROTOCOL("kafka.security.protocol", ""),
+    KAFKA_TOPIC_PREFIX("kafka.topic.prefix", ""),
+    KAFKA_TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
+    KAFKA_TRUST_STORE_PATH("kafka.truststore.path", ""),
 
     CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK("task.cron.metrics.portfolio", "10 * * * *"),
     CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK("task.cron.metrics.vulnerability", "40 * * * *"),
