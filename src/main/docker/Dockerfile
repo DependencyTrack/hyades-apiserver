@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-FROM eclipse-temurin:21.0.2_13-jre-jammy@sha256:d9f7b8326b9d396d070432982a998015a04ffb8885b145e97777a5ae324a8df1 AS jre-build
+FROM eclipse-temurin:22.0.1_8-jre-jammy@sha256:2d7f3faebdc2c11ab7ad939f88922af63eae069cf4de31007328494969ec67b5 AS jre-build
 
 FROM debian:stable-slim@sha256:2c96e0011b1b2855d8e482e6d4ced6d292ea50750e9e535d09510167ae4858f9
 
