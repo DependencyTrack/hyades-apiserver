@@ -57,7 +57,7 @@ public class MigrationInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getPropertyAsBoolean(ConfigKey.RUN_MIGRATIONS)) {
+        if (!config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS)) {
             LOGGER.info("Migrations are disabled; Skipping");
             return;
         }

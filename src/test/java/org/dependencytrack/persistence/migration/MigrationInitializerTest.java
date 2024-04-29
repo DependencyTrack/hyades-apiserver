@@ -54,7 +54,7 @@ public class MigrationInitializerTest {
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn(postgresContainer.getUsername());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn(postgresContainer.getPassword());
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.RUN_MIGRATIONS))).thenReturn(true);
+        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(true);
 
         new MigrationInitializer(configMock).contextInitialized(null);
     }
@@ -66,7 +66,7 @@ public class MigrationInitializerTest {
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn("username");
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn("password");
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.RUN_MIGRATIONS))).thenReturn(true);
+        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(true);
         when(configMock.getProperty(eq(ConfigKey.DATABASE_MIGRATION_USERNAME))).thenReturn(postgresContainer.getUsername());
         when(configMock.getProperty(eq(ConfigKey.DATABASE_MIGRATION_PASSWORD))).thenReturn(postgresContainer.getPassword());
 
