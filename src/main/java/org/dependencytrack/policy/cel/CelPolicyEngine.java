@@ -19,7 +19,6 @@
 package org.dependencytrack.policy.cel;
 
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,7 +27,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-import io.micrometer.core.instrument.Timer;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -67,6 +65,7 @@ import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
+import org.slf4j.MDC;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -86,6 +85,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
@@ -138,31 +138,31 @@ public class CelPolicyEngine {
      * @param uuid The {@link UUID} of the {@link Project}
      */
     public void evaluateProject(final UUID uuid) {
-        final Timer.Sample timerSample = Timer.start();
+        final long startTimeNs = System.nanoTime();
 
         try (final var qm = new QueryManager();
-             final var celQm = new CelPolicyQueryManager(qm)) {
+             final var celQm = new CelPolicyQueryManager(qm);
+             var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, uuid.toString())) {
             // TODO: Should this entire procedure run in a single DB transaction?
             //   Would be better for atomicity, but could block DB connections for prolonged
             //   period of time for larger projects with many violations.
 
             final Project project = qm.getObjectByUuid(Project.class, uuid, List.of(Project.FetchGroup.IDENTIFIERS.name()));
             if (project == null) {
-                LOGGER.warn("Project with UUID %s does not exist; Skipping".formatted(uuid));
+                LOGGER.warn("Project does not exist; Skipping");
                 return;
             }
 
-            LOGGER.debug("Compiling policy scripts for project %s".formatted(uuid));
+            LOGGER.debug("Compiling policy scripts");
             final List<Pair<PolicyCondition, CelPolicyScript>> conditionScriptPairs = getApplicableConditionScriptPairs(celQm, project);
             if (conditionScriptPairs.isEmpty()) {
-                LOGGER.info("No applicable policies found for project %s".formatted(uuid));
+                LOGGER.info("No applicable policies found");
                 celQm.reconcileViolations(project.getId(), emptyMultiValuedMap());
                 return;
             }
 
             final MultiValuedMap<Type, String> requirements = determineScriptRequirements(conditionScriptPairs);
-            LOGGER.debug("Requirements for project %s and %d policy conditions: %s"
-                    .formatted(uuid, conditionScriptPairs.size(), requirements));
+            LOGGER.debug("Requirements for %d policy conditions: %s".formatted(conditionScriptPairs.size(), requirements));
 
             final org.dependencytrack.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
@@ -229,18 +229,14 @@ public class CelPolicyEngine {
             }
 
             final List<Long> newViolationIds = celQm.reconcileViolations(project.getId(), violationsByComponentId);
-            LOGGER.info("Identified %d new violations for project %s".formatted(newViolationIds.size(), uuid));
+            LOGGER.info("Identified %d new violations".formatted(newViolationIds.size()));
 
             for (final Long newViolationId : newViolationIds) {
                 NotificationUtil.analyzeNotificationCriteria(qm, newViolationId);
             }
         } finally {
-            final long durationNs = timerSample.stop(Timer
-                    .builder("policy_evaluation")
-                    .tag("target", "project")
-                    .register(Metrics.getRegistry()));
-            LOGGER.info("Evaluation of project %s completed in %s"
-                    .formatted(uuid, Duration.ofNanos(durationNs)));
+            LOGGER.info("Evaluation completed in %s"
+                    .formatted(Duration.ofNanos(System.nanoTime() - startTimeNs)));
         }
     }
 

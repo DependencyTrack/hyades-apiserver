@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import io.micrometer.core.instrument.Timer;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
@@ -71,7 +70,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private void updateMetrics(final boolean forceRefresh) throws Exception {
         LOGGER.info("Executing portfolio metrics update");
-        final Timer.Sample timerSample = Timer.start();
+        final long startTimeNs = System.nanoTime();
 
         try {
             if (forceRefresh) {
@@ -81,11 +80,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
 
             Metrics.updatePortfolioMetrics();
         } finally {
-            final long durationNanos = timerSample.stop(Timer
-                    .builder("metrics_update")
-                    .tag("target", "portfolio")
-                    .register(alpine.common.metrics.Metrics.getRegistry()));
-            LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(durationNanos));
+            LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(System.nanoTime() - startTimeNs));
         }
     }
 
