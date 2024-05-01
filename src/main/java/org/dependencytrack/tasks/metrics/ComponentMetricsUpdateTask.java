@@ -21,15 +21,16 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
+import org.slf4j.MDC;
 
 import java.time.Duration;
 
+import static org.dependencytrack.common.MdcKeys.MDC_COMPONENT_UUID;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 /**
@@ -44,24 +45,20 @@ public class ComponentMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final ComponentMetricsUpdateEvent event) {
-            LOGGER.debug("Executing metrics update for component " + event.getUuid());
-            final Timer.Sample timerSample = Timer.start();
-            WorkflowState metricsUpdateState = null;
-            try (final var qm = new QueryManager()) {
-               metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), METRICS_UPDATE);
+            final long startTimeNs = System.nanoTime();
+            try (final var qm = new QueryManager();
+                 var ignoredMdcComponentUuid = MDC.putCloseable(MDC_COMPONENT_UUID, event.getUuid().toString())) {
+                LOGGER.debug("Executing metrics update");
+                final WorkflowState metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), METRICS_UPDATE);
                 try {
                     Metrics.updateComponentMetrics(event.getUuid());
                     qm.updateWorkflowStateToComplete(metricsUpdateState);
-                } catch (Exception ex) {
+                } catch (RuntimeException ex) {
                     qm.updateWorkflowStateToFailed(metricsUpdateState, ex.getMessage());
-                    LOGGER.error("An unexpected error occurred while updating metrics of component " + event.getUuid(), ex);
+                    LOGGER.error("An unexpected error occurred while updating metrics", ex);
                 }
             } finally {
-                final long durationNanos = timerSample.stop(Timer
-                        .builder("metrics_update")
-                        .tag("target", "component")
-                        .register(alpine.common.metrics.Metrics.getRegistry()));
-                LOGGER.debug("Completed metrics update for component " + event.getUuid() + " in " + Duration.ofNanos(durationNanos));
+                LOGGER.debug("Completed metrics update in %s".formatted(Duration.ofNanos(System.nanoTime() - startTimeNs)));
             }
         }
     }
