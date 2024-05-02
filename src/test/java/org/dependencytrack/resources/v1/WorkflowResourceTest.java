@@ -22,13 +22,12 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
@@ -47,15 +46,12 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class WorkflowResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(WorkflowResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)
-                                .register(MultiPartFeature.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(WorkflowResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class)
+                    .register(MultiPartFeature.class));
 
     @Test
     public void getWorkflowStatusOk() {
@@ -79,7 +75,7 @@ public class WorkflowResourceTest extends ResourceTest {
         workflowState2.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState2);
 
-        Response response = target(V1_WORKFLOW + "/token/" + uuid + "/status").request()
+        Response response = jersey.target(V1_WORKFLOW + "/token/" + uuid + "/status").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
@@ -120,7 +116,7 @@ public class WorkflowResourceTest extends ResourceTest {
         qm.persist(workflowState1);
 
         UUID randomUuid = UUID.randomUUID();
-        Response response = target(V1_WORKFLOW + "/token/" + randomUuid + "/status").request()
+        Response response = jersey.target(V1_WORKFLOW + "/token/" + randomUuid + "/status").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
 

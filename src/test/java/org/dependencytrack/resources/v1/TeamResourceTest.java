@@ -20,19 +20,20 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
 import alpine.model.ConfigProperty;
+import alpine.model.ManagedUser;
 import alpine.model.Team;
+import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.json.JsonArray;
@@ -44,21 +45,18 @@ import java.util.UUID;
 
 public class TeamResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(TeamResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(TeamResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class));
 
     @Test
     public void getTeamsTest() {
         for (int i = 0; i < 1000; i++) {
             qm.createTeam("Team " + i, false);
         }
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
@@ -72,7 +70,7 @@ public class TeamResourceTest extends ResourceTest {
     @Test
     public void getTeamTest() {
         Team team = qm.createTeam("ABC", false);
-        Response response = target(V1_TEAM + "/" + team.getUuid())
+        Response response = jersey.target(V1_TEAM + "/" + team.getUuid())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -83,7 +81,7 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamByInvalidUuidTest() {
-        Response response = target(V1_TEAM + "/" + UUID.randomUUID())
+        Response response = jersey.target(V1_TEAM + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(404, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -94,7 +92,7 @@ public class TeamResourceTest extends ResourceTest {
     @Test
     public void getTeamSelfTest() {
         initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
-        var response = target(V1_TEAM + "/self").request().header(X_API_KEY, apiKey).get(Response.class);
+        var response = jersey.target(V1_TEAM + "/self").request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus());
         final var json = parseJsonObject(response);
         Assert.assertEquals(team.getName(), json.getString("name"));
@@ -105,15 +103,17 @@ public class TeamResourceTest extends ResourceTest {
         Assert.assertEquals(Permissions.PROJECT_CREATION_UPLOAD.toString(), permissions.get(1).asJsonObject().getString("name"));
 
         // missing api-key
-        response = target(V1_TEAM + "/self").request().get(Response.class);
+        response = jersey.target(V1_TEAM + "/self").request().get(Response.class);
         Assert.assertEquals(401, response.getStatus());
 
         // wrong api-key
-        response = target(V1_TEAM + "/self").request().header(X_API_KEY, "5ce9b8a5-5f18-4c1f-9eda-1611b83e8915").get(Response.class);
+        response = jersey.target(V1_TEAM + "/self").request().header(X_API_KEY, "5ce9b8a5-5f18-4c1f-9eda-1611b83e8915").get(Response.class);
         Assert.assertEquals(401, response.getStatus());
 
         // not an api-key
-        response = target(V1_TEAM + "/self").request().header("Authorization", "Bearer " + jwt).get(Response.class);
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(testUser);
+        response = jersey.target(V1_TEAM + "/self").request().header("Authorization", "Bearer " + jwt).get(Response.class);
         Assert.assertEquals(400, response.getStatus());
     }
 
@@ -121,7 +121,7 @@ public class TeamResourceTest extends ResourceTest {
     public void createTeamTest() {
         Team team = new Team();
         team.setName("My Team");
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(team, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
@@ -135,7 +135,7 @@ public class TeamResourceTest extends ResourceTest {
     public void updateTeamTest() {
         Team team = qm.createTeam("My Team", false);
         team.setName("My New Teams Name");
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(team, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
@@ -148,7 +148,7 @@ public class TeamResourceTest extends ResourceTest {
     public void updateTeamEmptyNameTest() {
         Team team = qm.createTeam("My Team", false);
         team.setName(" ");
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(team, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
@@ -159,7 +159,7 @@ public class TeamResourceTest extends ResourceTest {
         Team team = new Team();
         team.setName("My Team");
         team.setUuid(UUID.randomUUID());
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(team, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -171,7 +171,7 @@ public class TeamResourceTest extends ResourceTest {
     @Test
     public void deleteTeamTest() {
         Team team = qm.createTeam("My Team", false);
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(team, MediaType.APPLICATION_JSON)); // HACK
@@ -192,7 +192,7 @@ public class TeamResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1", null, null, null, true, false);
         project.addAccessTeam(team);
         qm.persist(project);
-        Response response = target(V1_TEAM).request()
+        Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(team, MediaType.APPLICATION_JSON)); // HACK
@@ -204,7 +204,7 @@ public class TeamResourceTest extends ResourceTest {
     public void generateApiKeyTest() {
         Team team = qm.createTeam("My Team", false);
         Assert.assertEquals(0, team.getApiKeys().size());
-        Response response = target(V1_TEAM + "/" + team.getUuid().toString() + "/key").request()
+        Response response = jersey.target(V1_TEAM + "/" + team.getUuid().toString() + "/key").request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
@@ -215,7 +215,7 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void generateApiKeyInvalidTest() {
-        Response response = target(V1_TEAM + "/" + UUID.randomUUID().toString() + "/key").request()
+        Response response = jersey.target(V1_TEAM + "/" + UUID.randomUUID().toString() + "/key").request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
@@ -229,7 +229,7 @@ public class TeamResourceTest extends ResourceTest {
     public void regenerateApiKeyTest() {
         Team team = qm.createTeam("My Team", true);
         Assert.assertEquals(1, team.getApiKeys().size());
-        Response response = target(V1_TEAM + "/key/" + team.getApiKeys().get(0).getKey()).request()
+        Response response = jersey.target(V1_TEAM + "/key/" + team.getApiKeys().get(0).getKey()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
@@ -241,7 +241,7 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void regenerateApiKeyInvalidTest() {
-        Response response = target(V1_TEAM + "/key/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_TEAM + "/key/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -254,7 +254,7 @@ public class TeamResourceTest extends ResourceTest {
     public void deleteApiKeyTest() {
         Team team = qm.createTeam("My Team", true);
         Assert.assertEquals(1, team.getApiKeys().size());
-        Response response = target(V1_TEAM + "/key/" + team.getApiKeys().get(0).getKey()).request()
+        Response response = jersey.target(V1_TEAM + "/key/" + team.getApiKeys().get(0).getKey()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
         Assert.assertEquals(204, response.getStatus(), 0);
@@ -262,7 +262,7 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void deleteApiKeyInvalidTest() {
-        Response response = target(V1_TEAM + "/key/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_TEAM + "/key/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
         Assert.assertEquals(404, response.getStatus(), 0);

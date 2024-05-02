@@ -41,6 +41,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -49,10 +50,8 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.json.JSONArray;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.json.JsonArray;
@@ -68,15 +67,11 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class DependencyGraphResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(DependencyGraphResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)))
-                .build();
-    }
-
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(DependencyGraphResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class));
 
     @Test
     public void getComponentsAndServicesByComponentUuidTests() {
@@ -120,7 +115,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
         final UUID rootUuid = qm.createComponent(rootComponent, false).getUuid();
 
-        final Response response = target(V1_DEPENDENCY_GRAPH + "/component/" + rootUuid.toString() + "/directDependencies")
+        final Response response = jersey.target(V1_DEPENDENCY_GRAPH + "/component/" + rootUuid.toString() + "/directDependencies")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -202,7 +197,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
         final UUID rootUuid = qm.createComponent(rootComponent, false).getUuid();
 
-        final Response response = target(V1_DEPENDENCY_GRAPH + "/component/" + rootUuid.toString() + "/directDependencies")
+        final Response response = jersey.target(V1_DEPENDENCY_GRAPH + "/component/" + rootUuid.toString() + "/directDependencies")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -250,7 +245,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
         project.setDirectDependencies(jsonArray.toString());
         qm.updateProject(project, false);
 
-        final Response response = target(V1_DEPENDENCY_GRAPH + "/project/" + project.getUuid().toString() + "/directDependencies")
+        final Response response = jersey.target(V1_DEPENDENCY_GRAPH + "/project/" + project.getUuid().toString() + "/directDependencies")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -326,7 +321,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
         project.setDirectDependencies(jsonArray.toString());
         qm.updateProject(project, false);
 
-        final Response response = target(V1_DEPENDENCY_GRAPH + "/project/" + project.getUuid().toString() + "/directDependencies")
+        final Response response = jersey.target(V1_DEPENDENCY_GRAPH + "/project/" + project.getUuid().toString() + "/directDependencies")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -374,7 +369,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
                 """.formatted(componentWithPurl.getUuid(), componentWithoutPurl.getUuid()));
         qm.persist(project);
 
-        final Response response = target("%s/project/%s/directDependencies".formatted(V1_DEPENDENCY_GRAPH, project.getUuid()))
+        final Response response = jersey.target("%s/project/%s/directDependencies".formatted(V1_DEPENDENCY_GRAPH, project.getUuid()))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
