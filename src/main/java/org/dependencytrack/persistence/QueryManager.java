@@ -1131,8 +1131,8 @@ public class QueryManager extends AlpineQueryManager {
         return getFindingsQueryManager().getSuppressedCount(project, component);
     }
 
-    public List<AffectedProject> getAffectedProjects(final Vulnerability vulnerability, final Set<String> fetchGroups) {
-        return getVulnerabilityQueryManager().getAffectedProjects(vulnerability, fetchGroups);
+    public List<AffectedProject> getAffectedProjects(Vulnerability vulnerability) {
+        return getVulnerabilityQueryManager().getAffectedProjects(vulnerability);
     }
 
     public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {

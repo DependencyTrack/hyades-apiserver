@@ -49,7 +49,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.dependencytrack.model.sqlmapping.ComponentProjection.mapToComponent;
@@ -885,16 +884,17 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
     }
 
-    public Map<String, Component> getDependencyGraphForComponent(Project project, Component component) {
+    public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
         Map<String, Component> dependencyGraph = new HashMap<>();
         if (project.getDirectDependencies() == null || project.getDirectDependencies().isBlank()) {
             return dependencyGraph;
+        }
+
+        for(Component component : components) {
+            dependencyGraph.put(component.getUuid().toString(), component);
             getParentDependenciesOfComponent(project, component, dependencyGraph);
         }
         if (!dependencyGraph.isEmpty()){
-        }
-        for(Component component : components) {
-            dependencyGraph.put(component.getUuid().toString(), component);
             getRootDependencies(dependencyGraph, project);
             getDirectDependenciesForPathDependencies(dependencyGraph);
         }
@@ -937,7 +937,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         return List.copyOf(query.executeResultList(DependencyGraphResponse.class));
     }
 
-    private void getParentDependenciesOfComponent(Project project, Component childComponent, Map<String, Component> dependencyGraph, Component searchedComponent) {
+    private void getParentDependenciesOfComponent(Project project, Component childComponent, Map<String, Component> dependencyGraph) {
         String queryUuid = ".*" + childComponent.getUuid().toString() + ".*";
         final Query<Component> query = pm.newQuery(Component.class, "directDependencies.matches(:queryUuid) && project == :project");
         List<Component> parentComponents = (List<Component>) query.executeWithArray(queryUuid, project);
