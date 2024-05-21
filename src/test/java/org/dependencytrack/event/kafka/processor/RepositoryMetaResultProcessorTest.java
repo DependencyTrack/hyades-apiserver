@@ -48,6 +48,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Before
+    @Override
     public void before() throws Exception {
         super.before();
 

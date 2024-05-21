@@ -121,7 +121,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     /**
      * Loads the default permissions
      */
-    private void loadDefaultPermissions() {
+    public void loadDefaultPermissions() {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing permissions to datastore");
             for (final Permissions permission : Permissions.values()) {
@@ -198,7 +198,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     /**
      * Loads the default repositories
      */
-    private void loadDefaultRepositories() {
+    public void loadDefaultRepositories() {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing default repositories to datastore");
             qm.createRepository(RepositoryType.CPAN, "cpan-public-registry", "https://fastapi.metacpan.org/v1/", true, false, false, null, null);
@@ -237,7 +237,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     /**
      * Loads the default notification publishers
      */
-    private void loadDefaultNotificationPublishers() {
+    public void loadDefaultNotificationPublishers() {
         try (QueryManager qm = new QueryManager()) {
             LOGGER.info("Synchronizing notification publishers to datastore");
             try {

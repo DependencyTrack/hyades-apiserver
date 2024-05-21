@@ -19,18 +19,18 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
+import alpine.server.filters.AuthenticationFilter;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.http.HttpStatus;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.json.Json;
@@ -46,19 +46,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ComponentResourcePostgresTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(ComponentResource.class)
-                                .register(ApiFilter.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(ComponentResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class));
 
     @Test
     public void getAllComponentsTest() throws MalformedPackageURLException {
         final Project project = prepareProject();
 
-        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -73,7 +71,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     public void getOutdatedComponentsTest() throws MalformedPackageURLException {
         final Project project = prepareProject();
 
-        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
                 .queryParam("onlyOutdated", true)
                 .queryParam("onlyDirect", false)
                 .request()
@@ -90,7 +88,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     public void getOutdatedDirectComponentsTest() throws MalformedPackageURLException {
         final Project project = prepareProject();
 
-        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
                 .queryParam("onlyOutdated", true)
                 .queryParam("onlyDirect", true)
                 .request()
@@ -107,7 +105,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     public void getAllDirectComponentsTest() throws MalformedPackageURLException {
         final Project project = prepareProject();
 
-        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
                 .queryParam("onlyDirect", true)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -140,7 +138,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
         componentC.setName("somethingCompletelyDifferent");
         qm.persist(componentC);
 
-        final Response response = target(V1_COMPONENT + "/project/" + project.getUuid())
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
                 .queryParam("searchText", "ACME")
                 .request()
                 .header(X_API_KEY, apiKey)

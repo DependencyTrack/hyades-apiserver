@@ -22,6 +22,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import net.jcip.annotations.NotThreadSafe;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -40,9 +41,7 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.json.Json;
@@ -65,15 +64,12 @@ import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(ViolationAnalysisResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)
-                                .register(AuthorizationFilter.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(ViolationAnalysisResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class)
+                    .register(AuthorizationFilter.class));
 
     @Test
     public void retrieveAnalysisTest() {
@@ -104,7 +100,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         violationAnalysis = qm.persist(violationAnalysis);
         qm.makeViolationAnalysisComment(violationAnalysis, "Analysis comment here", "Jane Doe");
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", component.getUuid())
                 .queryParam("policyViolation", violation.getUuid())
                 .request()
@@ -125,7 +121,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisUnauthorizedTest() {
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", UUID.randomUUID())
                 .queryParam("policyViolation", UUID.randomUUID())
                 .request()
@@ -139,7 +135,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisComponentNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", UUID.randomUUID())
                 .queryParam("policyViolation", UUID.randomUUID())
                 .request()
@@ -162,7 +158,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", component.getUuid())
                 .queryParam("policyViolation", UUID.randomUUID())
                 .request()
@@ -198,7 +194,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 violation.getUuid().toString(), ViolationAnalysisState.APPROVED, "Some comment", false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -255,7 +251,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 violation.getUuid().toString(), null, null, null);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -312,7 +308,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 violation.getUuid().toString(), ViolationAnalysisState.REJECTED, "Some comment", false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -380,7 +376,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 violation.getUuid().toString(), ViolationAnalysisState.APPROVED, null, true);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -428,7 +424,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 violation.getUuid().toString(), null, null, null);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -461,7 +457,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), ViolationAnalysisState.REJECTED, "Some comment", false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -476,7 +472,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), ViolationAnalysisState.REJECTED, "Some comment", false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -500,7 +496,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         final var request = new ViolationAnalysisRequest(component.getUuid().toString(),
                 UUID.randomUUID().toString(), ViolationAnalysisState.REJECTED, "Some comment", false);
 
-        final Response response = target(V1_VIOLATION_ANALYSIS)
+        final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));

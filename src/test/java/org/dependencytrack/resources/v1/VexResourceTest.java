@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import net.javacrumbs.jsonunit.core.Option;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -32,9 +33,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
@@ -45,15 +44,12 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class VexResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(VexResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)
-                                .register(MultiPartFeature.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(VexResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class)
+                    .register(MultiPartFeature.class));
 
     @Test
     public void exportProjectAsCycloneDxTest() {
@@ -120,7 +116,7 @@ public class VexResourceTest extends ResourceTest {
                 ));
         qm.persist(project);
 
-        final Response response = target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+        final Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
