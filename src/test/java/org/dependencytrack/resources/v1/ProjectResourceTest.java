@@ -1003,7 +1003,10 @@ public class ProjectResourceTest extends ResourceTest {
                         """.formatted(project.getUuid())));
 
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(getPlainTextBody(response)).isEmpty();
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertNotNull(json.getString("token"));
+        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
 
         await("Cloning completion")
                 .atMost(Duration.ofSeconds(15))
@@ -1126,6 +1129,9 @@ public class ProjectResourceTest extends ResourceTest {
                         }
                         """.formatted(accessProject.getUuid())));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(getPlainTextBody(response)).isEmpty();
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertNotNull(json.getString("token"));
+        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
     }
 }
