@@ -48,11 +48,17 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,6 +84,7 @@ import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     @Before
+    @Override
     public void before() throws Exception {
         super.before();
         // Enable processing of CycloneDX BOMs
@@ -974,6 +981,46 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         var boms = qm.getAllBoms(project);
         assertThat(boms.get(0).getGenerated()).isEqualTo("2021-02-09T20:40:32Z");
+    }
+
+    @Test
+    public void informWithLockingTest() throws Exception {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project detachedProject = qm.detach(Project.class, project.getId());
+
+        final ExecutorService executor = Executors.newFixedThreadPool(5);
+        final var countDownLatch = new CountDownLatch(1);
+
+        final var events = new ArrayList<BomUploadEvent>(25);
+        for (int i = 0; i < 25; i++) {
+            final var bomUploadEvent = new BomUploadEvent(detachedProject, createTempBomFile("bom-1.xml"));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+            events.add(bomUploadEvent);
+        }
+
+        final var exceptions = new ArrayBlockingQueue<Exception>(25);
+        for (final BomUploadEvent bomUploadEvent : events) {
+            executor.submit(() -> {
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    exceptions.offer(e);
+                    return;
+                }
+
+                try {
+                    new BomUploadProcessingTask().inform(bomUploadEvent);
+                } catch (Exception e) {
+                    exceptions.offer(e);
+                }
+            });
+        }
+
+        countDownLatch.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(15, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(exceptions).isEmpty();
     }
 
     private void assertBomProcessedNotification() throws Exception {
