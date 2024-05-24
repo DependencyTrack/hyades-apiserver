@@ -88,4 +88,8 @@
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.5.0-6" author="nscuro">
+        <modifyDataType tableName="VULNERABILITY_POLICY" columnName="DESCRIPTION" newDataType="VARCHAR(512)"/>
+    </changeSet>
 </databaseChangeLog>
