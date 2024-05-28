@@ -31,10 +31,8 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.CweImporter;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -58,13 +56,6 @@ public class FindingResourceTest extends ResourceTest {
             new ResourceConfig(FindingResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class));
-
-    @Before
-    @Override
-    public void before() throws Exception {
-        super.before();
-        new CweImporter().processCweDefinitions();
-    }
 
     @Test
     public void getFindingsByProjectTest() {

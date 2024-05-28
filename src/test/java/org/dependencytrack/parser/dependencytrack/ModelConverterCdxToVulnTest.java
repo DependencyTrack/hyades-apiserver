@@ -27,8 +27,6 @@ import org.cyclonedx.proto.v1_4.VulnerabilityRating;
 import org.cyclonedx.proto.v1_4.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.persistence.CweImporter;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -41,11 +39,6 @@ import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV31;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_OWASP;
 
 public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
-
-    @Before
-    public void setUp() throws Exception {
-        new CweImporter().processCweDefinitions();
-    }
 
     @Test
     public void testConvertNullValue() {

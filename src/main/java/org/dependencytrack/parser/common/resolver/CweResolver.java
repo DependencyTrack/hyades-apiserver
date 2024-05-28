@@ -18,10 +18,13 @@
  */
 package org.dependencytrack.parser.common.resolver;
 
+import alpine.persistence.PaginatedResult;
+import alpine.persistence.Pagination;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Cwe;
-import org.dependencytrack.persistence.QueryManager;
-import java.util.HashMap;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,17 +36,10 @@ import java.util.Map;
  */
 public class CweResolver {
 
-    private static final Map<Integer, String> CWE_DICTIONARY = new HashMap<>();
-    static {
-        try (final QueryManager qm = new QueryManager()) {
-            for (final Cwe cwe : qm.getAllCwes()) {
-                CWE_DICTIONARY.put(cwe.getCweId(), cwe.getName());
-            }
-        }
-    }
     private static final CweResolver INSTANCE = new CweResolver();
 
-    private CweResolver() { }
+    private CweResolver() {
+    }
 
     public static CweResolver getInstance() {
         return INSTANCE;
@@ -58,17 +54,7 @@ public class CweResolver {
      * @since 4.5.0
      */
     public Cwe lookup(final String cweString) {
-        final Integer cweId = parseCweString(cweString);
-        if (cweId != null) {
-            final String cweName = CWE_DICTIONARY.get(cweId);
-            if (cweName != null) {
-                final Cwe cwe = new Cwe();
-                cwe.setCweId(cweId);
-                cwe.setName(cweName);
-                return cwe;
-            }
-        }
-        return null;
+        return lookup(parseCweString(cweString));
     }
 
     /**
@@ -81,7 +67,7 @@ public class CweResolver {
      */
     public Cwe lookup(final Integer cweId) {
         if (cweId != null) {
-            final String cweName = CWE_DICTIONARY.get(cweId);
+            final String cweName = CweDictionary.DICTIONARY.get(cweId);
             if (cweName != null) {
                 final Cwe cwe = new Cwe();
                 cwe.setCweId(cweId);
@@ -90,19 +76,6 @@ public class CweResolver {
             }
         }
         return null;
-    }
-
-    /**
-     * Resolves a CWE by its string representation.
-     * This method performs a query against the database and
-     * returns a persisted Cwe object.
-     * @param cweString the string to resolve
-     * @return a Cwe object
-     * @since 3.0.0
-     */
-    public Cwe resolve(final QueryManager qm, final String cweString) {
-        final Integer cweId = parseCweString(cweString);
-        return (cweId != null) ? qm.getCweById(cweId) : null;
     }
 
     /**
@@ -135,4 +108,43 @@ public class CweResolver {
         }
         return null;
     }
+
+    public List<Cwe> all() {
+        return CweDictionary.DICTIONARY.entrySet().stream()
+                .map(dictEntry -> {
+                    final var cwe = new Cwe();
+                    cwe.setCweId(dictEntry.getKey());
+                    cwe.setName(dictEntry.getValue());
+                    return cwe;
+                })
+                .toList();
+    }
+
+    public PaginatedResult all(final Pagination pagination) {
+        if (pagination == null || !pagination.isPaginated()) {
+            final List<Cwe> cwes = all();
+            return new PaginatedResult().objects(cwes).total(CweDictionary.DICTIONARY.size());
+        }
+
+        int pos = 0;
+        final var cwes = new ArrayList<Cwe>();
+        for (final Map.Entry<Integer, String> dictEntry : CweDictionary.DICTIONARY.entrySet()) {
+            if (pagination.getOffset() > pos) {
+                continue;
+            }
+            if (pagination.getLimit() <= pos) {
+                break;
+            }
+
+            final var cwe = new Cwe();
+            cwe.setCweId(dictEntry.getKey());
+            cwe.setName(dictEntry.getValue());
+            cwes.add(cwe);
+
+            pos++;
+        }
+
+        return new PaginatedResult().objects(cwes).total(CweDictionary.DICTIONARY.size());
+    }
+
 }
