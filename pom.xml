@@ -217,6 +217,11 @@
             <artifactId>jdbi3-freemarker</artifactId>
             <version>${lib.jdbi.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-micrometer</artifactId>
+            <version>${lib.jersey.version}</version>
+        </dependency>
         <!-- OWASP Risk Rating calculator -->
         <dependency>
             <groupId>us.springett</groupId>

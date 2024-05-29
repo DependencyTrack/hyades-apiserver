@@ -37,9 +37,10 @@ public class MeterRegistryCustomizer implements alpine.common.metrics.MeterRegis
         public DistributionStatisticConfig configure(@NotNull final Meter.Id id,
                                                      @NotNull final DistributionStatisticConfig config) {
             if ("alpine_event_processing".equals(id.getName())
-                    || "pc.user.function.processing.time".equals(id.getName())) {
+                    || "pc.user.function.processing.time".equals(id.getName())
+                    || "http.server.requests".equals(id.getName())) {
                 return DistributionStatisticConfig.builder()
-                        .percentiles() // Disable client-side calculation of percentiles.
+                        .percentiles(/* none */) // Disable client-side calculation of percentiles.
                         .percentilesHistogram(true) // Publish histogram instead.
                         .build()
                         .merge(config);
