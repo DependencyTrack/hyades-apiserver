@@ -38,6 +38,9 @@ import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 
@@ -57,11 +60,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import static alpine.event.framework.Event.isEventBeingProcessed;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
@@ -537,10 +543,32 @@ public class ProjectResource extends AlpineResource {
                     return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
                 }
                 LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
-                Event.dispatch(new CloneProjectEvent(jsonRequest));
                 CloneProjectEvent event = new CloneProjectEvent(jsonRequest);
+                final Response response = qm.runInTransaction(() -> {
+                    WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
+                    if (workflowState != null) {
+                        if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
+                            return Response
+                                    .status(Response.Status.CONFLICT)
+                                    .entity(Map.of("message", "Project cloning is already in progress"))
+                                    .build();
+                        }
+                        workflowState.setStatus(WorkflowStatus.PENDING);
+                        workflowState.setStartedAt(null);
+                        workflowState.setUpdatedAt(new Date());
+                    } else {
+                        workflowState = new WorkflowState();
+                        workflowState.setStep(WorkflowStep.PROJECT_CLONE);
+                        workflowState.setStatus(WorkflowStatus.PENDING);
+                        workflowState.setToken(event.getChainIdentifier());
+                        workflowState.setUpdatedAt(new Date());
+                        qm.getPersistenceManager().makePersistent(workflowState);
+                    }
+
+                    return Response.accepted(Map.of("token", event.getChainIdentifier())).build();
+                });
                 Event.dispatch(event);
-                return Response.ok(java.util.Collections.singletonMap("token", event.getChainIdentifier())).build();
+                return response;
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }

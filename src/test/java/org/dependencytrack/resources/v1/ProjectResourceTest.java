@@ -43,6 +43,9 @@ import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -1002,11 +1005,22 @@ public class ProjectResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
 
-        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getStatus()).isEqualTo(202);
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        UUID uuid = UUID.fromString(json.getString("token"));
+        assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactly(
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNull();
+                    assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.PENDING);
+                    assertThat(workflowState.getStartedAt()).isNotNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
+                }
+        );
 
         await("Cloning completion")
                 .atMost(Duration.ofSeconds(15))
@@ -1128,7 +1142,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "version": "1.1.0"
                         }
                         """.formatted(accessProject.getUuid())));
-        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getStatus()).isEqualTo(202);
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));

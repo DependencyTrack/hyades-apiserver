@@ -92,4 +92,12 @@
     <changeSet id="v5.5.0-6" author="nscuro">
         <modifyDataType tableName="VULNERABILITY_POLICY" columnName="DESCRIPTION" newDataType="VARCHAR(512)"/>
     </changeSet>
+
+    <changeSet id="v5.5.0-7" author="sahibamittal">
+        <sql splitStatements="true">
+            ALTER TABLE "WORKFLOW_STATE" DROP CONSTRAINT IF EXISTS "WORKFLOW_STATE_STEP_check";
+            ALTER TABLE "WORKFLOW_STATE" ADD CONSTRAINT "WORKFLOW_STATE_STEP_check"
+            CHECK ("STEP"::TEXT = ANY(ARRAY['BOM_CONSUMPTION', 'BOM_PROCESSING', 'METRICS_UPDATE', 'POLICY_BUNDLE_SYNC', 'POLICY_EVALUATION', 'REPO_META_ANALYSIS', 'VULN_ANALYSIS', 'PROJECT_CLONE']));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

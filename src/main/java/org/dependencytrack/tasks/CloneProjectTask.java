@@ -23,10 +23,15 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 
+import java.util.Date;
 import java.util.UUID;
+
+import static org.dependencytrack.model.WorkflowStatus.PENDING;
+import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
 
 public class CloneProjectTask implements Subscriber {
 
@@ -39,11 +44,24 @@ public class CloneProjectTask implements Subscriber {
         if (e instanceof CloneProjectEvent) {
             final CloneProjectEvent event = (CloneProjectEvent)e;
             final CloneProjectRequest request = event.getRequest();
-            LOGGER.info("Cloning project: " + request.getProject());
+            final UUID chainIdentifier = ((CloneProjectEvent) e).getChainIdentifier();
             try (QueryManager qm = new QueryManager()) {
+                WorkflowState workflowState = qm.updateStartTimeIfWorkflowStateExists(chainIdentifier, PROJECT_CLONE);
+                if (workflowState == null) {
+                    final var now = new Date();
+                    workflowState = new WorkflowState();
+                    workflowState.setStep(PROJECT_CLONE);
+                    workflowState.setStatus(PENDING);
+                    workflowState.setToken(chainIdentifier);
+                    workflowState.setStartedAt(now);
+                    workflowState.setUpdatedAt(now);
+                    qm.getPersistenceManager().makePersistent(workflowState);
+                }
+                LOGGER.info("Cloning project: " + request.getProject());
                 final Project project = qm.clone(UUID.fromString(request.getProject()),
                         request.getVersion(), request.includeTags(), request.includeProperties(),
                         request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL());
+                qm.updateWorkflowStateToComplete(workflowState);
                 LOGGER.info("Cloned project: " + request.getProject() + " to " + project.getUuid());
             }
         }
