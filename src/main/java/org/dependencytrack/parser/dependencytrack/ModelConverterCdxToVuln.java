@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
+import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV2;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV31;
@@ -125,12 +126,12 @@ public final class ModelConverterCdxToVuln {
                 continue;
             }
 
-            final Cvss cvss = Cvss.fromVector(rating.getVector());
             if (!appliedMethods.contains(SCORE_METHOD_CVSSV3)
                     && (rating.getMethod().equals(SCORE_METHOD_CVSSV3) || rating.getMethod().equals(SCORE_METHOD_CVSSV31))) {
-                vuln.setCvssV3Vector(rating.getVector());
+                vuln.setCvssV3Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
-                if (cvss != null) {
+                if (rating.hasVector()) {
+                    final Cvss cvss = Cvss.fromVector(rating.getVector());
                     final Score score = cvss.calculateScore();
                     vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
                     vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
@@ -141,9 +142,10 @@ public final class ModelConverterCdxToVuln {
                 appliedMethods.add(SCORE_METHOD_CVSSV3);
             }
             if (!appliedMethods.contains(SCORE_METHOD_CVSSV2) && rating.getMethod().equals(SCORE_METHOD_CVSSV2)) {
-                vuln.setCvssV2Vector(rating.getVector());
+                vuln.setCvssV2Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
-                if (cvss != null) {
+                if (rating.hasVector()) {
+                    final Cvss cvss = Cvss.fromVector(rating.getVector());
                     final Score score = cvss.calculateScore();
                     vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
                     vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
@@ -157,7 +159,7 @@ public final class ModelConverterCdxToVuln {
                 try {
                     final OwaspRiskRating orr = OwaspRiskRating.fromVector(rating.getVector());
                     final us.springett.owasp.riskrating.Score orrScore = orr.calculateScore();
-                    vuln.setOwaspRRVector(rating.getVector());
+                    vuln.setOwaspRRVector(trimToNull(rating.getVector()));
                     vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(orrScore.getLikelihoodScore()));
                     vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(orrScore.getBusinessImpactScore()));
                     vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(orrScore.getTechnicalImpactScore()));

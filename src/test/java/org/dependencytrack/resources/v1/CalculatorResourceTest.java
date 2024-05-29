@@ -42,7 +42,7 @@ public class CalculatorResourceTest extends ResourceTest {
     @Test
     public void getCvssScoresV3Test() {
         Response response = jersey.target(V1_CALCULATOR + "/cvss")
-                .queryParam("vector", "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
+                .queryParam("vector", "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
