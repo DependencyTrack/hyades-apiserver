@@ -467,8 +467,8 @@ public class QueryManager extends AlpineQueryManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //// BEGIN WRAPPER METHODS                                                                                      ////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(includeMetrics, excludeInactive, onlyRoot);
+    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
+        return getProjectQueryManager().getProjects(includeMetrics, excludeInactive, onlyRoot, notAssignedToTeam);
     }
 
     public PaginatedResult getProjects(final boolean includeMetrics) {
@@ -487,8 +487,8 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getAllProjects(excludeInactive);
     }
 
-    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot);
+    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
+        return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam);
     }
 
     public Project getProject(final String uuid) {

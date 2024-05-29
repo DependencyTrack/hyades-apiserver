@@ -89,7 +89,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return a List of Projects
      */
     @Override
-    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
+    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
         final PaginatedResult result;
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
@@ -102,6 +102,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
+        }
+
+        if(notAssignedToTeam != null) {
+            filterBuilder.notWithTeam(notAssignedToTeam);
         }
 
         if (filter != null) {
@@ -138,7 +142,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public PaginatedResult getProjects(final boolean includeMetrics) {
-        return getProjects(includeMetrics, false, false);
+        return getProjects(includeMetrics, false, false, null);
     }
 
     /**
@@ -185,7 +189,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return a List of Project objects
      */
     @Override
-    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot) {
+    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
         final Query<Project> query = pm.newQuery(Project.class);
         if (orderBy == null) {
             query.setOrdering("version desc, id asc");
@@ -198,6 +202,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         if (onlyRoot) {
             filterBuilder.excludeChildProjects();
             query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
+        }
+
+        if(notAssignedToTeam != null) {
+            filterBuilder.notWithTeam(notAssignedToTeam);
         }
 
         final String queryFilter = filterBuilder.buildFilter();
