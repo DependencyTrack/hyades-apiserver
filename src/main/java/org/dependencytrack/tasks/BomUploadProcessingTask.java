@@ -64,6 +64,7 @@ import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.FlushHelper;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
+import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
 
 import javax.jdo.PersistenceManager;
@@ -73,6 +74,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -102,6 +104,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertTo
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
 import static org.dependencytrack.util.InternalComponentIdentificationUtil.isInternalComponent;
+import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
@@ -136,7 +139,11 @@ public class BomUploadProcessingTask implements Subscriber {
         if (e instanceof final BomUploadEvent event) {
             final var ctx = new Context(event.getProject(), event.getChainIdentifier());
             try {
-                processBom(ctx, event.getFile());
+                // Prevent BOMs for the same project to be processed concurrently.
+                // Note that this is an edge case, we're not expecting any lock waits under normal circumstances.
+                final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
+                executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, event.getFile()));
+
                 LOGGER.info("BOM processed successfully (%s)".formatted(ctx));
                 updateState(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.COMPLETED);
                 if (!delayBomProcessedNotification) {
@@ -147,42 +154,44 @@ public class BomUploadProcessingTask implements Subscriber {
                     LOGGER.warn("Not dispatching %s notification, because %s is enabled (%s)"
                             .formatted(NotificationGroup.BOM_PROCESSED, ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION.getPropertyName(), ctx));
                 }
-            } catch (BomConsumptionException ex) {
-                LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
-                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchNotification(new Notification()
-                        .scope(NotificationScope.PORTFOLIO)
-                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
-                        .level(NotificationLevel.ERROR)
-                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
-                        .content("An error occurred while processing a BOM")
-                        // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
-                        // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
-            } catch (BomProcessingException ex) {
-                LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
-                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchNotification(new Notification()
-                        .scope(NotificationScope.PORTFOLIO)
-                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
-                        .level(NotificationLevel.ERROR)
-                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
-                        .content("An error occurred while processing a BOM")
-                        // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
-                        //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
-                        // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
-            } catch (Exception ex) {
-                LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), ex);
-                updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
-                kafkaEventDispatcher.dispatchNotification(new Notification()
-                        .scope(NotificationScope.PORTFOLIO)
-                        .group(NotificationGroup.BOM_PROCESSING_FAILED)
-                        .level(NotificationLevel.ERROR)
-                        .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
-                        .content("An error occurred while processing a BOM")
-                        // FIXME: Add reference to BOM after we have dedicated BOM server
-                        .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ctx.bomFormat /* (may be null) */, ctx.bomSpecVersion /* (may be null) */)));
+            } catch (Throwable throwable) {
+                if (throwable instanceof BomConsumptionException ex) {
+                    LOGGER.error("BOM consumption failed (%s)".formatted(ex.ctx), ex);
+                    updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, WorkflowStatus.FAILED, ex.getMessage());
+                    kafkaEventDispatcher.dispatchNotification(new Notification()
+                            .scope(NotificationScope.PORTFOLIO)
+                            .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                            .level(NotificationLevel.ERROR)
+                            .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                            .content("An error occurred while processing a BOM")
+                            // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
+                            // FIXME: Add reference to BOM after we have dedicated BOM server
+                            .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+                } else if (throwable instanceof final BomProcessingException ex) {
+                    LOGGER.error("BOM processing failed (%s)".formatted(ex.ctx), ex);
+                    updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, ex.getMessage());
+                    kafkaEventDispatcher.dispatchNotification(new Notification()
+                            .scope(NotificationScope.PORTFOLIO)
+                            .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                            .level(NotificationLevel.ERROR)
+                            .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                            .content("An error occurred while processing a BOM")
+                            // TODO: Look into adding more fields to BomProcessingFailed, to also cover upload token, serial number, version, etc.
+                            //   Thanks to ctx we now have more information about the BOM that may be useful to consumers downstream.
+                            // FIXME: Add reference to BOM after we have dedicated BOM server
+                            .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", ex.getMessage(), ex.ctx.bomFormat, ex.ctx.bomSpecVersion)));
+                } else {
+                    LOGGER.error("BOM processing failed unexpectedly (%s)".formatted(ctx), throwable);
+                    updateStateAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, WorkflowStatus.FAILED, throwable.getMessage());
+                    kafkaEventDispatcher.dispatchNotification(new Notification()
+                            .scope(NotificationScope.PORTFOLIO)
+                            .group(NotificationGroup.BOM_PROCESSING_FAILED)
+                            .level(NotificationLevel.ERROR)
+                            .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                            .content("An error occurred while processing a BOM")
+                            // FIXME: Add reference to BOM after we have dedicated BOM server
+                            .subject(new BomProcessingFailed(ctx.uploadToken, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat /* (may be null) */, ctx.bomSpecVersion /* (may be null) */)));
+                }
             }
         }
     }
@@ -1115,4 +1124,16 @@ public class BomUploadProcessingTask implements Subscriber {
         //don't send event because integrity metadata would be sent recently and don't want to send again
         return false;
     }
+
+    private static WaitingLockConfiguration createLockConfiguration(final Context ctx) {
+        return new WaitingLockConfiguration(
+                /* createdAt */ Instant.now(),
+                /* name */ "%s-%s".formatted(BomUploadProcessingTask.class.getSimpleName(), ctx.project.getUuid()),
+                /* lockAtMostFor */ Duration.ofMinutes(5),
+                /* lockAtLeastFor */ Duration.ZERO,
+                /* pollInterval */ Duration.ofMillis(100),
+                /* waitTimeout */ Duration.ofMinutes(5)
+        );
+    }
+
 }

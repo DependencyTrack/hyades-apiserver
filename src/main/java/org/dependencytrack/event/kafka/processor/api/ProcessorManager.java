@@ -359,12 +359,12 @@ public class ProcessorManager implements AutoCloseable {
 
         final var tlsConfig = new HashMap<String, Object>();
         tlsConfig.put(SECURITY_PROTOCOL_CONFIG, config.getProperty(ConfigKey.KAFKA_TLS_PROTOCOL));
-        tlsConfig.put(SSL_TRUSTSTORE_LOCATION_CONFIG, config.getProperty(ConfigKey.TRUST_STORE_PATH));
-        tlsConfig.put(SSL_TRUSTSTORE_PASSWORD_CONFIG, config.getProperty(ConfigKey.TRUST_STORE_PASSWORD));
+        tlsConfig.put(SSL_TRUSTSTORE_LOCATION_CONFIG, config.getProperty(ConfigKey.KAFKA_TRUST_STORE_PATH));
+        tlsConfig.put(SSL_TRUSTSTORE_PASSWORD_CONFIG, config.getProperty(ConfigKey.KAFKA_TRUST_STORE_PASSWORD));
 
         if (config.getPropertyAsBoolean(ConfigKey.KAFKA_MTLS_ENABLED)) {
-            tlsConfig.put(SSL_KEYSTORE_LOCATION_CONFIG, config.getProperty(ConfigKey.KEY_STORE_PATH));
-            tlsConfig.put(SSL_KEYSTORE_PASSWORD_CONFIG, config.getProperty(ConfigKey.KEY_STORE_PASSWORD));
+            tlsConfig.put(SSL_KEYSTORE_LOCATION_CONFIG, config.getProperty(ConfigKey.KAFKA_KEY_STORE_PATH));
+            tlsConfig.put(SSL_KEYSTORE_PASSWORD_CONFIG, config.getProperty(ConfigKey.KAFKA_KEY_STORE_PASSWORD));
         }
 
         return tlsConfig;

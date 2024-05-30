@@ -89,9 +89,14 @@
                                  referencedTableName="VULNERABILITY" validate="true"/>
     </changeSet>
 
-    <changeSet id="v5.5.0-6" author="sahibamittal">
+    <changeSet id="v5.5.0-6" author="nscuro">
+        <modifyDataType tableName="VULNERABILITY_POLICY" columnName="DESCRIPTION" newDataType="VARCHAR(512)"/>
+    </changeSet>
+
+    <changeSet id="v5.5.0-7" author="sahibamittal">
         <addColumn tableName="VULNERABILITY_POLICY">
             <column name="OPERATION_MODE" type="VARCHAR(255)"/>
         </addColumn>
     </changeSet>
+
 </databaseChangeLog>

@@ -20,13 +20,12 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.ws.rs.client.Entity;
@@ -38,20 +37,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class PolicyConditionResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(PolicyConditionResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(PolicyConditionResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class));
 
     @Test
     public void testCreateExpressionCondition() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
 
-        final Response response = target("%s/%s/condition".formatted(V1_POLICY, policy.getUuid()))
+        final Response response = jersey.target("%s/%s/condition".formatted(V1_POLICY, policy.getUuid()))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity("""
@@ -79,7 +75,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
     public void testCreateExpressionConditionWithError() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
 
-        final Response response = target("%s/%s/condition".formatted(V1_POLICY, policy.getUuid()))
+        final Response response = jersey.target("%s/%s/condition".formatted(V1_POLICY, policy.getUuid()))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity("""
@@ -111,7 +107,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
         final PolicyCondition condition = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.VULNERABILITY_ID, PolicyCondition.Operator.IS, "foobar");
 
-        final Response response = target("%s/condition".formatted(V1_POLICY))
+        final Response response = jersey.target("%s/condition".formatted(V1_POLICY))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity("""
@@ -142,7 +138,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
         final PolicyCondition condition = qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.VULNERABILITY_ID, PolicyCondition.Operator.IS, "foobar");
 
-        final Response response = target("%s/condition".formatted(V1_POLICY))
+        final Response response = jersey.target("%s/condition".formatted(V1_POLICY))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity("""

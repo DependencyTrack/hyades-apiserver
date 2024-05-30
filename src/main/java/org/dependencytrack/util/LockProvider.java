@@ -71,8 +71,6 @@ public class LockProvider {
 
     private static JdbcLockProvider instance;
 
-    private static LockingTaskExecutor lockingTaskExecutor;
-
     public static void executeWithLock(LockName lockName, Runnable task) {
         LockConfiguration lockConfiguration = getLockConfigurationByLockName(lockName);
         LockingTaskExecutor executor = getLockingTaskExecutorInstance();
@@ -85,25 +83,31 @@ public class LockProvider {
         executor.executeWithLock(task, lockConfiguration);
     }
 
+    public static void executeWithLockWaiting(final WaitingLockConfiguration lockConfiguration,
+                                              final LockingTaskExecutor.Task task) throws Throwable {
+        final JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
+        final var waitingLockProvider = new WaitingLockProvider(jdbcLockProvider,
+                lockConfiguration.getPollInterval(), lockConfiguration.getWaitTimeout());
+        final var executor = new DefaultLockingTaskExecutor(waitingLockProvider);
+        executor.executeWithLock(task, lockConfiguration);
+    }
+
     private static JdbcLockProvider getJdbcLockProviderInstance() {
-       if(instance == null || Config.isUnitTestsEnabled()) {
-           try (final QueryManager qm = new QueryManager()) {
-               PersistenceManager pm = qm.getPersistenceManager();
-               JDOPersistenceManagerFactory pmf = (JDOPersistenceManagerFactory) pm.getPersistenceManagerFactory();
-               instance =  new JdbcLockProvider(getDataSource(pmf));
-           } catch (IllegalAccessException e) {
-               throw new RuntimeException("Failed to access data source", e);
-           }
-       }
-       return instance;
+        if (instance == null || Config.isUnitTestsEnabled()) {
+            try (final QueryManager qm = new QueryManager()) {
+                PersistenceManager pm = qm.getPersistenceManager();
+                JDOPersistenceManagerFactory pmf = (JDOPersistenceManagerFactory) pm.getPersistenceManagerFactory();
+                instance = new JdbcLockProvider(getDataSource(pmf));
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Failed to access data source", e);
+            }
+        }
+        return instance;
     }
 
     private static LockingTaskExecutor getLockingTaskExecutorInstance() {
-        JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
-        if(lockingTaskExecutor == null || Config.isUnitTestsEnabled()) {
-            lockingTaskExecutor = new DefaultLockingTaskExecutor(jdbcLockProvider);
-        }
-        return lockingTaskExecutor;
+        final JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
+        return new DefaultLockingTaskExecutor(jdbcLockProvider);
     }
 
     private static DataSource getDataSource(final JDOPersistenceManagerFactory pmf) throws IllegalAccessException {
@@ -125,7 +129,7 @@ public class LockProvider {
     }
 
     public static LockConfiguration getLockConfigurationByLockName(LockName lockName) {
-        return switch(lockName) {
+        return switch (lockName) {
             case PORTFOLIO_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
                     PORTFOLIO_METRICS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
@@ -172,6 +176,6 @@ public class LockProvider {
 
     public static boolean isLockToBeExtended(long cumulativeDurationInMillis, LockName lockName) {
         LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(lockName);
-        return cumulativeDurationInMillis >=  (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
+        return cumulativeDurationInMillis >= (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis() ? true : false;
     }
 }

@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.Config;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -32,11 +33,9 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.CweImporter;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.glassfish.jersey.test.DeploymentContext;
-import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.json.JsonArray;
@@ -54,18 +53,16 @@ import static org.junit.Assert.assertEquals;
 
 public class FindingResourceTest extends ResourceTest {
 
-    @Override
-    protected DeploymentContext configureDeployment() {
-        return ServletDeploymentContext.forServlet(new ServletContainer(
-                        new ResourceConfig(FindingResource.class)
-                                .register(ApiFilter.class)
-                                .register(AuthenticationFilter.class)))
-                .build();
-    }
+    @ClassRule
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig(FindingResource.class)
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFilter.class));
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    @Override
+    public void before() throws Exception {
+        super.before();
         new CweImporter().processCweDefinitions();
     }
 
@@ -87,7 +84,7 @@ public class FindingResourceTest extends ResourceTest {
         qm.addVulnerability(v2, c1, AnalyzerIdentity.NONE);
         qm.addVulnerability(v3, c2, AnalyzerIdentity.NONE);
         qm.addVulnerability(v4, c5, AnalyzerIdentity.NONE);
-        Response response = target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
@@ -139,7 +136,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectInvalidTest() {
-        Response response = target(V1_FINDING + "/project/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
@@ -166,7 +163,7 @@ public class FindingResourceTest extends ResourceTest {
         qm.addVulnerability(v2, c1, AnalyzerIdentity.NONE);
         qm.addVulnerability(v3, c2, AnalyzerIdentity.NONE);
         qm.addVulnerability(v4, c5, AnalyzerIdentity.NONE);
-        Response response = target(V1_FINDING + "/project/" + p1.getUuid().toString() + "/export").request()
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString() + "/export").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
@@ -226,7 +223,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectInvalidTest() {
-        Response response = target(V1_FINDING + "/project/" + UUID.randomUUID().toString() + "/export").request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString() + "/export").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
@@ -284,7 +281,7 @@ public class FindingResourceTest extends ResourceTest {
         qm.addVulnerability(v2, c1, AnalyzerIdentity.NONE);
         qm.addVulnerability(v3, c2, AnalyzerIdentity.NONE);
         qm.addVulnerability(v4, c5, AnalyzerIdentity.NONE);
-        Response response = target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
@@ -345,7 +342,7 @@ public class FindingResourceTest extends ResourceTest {
 
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
-        Response response = target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
@@ -370,7 +367,7 @@ public class FindingResourceTest extends ResourceTest {
     public void testWorkflowStepsShouldBeCreatedOnReanalyze() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        Response response = target(V1_FINDING + "/project/" + p1.getUuid().toString() +  "/analyze").request()
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString() +  "/analyze").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json("{}"));
         Map<String, String> responseMap = response.readEntity(Map.class);

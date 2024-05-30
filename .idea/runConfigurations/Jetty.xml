@@ -12,6 +12,7 @@
               <entry key="ALPINE_DATABASE_PASSWORD" value="dtrack" />
               <entry key="ALPINE_DATABASE_URL" value="jdbc:postgresql://localhost:5432/dtrack" />
               <entry key="ALPINE_DATABASE_USERNAME" value="dtrack" />
+              <entry key="KAFKA_BOOTSTRAP_SERVERS" value="localhost:9092" />
             </map>
           </option>
           <option name="jreName" value="#USE_PROJECT_JDK" />

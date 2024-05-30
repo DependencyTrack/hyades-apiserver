@@ -26,6 +26,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import us.springett.cvss.Cvss;
+import us.springett.cvss.MalformedVectorException;
 import us.springett.cvss.Score;
 import us.springett.owasp.riskrating.MissingFactorException;
 import us.springett.owasp.riskrating.OwaspRiskRating;
@@ -64,7 +65,7 @@ public class CalculatorResource extends AlpineResource {
             final Cvss cvss = Cvss.fromVector(vector);
             final Score score = cvss.calculateScore();
             return Response.ok(score).build();
-        } catch (NullPointerException e) {
+        } catch (MalformedVectorException | NullPointerException e) {
             final String invalidVector = "An invalid CVSSv2 or CVSSv3 vector submitted.";
             return Response.status(Response.Status.BAD_REQUEST).entity(invalidVector).build();
         }

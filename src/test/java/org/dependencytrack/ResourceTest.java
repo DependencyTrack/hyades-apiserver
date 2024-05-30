@@ -19,20 +19,14 @@
 package org.dependencytrack;
 
 import alpine.Config;
-import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.server.auth.JsonWebToken;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
-import org.glassfish.jersey.test.JerseyTest;
-import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -50,7 +44,7 @@ import java.util.List;
 import static org.dependencytrack.PersistenceCapableTest.configurePmf;
 import static org.dependencytrack.PersistenceCapableTest.truncateTables;
 
-public abstract class ResourceTest extends JerseyTest {
+public abstract class ResourceTest {
 
     protected final String V1_ANALYSIS = "/v1/analysis";
     protected final String V1_BADGE = "/v1/badge";
@@ -95,17 +89,18 @@ public abstract class ResourceTest extends JerseyTest {
     protected final String X_API_KEY = "X-Api-Key";
     protected final String V1_TAG = "/v1/tag";
 
+    // Hashing is expensive. Do it once and re-use across tests as much as possible.
+    protected static final String TEST_USER_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
+
     protected static PostgresTestContainer postgresContainer;
 
     protected QueryManager qm;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
-    protected ManagedUser testUser;
-    protected String jwt;
     protected Team team;
     protected String apiKey;
 
     @BeforeClass
-    public static void init() throws Exception {
+    public static void init() {
         Config.enableUnitTests();
 
         postgresContainer = new PostgresTestContainer();
@@ -120,10 +115,7 @@ public abstract class ResourceTest extends JerseyTest {
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
-        testUser = qm.createManagedUser("testuser", String.valueOf(PasswordService.createHash("testuser".toCharArray())));
-        this.jwt = new JsonWebToken().createToken(testUser);
         team = qm.createTeam("Test Users", true);
-        qm.addUserToTeam(testUser, team);
         this.apiKey = team.getApiKeys().get(0).getKey();
     }
 
@@ -149,28 +141,13 @@ public abstract class ResourceTest extends JerseyTest {
         }
     }
 
-    @Override
-    protected TestContainerFactory getTestContainerFactory() {
-        return new DTGrizzlyWebTestContainerFactory();
-    }
-
-    @Override
-    protected void configureClient(final ClientConfig config) {
-        // Prevent InaccessibleObjectException with JDK >= 16 when performing PATCH requests
-        // using the default HttpUrlConnection connector provider.
-        // See https://github.com/eclipse-ee4j/jersey/issues/4825
-        config.connectorProvider(new GrizzlyConnectorProvider());
-    }
-
     public void initializeWithPermissions(Permissions... permissions) {
         List<Permission> permissionList = new ArrayList<>();
         for (Permissions permission : permissions) {
             permissionList.add(qm.createPermission(permission.name(), null));
         }
-        testUser.setPermissions(permissionList);
         team.setPermissions(permissionList);
         qm.persist(team);
-        testUser = qm.persist(testUser);
     }
 
     protected String getPlainTextBody(Response response) {

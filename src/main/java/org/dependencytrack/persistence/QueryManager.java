@@ -93,6 +93,7 @@ import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
+import org.dependencytrack.resources.v1.vo.AffectedProject;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -466,8 +467,8 @@ public class QueryManager extends AlpineQueryManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //// BEGIN WRAPPER METHODS                                                                                      ////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(includeMetrics, excludeInactive, onlyRoot);
+    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
+        return getProjectQueryManager().getProjects(includeMetrics, excludeInactive, onlyRoot, notAssignedToTeam);
     }
 
     public PaginatedResult getProjects(final boolean includeMetrics) {
@@ -486,8 +487,8 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getAllProjects(excludeInactive);
     }
 
-    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot);
+    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
+        return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam);
     }
 
     public Project getProject(final String uuid) {
@@ -675,8 +676,8 @@ public class QueryManager extends AlpineQueryManager {
         getComponentQueryManager().recursivelyDelete(component, commitIndex);
     }
 
-    public Map<String, Component> getDependencyGraphForComponent(Project project, Component component) {
-        return getComponentQueryManager().getDependencyGraphForComponent(project, component);
+    public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
+        return getComponentQueryManager().getDependencyGraphForComponents(project, components);
     }
 
     public PaginatedResult getLicenses() {
@@ -1130,8 +1131,8 @@ public class QueryManager extends AlpineQueryManager {
         return getFindingsQueryManager().getSuppressedCount(project, component);
     }
 
-    public List<Project> getProjects(final Vulnerability vulnerability, final Set<String> fetchGroups) {
-        return getVulnerabilityQueryManager().getProjects(vulnerability, fetchGroups);
+    public List<AffectedProject> getAffectedProjects(Vulnerability vulnerability) {
+        return getVulnerabilityQueryManager().getAffectedProjects(vulnerability);
     }
 
     public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {
