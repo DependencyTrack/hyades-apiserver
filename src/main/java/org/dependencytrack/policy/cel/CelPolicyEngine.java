@@ -86,7 +86,7 @@ import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
@@ -166,7 +166,8 @@ public class CelPolicyEngine {
 
             final org.dependencytrack.proto.policy.v1.Project protoProject;
             if (requirements.containsKey(TYPE_PROJECT)) {
-                protoProject = jdbi(qm).withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build(), requirements));
+                final var inputProject = org.dependencytrack.proto.policy.v1.Project.newBuilder().setUuid(project.getUuid().toString()).build();
+                protoProject = withJdbiHandle(handle -> handle.attach(CelPolicyDao.class).loadRequiredFields(inputProject, requirements));
             } else {
                 protoProject = org.dependencytrack.proto.policy.v1.Project.getDefaultInstance();
             }

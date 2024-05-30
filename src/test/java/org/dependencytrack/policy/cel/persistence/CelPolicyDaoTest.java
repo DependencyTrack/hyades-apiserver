@@ -44,7 +44,7 @@ import java.util.Date;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
@@ -97,8 +97,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .setUuid(project.getUuid().toString())
                 .build();
 
-        final org.dependencytrack.proto.policy.v1.Project enrichedProject = jdbi(qm)
-                .withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(protoProject, requirements));
+        final org.dependencytrack.proto.policy.v1.Project enrichedProject = withJdbiHandle(handle -> handle
+                .attach(CelPolicyDao.class).loadRequiredFields(protoProject, requirements));
 
         assertThatJson(JsonFormat.printer().print(enrichedProject))
                 .withMatcher("uuid", equalTo(project.getUuid().toString()))
@@ -194,8 +194,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .setUuid(component.getUuid().toString())
                 .build();
 
-        final org.dependencytrack.proto.policy.v1.Component enrichedComponent = jdbi(qm)
-                .withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(protoComponent, requirements));
+        final org.dependencytrack.proto.policy.v1.Component enrichedComponent = withJdbiHandle(handle -> handle
+                .attach(CelPolicyDao.class).loadRequiredFields(protoComponent, requirements));
 
         assertThatJson(JsonFormat.printer().print(enrichedComponent))
                 .withMatcher("uuid", equalTo(component.getUuid().toString()))
@@ -272,8 +272,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .setUuid(vuln.getUuid().toString())
                 .build();
 
-        final org.dependencytrack.proto.policy.v1.Vulnerability enrichedVuln = jdbi(qm)
-                .withExtension(CelPolicyDao.class, dao -> dao.loadRequiredFields(protoVuln, requirements));
+        final org.dependencytrack.proto.policy.v1.Vulnerability enrichedVuln = withJdbiHandle(handle -> handle
+                .attach(CelPolicyDao.class).loadRequiredFields(protoVuln, requirements));
 
         assertThatJson(JsonFormat.printer().print(enrichedVuln))
                 .withOptions(Option.IGNORING_ARRAY_ORDER)

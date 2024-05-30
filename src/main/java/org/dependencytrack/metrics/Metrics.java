@@ -18,15 +18,13 @@
  */
 package org.dependencytrack.metrics;
 
-import org.datanucleus.metadata.StoredProcQueryParameterMode;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.persistence.StoredProcedures;
-import org.dependencytrack.persistence.StoredProcedures.Procedure;
 
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 /**
  * Helper class for enhancing metrics.
@@ -60,23 +58,20 @@ public final class Metrics {
      * @since 5.0.0
      */
     public static void updatePortfolioMetrics() {
-        StoredProcedures.execute(Procedure.UPDATE_PORTFOLIO_METRICS);
+        useJdbiHandle(handle -> handle.createCall("CALL \"UPDATE_PORTFOLIO_METRICS\"()").invoke());
     }
 
     /**
      * Update metrics for a given {@link Project}.
-     * <p>
-     * Note: This does not implicitly update metrics for all components in the project,
-     * it merely aggregates all existing {@link DependencyMetrics}.
      *
      * @param projectUuid {@link UUID} of the {@link Project} to update metrics for
      * @since 5.0.0
      */
     public static void updateProjectMetrics(final UUID projectUuid) {
-        StoredProcedures.execute(Procedure.UPDATE_PROJECT_METRICS, query -> {
-            query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
-            query.setImplicitParameter(1, projectUuid.toString());
-        });
+        useJdbiHandle(handle -> handle
+                .createCall("CALL \"UPDATE_PROJECT_METRICS\"((:uuid)::VARCHAR)")
+                .bind("uuid", projectUuid)
+                .invoke());
     }
 
     /**
@@ -86,10 +81,10 @@ public final class Metrics {
      * @since 5.0.0
      */
     public static void updateComponentMetrics(final UUID componentUuid) {
-        StoredProcedures.execute(Procedure.UPDATE_COMPONENT_METRICS, query -> {
-            query.registerParameter(1, String.class, StoredProcQueryParameterMode.IN);
-            query.setImplicitParameter(1, componentUuid.toString());
-        });
+        useJdbiHandle(handle -> handle
+                .createCall("CALL \"UPDATE_COMPONENT_METRICS\"((:uuid)::VARCHAR)")
+                .bind("uuid", componentUuid)
+                .invoke());
     }
 
 }

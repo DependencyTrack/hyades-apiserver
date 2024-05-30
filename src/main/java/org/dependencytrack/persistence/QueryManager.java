@@ -112,7 +112,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -432,29 +431,6 @@ public class QueryManager extends AlpineQueryManager {
             integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
         }
         return integrityAnalysisQueryManager;
-    }
-
-    /**
-     * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
-     *
-     * @return A {@link Set} of {@link Team} IDs
-     */
-    protected Set<Long> getTeamIds(final Principal principal) {
-        final Set<Long> principalTeamIds = new HashSet<>();
-
-        if (principal instanceof final UserPrincipal userPrincipal
-                && userPrincipal.getTeams() != null) {
-            for (final Team userInTeam : userPrincipal.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        } else if (principal instanceof final ApiKey apiKey
-                && apiKey.getTeams() != null) {
-            for (final Team userInTeam : apiKey.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        }
-
-        return principalTeamIds;
     }
 
     private void disableL2Cache() {
