@@ -573,9 +573,9 @@ public class QueryManager extends AlpineQueryManager {
 
     public Project clone(UUID from, String newVersion, boolean includeTags, boolean includeProperties,
                          boolean includeComponents, boolean includeServices, boolean includeAuditHistory,
-                         boolean includeACL) {
+                         boolean includeACL, boolean includePolicyViolations) {
         return getProjectQueryManager().clone(from, newVersion, includeTags, includeProperties,
-                includeComponents, includeServices, includeAuditHistory, includeACL);
+                includeComponents, includeServices, includeAuditHistory, includeACL, includePolicyViolations);
     }
 
     public Project updateLastBomImport(Project p, Date date, String bomFormat) {
@@ -742,6 +742,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public PolicyCondition updatePolicyCondition(final PolicyCondition policyCondition) {
         return getPolicyQueryManager().updatePolicyCondition(policyCondition);
+    }
+
+    public PolicyViolation clonePolicyViolation(PolicyViolation sourcePolicyViolation, Component destinationComponent){
+        return getPolicyQueryManager().clonePolicyViolation(sourcePolicyViolation, destinationComponent);
     }
 
     public List<PolicyViolation> getAllPolicyViolations() {
