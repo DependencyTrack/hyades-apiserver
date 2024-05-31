@@ -26,9 +26,12 @@ import org.junit.Test;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
+import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
 
 public class CloneProjectTaskTest extends PersistenceCapableTest {
@@ -49,5 +52,44 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 });
 
+    }
+
+    @Test
+    public void testCloneProjectDoesNotExist() {
+        var uuid = UUID.randomUUID();
+        CloneProjectRequest request = new CloneProjectRequest(uuid.toString(), "1.1", false, false, false, false, false, false, false);
+        final var cloneProjectEvent = new CloneProjectEvent(request);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> new CloneProjectTask().inform(cloneProjectEvent))
+                .withMessageContaining("Project with UUID " + uuid + " was supposed to be cloned, but it does not exist anymore");
+
+        var clonedProject = qm.getProject("Acme Example", "1.1");
+        assertThat(clonedProject).isNull();
+        assertThat(qm.getAllWorkflowStatesForAToken(cloneProjectEvent.getChainIdentifier())).satisfiesExactly(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(PROJECT_CLONE);
+                    assertThat(state.getStatus()).isEqualTo(FAILED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                });
+    }
+
+    @Test
+    public void testCloneProjectVersionExist() {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        // Clone request with project version already existing.
+        CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.0", false, false, false, false, false, false, false);
+        final var cloneProjectEvent = new CloneProjectEvent(request);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> new CloneProjectTask().inform(cloneProjectEvent))
+                .withMessageContaining("Project Acme Example : 1.0 was supposed to be cloned to version 1.0, but that version already exists");
+
+        assertThat(qm.getAllWorkflowStatesForAToken(cloneProjectEvent.getChainIdentifier())).satisfiesExactly(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(PROJECT_CLONE);
+                    assertThat(state.getStatus()).isEqualTo(FAILED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                });
     }
 }

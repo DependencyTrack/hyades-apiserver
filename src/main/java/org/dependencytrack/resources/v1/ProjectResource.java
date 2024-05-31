@@ -572,6 +572,9 @@ public class ProjectResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
+        } catch (Exception ex) {
+            LOGGER.error("An error occurred while cloning project %s : %s".formatted(jsonRequest.getProject(), ex));
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
 
