@@ -39,7 +39,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
     @Test
     public void testCloneProjectTask() {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.1", false, false, false, false, false, false, false);
+        CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.1", false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         new CloneProjectTask().inform(cloneProjectEvent);
         var clonedProject = qm.getProject("Acme Example", "1.1");
@@ -57,7 +57,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
     @Test
     public void testCloneProjectDoesNotExist() {
         var uuid = UUID.randomUUID();
-        CloneProjectRequest request = new CloneProjectRequest(uuid.toString(), "1.1", false, false, false, false, false, false, false);
+        CloneProjectRequest request = new CloneProjectRequest(uuid.toString(), "1.1", false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> new CloneProjectTask().inform(cloneProjectEvent))
@@ -78,7 +78,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
     public void testCloneProjectVersionExist() {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
         // Clone request with project version already existing.
-        CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.0", false, false, false, false, false, false, false);
+        CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.0", false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> new CloneProjectTask().inform(cloneProjectEvent))
