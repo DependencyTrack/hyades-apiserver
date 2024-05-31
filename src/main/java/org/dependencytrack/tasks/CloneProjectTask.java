@@ -61,7 +61,7 @@ public class CloneProjectTask implements Subscriber {
                 LOGGER.info("Cloning project: " + request.getProject());
                 final Project project = qm.clone(UUID.fromString(request.getProject()),
                         request.getVersion(), request.includeTags(), request.includeProperties(),
-                        request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL());
+                        request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL(), request.includePolicyViolations());
                 qm.updateWorkflowStateToComplete(workflowState);
                 LOGGER.info("Cloned project: " + request.getProject() + " to " + project.getUuid());
             } catch (Exception ex) {
