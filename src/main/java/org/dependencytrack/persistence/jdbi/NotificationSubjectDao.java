@@ -105,13 +105,13 @@ public interface NotificationSubjectDao extends SqlObject {
                 ELSE "V"."CVSSV3BASESCORE"
               END                              AS "vulnCvssV3BaseScore",
               CASE
-                WHEN "A"."CVSSV2VECTOR" IS NOT NULL THEN "A"."CVSSV2VECTOR"
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                 ELSE "V"."CVSSV2VECTOR"
               END                              AS "vulnCvssV2Vector",
               CASE
-                WHEN "A"."CVSSV3VECTOR" IS NOT NULL THEN "A"."CVSSV3VECTOR"
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
                 ELSE "V"."CVSSV3VECTOR"
-              END                              AS "vulnCvssV3Vector",            
+              END                              AS "vulnCvssV3Vector",              
               -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
               --  How to handle this?
               CASE
@@ -126,6 +126,10 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
               END                              AS "vulnOwaspRrTechnicalImpactScore",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
+                ELSE "V"."OWASPRRVECTOR"
+              END                              AS "vulnOwaspRrVector",
               "CALC_SEVERITY"(
                 "V"."SEVERITY",
                 "A"."SEVERITY",
@@ -219,6 +223,14 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
                 ELSE "V"."CVSSV3BASESCORE"
               END                              AS "vulnCvssV3BaseScore",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
+                ELSE "V"."CVSSV2VECTOR"
+              END                              AS "vulnCvssV2Vector",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
+                ELSE "V"."CVSSV3VECTOR"
+              END                              AS "vulnCvssV3Vector", 
               -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
               --  How to handle this?
               CASE
@@ -233,6 +245,10 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
               END                              AS "vulnOwaspRrTechnicalImpactScore",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
+                ELSE "V"."OWASPRRVECTOR"
+              END                              AS "vulnOwaspRrVector",
               "CALC_SEVERITY"(
                 "V"."SEVERITY",
                 "A"."SEVERITY",
@@ -322,6 +338,14 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
                 ELSE "V"."CVSSV3BASESCORE"
               END                              AS "vulnCvssV3BaseScore",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
+                ELSE "V"."CVSSV2VECTOR"
+              END                              AS "vulnCvssV2Vector",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
+                ELSE "V"."CVSSV3VECTOR"        
+              END                              AS "vulnCvssV3Vector",
               -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
               --  How to handle this?
               CASE
@@ -336,6 +360,10 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
                 ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
               END                              AS "vulnOwaspRrTechnicalImpactScore",
+              CASE
+                WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
+                ELSE "V"."OWASPRRVECTOR"
+              END                              AS "vulnOwaspRrVector",
               "CALC_SEVERITY"(
                 "V"."SEVERITY",
                 "A"."SEVERITY",

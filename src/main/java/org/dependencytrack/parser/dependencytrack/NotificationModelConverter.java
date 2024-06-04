@@ -336,9 +336,12 @@ public final class NotificationModelConverter {
         Optional.ofNullable(vulnerability.getRecommendation()).ifPresent(builder::setRecommendation);
         Optional.ofNullable(vulnerability.getCvssV2BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV2);
         Optional.ofNullable(vulnerability.getCvssV3BaseScore()).map(BigDecimal::doubleValue).ifPresent(builder::setCvssV3);
+        Optional.ofNullable(vulnerability.getCvssV2Vector()).ifPresent(builder::setCvssV2Vector);
+        Optional.ofNullable(vulnerability.getCvssV3Vector()).ifPresent(builder::setCvssV3Vector);
         Optional.ofNullable(vulnerability.getOwaspRRLikelihoodScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihood);
         Optional.ofNullable(vulnerability.getOwaspRRTechnicalImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpact);
         Optional.ofNullable(vulnerability.getOwaspRRBusinessImpactScore()).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpact);
+        Optional.ofNullable(vulnerability.getOwaspRRVector()).ifPresent(builder::setOwaspRrVector);
         Optional.ofNullable(vulnerability.getSeverity()).map(Enum::name).ifPresent(builder::setSeverity);
         Optional.ofNullable(vulnerability.getCwes())
                 .orElseGet(Collections::emptyList).stream()
