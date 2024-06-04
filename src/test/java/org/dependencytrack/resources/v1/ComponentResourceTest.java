@@ -28,6 +28,7 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
@@ -693,17 +694,29 @@ public class ComponentResourceTest extends ResourceTest {
         component.setPurl("pkg:maven/org.acme/abc");
         component.setName("My Component");
         component.setVersion("1.0");
-        component.setDescription("Test component");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
+
+        var jsonComponent = new Component();
+        jsonComponent.setUuid(component.getUuid());
+        jsonComponent.setPurl("pkg:maven/org.acme/abc");
+        jsonComponent.setName("My Component");
+        jsonComponent.setVersion("1.0");
+        jsonComponent.setDescription("Test component");
+        var externalReference = new ExternalReference();
+        externalReference.setType(org.cyclonedx.model.ExternalReference.Type.WEBSITE);
+        externalReference.setUrl("test.com");
+        jsonComponent.setExternalReferences(List.of(externalReference));
+
         Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(component, MediaType.APPLICATION_JSON));
+                .post(Entity.entity(jsonComponent, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test component", json.getString("description"));
+        Assert.assertEquals(1, json.getJsonArray("externalReferences").size());
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
