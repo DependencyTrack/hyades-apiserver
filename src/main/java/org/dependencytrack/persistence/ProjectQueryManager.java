@@ -517,16 +517,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                          boolean includeACL, boolean includePolicyViolations) {
         final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
         if (source == null) {
-            LOGGER.warn("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
-            return null;
+            throw new IllegalStateException("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
         }
         if (doesProjectExist(source.getName(), newVersion)) {
             // Project cloning is an asynchronous process. When receiving the clone request, we already perform
             // this check. It is possible though that a project with the new version is created synchronously
             // between the clone event being dispatched, and it being processed.
-            LOGGER.warn("Project %s was supposed to be cloned to version %s, but that version already exists"
+            throw new IllegalStateException("Project %s was supposed to be cloned to version %s, but that version already exists"
                     .formatted(source, newVersion));
-            return null;
         }
         Project project = new Project();
         project.setAuthor(source.getAuthor());
