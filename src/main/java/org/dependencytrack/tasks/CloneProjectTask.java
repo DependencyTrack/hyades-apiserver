@@ -45,28 +45,29 @@ public class CloneProjectTask implements Subscriber {
             final CloneProjectEvent event = (CloneProjectEvent)e;
             final CloneProjectRequest request = event.getRequest();
             final UUID chainIdentifier = ((CloneProjectEvent) e).getChainIdentifier();
-            final QueryManager qm = new QueryManager();
-            WorkflowState workflowState = qm.updateStartTimeIfWorkflowStateExists(chainIdentifier, PROJECT_CLONE);
-            if (workflowState == null) {
-                final var now = new Date();
-                workflowState = new WorkflowState();
-                workflowState.setStep(PROJECT_CLONE);
-                workflowState.setStatus(PENDING);
-                workflowState.setToken(chainIdentifier);
-                workflowState.setStartedAt(now);
-                workflowState.setUpdatedAt(now);
-                qm.getPersistenceManager().makePersistent(workflowState);
-            }
-            try {
-                LOGGER.info("Cloning project: " + request.getProject());
-                final Project project = qm.clone(UUID.fromString(request.getProject()),
-                        request.getVersion(), request.includeTags(), request.includeProperties(),
-                        request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL(), request.includePolicyViolations());
-                qm.updateWorkflowStateToComplete(workflowState);
-                LOGGER.info("Cloned project: " + request.getProject() + " to " + project.getUuid());
-            } catch (Exception ex) {
-                qm.updateWorkflowStateToFailed(workflowState, ex.getMessage());
-                throw ex;
+            try (QueryManager qm = new QueryManager()) {
+                WorkflowState workflowState = qm.updateStartTimeIfWorkflowStateExists(chainIdentifier, PROJECT_CLONE);
+                if (workflowState == null) {
+                    final var now = new Date();
+                    workflowState = new WorkflowState();
+                    workflowState.setStep(PROJECT_CLONE);
+                    workflowState.setStatus(PENDING);
+                    workflowState.setToken(chainIdentifier);
+                    workflowState.setStartedAt(now);
+                    workflowState.setUpdatedAt(now);
+                    qm.getPersistenceManager().makePersistent(workflowState);
+                }
+                try {
+                    LOGGER.info("Cloning project: " + request.getProject());
+                    final Project project = qm.clone(UUID.fromString(request.getProject()),
+                            request.getVersion(), request.includeTags(), request.includeProperties(),
+                            request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL(), request.includePolicyViolations());
+                    qm.updateWorkflowStateToComplete(workflowState);
+                    LOGGER.info("Cloned project: " + request.getProject() + " to " + project.getUuid());
+                } catch (Exception ex) {
+                    LOGGER.error("An error occurred while cloning project %s".formatted(request.getProject()), ex);
+                    qm.updateWorkflowStateToFailed(workflowState, ex.getMessage());
+                }
             }
         }
     }
