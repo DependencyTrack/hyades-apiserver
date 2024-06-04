@@ -38,7 +38,6 @@ import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
 import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
-import org.dependencytrack.persistence.CweImporter;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
@@ -89,14 +88,6 @@ import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_SYSTEM;
 
 public class NotificationModelConverterTest extends PersistenceCapableTest {
-
-    @Override
-    public void before() throws Exception {
-        super.before();
-
-        // Required for CWE conversions.
-        new CweImporter().processCweDefinitions();
-    }
 
     @Test
     public void testConvertConfigurationNotification() {

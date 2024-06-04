@@ -101,10 +101,13 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.5.0-8" author="sahibamittal">
+    <changeSet id="v5.5.0-8" author="nscuro">
+        <dropTable tableName="CWE"/>
+    </changeSet>
+
+    <changeSet id="v5.5.0-9" author="sahibamittal">
         <addColumn tableName="VULNERABILITY_POLICY">
             <column name="OPERATION_MODE" type="VARCHAR(255)"/>
         </addColumn>
     </changeSet>
-
 </databaseChangeLog>

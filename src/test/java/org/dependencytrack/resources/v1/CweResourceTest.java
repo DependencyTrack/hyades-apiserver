@@ -22,10 +22,8 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.persistence.CweImporter;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -40,13 +38,6 @@ public class CweResourceTest extends ResourceTest {
             new ResourceConfig(CweResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class));
-
-    @Before
-    public void before() throws Exception {
-       super.before();
-        CweImporter cweImporter = new CweImporter();
-        cweImporter.processCweDefinitions();
-    }
 
     @Test
     public void getCwesTest() {
