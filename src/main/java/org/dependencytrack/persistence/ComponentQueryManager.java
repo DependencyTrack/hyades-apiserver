@@ -585,6 +585,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setInternal(transientComponent.isInternal());
         component.setAuthor(transientComponent.getAuthor());
         component.setSupplier(transientComponent.getSupplier());
+        component.setExternalReferences(transientComponent.getExternalReferences());
         final Component result = persist(component);
         return result;
     }
