@@ -28,6 +28,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.vulnanalysis.v1.Scanner;
 import us.springett.cvss.Cvss;
@@ -108,7 +109,7 @@ public final class ModelConverterCdxToVuln {
         }
 
         cycloneVuln.getCwesList().stream()
-                .map(qm::getCweById)
+                .map(CweResolver.getInstance()::lookup)
                 .filter(Objects::nonNull)
                 .forEach(vuln::addCwe);
 

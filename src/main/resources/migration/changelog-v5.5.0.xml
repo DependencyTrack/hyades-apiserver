@@ -100,4 +100,8 @@
             CHECK ("STEP"::TEXT = ANY(ARRAY['BOM_CONSUMPTION', 'BOM_PROCESSING', 'METRICS_UPDATE', 'POLICY_BUNDLE_SYNC', 'POLICY_EVALUATION', 'REPO_META_ANALYSIS', 'VULN_ANALYSIS', 'PROJECT_CLONE']));
         </sql>
     </changeSet>
+
+    <changeSet id="v5.5.0-8" author="nscuro">
+        <dropTable tableName="CWE"/>
+    </changeSet>
 </databaseChangeLog>

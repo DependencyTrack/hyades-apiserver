@@ -29,11 +29,9 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.persistence.CweImporter;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -45,13 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 public class NotificationSubjectDaoTest extends PersistenceCapableTest {
-
-    @Before
-    public void before() throws Exception {
-        super.before();
-
-        new CweImporter().processCweDefinitions();
-    }
 
     @Test
     public void testGetForNewVulnerabilities() {
