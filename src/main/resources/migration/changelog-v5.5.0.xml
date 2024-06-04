@@ -94,6 +94,14 @@
     </changeSet>
 
     <changeSet id="v5.5.0-7" author="sahibamittal">
+        <sql splitStatements="true">
+            ALTER TABLE "WORKFLOW_STATE" DROP CONSTRAINT IF EXISTS "WORKFLOW_STATE_STEP_check";
+            ALTER TABLE "WORKFLOW_STATE" ADD CONSTRAINT "WORKFLOW_STATE_STEP_check"
+            CHECK ("STEP"::TEXT = ANY(ARRAY['BOM_CONSUMPTION', 'BOM_PROCESSING', 'METRICS_UPDATE', 'POLICY_BUNDLE_SYNC', 'POLICY_EVALUATION', 'REPO_META_ANALYSIS', 'VULN_ANALYSIS', 'PROJECT_CLONE']));
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.5.0-8" author="sahibamittal">
         <addColumn tableName="VULNERABILITY_POLICY">
             <column name="OPERATION_MODE" type="VARCHAR(255)"/>
         </addColumn>

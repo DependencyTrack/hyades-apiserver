@@ -38,6 +38,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FindingAttribution;
+import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
@@ -513,19 +514,17 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     @Override
     public Project clone(UUID from, String newVersion, boolean includeTags, boolean includeProperties,
                          boolean includeComponents, boolean includeServices, boolean includeAuditHistory,
-                         boolean includeACL) {
+                         boolean includeACL, boolean includePolicyViolations) {
         final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
         if (source == null) {
-            LOGGER.warn("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
-            return null;
+            throw new IllegalStateException("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
         }
         if (doesProjectExist(source.getName(), newVersion)) {
             // Project cloning is an asynchronous process. When receiving the clone request, we already perform
             // this check. It is possible though that a project with the new version is created synchronously
             // between the clone event being dispatched, and it being processed.
-            LOGGER.warn("Project %s was supposed to be cloned to version %s, but that version already exists"
+            throw new IllegalStateException("Project %s was supposed to be cloned to version %s, but that version already exists"
                     .formatted(source, newVersion));
-            return null;
         }
         Project project = new Project();
         project.setAuthor(source.getAuthor());
@@ -638,6 +637,17 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 project.setAccessTeams(new ArrayList<>(accessTeams));
             }
         }
+
+        if(includeComponents && includePolicyViolations){
+            final List<PolicyViolation> sourcePolicyViolations = getAllPolicyViolations(source);
+            if(sourcePolicyViolations != null){
+                for(final PolicyViolation policyViolation: sourcePolicyViolations){
+                final Component destinationComponent = clonedComponents.get(policyViolation.getComponent().getId());
+                final PolicyViolation clonedPolicyViolation = clonePolicyViolation(policyViolation, destinationComponent);
+                persist(clonedPolicyViolation);
+                }   
+            }
+       }
 
         project = getObjectById(Project.class, project.getId());
         return project;
