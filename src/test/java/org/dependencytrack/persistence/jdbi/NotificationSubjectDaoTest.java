@@ -79,9 +79,12 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSeverity(Severity.MEDIUM);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
+        vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
+        vulnA.setCvssV3Vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H");
         vulnA.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.3));
         vulnA.setOwaspRRLikelihoodScore(BigDecimal.valueOf(4.4));
         vulnA.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.5));
+        vulnA.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         vulnA.setCwes(List.of(666, 777));
         qm.persist(vulnA);
 
@@ -173,7 +176,10 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                     "subtitle": "vulnASubTitle",
                                     "title": "vulnATitle",
                                     "uuid": "${json-unit.matches:vulnUuid}",
-                                    "vulnId": "CVE-100"
+                                    "vulnId": "CVE-100",
+                                    "cvssV2Vector": "(AV:N/AC:M/Au:S/C:P/I:P/A:P)",
+                                    "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+                                    "owaspRRVector": "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)"
                                   },
                                   "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
                                   "affectedProjectsReference": {
@@ -248,7 +254,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                             "vulnId": "CVE-100",
                             "source": "NVD",
                             "cvssv3": 10.0,
-                            "severity": "CRITICAL"
+                            "severity": "CRITICAL",
+                            "cvssV3Vector": "cvssV3VectorOverwrite"
                           },
                           "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
                           "affectedProjects": [
@@ -300,9 +307,12 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSeverity(Severity.MEDIUM);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
+        vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
+        vulnA.setCvssV3Vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H");
         vulnA.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.3));
         vulnA.setOwaspRRLikelihoodScore(BigDecimal.valueOf(4.4));
         vulnA.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.5));
+        vulnA.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         vulnA.setCwes(List.of(666, 777));
         qm.persist(vulnA);
 
@@ -379,6 +389,9 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                   "name": "Regular Expression without Anchors"
                                 }
                               ],
+                              "cvssV2Vector": "(AV:N/AC:M/Au:S/C:P/I:P/A:P)",
+                              "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+                              "owaspRRVector": "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)",
                               "aliases": [
                                 {"vulnId": "GHSA-100", "source": "GITHUB"}
                               ]
@@ -452,7 +465,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                               "vulnId": "CVE-100",
                               "source": "NVD",
                               "cvssv3": 10.0,
-                              "severity": "CRITICAL"
+                              "severity": "CRITICAL",
+                              "cvssV3Vector": "cvssV3VectorOverwrite"
                             }
                           ]
                         }
@@ -494,9 +508,12 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSeverity(Severity.MEDIUM);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
+        vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
+        vulnA.setCvssV3Vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H");
         vulnA.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.3));
         vulnA.setOwaspRRLikelihoodScore(BigDecimal.valueOf(4.4));
         vulnA.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(5.5));
+        vulnA.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         vulnA.setCwes(List.of(666, 777));
         qm.persist(vulnA);
 
@@ -571,7 +588,10 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                                  "cweId": 777,
                                                  "name": "Regular Expression without Anchors"
                                              }
-                                         ]
+                                         ],
+                                         "cvssV2Vector": "(AV:N/AC:M/Au:S/C:P/I:P/A:P)",
+                                         "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+                                         "owaspRRVector": "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)"
                                      },
                                      "analysis": {
                                          "component": {
@@ -625,7 +645,10 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                                      "cweId": 777,
                                                      "name": "Regular Expression without Anchors"
                                                  }
-                                             ]
+                                             ],
+                                         "cvssV2Vector": "(AV:N/AC:M/Au:S/C:P/I:P/A:P)",
+                                         "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+                                         "owaspRRVector": "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)"
                                          },
                                          "state": "NOT_AFFECTED",
                                          "suppressed": false
