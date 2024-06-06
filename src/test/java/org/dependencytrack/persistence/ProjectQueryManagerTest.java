@@ -28,6 +28,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.NotificationPublisher;
@@ -39,6 +40,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
@@ -201,4 +203,27 @@ public class ProjectQueryManagerTest extends PersistenceCapableTest {
         assertThat(policy.getProjects()).isEmpty();
     }
 
+    @Test
+    public void testCloneProjectPreservesVulnerabilityAttributionDate() throws Exception {
+        Project project = qm.createProject("Example Project 1", "Description 1", "1.0", null, null, null, true, false);
+        Component comp = new Component();
+        comp.setId(111L);
+        comp.setName("name");
+        comp.setProject(project);
+        comp.setVersion("1.0");
+        comp.setCopyright("Copyright Acme");
+        qm.createComponent(comp, true);
+        Vulnerability vuln = new Vulnerability();
+        vuln.setVulnId("INT-123");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        qm.persist(vuln);
+        qm.addVulnerability(vuln, comp, AnalyzerIdentity.INTERNAL_ANALYZER, "Vuln1", "http://vuln.com/vuln1", new Date());
+        Project clonedProject = qm.clone(project.getUuid(), "1.1.0", false, false, true, false, false, false, false);
+        List<Finding> findings = qm.getFindings(clonedProject);
+        assertThat(findings.size()).isEqualTo(1);
+        Finding finding = findings.get(0);
+        assertThat(finding).isNotNull();
+        assertThat(finding.getAttribution().isEmpty()).isFalse();
+    }
 }
