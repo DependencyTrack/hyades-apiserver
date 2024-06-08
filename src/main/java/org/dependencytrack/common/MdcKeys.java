@@ -23,12 +23,19 @@ package org.dependencytrack.common;
  */
 public final class MdcKeys {
 
+    public static final String MDC_BOM_FORMAT = "bomFormat";
+    public static final String MDC_BOM_SERIAL_NUMBER = "bomSerialNumber";
+    public static final String MDC_BOM_SPEC_VERSION = "bomSpecVersion";
+    public static final String MDC_BOM_UPLOAD_TOKEN = "bomUploadToken";
+    public static final String MDC_BOM_VERSION = "bomVersion";
     public static final String MDC_COMPONENT_UUID = "componentUuid";
     public static final String MDC_KAFKA_RECORD_TOPIC = "kafkaRecordTopic";
     public static final String MDC_KAFKA_RECORD_PARTITION = "kafkaRecordPartition";
     public static final String MDC_KAFKA_RECORD_OFFSET = "kafkaRecordOffset";
     public static final String MDC_KAFKA_RECORD_KEY = "kafkaRecordKey";
+    public static final String MDC_PROJECT_NAME = "projectName";
     public static final String MDC_PROJECT_UUID = "projectUuid";
+    public static final String MDC_PROJECT_VERSION = "projectVersion";
     public static final String MDC_SCAN_TOKEN = "scanToken";
 
     private MdcKeys() {

@@ -300,6 +300,8 @@ public class Project implements Serializable {
     @ApiModelProperty(accessMode = ApiModelProperty.AccessMode.READ_ONLY)
     private ProjectMetadata metadata;
 
+    private transient String bomRef;
+
     private transient ProjectMetrics metrics;
 
     private transient List<ProjectVersion> versions;
@@ -509,6 +511,14 @@ public class Project implements Serializable {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getBomRef() {
+        return bomRef;
+    }
+
+    public void setBomRef(String bomRef) {
+        this.bomRef = bomRef;
     }
 
     public ProjectMetrics getMetrics() {
