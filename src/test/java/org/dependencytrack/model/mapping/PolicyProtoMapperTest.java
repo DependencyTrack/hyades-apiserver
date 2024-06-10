@@ -124,13 +124,7 @@ public class PolicyProtoMapperTest extends PersistenceCapableTest {
 
     @Test
     public void testMapVulnerabilityWithNoFieldsSet() throws Exception {
-        assertThatJson(JsonFormat.printer().print(PolicyProtoMapper.mapToProto(new Vulnerability())))
-                // Oddity of the Vulnerability behavior: getSeverity never returns null, but UNASSIGNED instead.
-                .isEqualTo("""
-                        {
-                          "severity": "UNASSIGNED"
-                        }
-                        """);
+        assertThatJson(JsonFormat.printer().print(PolicyProtoMapper.mapToProto(new Vulnerability()))).isEqualTo("{}");
     }
 
     @Test

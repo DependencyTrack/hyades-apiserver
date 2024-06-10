@@ -76,7 +76,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSubTitle("vulnASubTitle");
         vulnA.setDescription("vulnADescription");
         vulnA.setRecommendation("vulnARecommendation");
-        vulnA.setSeverity(Severity.MEDIUM);
+        vulnA.setSeverity(Severity.LOW);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
         vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
@@ -304,7 +304,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSubTitle("vulnASubTitle");
         vulnA.setDescription("vulnADescription");
         vulnA.setRecommendation("vulnARecommendation");
-        vulnA.setSeverity(Severity.MEDIUM);
+        vulnA.setSeverity(Severity.LOW);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
         vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");
@@ -505,7 +505,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setSubTitle("vulnASubTitle");
         vulnA.setDescription("vulnADescription");
         vulnA.setRecommendation("vulnARecommendation");
-        vulnA.setSeverity(Severity.MEDIUM);
+        vulnA.setSeverity(Severity.LOW);
         vulnA.setCvssV2BaseScore(BigDecimal.valueOf(1.1));
         vulnA.setCvssV3BaseScore(BigDecimal.valueOf(2.2));
         vulnA.setCvssV2Vector("(AV:N/AC:M/Au:S/C:P/I:P/A:P)");

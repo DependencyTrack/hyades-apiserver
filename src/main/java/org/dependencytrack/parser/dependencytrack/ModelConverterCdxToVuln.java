@@ -31,6 +31,7 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.vulnanalysis.v1.Scanner;
+import org.dependencytrack.util.VulnerabilityUtil;
 import us.springett.cvss.Cvss;
 import us.springett.cvss.Score;
 import us.springett.owasp.riskrating.MissingFactorException;
@@ -170,6 +171,14 @@ public final class ModelConverterCdxToVuln {
                 }
             }
         }
+        vuln.setSeverity(VulnerabilityUtil.getSeverity(
+                vuln.getSeverity(),
+                vuln.getCvssV2BaseScore(),
+                vuln.getCvssV3BaseScore(),
+                vuln.getOwaspRRLikelihoodScore(),
+                vuln.getOwaspRRTechnicalImpactScore(),
+                vuln.getOwaspRRBusinessImpactScore()
+        ));
 
         // There can be cases where ratings do not have a known method, and the source only assigned
         // a severity. Such ratings are inferior to those with proper method and vector, but we'll use
