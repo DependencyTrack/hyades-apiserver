@@ -286,13 +286,13 @@ public class BomResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response uploadBom(@FormDataParam("project") @ValidUuid String projectUuid,
+    public Response uploadBom(@FormDataParam("project") String projectUuid,
                               @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
                               @FormDataParam("projectName") String projectName,
                               @FormDataParam("projectVersion") String projectVersion,
                               @FormDataParam("parentName") String parentName,
                               @FormDataParam("parentVersion") String parentVersion,
-                              @FormDataParam("parentUUID") @ValidUuid String parentUUID,
+                              @FormDataParam("parentUUID") String parentUUID,
                               final FormDataMultiPart multiPart) {
 
         final List<FormDataBodyPart> artifactParts = multiPart.getFields("bom");
