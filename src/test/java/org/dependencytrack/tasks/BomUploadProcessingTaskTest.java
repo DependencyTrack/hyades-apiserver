@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -27,6 +28,7 @@ import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -171,6 +173,30 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
         assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
+
+        assertThat(component.getProperties()).satisfiesExactlyInAnyOrder(
+                property -> {
+                    assertThat(property.getGroupName()).isEqualTo("foo");
+                    assertThat(property.getPropertyName()).isEqualTo("bar");
+                    assertThat(property.getPropertyValue()).isEqualTo("baz");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                },
+                property -> {
+                    assertThat(property.getGroupName()).isNull();
+                    assertThat(property.getPropertyName()).isEqualTo("foo");
+                    assertThat(property.getPropertyValue()).isEqualTo("bar");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                },
+                property -> {
+                    assertThat(property.getGroupName()).isEqualTo("foo");
+                    assertThat(property.getPropertyName()).isEqualTo("bar");
+                    assertThat(property.getPropertyValue()).isEqualTo("qux");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                }
+        );
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
@@ -1021,6 +1047,68 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(executor.awaitTermination(15, TimeUnit.SECONDS)).isTrue();
 
         assertThat(exceptions).isEmpty();
+    }
+
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithoutComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setVersion("1.0.0");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-schema1.4.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).isEmpty();
+    }
+
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-component-property.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).satisfiesExactly(property -> {
+            assertThat(property.getGroupName()).isNull();
+            assertThat(property.getPropertyName()).isEqualTo("foo");
+            assertThat(property.getPropertyValue()).isEqualTo("baz");
+            assertThat(property.getUuid()).isNotEqualTo(componentProperty.getUuid());
+        });
     }
 
     private void assertBomProcessedNotification() throws Exception {

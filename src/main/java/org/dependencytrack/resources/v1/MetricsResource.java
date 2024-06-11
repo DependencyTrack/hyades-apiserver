@@ -38,6 +38,7 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.DateUtil;
 
@@ -178,7 +179,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectCurrentMetrics(
             @ApiParam(value = "The UUID of the project to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
@@ -211,7 +212,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectMetricsSince(
             @ApiParam(value = "The UUID of the project to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
 
@@ -235,7 +236,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectMetricsXDays(
             @ApiParam(value = "The UUID of the project to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
 
@@ -257,7 +258,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response RefreshProjectMetrics(
             @ApiParam(value = "The UUID of the project to refresh metrics on", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
@@ -288,7 +289,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentCurrentMetrics(
             @ApiParam(value = "The UUID of the component to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
@@ -321,7 +322,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentMetricsSince(
             @ApiParam(value = "The UUID of the component to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
 
@@ -348,7 +349,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentMetricsXDays(
             @ApiParam(value = "The UUID of the component to retrieve metrics for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
 
@@ -370,7 +371,7 @@ public class MetricsResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response RefreshComponentMetrics(
             @ApiParam(value = "The UUID of the component to refresh metrics on", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {

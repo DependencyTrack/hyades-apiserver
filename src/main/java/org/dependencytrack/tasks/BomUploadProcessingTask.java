@@ -646,12 +646,15 @@ public class BomUploadProcessingTask implements Subscriber {
                     changed |= applyIfChanged(persistentComponent, component, Component::getResolvedLicense, persistentComponent::setResolvedLicense);
                     changed |= applyIfChanged(persistentComponent, component, Component::getLicense, persistentComponent::setLicense);
                     changed |= applyIfChanged(persistentComponent, component, Component::getLicenseUrl, persistentComponent::setLicenseUrl);
+                    changed |= applyIfChanged(persistentComponent, component, Component::getLicenseExpression, persistentComponent::setLicenseExpression);
                     changed |= applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
                     changed |= applyIfChanged(persistentComponent, component, Component::getExternalReferences, persistentComponent::setExternalReferences);
                     isNewOrUpdated = changed;
 
                     // BOM ref is transient and thus doesn't count towards the changed status.
                     persistentComponent.setBomRef(component.getBomRef());
+
+                    qm.synchronizeComponentProperties(persistentComponent, component.getProperties());
 
                     // Exclude from components to delete.
                     if (!oldComponentIds.isEmpty()) {

@@ -32,6 +32,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.RepositoryQueryManager;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
@@ -77,7 +78,7 @@ public class DependencyGraphResource extends AlpineResource {
             @ApiResponse(code = 404, message = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getComponentsAndServicesByProjectUuid(final @PathParam("uuid") String uuid) {
+    public Response getComponentsAndServicesByProjectUuid(final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
 
@@ -115,7 +116,7 @@ public class DependencyGraphResource extends AlpineResource {
             @ApiResponse(code = 404, message = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getComponentsAndServicesByComponentUuid(final @PathParam("uuid") String uuid) {
+    public Response getComponentsAndServicesByComponentUuid(final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component == null) {

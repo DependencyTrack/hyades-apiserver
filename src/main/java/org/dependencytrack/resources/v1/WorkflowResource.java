@@ -28,6 +28,7 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
@@ -56,7 +57,7 @@ public class WorkflowResource {
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
     public Response getWorkflowStates(
             @ApiParam(value = "The UUID of the token to query", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
             workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));

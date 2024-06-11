@@ -29,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.validation.Validator;
@@ -69,7 +70,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getProperties(
             @ApiParam(value = "The UUID of the project to retrieve properties for", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
@@ -112,7 +113,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response createProperty(
             @ApiParam(value = "The UUID of the project to create a property for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -167,7 +168,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response updateProperty(
             @ApiParam(value = "The UUID of the project to create a property for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -209,7 +210,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProperty(
             @ApiParam(value = "The UUID of the project to delete a property from", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();
         failOnValidationError(
