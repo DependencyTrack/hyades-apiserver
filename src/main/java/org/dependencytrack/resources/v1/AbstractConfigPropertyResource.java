@@ -68,7 +68,7 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
         if (property.getPropertyType() == IConfigProperty.PropertyType.BOOLEAN) {
             boolean propertyValue = BooleanUtil.valueOf(json.getPropertyValue());
             if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HISTORY_ENABLED.getPropertyName().equals(json.getPropertyName())){
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Attribute \"" + json.getPropertyName() + "\" was changed to value: " + String.valueOf(propertyValue));
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Attribute \"" + json.getPropertyName() + "\" was changed to value: " + String.valueOf(propertyValue) + " by user " + super.getPrincipal().getName());
             }
             property.setPropertyValue(String.valueOf(BooleanUtil.valueOf(json.getPropertyValue())));
         } else if (property.getPropertyType() == IConfigProperty.PropertyType.INTEGER) {
@@ -84,31 +84,31 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
                     return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName())){
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 10)){
                     return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName())){
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 10)){
                     return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName())){
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 10)){
                     return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName())){
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 10)){
                     return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
                 }
-                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())){
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue);
+                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 10)){
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
                 property.setPropertyValue(String.valueOf(propertyValue));
             } catch (NumberFormatException e) {
