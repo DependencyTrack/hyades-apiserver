@@ -985,8 +985,12 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getAllVulnerableSoftware(cpePart, cpeVendor, cpeProduct, purl);
     }
 
-    public Component matchSingleIdentity(final Project project, final ComponentIdentity cid) {
-        return getComponentQueryManager().matchSingleIdentity(project, cid);
+    public Component matchSingleIdentityExact(final Project project, final ComponentIdentity cid) {
+        return getComponentQueryManager().matchSingleIdentityExact(project, cid);
+    }
+
+    public Component matchFirstIdentityExact(final Project project, final ComponentIdentity cid) {
+        return getComponentQueryManager().matchFirstIdentityExact(project, cid);
     }
 
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {

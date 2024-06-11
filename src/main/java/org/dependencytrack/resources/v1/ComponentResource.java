@@ -53,7 +53,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
-import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 
 import javax.validation.Validator;
@@ -383,7 +383,7 @@ public class ComponentResource extends AlpineResource {
             component.setClassifier(jsonComponent.getClassifier());
             component.setPurl(jsonComponent.getPurl());
             component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
-            component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
+            component.setInternal(new InternalComponentIdentifier().isInternal(component));
             component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
             component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
             component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
@@ -490,7 +490,7 @@ public class ComponentResource extends AlpineResource {
                 component.setClassifier(jsonComponent.getClassifier());
                 component.setPurl(jsonComponent.getPurl());
                 component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
-                component.setInternal(InternalComponentIdentificationUtil.isInternalComponent(component, qm));
+                component.setInternal(new InternalComponentIdentifier().isInternal(component));
                 component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
                 component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
                 component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));

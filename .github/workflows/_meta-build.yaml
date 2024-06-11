@@ -130,7 +130,7 @@ jobs:
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build multi-arch Container Image
-        uses: docker/build-push-action@v5.3.0
+        uses: docker/build-push-action@v5.4.0
         with:
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |-
@@ -144,7 +144,7 @@ jobs:
 
       - name: Run Trivy Vulnerability Scanner
         if: ${{ inputs.publish-container }}
-        uses: aquasecurity/trivy-action@0.21.0
+        uses: aquasecurity/trivy-action@0.22.0
         with:
           image-ref: ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}
           format: 'sarif'
