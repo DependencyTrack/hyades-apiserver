@@ -37,10 +37,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONE
  * <p>
  * RegEx patterns are loaded and compiled once upon first invocation of {@link #isInternal(Component)},
  * and then re-used for the lifetime of the {@link InternalComponentIdentifier} instance.
- * <p>
- * Direct usage of this class is preferred over {@link InternalComponentIdentificationUtil#isInternalComponent(Component)}
- * in cases where multiple {@link Component}s are to be checked. This avoids redundant database queries and
- * (re-) compilation of RegEx patterns.
  *
  * @since 4.11.0
  */

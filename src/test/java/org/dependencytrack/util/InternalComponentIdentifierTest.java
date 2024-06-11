@@ -32,7 +32,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONE
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-public class InternalComponentIdentificationUtilTest extends PersistenceCapableTest {
+public class InternalComponentIdentifierTest extends PersistenceCapableTest {
 
     private final String groupsRegexProperty;
     private final String componentGroup;
@@ -42,7 +42,7 @@ public class InternalComponentIdentificationUtilTest extends PersistenceCapableT
 
     @Parameterized.Parameters(name = "[{index}] groupsRegexProperty={0} componentGroup={1} " +
             "namesRegexProperty={2} componentName={3} shouldBeInternal={4}")
-    public static Collection testParameters() {
+    public static Collection<?> testParameters() {
         return Arrays.asList(new Object[][]{
                 // neither regexes nor group / name provided
                 {"", "", "", "", false},
@@ -69,9 +69,9 @@ public class InternalComponentIdentificationUtilTest extends PersistenceCapableT
         });
     }
 
-    public InternalComponentIdentificationUtilTest(final String groupsRegexProperty, final String componentGroup,
-                                                   final String namesRegexProperty, final String componentName,
-                                                   final boolean shouldBeInternal) {
+    public InternalComponentIdentifierTest(final String groupsRegexProperty, final String componentGroup,
+                                           final String namesRegexProperty, final String componentName,
+                                           final boolean shouldBeInternal) {
         this.groupsRegexProperty = groupsRegexProperty;
         this.componentGroup = componentGroup;
         this.namesRegexProperty = namesRegexProperty;
@@ -100,7 +100,7 @@ public class InternalComponentIdentificationUtilTest extends PersistenceCapableT
         component.setGroup(componentGroup);
         component.setName(componentName);
 
-        assertEquals(shouldBeInternal, InternalComponentIdentificationUtil.isInternalComponent(component));
+        assertEquals(shouldBeInternal, new InternalComponentIdentifier().isInternal(component));
     }
 
 }
