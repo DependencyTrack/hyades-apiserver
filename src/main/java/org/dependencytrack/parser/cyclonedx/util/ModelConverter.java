@@ -21,7 +21,10 @@ package org.dependencytrack.parser.cyclonedx.util;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
+import org.cyclonedx.model.BomReference;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.model.Hash;
 import org.cyclonedx.model.LicenseChoice;
@@ -129,15 +132,16 @@ public class ModelConverter {
 
     public static Project convertToProject(final org.cyclonedx.model.Component cdxComponent) {
         final var project = new Project();
+        project.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
+        project.setSupplier(convert(cdxComponent.getSupplier()));
         project.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.APPLICATION));
         project.setGroup(trimToNull(cdxComponent.getGroup()));
         project.setName(trimToNull(cdxComponent.getName()));
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
-        project.setSupplier(ModelConverter.convert(cdxComponent.getSupplier()));
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -165,6 +169,7 @@ public class ModelConverter {
 
     public static Component convertComponent(final org.cyclonedx.model.Component cdxComponent) {
         final var component = new Component();
+        component.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         component.setAuthor(trimToNull(cdxComponent.getAuthor()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
         component.setSupplier(convert(cdxComponent.getSupplier()));
@@ -389,7 +394,7 @@ public class ModelConverter {
 
     public static ServiceComponent convertService(final org.cyclonedx.model.Service cdxService) {
         final var service = new ServiceComponent();
-        service.setBomRef(trimToNull(cdxService.getBomRef()));
+        service.setBomRef(useOrGenerateRandomBomRef(cdxService.getBomRef()));
         service.setProvider(convert(cdxService.getProvider()));
         service.setGroup(trimToNull(cdxService.getGroup()));
         service.setName(trimToNull(cdxService.getName()));
@@ -416,6 +421,25 @@ public class ModelConverter {
         }
 
         return service;
+    }
+
+    public static MultiValuedMap<String, String> convertDependencyGraph(final List<Dependency> cdxDependencies) {
+        final var dependencyGraph = new HashSetValuedHashMap<String, String>();
+        if (cdxDependencies == null || cdxDependencies.isEmpty()) {
+            return dependencyGraph;
+        }
+
+        for (final Dependency cdxDependency : cdxDependencies) {
+            if (cdxDependency.getDependencies() == null || cdxDependency.getDependencies().isEmpty()) {
+                continue;
+            }
+
+            final List<String> directDependencies = cdxDependency.getDependencies().stream()
+                    .map(BomReference::getRef).toList();
+            dependencyGraph.putAll(cdxDependency.getRef(), directDependencies);
+        }
+
+        return dependencyGraph;
     }
 
     private static Optional<Classifier> convertClassifier(final org.cyclonedx.model.Component.Type cdxComponentType) {
@@ -480,6 +504,12 @@ public class ModelConverter {
                     return classification;
                 })
                 .toList();
+    }
+
+    private static String useOrGenerateRandomBomRef(final String bomRef) {
+        return Optional.ofNullable(bomRef)
+                .map(StringUtils::trimToNull)
+                .orElseGet(() -> UUID.randomUUID().toString());
     }
 
     public static <T> List<T> flatten(final Collection<T> items,
