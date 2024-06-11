@@ -28,6 +28,7 @@ import io.confluent.parallelconsumer.ParallelStreamProcessor;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.DescribeTopicsOptions;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -195,9 +196,9 @@ public class ProcessorManager implements AutoCloseable {
 
     private void ensureTopicsExist() {
         final List<String> topicNames = managedProcessors.values().stream().map(ManagedProcessor::topic).toList();
-        LOGGER.debug("Ensuring existence of topics: %s".formatted(topicNames));
+        LOGGER.info("Verifying existence of subscribed topics: %s".formatted(topicNames));
 
-        final DescribeTopicsResult topicsResult = adminClient.describeTopics(topicNames);
+        final DescribeTopicsResult topicsResult = adminClient.describeTopics(topicNames, new DescribeTopicsOptions().timeoutMs(3_000));
         final var exceptionsByTopicName = new HashMap<String, Throwable>();
         for (final Map.Entry<String, KafkaFuture<TopicDescription>> entry : topicsResult.topicNameValues().entrySet()) {
             final String topicName = entry.getKey();
@@ -224,7 +225,7 @@ public class ProcessorManager implements AutoCloseable {
 
     private int getTopicPartitionCount(final String topicName) {
         LOGGER.debug("Determining partition count of topic %s".formatted(topicName));
-        final DescribeTopicsResult topicsResult = adminClient.describeTopics(List.of(topicName));
+        final DescribeTopicsResult topicsResult = adminClient.describeTopics(List.of(topicName), new DescribeTopicsOptions().timeoutMs(3_000));
         final KafkaFuture<TopicDescription> topicDescriptionFuture = topicsResult.topicNameValues().get(topicName);
 
         try {

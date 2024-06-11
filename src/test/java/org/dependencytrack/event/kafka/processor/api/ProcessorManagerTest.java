@@ -58,7 +58,7 @@ public class ProcessorManagerTest {
 
     @Rule
     public RedpandaContainer kafkaContainer = new RedpandaContainer(DockerImageName
-            .parse("docker.redpanda.com/vectorized/redpanda:v23.3.13"));
+            .parse("docker.redpanda.com/vectorized/redpanda:v24.1.7"));
 
     private ExternalKafkaCluster kafka;
     private Config configMock;
