@@ -23,8 +23,18 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
+
+import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.StoredProcedures;
 import org.dependencytrack.persistence.StoredProcedures.Procedure;
+
+import alpine.model.ConfigProperty;
 
 import java.util.UUID;
 
@@ -36,11 +46,26 @@ import java.util.UUID;
  */
 public final class Metrics {
 
+    protected static QueryManager qm;
+
     private Metrics() {
     }
 
     public static double inheritedRiskScore(final int critical, final int high, final int medium, final int low, final int unassigned) {
-        return (double) ((critical * 10) + (high * 5) + (medium * 3) + (low * 1) + (unassigned * 5));
+        ConfigProperty risk_score_critical_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName());
+        ConfigProperty risk_score_high_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName());
+        ConfigProperty risk_score_medium_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName());
+        ConfigProperty risk_score_low_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName());
+        ConfigProperty risk_score_unassigned_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName());
+
+        int risk_score_critical_val = Integer.valueOf(risk_score_critical_property.getPropertyValue());
+        int risk_score_high_val = Integer.valueOf(risk_score_high_property.getPropertyValue());
+        int risk_score_medium_val = Integer.valueOf(risk_score_medium_property.getPropertyValue());
+        int risk_score_low_val = Integer.valueOf(risk_score_low_property.getPropertyValue());
+        int risk_score_unassigned_val = Integer.valueOf(risk_score_unassigned_property.getPropertyValue());
+
+        // return (double) ((critical * 10) + (high * 5) + (medium * 3) + (low * 1) + (unassigned * 5));
+        return (double) ((critical * risk_score_critical_val) + (high * risk_score_high_val) + (medium * risk_score_medium_val) + (low * risk_score_low_val) + (unassigned * risk_score_unassigned_val));
     }
 
     public static double vulnerableComponentRatio(final int vulnerabilities, final int vulnerableComponents) {

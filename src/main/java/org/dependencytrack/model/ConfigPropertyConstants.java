@@ -94,7 +94,13 @@ public enum ConfigPropertyConstants {
     TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE("task-scheduler", "internal.components.identification.cadence", "6", PropertyType.INTEGER, "Internal component identification cadence (in hours)", ConfigPropertyAccessMode.READ_WRITE),
     SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED("search-indexes", "consistency.check.enabled", "true", PropertyType.BOOLEAN, "Flag to enable lucene indexes periodic consistency check", ConfigPropertyAccessMode.READ_WRITE),
     SEARCH_INDEXES_CONSISTENCY_CHECK_CADENCE("search-indexes", "consistency.check.cadence", "4320", PropertyType.INTEGER, "Lucene indexes consistency check cadence (in minutes)", ConfigPropertyAccessMode.READ_WRITE),
-    SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD("search-indexes", "consistency.check.delta.threshold", "20", PropertyType.INTEGER, "Threshold used to trigger an index rebuild when comparing database table and corresponding lucene index (in percentage). It must be an integer between 1 and 100", ConfigPropertyAccessMode.READ_WRITE);
+    SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD("search-indexes", "consistency.check.delta.threshold", "20", PropertyType.INTEGER, "Threshold used to trigger an index rebuild when comparing database table and corresponding lucene index (in percentage). It must be an integer between 1 and 100", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_HISTORY_ENABLED("risk-score", "riskscore.history.enabled", "true", PropertyType.BOOLEAN, "Flag to re-calculate risk score history", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_CRITICAL("risk-score", "riskscore.critical", "10", PropertyType.INTEGER, "Critical severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_HIGH("risk-score", "riskscore.high", "5", PropertyType.INTEGER, "High severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_MEDIUM("risk-score", "riskscore.medium", "3", PropertyType.INTEGER, "Medium severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_LOW("risk-score", "riskscore.low", "1", PropertyType.INTEGER, "Low severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "riskscore.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE);
 
     private final String groupName;
     private final String propertyName;
@@ -147,5 +153,5 @@ public enum ConfigPropertyConstants {
     public ConfigPropertyAccessMode getAccessMode() {
         return accessMode;
     }
-
 }
+
