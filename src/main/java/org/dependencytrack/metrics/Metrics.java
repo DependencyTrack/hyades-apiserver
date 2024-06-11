@@ -52,20 +52,24 @@ public final class Metrics {
     }
 
     public static double inheritedRiskScore(final int critical, final int high, final int medium, final int low, final int unassigned) {
-        ConfigProperty risk_score_critical_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName());
-        ConfigProperty risk_score_high_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName());
-        ConfigProperty risk_score_medium_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName());
-        ConfigProperty risk_score_low_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName());
-        ConfigProperty risk_score_unassigned_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName());
+        try (final var qm = new QueryManager()) {
+            ConfigProperty risk_score_critical_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName());
+            ConfigProperty risk_score_high_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName());
+            ConfigProperty risk_score_medium_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName());
+            ConfigProperty risk_score_low_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName());
+            ConfigProperty risk_score_unassigned_property = qm.getConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName());
 
-        int risk_score_critical_val = Integer.valueOf(risk_score_critical_property.getPropertyValue());
-        int risk_score_high_val = Integer.valueOf(risk_score_high_property.getPropertyValue());
-        int risk_score_medium_val = Integer.valueOf(risk_score_medium_property.getPropertyValue());
-        int risk_score_low_val = Integer.valueOf(risk_score_low_property.getPropertyValue());
-        int risk_score_unassigned_val = Integer.valueOf(risk_score_unassigned_property.getPropertyValue());
+            int risk_score_critical_val = Integer.valueOf(risk_score_critical_property.getPropertyValue());
+            int risk_score_high_val = Integer.valueOf(risk_score_high_property.getPropertyValue());
+            int risk_score_medium_val = Integer.valueOf(risk_score_medium_property.getPropertyValue());
+            int risk_score_low_val = Integer.valueOf(risk_score_low_property.getPropertyValue());
+            int risk_score_unassigned_val = Integer.valueOf(risk_score_unassigned_property.getPropertyValue());
 
-        // return (double) ((critical * 10) + (high * 5) + (medium * 3) + (low * 1) + (unassigned * 5));
-        return (double) ((critical * risk_score_critical_val) + (high * risk_score_high_val) + (medium * risk_score_medium_val) + (low * risk_score_low_val) + (unassigned * risk_score_unassigned_val));
+            return (double) ((critical * risk_score_critical_val) + (high * risk_score_high_val) + (medium * risk_score_medium_val) + (low * risk_score_low_val) + (unassigned * risk_score_unassigned_val));
+
+        } catch (Exception e) {
+            return (double) ((critical * 10) + (high * 5) + (medium * 3) + (low * 1) + (unassigned * 5)); 
+        }
     }
 
     public static double vulnerableComponentRatio(final int vulnerabilities, final int vulnerableComponents) {
