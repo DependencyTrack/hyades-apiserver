@@ -88,7 +88,7 @@ public class Finding implements Serializable {
                 ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
              INNER JOIN "VULNERABILITY"
                 ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
-             INNER JOIN "EPSS"
+             LEFT JOIN "EPSS"
                 ON "VULNERABILITY"."VULNID" = "EPSS"."CVE"
              INNER JOIN "FINDINGATTRIBUTION"
                 ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
