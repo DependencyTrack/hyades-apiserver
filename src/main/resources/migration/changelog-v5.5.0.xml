@@ -132,5 +132,13 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addForeignKeyConstraint baseTableName="COMPONENT_PROPERTY" baseColumnNames="COMPONENT_ID"
+                                 constraintName="COMPONENT_PROPERTY_COMPONENT_ID_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="COMPONENT" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <sql>
+            ALTER TABLE "COMPONENT_PROPERTY" ADD CONSTRAINT "COMPONENT_PROPERTY_TYPE_check"
+            CHECK ("PROPERTYTYPE" IS NULL OR "PROPERTYTYPE"::TEXT = ANY(ARRAY['BOOLEAN', 'INTEGER', 'NUMBER', 'STRING', 'ENCRYPTEDSTRING', 'TIMESTAMP', 'URL', 'UUID']));
+        </sql>
     </changeSet>
 </databaseChangeLog>

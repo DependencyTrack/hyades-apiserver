@@ -271,15 +271,6 @@ public class ModelConverter {
             component.setChildren(children);
         }
 
-        final List<ComponentProperty> properties = convertToComponentProperties(cdxComponent.getProperties());
-        if (component.getId() == 0) {
-            component.setProperties(properties);
-        } else {
-            try (var qm = new QueryManager()) {
-                qm.synchronizeComponentProperties(component, properties);
-            }
-        }
-
         return component;
     }
 
