@@ -196,7 +196,7 @@ public class ProcessorManager implements AutoCloseable {
 
     private void ensureTopicsExist() {
         final List<String> topicNames = managedProcessors.values().stream().map(ManagedProcessor::topic).toList();
-        LOGGER.debug("Ensuring existence of topics: %s".formatted(topicNames));
+        LOGGER.info("Verifying existence of subscribed topics: %s".formatted(topicNames));
 
         final DescribeTopicsResult topicsResult = adminClient.describeTopics(topicNames, new DescribeTopicsOptions().timeoutMs(3_000));
         final var exceptionsByTopicName = new HashMap<String, Throwable>();
