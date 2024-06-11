@@ -7,10 +7,19 @@
   "crossRef": [
     {
       "match": "false",
+      "url": "https://www.iec.ch/CCv1",
+      "isValid": true,
+      "isLive": true,
+      "timestamp": "2024-02-08T16:38:04Z",
+      "isWayBackLink": false,
+      "order": 1
+    },
+    {
+      "match": "false",
       "url": "https://www.iec.ch/webstore/custserv/pdf/CC-EULA.pdf",
       "isValid": true,
       "isLive": true,
-      "timestamp": "2023-06-18T16:52:40Z",
+      "timestamp": "2024-02-08T16:38:05Z",
       "isWayBackLink": false,
       "order": 0
     },
@@ -19,18 +28,9 @@
       "url": "https://www.iec.ch/copyright",
       "isValid": true,
       "isLive": true,
-      "timestamp": "2023-06-18T16:52:41Z",
+      "timestamp": "2024-02-08T16:38:05Z",
       "isWayBackLink": false,
       "order": 2
-    },
-    {
-      "match": "false",
-      "url": "https://www.iec.ch/CCv1",
-      "isValid": true,
-      "isLive": true,
-      "timestamp": "2023-06-18T16:52:42Z",
-      "isWayBackLink": false,
-      "order": 1
     }
   ],
   "seeAlso": [
