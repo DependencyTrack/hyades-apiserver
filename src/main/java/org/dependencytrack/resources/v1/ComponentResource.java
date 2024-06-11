@@ -50,6 +50,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.InternalComponentIdentifier;
@@ -106,7 +107,7 @@ public class ComponentResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getAllComponents(
             @ApiParam(value = "The UUID of the project to retrieve components for", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "Optionally exclude recent components so only outdated components are returned", required = false)
             @QueryParam("onlyOutdated") boolean onlyOutdated,
             @ApiParam(value = "Optionally exclude transitive dependencies so only direct dependencies are returned", required = false)
@@ -141,7 +142,7 @@ public class ComponentResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentByUuid(
             @ApiParam(value = "The UUID of the component to retrieve", required = true)
-            @PathParam("uuid") String uuid,
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "Optionally includes third-party metadata about the component from external repositories", required = false)
             @QueryParam("includeRepositoryMetaData") boolean includeRepositoryMetaData,
             @QueryParam("includeIntegrityMetaData") boolean includeIntegrityMetaData) {
@@ -223,7 +224,7 @@ public class ComponentResource extends AlpineResource {
     })
     public Response getIntegrityStatus(
             @ApiParam(value = "UUID of the component for which integrity status information is needed", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(UUID.fromString(uuid));
             if (result == null) {
@@ -329,7 +330,7 @@ public class ComponentResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response createComponent(@PathParam("uuid") String uuid, Component jsonComponent) {
+    public Response createComponent(@PathParam("uuid") @ValidUuid String uuid, Component jsonComponent) {
         final Validator validator = super.getValidator();
         failOnValidationError(
                 validator.validateProperty(jsonComponent, "author"),
@@ -567,7 +568,7 @@ public class ComponentResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteComponent(
             @ApiParam(value = "The UUID of the component to delete", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
             if (component != null) {
@@ -610,9 +611,9 @@ public class ComponentResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getDependencyGraphForComponent(
             @ApiParam(value = "The UUID of the project to get the expanded dependency graph for", required = true)
-            @PathParam("projectUuid") String projectUuid,
+            @PathParam("projectUuid") @ValidUuid String projectUuid,
             @ApiParam(value = "List of UUIDs of the components (separated by |) to get the expanded dependency graph for", required = true)
-            @PathParam("componentUuids") String componentUuids) {
+            @PathParam("componentUuids") @ValidUuid String componentUuids) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);
             if(project == null) {

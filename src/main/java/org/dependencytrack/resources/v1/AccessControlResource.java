@@ -31,6 +31,7 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.AclMappingRequest;
 
@@ -73,7 +74,7 @@ public class AccessControlResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response retrieveProjects (@ApiParam(value = "The UUID of the team to retrieve mappings for", required = true)
-                                      @PathParam("uuid") String uuid,
+                                      @PathParam("uuid") @ValidUuid String uuid,
                                       @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
                                       @QueryParam("excludeInactive") boolean excludeInactive,
                                       @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
@@ -139,9 +140,9 @@ public class AccessControlResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteMapping(
             @ApiParam(value = "The UUID of the team to delete the mapping for", required = true)
-            @PathParam("teamUuid") String teamUuid,
+            @PathParam("teamUuid") @ValidUuid String teamUuid,
             @ApiParam(value = "The UUID of the project to delete the mapping for", required = true)
-            @PathParam("projectUuid") String projectUuid) {
+            @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);

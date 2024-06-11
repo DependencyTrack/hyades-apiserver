@@ -26,6 +26,7 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
 import javax.ws.rs.GET;
@@ -60,7 +61,7 @@ public class EventResource extends AlpineResource {
     })
     public Response isTokenBeingProcessed (
             @ApiParam(value = "The UUID of the token to query", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         final boolean value = Event.isEventBeingProcessed(UUID.fromString(uuid));
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
         response.setProcessing(value);
