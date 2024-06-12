@@ -75,6 +75,10 @@ public class InternalComponentIdentifier {
         return matchesGroup || matchesName;
     }
 
+    public boolean hasPatterns() {
+        return patternsSupplier.get().hasPattern();
+    }
+
     private static Patterns loadPatterns() {
         try (final var qm = new QueryManager()) {
             final ConfigProperty groupsRegexProperty = qm.getConfigProperty(
