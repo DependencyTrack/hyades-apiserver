@@ -15,5 +15,18 @@ CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
   IMMUTABLE
 AS
 $$
-SELECT (("critical" * 10) + ("high" * 5) + ("medium" * 3) + ("low" * 1) + ("unassigned" * 5))::NUMERIC;
+WITH "CUSTOM_SCORES" AS (
+  SELECT "PROPERTYVALUE"::INT AS "value"
+       , "PROPERTYNAME" AS "name"
+    FROM "CONFIGPROPERTY"
+   WHERE "PROPERTYGROUP" = 'risk-score'
+     AND "PROPERTYTYPE" = 'INTEGER'
+)
+SELECT (
+  ("critical" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.critical'))
+  + ("high" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.high'))
+  + ("medium" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.medium'))
+  + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.low'))
+  + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.unassigned'))
+)::NUMERIC;
 $$;
