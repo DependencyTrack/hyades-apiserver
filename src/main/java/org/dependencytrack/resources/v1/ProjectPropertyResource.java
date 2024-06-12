@@ -69,7 +69,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getProperties(
-            @ApiParam(value = "The UUID of the project to retrieve properties for", required = true)
+            @ApiParam(value = "The UUID of the project to retrieve properties for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
@@ -112,7 +112,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response createProperty(
-            @ApiParam(value = "The UUID of the project to create a property for", required = true)
+            @ApiParam(value = "The UUID of the project to create a property for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();
@@ -167,7 +167,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response updateProperty(
-            @ApiParam(value = "The UUID of the project to create a property for", required = true)
+            @ApiParam(value = "The UUID of the project to create a property for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();
@@ -209,7 +209,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProperty(
-            @ApiParam(value = "The UUID of the project to delete a property from", required = true)
+            @ApiParam(value = "The UUID of the project to delete a property from", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             ProjectProperty json) {
         final Validator validator = super.getValidator();

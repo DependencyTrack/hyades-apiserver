@@ -72,7 +72,8 @@ public class ServiceResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getAllServices(@PathParam("uuid") @ValidUuid String uuid) {
+    public Response getAllServices(@ApiParam(value = "The UUID of the project", format = "uuid", required = true)
+                                   @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
@@ -102,7 +103,7 @@ public class ServiceResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getServiceByUuid(
-            @ApiParam(value = "The UUID of the service to retrieve", required = true)
+            @ApiParam(value = "The UUID of the service to retrieve", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid);
@@ -135,7 +136,8 @@ public class ServiceResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response createService(@PathParam("uuid") @ValidUuid String uuid, ServiceComponent jsonService) {
+    public Response createService(@ApiParam(value = "The UUID of the project", format = "uuid", required = true)
+                                  @PathParam("uuid") @ValidUuid String uuid, ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
         failOnValidationError(
                 validator.validateProperty(jsonService, "name"),
@@ -237,7 +239,7 @@ public class ServiceResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteService(
-            @ApiParam(value = "The UUID of the service to delete", required = true)
+            @ApiParam(value = "The UUID of the service to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid, ServiceComponent.FetchGroup.ALL.name());

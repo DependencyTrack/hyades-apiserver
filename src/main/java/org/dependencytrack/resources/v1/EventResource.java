@@ -60,7 +60,7 @@ public class EventResource extends AlpineResource {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
     public Response isTokenBeingProcessed (
-            @ApiParam(value = "The UUID of the token to query", required = true)
+            @ApiParam(value = "The UUID of the token to query", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         final boolean value = Event.isEventBeingProcessed(UUID.fromString(uuid));
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();

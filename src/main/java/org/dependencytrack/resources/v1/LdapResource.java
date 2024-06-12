@@ -124,7 +124,7 @@ public class LdapResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the team could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response retrieveLdapGroups (@ApiParam(value = "The UUID of the team to retrieve mappings for", required = true)
+    public Response retrieveLdapGroups (@ApiParam(value = "The UUID of the team to retrieve mappings for", format = "uuid", required = true)
                                         @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, uuid);
@@ -184,7 +184,7 @@ public class LdapResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteMapping(
-            @ApiParam(value = "The UUID of the mapping to delete", required = true)
+            @ApiParam(value = "The UUID of the mapping to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final MappedLdapGroup mapping = qm.getObjectByUuid(MappedLdapGroup.class, uuid);

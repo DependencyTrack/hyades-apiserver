@@ -57,7 +57,7 @@ public class TagResource extends AlpineResource {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getTags(@ApiParam(value = "The UUID of the policy", required = true)
+    public Response getTags(@ApiParam(value = "The UUID of the policy", format = "uuid", required = true)
                             @PathParam("policyUuid") @ValidUuid String policyUuid){
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getTags(policyUuid);

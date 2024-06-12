@@ -168,7 +168,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The group could not be found")
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response deleteGroup(@ApiParam(value = "The UUID of the group to delete", required = true)
+    public Response deleteGroup(@ApiParam(value = "The UUID of the group to delete", format = "uuid", required = true)
                                 @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, uuid);
@@ -196,7 +196,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the mapping could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response retrieveTeamsMappedToGroup(@ApiParam(value = "The UUID of the mapping to retrieve the team for", required = true)
+    public Response retrieveTeamsMappedToGroup(@ApiParam(value = "The UUID of the mapping to retrieve the team for", format = "uuid", required = true)
                                                @PathParam("uuid") @ValidUuid final String uuid) {
         try (final QueryManager qm = new QueryManager()) {
             final OidcGroup oidcGroup = qm.getObjectByUuid(OidcGroup.class, uuid);
@@ -265,7 +265,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the mapping could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response deleteMappingByUuid(@ApiParam(value = "The UUID of the mapping to delete", required = true)
+    public Response deleteMappingByUuid(@ApiParam(value = "The UUID of the mapping to delete", format = "uuid", required = true)
                                         @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final MappedOidcGroup mapping = qm.getObjectByUuid(MappedOidcGroup.class, uuid);
@@ -291,9 +291,9 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the mapping could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response deleteMapping(@ApiParam(value = "The UUID of the group to delete a mapping for", required = true)
+    public Response deleteMapping(@ApiParam(value = "The UUID of the group to delete a mapping for", format = "uuid", required = true)
                                   @PathParam("groupUuid") @ValidUuid final String groupUuid,
-                                  @ApiParam(value = "The UUID of the team to delete a mapping for", required = true)
+                                  @ApiParam(value = "The UUID of the team to delete a mapping for", format = "uuid", required = true)
                                   @PathParam("teamUuid") @ValidUuid final String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);

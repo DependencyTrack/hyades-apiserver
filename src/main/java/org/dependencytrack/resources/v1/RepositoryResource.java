@@ -242,7 +242,7 @@ public class RepositoryResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteRepository(
-            @ApiParam(value = "The UUID of the repository to delete", required = true)
+            @ApiParam(value = "The UUID of the repository to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Repository repository = qm.getObjectByUuid(Repository.class, uuid);

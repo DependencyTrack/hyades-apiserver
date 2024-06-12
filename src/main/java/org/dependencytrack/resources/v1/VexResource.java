@@ -88,7 +88,7 @@ public class VexResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
     public Response exportProjectAsCycloneDx (
-            @ApiParam(value = "The UUID of the project to export", required = true)
+            @ApiParam(value = "The UUID of the project to export", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "Force the resulting VEX to be downloaded as a file (defaults to 'false')")
             @QueryParam("download") boolean download) {

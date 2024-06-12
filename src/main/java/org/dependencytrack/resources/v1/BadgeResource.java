@@ -73,7 +73,7 @@ public class BadgeResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response getProjectVulnerabilitiesBadge(
-            @ApiParam(value = "The UUID of the project to retrieve metrics for", required = true)
+            @ApiParam(value = "The UUID of the project to retrieve metrics for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             if (isBadgeSupportEnabled(qm)) {
@@ -139,7 +139,7 @@ public class BadgeResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response getProjectPolicyViolationsBadge(
-            @ApiParam(value = "The UUID of the project to retrieve a badge for", required = true)
+            @ApiParam(value = "The UUID of the project to retrieve a badge for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             if (isBadgeSupportEnabled(qm)) {

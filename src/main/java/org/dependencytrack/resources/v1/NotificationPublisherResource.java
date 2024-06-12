@@ -201,7 +201,7 @@ public class NotificationPublisherResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the notification publisher could not be found")
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
-    public Response deleteNotificationPublisher(@ApiParam(value = "The UUID of the notification publisher to delete", required = true)
+    public Response deleteNotificationPublisher(@ApiParam(value = "The UUID of the notification publisher to delete", format = "uuid", required = true)
                                                 @PathParam("notificationPublisherUuid") @ValidUuid String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);

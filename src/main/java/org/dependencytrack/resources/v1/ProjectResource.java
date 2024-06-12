@@ -101,7 +101,7 @@ public class ProjectResource extends AlpineResource {
                                 @QueryParam("excludeInactive") boolean excludeInactive,
                                 @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
                                 @QueryParam("onlyRoot") boolean onlyRoot,
-                                @ApiParam(value = "The UUID of the team which projects shall be excluded", required = false)
+                                @ApiParam(value = "The UUID of the team which projects shall be excluded", format = "uuid", required = false)
                                 @QueryParam("notAssignedToTeamWithUuid") @ValidUuid String notAssignedToTeamWithUuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Team notAssignedToTeam = null;
@@ -130,7 +130,7 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProject(
-            @ApiParam(value = "The UUID of the project to retrieve", required = true)
+            @ApiParam(value = "The UUID of the project to retrieve", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(uuid);
@@ -365,7 +365,7 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response patchProject(
-            @ApiParam(value = "The UUID of the project to modify", required = true)
+            @ApiParam(value = "The UUID of the project to modify", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             Project jsonProject) {
         final Validator validator = getValidator();
@@ -495,7 +495,7 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProject(
-            @ApiParam(value = "The UUID of the project to delete", required = true)
+            @ApiParam(value = "The UUID of the project to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
@@ -592,7 +592,7 @@ public class ProjectResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getChildrenProjects(@ApiParam(value = "The UUID of the project to get the children from", required = true)
+    public Response getChildrenProjects(@ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
                                         @PathParam("uuid") @ValidUuid String uuid,
                                         @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
                                         @QueryParam("excludeInactive") boolean excludeInactive) {
@@ -629,7 +629,7 @@ public class ProjectResource extends AlpineResource {
     public Response getChildrenProjectsByClassifier(
             @ApiParam(value = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
-            @ApiParam(value = "The UUID of the project to get the children from", required = true)
+            @ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive) {
@@ -667,7 +667,7 @@ public class ProjectResource extends AlpineResource {
     public Response getChildrenProjectsByTag(
             @ApiParam(value = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
-            @ApiParam(value = "The UUID of the project to get the children from", required = true)
+            @ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive) {
@@ -703,7 +703,7 @@ public class ProjectResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectsWithoutDescendantsOf(
-            @ApiParam(value = "The UUID of the project which descendants will be excluded", required = true)
+            @ApiParam(value = "The UUID of the project which descendants will be excluded", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The optional name of the project to query on", required = false)
             @QueryParam("name") String name,
