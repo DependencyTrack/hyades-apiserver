@@ -73,7 +73,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the team could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response retrieveProjects (@ApiParam(value = "The UUID of the team to retrieve mappings for", required = true)
+    public Response retrieveProjects (@ApiParam(value = "The UUID of the team to retrieve mappings for", format = "uuid", required = true)
                                       @PathParam("uuid") @ValidUuid String uuid,
                                       @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
                                       @QueryParam("excludeInactive") boolean excludeInactive,
@@ -139,9 +139,9 @@ public class AccessControlResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteMapping(
-            @ApiParam(value = "The UUID of the team to delete the mapping for", required = true)
+            @ApiParam(value = "The UUID of the team to delete the mapping for", format = "uuid", required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid,
-            @ApiParam(value = "The UUID of the project to delete the mapping for", required = true)
+            @ApiParam(value = "The UUID of the project to delete the mapping for", format = "uuid", required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);

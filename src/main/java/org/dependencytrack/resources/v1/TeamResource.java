@@ -97,7 +97,7 @@ public class TeamResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response getTeam(
-            @ApiParam(value = "The UUID of the team to retrieve", required = true)
+            @ApiParam(value = "The UUID of the team to retrieve", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, uuid);
@@ -207,7 +207,7 @@ public class TeamResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response generateApiKey(
-            @ApiParam(value = "The UUID of the team to generate a key for", required = true)
+            @ApiParam(value = "The UUID of the team to generate a key for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, uuid);

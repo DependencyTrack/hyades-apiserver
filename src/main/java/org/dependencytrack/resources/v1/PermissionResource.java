@@ -172,7 +172,7 @@ public class PermissionResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response addPermissionToTeam(
-            @ApiParam(value = "A valid team uuid", required = true)
+            @ApiParam(value = "A valid team uuid", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "A valid permission", required = true)
             @PathParam("permission") String permissionName) {
@@ -212,7 +212,7 @@ public class PermissionResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response removePermissionFromTeam(
-            @ApiParam(value = "A valid team uuid", required = true)
+            @ApiParam(value = "A valid team uuid", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "A valid permission", required = true)
             @PathParam("permission") String permissionName) {

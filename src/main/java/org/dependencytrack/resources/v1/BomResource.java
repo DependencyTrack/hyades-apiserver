@@ -109,7 +109,7 @@ public class BomResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response exportProjectAsCycloneDx(
-            @ApiParam(value = "The UUID of the project to export", required = true)
+            @ApiParam(value = "The UUID of the project to export", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
             @QueryParam("format") String format,
@@ -178,7 +178,7 @@ public class BomResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response exportComponentAsCycloneDx(
-            @ApiParam(value = "The UUID of the component to export", required = true)
+            @ApiParam(value = "The UUID of the component to export", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
             @QueryParam("format") String format) {
@@ -347,7 +347,7 @@ public class BomResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
     @Deprecated(since = "4.11.0")
     public Response isTokenBeingProcessed(
-            @ApiParam(value = "The UUID of the token to query", required = true)
+            @ApiParam(value = "The UUID of the token to query", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         // Check workflow states for the token.
         List<WorkflowState> workflowStates;

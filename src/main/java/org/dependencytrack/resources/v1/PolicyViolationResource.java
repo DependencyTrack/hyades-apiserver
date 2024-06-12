@@ -93,7 +93,8 @@ public class PolicyViolationResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
-    public Response getViolationsByProject(@PathParam("uuid") @ValidUuid String uuid,
+    public Response getViolationsByProject(@ApiParam(value = "The UUID of the project", format = "uuid", required = true)
+                                           @PathParam("uuid") @ValidUuid String uuid,
                                            @ApiParam(value = "Optionally includes suppressed violations")
                                            @QueryParam("suppressed") boolean suppressed) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -128,7 +129,8 @@ public class PolicyViolationResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
-    public Response getViolationsByComponent(@PathParam("uuid") @ValidUuid String uuid,
+    public Response getViolationsByComponent(@ApiParam(value = "The UUID of the component", format = "uuid", required = true)
+                                             @PathParam("uuid") @ValidUuid String uuid,
                                              @ApiParam(value = "Optionally includes suppressed violations")
                                              @QueryParam("suppressed") boolean suppressed) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
