@@ -14,12 +14,11 @@ CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
   PARALLEL SAFE
   IMMUTABLE
 AS
-$$
 WITH "CUSTOM_SCORES" AS (
   SELECT "PROPERTYVALUE"::INT AS "value"
        , "PROPERTYNAME" AS "name"
     FROM "CONFIGPROPERTY"
-   WHERE "GROUPNAME" = 'risk-score'
+   WHERE "PROPERTYGROUP" = 'risk-score'
      AND "PROPERTYTYPE" = 'INTEGER'
 )
 SELECT (
@@ -29,4 +28,3 @@ SELECT (
   + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.low'))
   + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.unassigned'))
 )::NUMERIC;
-$$;
