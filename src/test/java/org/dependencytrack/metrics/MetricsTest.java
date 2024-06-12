@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.metrics;
 
-import org.dependencytrack.persistence.QueryManager;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,8 +32,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCOR
 import org.dependencytrack.PersistenceCapableTest;
 
 public class MetricsTest extends PersistenceCapableTest{
-    protected QueryManager qm;
-
     @Test
     public void testMetricCalculations() {
         double chml = Metrics.inheritedRiskScore(20, 10, 5, 1, 3);
