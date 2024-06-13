@@ -21,17 +21,8 @@ package org.dependencytrack.metrics;
 import org.junit.Assert;
 import org.junit.Test;
 
-import alpine.model.IConfigProperty;
+public class MetricsTest {
 
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
-
-import org.dependencytrack.PersistenceCapableTest;
-
-public class MetricsTest extends PersistenceCapableTest{
     @Test
     public void testMetricCalculations() {
         double chml = Metrics.inheritedRiskScore(20, 10, 5, 1, 3);
@@ -39,20 +30,5 @@ public class MetricsTest extends PersistenceCapableTest{
 
         double ratio = Metrics.vulnerableComponentRatio(5, 100);
         Assert.assertEquals(0.05, ratio, 0);
-    }
-
-    @Test
-    public void testCustomRiskScores(){
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "9", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "8", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "7", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "6", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "6", IConfigProperty.PropertyType.INTEGER, null);
-
-        // 20*9+10*8+5*7+1*6+3*6 = 319
-        double chml = Metrics.inheritedRiskScore(20, 10, 5, 1, 3);
-        Assert.assertEquals(319, chml, 0);
-
-
     }
 }

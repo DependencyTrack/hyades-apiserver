@@ -33,6 +33,8 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.junit.Test;
 
+import alpine.model.IConfigProperty;
+
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -43,6 +45,12 @@ import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
+
 public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
     @Test
@@ -50,6 +58,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+        
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
 
         var component = new Component();
         component.setProject(project);
@@ -112,6 +126,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
@@ -137,6 +157,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
 
         var component = new Component();
         component.setProject(project);
@@ -218,6 +244,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
 
         var component = new Component();
         component.setProject(project);
@@ -304,6 +336,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
@@ -359,6 +397,12 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
