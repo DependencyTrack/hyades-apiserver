@@ -3,6 +3,7 @@
 -- The behavior of this function is identical to Metrics#inheritedRiskScore
 -- in the API server Java code base.
 -- https://github.com/DependencyTrack/dependency-track/blob/1976be1f5cc9d027900f09aed9d1539595aeda3a/src/main/java/org/dependencytrack/metrics/Metrics.java#L31-L33
+
 CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
   "critical" INT,
   "high" INT,
@@ -14,6 +15,7 @@ CREATE OR REPLACE FUNCTION "CALC_RISK_SCORE"(
   PARALLEL SAFE
   IMMUTABLE
 AS
+$$
 WITH "CUSTOM_SCORES" AS (
   SELECT "PROPERTYVALUE"::INT AS "value"
        , "PROPERTYNAME" AS "name"
@@ -28,3 +30,4 @@ SELECT (
   + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.low'))
   + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.unassigned'))
 )::NUMERIC;
+$$;
