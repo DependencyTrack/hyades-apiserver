@@ -130,12 +130,7 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
                 ELSE "V"."OWASPRRVECTOR"
               END                              AS "vulnOwaspRrVector",
-              "CALC_SEVERITY"(
-                "V"."SEVERITY",
-                "A"."SEVERITY",
-                "V"."CVSSV3BASESCORE",
-                "V"."CVSSV2BASESCORE"
-              )                    AS "vulnSeverity",
+              COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson",
               :vulnAnalysisLevel               AS "vulnAnalysisLevel",
@@ -249,12 +244,7 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
                 ELSE "V"."OWASPRRVECTOR"
               END                              AS "vulnOwaspRrVector",
-              "CALC_SEVERITY"(
-                "V"."SEVERITY",
-                "A"."SEVERITY",
-                "V"."CVSSV3BASESCORE",
-                "V"."CVSSV2BASESCORE"
-              )                                AS "vulnSeverity",
+              COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson"
             FROM
@@ -364,12 +354,7 @@ public interface NotificationSubjectDao extends SqlObject {
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
                 ELSE "V"."OWASPRRVECTOR"
               END                              AS "vulnOwaspRrVector",
-              "CALC_SEVERITY"(
-                "V"."SEVERITY",
-                "A"."SEVERITY",
-                "V"."CVSSV3BASESCORE",
-                "V"."CVSSV2BASESCORE"
-              )                    AS "vulnSeverity",
+              COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
               "vulnAliasesJson",
               :isSuppressed              AS "isVulnAnalysisSuppressed",
@@ -519,7 +504,7 @@ public interface NotificationSubjectDao extends SqlObject {
                                     THEN "A"."OWASPVECTOR"
                                     ELSE "V"."OWASPRRVECTOR"
                                END AS "vulnOwaspRrVector"
-                             , "CALC_SEVERITY"("V"."SEVERITY", "A"."SEVERITY", "V"."CVSSV3BASESCORE", "V"."CVSSV2BASESCORE") AS "vulnSeverity"
+                             , COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity"
                              , STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes"
                              , "vulnAliasesJson"
                          FROM "COMPONENT" AS "C"

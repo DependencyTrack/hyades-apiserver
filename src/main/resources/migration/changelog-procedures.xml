@@ -8,15 +8,6 @@
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
             http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet id="function_cvssv2-to-severity" author="nscuro@protonmail.com" runOnChange="true">
-        <createProcedure path="procedures/function_cvssv2-to-severity.sql" relativeToChangelogFile="true"/>
-    </changeSet>
-    <changeSet id="function_cvssv3-to-severity" author="nscuro@protonmail.com" runOnChange="true">
-        <createProcedure path="procedures/function_cvssv3-to-severity.sql" relativeToChangelogFile="true"/>
-    </changeSet>
-    <changeSet id="function_calc-severity" author="nscuro@protonmail.com" runOnChange="true">
-        <createProcedure path="procedures/function_calc-severity.sql" relativeToChangelogFile="true"/>
-    </changeSet>
     <changeSet id="function_calc-risk-score" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/function_calc-risk-score.sql" relativeToChangelogFile="true"/>
     </changeSet>

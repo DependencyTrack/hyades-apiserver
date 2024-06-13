@@ -23,6 +23,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
@@ -602,6 +603,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         vuln.setOwaspRRLikelihoodScore(BigDecimal.valueOf(1.1));
         vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(2.2));
         vuln.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(3.3));
+        vuln.setSeverity(Severity.MEDIUM);
         vuln.setCwes(List.of(666, 777));
         return vuln;
     }
