@@ -35,11 +35,11 @@ import javax.ws.rs.core.Response;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED;
 
-public class OsvEcosystemResourceTest extends ResourceTest {
+public class IntegrationResourceTest extends ResourceTest {
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(OsvEcosytemResource.class)
+            new ResourceConfig(IntegrationResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class));
 

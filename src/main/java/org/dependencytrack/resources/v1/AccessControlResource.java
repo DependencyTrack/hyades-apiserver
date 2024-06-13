@@ -69,7 +69,8 @@ public class AccessControlResource extends AlpineResource {
             value = "Returns the projects assigned to the specified team",
             response = String.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -99,7 +100,8 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Adds an ACL mapping",
-            response = AclMappingRequest.class
+            response = AclMappingRequest.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -135,7 +137,8 @@ public class AccessControlResource extends AlpineResource {
     @Path("/mapping/team/{teamUuid}/project/{projectUuid}")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
-            value = "Removes an ACL mapping"
+            value = "Removes an ACL mapping",
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),

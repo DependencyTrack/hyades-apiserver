@@ -70,7 +70,8 @@ public class TeamResource extends AlpineResource {
             value = "Returns a list of all teams",
             response = Team.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of teams")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of teams"),
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -89,7 +90,8 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Returns a specific team",
-            response = Team.class
+            response = Team.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -115,7 +117,8 @@ public class TeamResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new team along with an associated API key",
             response = Team.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -141,7 +144,8 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates a team's fields including",
-            response = Team.class
+            response = Team.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -172,7 +176,8 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a team",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -199,7 +204,8 @@ public class TeamResource extends AlpineResource {
     @ApiOperation(
             value = "Generates an API key and returns its value",
             response = ApiKey.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -225,7 +231,8 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Regenerates an API key by removing the specified key, generating a new one and returning its value",
-            response = ApiKey.class
+            response = ApiKey.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -250,7 +257,11 @@ public class TeamResource extends AlpineResource {
     @Path("/key/{apikey}/comment")
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Updates an API key's comment", response = ApiKey.class)
+    @ApiOperation(
+            value = "Updates an API key's comment",
+            response = ApiKey.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+    )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The API key could not be found")
@@ -279,7 +290,8 @@ public class TeamResource extends AlpineResource {
     @Path("/key/{apikey}")
     @ApiOperation(
             value = "Deletes the specified API key",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -316,7 +328,7 @@ public class TeamResource extends AlpineResource {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
             try (var qm = new QueryManager()) {
                 if (isApiKey()) {
-                    final var apiKey = qm.getApiKey(((ApiKey)getPrincipal()).getKey());
+                    final var apiKey = qm.getApiKey(((ApiKey) getPrincipal()).getKey());
                     final var team = apiKey.getTeams().stream().findFirst();
                     if (team.isPresent()) {
                         return Response.ok(new TeamSelfResponse(team.get())).build();

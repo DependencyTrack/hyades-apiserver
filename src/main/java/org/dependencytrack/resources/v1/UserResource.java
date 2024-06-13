@@ -222,7 +222,8 @@ public class UserResource extends AlpineResource {
             value = "Returns a list of all managed users",
             response = ManagedUser.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of managed users")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of managed users"),
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -243,7 +244,8 @@ public class UserResource extends AlpineResource {
             value = "Returns a list of all LDAP users",
             response = LdapUser.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of LDAP users")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of LDAP users"),
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -267,7 +269,8 @@ public class UserResource extends AlpineResource {
             value = "Returns a list of all OIDC users",
             response = OidcUser.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of OIDC users")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of OIDC users"),
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -366,7 +369,8 @@ public class UserResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new user that references an existing LDAP object.",
             response = LdapUser.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Username cannot be null or blank."),
@@ -396,7 +400,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a user.",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -423,7 +428,8 @@ public class UserResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new user.",
             response = ManagedUser.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Missing required field"),
@@ -469,7 +475,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates a managed user.",
-            response = ManagedUser.class
+            response = ManagedUser.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Missing required field"),
@@ -511,7 +518,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a user.",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -538,7 +546,8 @@ public class UserResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new user that references an existing OpenID Connect user.",
             response = OidcUser.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Username cannot be null or blank."),
@@ -568,7 +577,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes an OpenID Connect user.",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -594,7 +604,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Adds the username to the specified team.",
-            response = UserPrincipal.class
+            response = UserPrincipal.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The user is already a member of the specified team"),
@@ -606,7 +617,7 @@ public class UserResource extends AlpineResource {
             @ApiParam(value = "A valid username", required = true)
             @PathParam("username") String username,
             @ApiParam(value = "The UUID of the team to associate username with", required = true)
-                    IdentifiableObject identifiableObject) {
+            IdentifiableObject identifiableObject) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
             if (team == null) {
@@ -633,7 +644,8 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Removes the username from the specified team.",
-            response = UserPrincipal.class
+            response = UserPrincipal.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The user was not a member of the specified team"),
@@ -645,7 +657,7 @@ public class UserResource extends AlpineResource {
             @ApiParam(value = "A valid username", required = true)
             @PathParam("username") String username,
             @ApiParam(value = "The UUID of the team to un-associate username from", required = true)
-                    IdentifiableObject identifiableObject) {
+            IdentifiableObject identifiableObject) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
             if (team == null) {

@@ -81,7 +81,8 @@ public class OidcResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a list of all groups",
             response = OidcGroup.class,
-            responseContainer = "List"
+            responseContainer = "List",
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -101,7 +102,8 @@ public class OidcResource extends AlpineResource {
     @ApiOperation(
             value = "Creates group",
             response = OidcGroup.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -130,7 +132,8 @@ public class OidcResource extends AlpineResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates group",
-            response = OidcGroup.class
+            response = OidcGroup.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -161,7 +164,8 @@ public class OidcResource extends AlpineResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a group",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -189,7 +193,8 @@ public class OidcResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a list of teams associated with the specified group",
             response = Team.class,
-            responseContainer = "List"
+            responseContainer = "List",
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -217,7 +222,8 @@ public class OidcResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Adds a mapping",
-            response = MappedOidcGroup.class
+            response = MappedOidcGroup.class,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -258,7 +264,8 @@ public class OidcResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a mapping",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -284,7 +291,8 @@ public class OidcResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a mapping",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),

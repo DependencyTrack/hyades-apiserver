@@ -32,6 +32,7 @@ import io.swagger.annotations.Authorization;
 import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
@@ -40,6 +41,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -75,7 +77,8 @@ public class FindingResource extends AlpineResource {
             value = "Returns a list of all findings for a specific project",
             response = Finding.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings"),
+            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -113,7 +116,8 @@ public class FindingResource extends AlpineResource {
     @Path("/project/{uuid}/export")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
-            value = "Returns the findings for the specified project as FPF"
+            value = "Returns the findings for the specified project as FPF",
+            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -143,7 +147,10 @@ public class FindingResource extends AlpineResource {
 
     @POST
     @Path("/portfolio/analyze")
-    @ApiOperation(value = "Triggers Vulnerability Analysis for the entire portfolio")
+    @ApiOperation(
+            value = "Triggers Vulnerability Analysis for the entire portfolio",
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+    )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "Analysis is already in progress"),
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -156,7 +163,7 @@ public class FindingResource extends AlpineResource {
             return Response.status(Response.Status.NOT_MODIFIED).build();
         }
 
-        Event.dispatch(new PortfolioRepositoryMetaAnalysisEvent());
+        Event.dispatch(new PortfolioVulnerabilityAnalysisEvent());
         return Response.ok().build();
     }
 
@@ -165,7 +172,8 @@ public class FindingResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Triggers Vulnerability Analysis on a specific project",
-            response = Project.class
+            response = BomUploadResponse.class,
+            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -204,7 +212,8 @@ public class FindingResource extends AlpineResource {
             value = "Returns a list of all findings",
             response = Finding.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings"),
+            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -267,7 +276,8 @@ public class FindingResource extends AlpineResource {
             value = "Returns a list of all findings grouped by vulnerability",
             response = Finding.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of findings"),
+            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")

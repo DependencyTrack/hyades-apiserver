@@ -70,7 +70,8 @@ public class PolicyConditionResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new policy condition",
             response = PolicyCondition.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -106,7 +107,7 @@ public class PolicyConditionResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a policy condition",
             response = PolicyCondition.class,
-            code = 200
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -136,7 +137,8 @@ public class PolicyConditionResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a policy condition",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),

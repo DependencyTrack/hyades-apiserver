@@ -63,7 +63,8 @@ public class PolicyViolationResource extends AlpineResource {
             value = "Returns a list of all policy violations for the entire portfolio",
             response = PolicyViolation.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations"),
+            notes = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -87,7 +88,8 @@ public class PolicyViolationResource extends AlpineResource {
             value = "Returns a list of all policy violations for a specific project",
             response = PolicyViolation.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations"),
+            notes = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -124,7 +126,8 @@ public class PolicyViolationResource extends AlpineResource {
             value = "Returns a list of all policy violations for a specific component",
             response = PolicyViolation.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policy violations"),
+            notes = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {

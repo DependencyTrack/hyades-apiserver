@@ -51,14 +51,15 @@ public class TagResource extends AlpineResource {
             value = "Returns a list of all tags associated with a given policy",
             response = Tag.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of tags")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of tags"),
+            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getTags(@ApiParam(value = "The UUID of the policy", format = "uuid", required = true)
-                            @PathParam("policyUuid") @ValidUuid String policyUuid){
+                            @PathParam("policyUuid") @ValidUuid String policyUuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getTags(policyUuid);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();

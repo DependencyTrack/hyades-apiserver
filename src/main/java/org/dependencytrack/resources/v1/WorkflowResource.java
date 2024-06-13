@@ -52,13 +52,14 @@ public class WorkflowResource {
     @ApiOperation(
             value = "Retrieves workflow states associated with the token received from bom upload .",
             response = WorkflowState.class,
-            responseContainer = "List"
+            responseContainer = "List",
+            notes = "<p>Requires permission <strong>BOM_UPLOAD</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "Workflow does not exist")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @PermissionRequired(Permissions.Constants.BOM_UPLOAD) // TODO: Should be a more generic permission.
     public Response getWorkflowStates(
             @ApiParam(value = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
