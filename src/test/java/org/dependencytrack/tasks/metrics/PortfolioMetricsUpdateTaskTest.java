@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks.metrics;
 
 import alpine.event.framework.EventService;
+import alpine.model.IConfigProperty;
 import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -45,6 +46,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
+
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
@@ -62,6 +69,12 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsEmpty() {
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -99,6 +112,12 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsUnchanged() throws Exception {
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -119,6 +138,12 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsDidNotExecuteWhenLockWasHeld() throws Exception {
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -130,6 +155,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Ensure that the lastOccurrence timestamp was correctly updated
         qm.getPersistenceManager().refresh(metrics);
+
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
     }
 
@@ -145,6 +171,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         projectUnaudited = qm.createProject(projectUnaudited, List.of(), false);
+
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
@@ -155,6 +182,13 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         projectAudited = qm.createProject(projectAudited, List.of(), false);
+        
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
@@ -166,6 +200,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         projectSuppressed = qm.createProject(projectSuppressed, List.of(), false);
+        
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
@@ -246,6 +281,13 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         projectUnaudited = qm.createProject(projectUnaudited, List.of(), false);
+        
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
+        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
@@ -256,6 +298,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         projectAudited = qm.createProject(projectAudited, List.of(), false);
+        
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
@@ -267,6 +310,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         projectSuppressed = qm.createProject(projectSuppressed, List.of(), false);
+        
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
