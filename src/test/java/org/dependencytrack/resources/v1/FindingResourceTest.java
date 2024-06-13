@@ -450,8 +450,8 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void getAllFindingsWithAclEnabled() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Team team = qm.createTeam("Team Acme", true);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -506,8 +506,8 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void getAllFindingsGroupedByVulnerability() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1_child, "Component C", "1.0");
@@ -582,8 +582,8 @@ public class FindingResourceTest extends ResourceTest {
     @Test
     public void getAllFindingsGroupedByVulnerabilityWithAclEnabled() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
         Team team = qm.createTeam("Team Acme", true);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
