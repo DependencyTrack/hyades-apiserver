@@ -45,6 +45,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -108,8 +109,8 @@ public class BomResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response exportProjectAsCycloneDx(
-            @ApiParam(value = "The UUID of the project to export", required = true)
-            @PathParam("uuid") String uuid,
+            @ApiParam(value = "The UUID of the project to export", format = "uuid", required = true)
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
             @QueryParam("format") String format,
             @ApiParam(value = "Specifies the CycloneDX variant to export. Value options are 'inventory' and 'withVulnerabilities'. (defaults to 'inventory')")
@@ -177,8 +178,8 @@ public class BomResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response exportComponentAsCycloneDx(
-            @ApiParam(value = "The UUID of the component to export", required = true)
-            @PathParam("uuid") String uuid,
+            @ApiParam(value = "The UUID of the component to export", format = "uuid", required = true)
+            @PathParam("uuid") @ValidUuid String uuid,
             @ApiParam(value = "The format to output (defaults to JSON)")
             @QueryParam("format") String format) {
         try (QueryManager qm = new QueryManager()) {
@@ -346,8 +347,8 @@ public class BomResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
     @Deprecated(since = "4.11.0")
     public Response isTokenBeingProcessed(
-            @ApiParam(value = "The UUID of the token to query", required = true)
-            @PathParam("uuid") String uuid) {
+            @ApiParam(value = "The UUID of the token to query", format = "uuid", required = true)
+            @PathParam("uuid") @ValidUuid String uuid) {
         // Check workflow states for the token.
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {

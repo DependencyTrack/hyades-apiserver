@@ -29,9 +29,12 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
+import io.swagger.annotations.ResponseHeader;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.vo.AclMappingRequest;
 
 import javax.validation.Validator;
@@ -65,15 +68,17 @@ public class AccessControlResource extends AlpineResource {
     @ApiOperation(
             value = "Returns the projects assigned to the specified team",
             response = String.class,
-            responseContainer = "List"
+            responseContainer = "List",
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects")
     )
+    @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the team could not be found"),
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response retrieveProjects (@ApiParam(value = "The UUID of the team to retrieve mappings for", required = true)
-                                      @PathParam("uuid") String uuid,
+    public Response retrieveProjects (@ApiParam(value = "The UUID of the team to retrieve mappings for", format = "uuid", required = true)
+                                      @PathParam("uuid") @ValidUuid String uuid,
                                       @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
                                       @QueryParam("excludeInactive") boolean excludeInactive,
                                       @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
@@ -138,10 +143,10 @@ public class AccessControlResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteMapping(
-            @ApiParam(value = "The UUID of the team to delete the mapping for", required = true)
-            @PathParam("teamUuid") String teamUuid,
-            @ApiParam(value = "The UUID of the project to delete the mapping for", required = true)
-            @PathParam("projectUuid") String projectUuid) {
+            @ApiParam(value = "The UUID of the team to delete the mapping for", format = "uuid", required = true)
+            @PathParam("teamUuid") @ValidUuid String teamUuid,
+            @ApiParam(value = "The UUID of the project to delete the mapping for", format = "uuid", required = true)
+            @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);
             final Project project = qm.getObjectByUuid(Project.class, projectUuid);

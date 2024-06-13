@@ -19,9 +19,13 @@
 package org.dependencytrack.parser.cyclonedx.util;
 
 import alpine.common.logging.Logger;
+import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
+import org.cyclonedx.model.BomReference;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.model.Hash;
 import org.cyclonedx.model.LicenseChoice;
@@ -34,6 +38,7 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DataClassification;
 import org.dependencytrack.model.ExternalReference;
@@ -62,7 +67,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -129,15 +136,16 @@ public class ModelConverter {
 
     public static Project convertToProject(final org.cyclonedx.model.Component cdxComponent) {
         final var project = new Project();
+        project.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
+        project.setSupplier(convert(cdxComponent.getSupplier()));
         project.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.APPLICATION));
         project.setGroup(trimToNull(cdxComponent.getGroup()));
         project.setName(trimToNull(cdxComponent.getName()));
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
-        project.setSupplier(ModelConverter.convert(cdxComponent.getSupplier()));
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -165,6 +173,7 @@ public class ModelConverter {
 
     public static Component convertComponent(final org.cyclonedx.model.Component cdxComponent) {
         final var component = new Component();
+        component.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         component.setAuthor(trimToNull(cdxComponent.getAuthor()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
         component.setSupplier(convert(cdxComponent.getSupplier()));
@@ -177,6 +186,7 @@ public class ModelConverter {
         component.setCopyright(trimToNull(cdxComponent.getCopyright()));
         component.setCpe(trimToNull(cdxComponent.getCpe()));
         component.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
+        component.setProperties(convertToComponentProperties(cdxComponent.getProperties()));
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -379,6 +389,46 @@ public class ModelConverter {
         return cdxContact;
     }
 
+    private static List<ComponentProperty> convertToComponentProperties(final List<org.cyclonedx.model.Property> cdxProperties) {
+        if (cdxProperties == null || cdxProperties.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final var identitiesSeen = new HashSet<ComponentProperty.Identity>();
+        return cdxProperties.stream()
+                .map(ModelConverter::convertToComponentProperty)
+                .filter(Objects::nonNull)
+                .filter(property -> identitiesSeen.add(new ComponentProperty.Identity(property)))
+                .toList();
+    }
+
+    private static ComponentProperty convertToComponentProperty(final org.cyclonedx.model.Property cdxProperty) {
+        if (cdxProperty == null) {
+            return null;
+        }
+
+        final var property = new ComponentProperty();
+        property.setPropertyValue(trimToNull(cdxProperty.getValue()));
+        property.setPropertyType(IConfigProperty.PropertyType.STRING);
+
+        final String cdxPropertyName = trimToNull(cdxProperty.getName());
+        if (cdxPropertyName == null) {
+            return null;
+        }
+
+        // Treat property names according to the CycloneDX namespace syntax:
+        // https://cyclonedx.github.io/cyclonedx-property-taxonomy/
+        final int firstSeparatorIndex = cdxPropertyName.indexOf(':');
+        if (firstSeparatorIndex < 0) {
+            property.setPropertyName(cdxPropertyName);
+        } else {
+            property.setGroupName(cdxPropertyName.substring(0, firstSeparatorIndex));
+            property.setPropertyName(cdxPropertyName.substring(firstSeparatorIndex + 1));
+        }
+
+        return property;
+    }
+
     public static List<ServiceComponent> convertServices(final List<org.cyclonedx.model.Service> cdxServices) {
         if (cdxServices == null || cdxServices.isEmpty()) {
             return Collections.emptyList();
@@ -389,7 +439,7 @@ public class ModelConverter {
 
     public static ServiceComponent convertService(final org.cyclonedx.model.Service cdxService) {
         final var service = new ServiceComponent();
-        service.setBomRef(trimToNull(cdxService.getBomRef()));
+        service.setBomRef(useOrGenerateRandomBomRef(cdxService.getBomRef()));
         service.setProvider(convert(cdxService.getProvider()));
         service.setGroup(trimToNull(cdxService.getGroup()));
         service.setName(trimToNull(cdxService.getName()));
@@ -416,6 +466,25 @@ public class ModelConverter {
         }
 
         return service;
+    }
+
+    public static MultiValuedMap<String, String> convertDependencyGraph(final List<Dependency> cdxDependencies) {
+        final var dependencyGraph = new HashSetValuedHashMap<String, String>();
+        if (cdxDependencies == null || cdxDependencies.isEmpty()) {
+            return dependencyGraph;
+        }
+
+        for (final Dependency cdxDependency : cdxDependencies) {
+            if (cdxDependency.getDependencies() == null || cdxDependency.getDependencies().isEmpty()) {
+                continue;
+            }
+
+            final List<String> directDependencies = cdxDependency.getDependencies().stream()
+                    .map(BomReference::getRef).toList();
+            dependencyGraph.putAll(cdxDependency.getRef(), directDependencies);
+        }
+
+        return dependencyGraph;
     }
 
     private static Optional<Classifier> convertClassifier(final org.cyclonedx.model.Component.Type cdxComponentType) {
@@ -482,6 +551,12 @@ public class ModelConverter {
                 .toList();
     }
 
+    private static String useOrGenerateRandomBomRef(final String bomRef) {
+        return Optional.ofNullable(bomRef)
+                .map(StringUtils::trimToNull)
+                .orElseGet(() -> UUID.randomUUID().toString());
+    }
+
     public static <T> List<T> flatten(final Collection<T> items,
                                       final Function<T, Collection<T>> childrenGetter,
                                       final BiConsumer<T, Collection<T>> childrenSetter) {
@@ -514,6 +589,7 @@ public class ModelConverter {
         cycloneComponent.setCpe(StringUtils.trimToNull(component.getCpe()));
         cycloneComponent.setAuthor(StringUtils.trimToNull(component.getAuthor()));
         cycloneComponent.setSupplier(convert(component.getSupplier()));
+        cycloneComponent.setProperties(convert(component.getProperties()));
 
         if (component.getSwidTagId() != null) {
             final Swid swid = new Swid();
@@ -607,6 +683,32 @@ public class ModelConverter {
         return cycloneComponent;
     }
 
+    private static <T extends IConfigProperty> List<org.cyclonedx.model.Property> convert(final Collection<T> dtProperties) {
+        if (dtProperties == null || dtProperties.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final List<org.cyclonedx.model.Property> cdxProperties = new ArrayList<>();
+        for (final T dtProperty : dtProperties) {
+            if (dtProperty.getPropertyType() == IConfigProperty.PropertyType.ENCRYPTEDSTRING) {
+                // We treat encrypted properties as internal.
+                // They shall not be leaked when exporting.
+                continue;
+            }
+
+            final var cdxProperty = new org.cyclonedx.model.Property();
+            if (dtProperty.getGroupName() == null) {
+                cdxProperty.setName(dtProperty.getPropertyName());
+            } else {
+                cdxProperty.setName("%s:%s".formatted(dtProperty.getGroupName(), dtProperty.getPropertyName()));
+            }
+            cdxProperty.setValue(dtProperty.getPropertyValue());
+            cdxProperties.add(cdxProperty);
+        }
+
+        return cdxProperties;
+    }
+
     public static org.cyclonedx.model.Metadata createMetadata(final Project project) {
         final org.cyclonedx.model.Metadata metadata = new org.cyclonedx.model.Metadata();
         final org.cyclonedx.model.Tool tool = new org.cyclonedx.model.Tool();
@@ -656,6 +758,11 @@ public class ModelConverter {
                 cycloneComponent.setExternalReferences(references);
             }
             cycloneComponent.setSupplier(convert(project.getSupplier()));
+            // NB: Project properties are currently used to configure integrations
+            // such as Defect Dojo. They can also contain encrypted values that most
+            // definitely are not safe to share. Before we can include project properties
+            // in BOM exports, we need a filtering mechanism.
+            // cycloneComponent.setProperties(convert(project.getProperties()));
             metadata.setComponent(cycloneComponent);
 
             if (project.getMetadata() != null) {

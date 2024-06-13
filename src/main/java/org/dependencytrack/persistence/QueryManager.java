@@ -23,6 +23,7 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
+import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.notification.NotificationLevel;
@@ -50,6 +51,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentMetaInformation;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
@@ -983,8 +985,12 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getAllVulnerableSoftware(cpePart, cpeVendor, cpeProduct, purl);
     }
 
-    public Component matchSingleIdentity(final Project project, final ComponentIdentity cid) {
-        return getComponentQueryManager().matchSingleIdentity(project, cid);
+    public Component matchSingleIdentityExact(final Project project, final ComponentIdentity cid) {
+        return getComponentQueryManager().matchSingleIdentityExact(project, cid);
+    }
+
+    public Component matchFirstIdentityExact(final Project project, final ComponentIdentity cid) {
+        return getComponentQueryManager().matchFirstIdentityExact(project, cid);
     }
 
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
@@ -1942,5 +1948,28 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getVulnerabilities(final Tag tag) {
         return getVulnerabilityQueryManager().getVulnerabilities(tag);
+    }
+
+    public List<ComponentProperty> getComponentProperties(final Component component) {
+        return getComponentQueryManager().getComponentProperties(component);
+    }
+
+    public List<ComponentProperty> getComponentProperties(final Component component, final String groupName, final String propertyName) {
+        return getComponentQueryManager().getComponentProperties(component, groupName, propertyName);
+    }
+
+    public ComponentProperty createComponentProperty(final Component component, final String groupName, final String propertyName,
+                                                     final String propertyValue, final PropertyType propertyType,
+                                                     final String description) {
+        return getComponentQueryManager()
+                .createComponentProperty(component, groupName, propertyName, propertyValue, propertyType, description);
+    }
+
+    public long deleteComponentPropertyByUuid(final Component component, final UUID uuid) {
+        return getComponentQueryManager().deleteComponentPropertyByUuid(component, uuid);
+    }
+
+    public void synchronizeComponentProperties(final Component component, final List<ComponentProperty> properties) {
+        getComponentQueryManager().synchronizeComponentProperties(component, properties);
     }
 }

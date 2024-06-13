@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import io.swagger.annotations.ApiModelProperty;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
@@ -73,6 +74,7 @@ import java.util.UUID;
                 @Persistent(name = "externalReferences"),
                 @Persistent(name = "parent"),
                 @Persistent(name = "children"),
+                @Persistent(name = "properties"),
                 @Persistent(name = "vulnerabilities"),
         }),
         @FetchGroup(name = "IDENTITY", members = {
@@ -278,6 +280,7 @@ public class Component implements Serializable {
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @JsonView(JsonViews.MetadataTools.class)
+    @ApiModelProperty(dataType = "string")
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
@@ -356,6 +359,10 @@ public class Component implements Serializable {
     @Persistent(mappedBy = "parent")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
     private Collection<Component> children;
+
+    @Persistent(mappedBy = "component", defaultFetchGroup = "false")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "groupName ASC, propertyName ASC, id ASC"))
+    private List<ComponentProperty> properties;
 
     @Persistent(table = "COMPONENTS_VULNERABILITIES")
     @Join(column = "COMPONENT_ID")
@@ -738,6 +745,14 @@ public class Component implements Serializable {
 
     public void setChildren(Collection<Component> children) {
         this.children = children;
+    }
+
+    public List<ComponentProperty> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(List<ComponentProperty> properties) {
+        this.properties = properties;
     }
 
     public List<Vulnerability> getVulnerabilities() {

@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence;
 
 import alpine.model.ApiKey;
+import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.OrderDirection;
@@ -29,6 +30,7 @@ import com.github.packageurl.PackageURL;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -50,8 +52,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.model.sqlmapping.ComponentProjection.mapToComponent;
+import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
+import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 final class ComponentQueryManager extends QueryManager implements IQueryManager {
 
@@ -656,65 +662,47 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     /**
      * Returns a component by matching its identity information.
      * <p>
-     * Note that this method employs a stricter matching logic than {@link #matchIdentity(Project, ComponentIdentity)}
-     * and {@link #matchIdentity(ComponentIdentity)}. For example, if {@code purl} of the given {@link ComponentIdentity}
-     * is {@code null}, this method will use a query that explicitly checks for the {@code purl} column to be {@code null}.
+     * Note that this method employs a stricter matching logic than {@link #matchIdentity(Project, ComponentIdentity)}.
+     * For example, if {@code purl} of the given {@link ComponentIdentity} is {@code null}, this method will use a
+     * query that explicitly checks for the {@code purl} column to be {@code null}.
      * Whereas other methods will simply not include {@code purl} in the query in such cases.
      *
      * @param project the Project the component is a dependency of
      * @param cid     the identity values of the component
      * @return a Component object, or null if not found
+     * @since 4.11.0
      */
-    public Component matchSingleIdentity(final Project project, final ComponentIdentity cid) {
-        var filterParts = new ArrayList<String>();
-        final var params = new HashMap<String, Object>();
-
-        if (cid.getPurl() != null) {
-            filterParts.add("(purl != null && purl == :purl)");
-            params.put("purl", cid.getPurl().canonicalize());
-        } else {
-            filterParts.add("purl == null");
-        }
-
-        if (cid.getCpe() != null) {
-            filterParts.add("(cpe != null && cpe == :cpe)");
-            params.put("cpe", cid.getCpe());
-        } else {
-            filterParts.add("cpe == null");
-        }
-
-        if (cid.getSwidTagId() != null) {
-            filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
-            params.put("swidTagId", cid.getSwidTagId());
-        } else {
-            filterParts.add("swidTagId == null");
-        }
-
-        var coordinatesFilter = "(";
-        if (cid.getGroup() != null) {
-            coordinatesFilter += "group == :group";
-            params.put("group", cid.getGroup());
-        } else {
-            coordinatesFilter += "group == null";
-        }
-        coordinatesFilter += " && name == :name";
-        params.put("name", cid.getName());
-        if (cid.getVersion() != null) {
-            coordinatesFilter += " && version == :version";
-            params.put("version", cid.getVersion());
-        } else {
-            coordinatesFilter += " && version == null";
-        }
-        coordinatesFilter += ")";
-        filterParts.add(coordinatesFilter);
-
-        final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
-        params.put("project", project);
-
-        final Query<Component> query = pm.newQuery(Component.class, filter);
-        query.setNamedParameters(params);
+    public Component matchSingleIdentityExact(final Project project, final ComponentIdentity cid) {
+        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildExactComponentIdentityQuery(project, cid);
+        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getKey());
+        query.setNamedParameters(queryFilterParamsPair.getRight());
         try {
             return query.executeUnique();
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    /**
+     * Returns the first component matching a given {@link ComponentIdentity} in a {@link Project}.
+     *
+     * @param project the Project the component is a dependency of
+     * @param cid     the identity values of the component
+     * @return a Component object, or null if not found
+     * @since 4.11.0
+     */
+    public Component matchFirstIdentityExact(final Project project, final ComponentIdentity cid) {
+        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildExactComponentIdentityQuery(project, cid);
+        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getKey());
+        query.setNamedParameters(queryFilterParamsPair.getRight());
+        query.setRange(0, 1);
+        try {
+            final List<Component> result = query.executeList();
+            if (result.isEmpty()) {
+                return null;
+            }
+
+            return result.getFirst();
         } finally {
             query.closeAll();
         }
@@ -807,6 +795,55 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         final String filter = "project == :project && (%s)".formatted(String.join(" || ", filterParts));
         params.put("project", project);
+        return Pair.of(filter, params);
+    }
+
+    private static Pair<String, Map<String, Object>> buildExactComponentIdentityQuery(final Project project, final ComponentIdentity cid) {
+        var filterParts = new ArrayList<String>();
+        final var params = new HashMap<String, Object>();
+
+        if (cid.getPurl() != null) {
+            filterParts.add("(purl != null && purl == :purl)");
+            params.put("purl", cid.getPurl().canonicalize());
+        } else {
+            filterParts.add("purl == null");
+        }
+
+        if (cid.getCpe() != null) {
+            filterParts.add("(cpe != null && cpe == :cpe)");
+            params.put("cpe", cid.getCpe());
+        } else {
+            filterParts.add("cpe == null");
+        }
+
+        if (cid.getSwidTagId() != null) {
+            filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
+            params.put("swidTagId", cid.getSwidTagId());
+        } else {
+            filterParts.add("swidTagId == null");
+        }
+
+        var coordinatesFilter = "(";
+        if (cid.getGroup() != null) {
+            coordinatesFilter += "group == :group";
+            params.put("group", cid.getGroup());
+        } else {
+            coordinatesFilter += "group == null";
+        }
+        coordinatesFilter += " && name == :name";
+        params.put("name", cid.getName());
+        if (cid.getVersion() != null) {
+            coordinatesFilter += " && version == :version";
+            params.put("version", cid.getVersion());
+        } else {
+            coordinatesFilter += " && version == null";
+        }
+        coordinatesFilter += ")";
+        filterParts.add(coordinatesFilter);
+
+        final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
+        params.put("project", project);
+
         return Pair.of(filter, params);
     }
 
@@ -996,6 +1033,110 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             return List.copyOf(query.executeResultList(Component.class));
         } catch(Exception exception) {
             throw new RuntimeException(exception);
+        }
+    }
+
+    @Override
+    public List<ComponentProperty> getComponentProperties(final Component component, final String groupName, final String propertyName) {
+        final Query<ComponentProperty> query = pm.newQuery(ComponentProperty.class);
+        query.setFilter("component == :component && groupName == :groupName && propertyName == :propertyName");
+        query.setParameters(component, groupName, propertyName);
+        try {
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    @Override
+    public List<ComponentProperty> getComponentProperties(final Component component) {
+        final Query<ComponentProperty> query = pm.newQuery(ComponentProperty.class);
+        query.setFilter("component == :component");
+        query.setParameters(component);
+        query.setOrdering("groupName ASC, propertyName ASC, id ASC");
+        try {
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    @Override
+    public ComponentProperty createComponentProperty(final Component component,
+                                                     final String groupName,
+                                                     final String propertyName,
+                                                     final String propertyValue,
+                                                     final PropertyType propertyType,
+                                                     final String description) {
+        final ComponentProperty property = new ComponentProperty();
+        property.setComponent(component);
+        property.setGroupName(groupName);
+        property.setPropertyName(propertyName);
+        property.setPropertyValue(propertyValue);
+        property.setPropertyType(propertyType);
+        property.setDescription(description);
+        return persist(property);
+    }
+
+    @Override
+    public long deleteComponentPropertyByUuid(final Component component, final UUID uuid) {
+        final Query<ComponentProperty> query = pm.newQuery(ComponentProperty.class);
+        query.setFilter("component == :component && uuid == :uuid");
+        try {
+            return query.deletePersistentAll(component, uuid);
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    public void synchronizeComponentProperties(final Component component, final List<ComponentProperty> properties) {
+        assertPersistent(component, "component must be persistent");
+
+        if (properties == null || properties.isEmpty()) {
+            // TODO: We currently remove all existing properties that are no longer included in the BOM.
+            //   This is to stay consistent with the BOM being the source of truth. However, this may feel
+            //   counter-intuitive to some users, who might expect their manual changes to persist.
+            //   If we want to support that, we need a way to track which properties were added and / or
+            //   modified manually.
+            if (component.getProperties() != null) {
+                pm.deletePersistentAll(component.getProperties());
+            }
+
+            return;
+        }
+
+        properties.forEach(property -> assertNonPersistent(property, "property must not be persistent"));
+
+        if (component.getProperties() == null || component.getProperties().isEmpty()) {
+            for (final ComponentProperty property : properties) {
+                property.setComponent(component);
+                pm.makePersistent(property);
+            }
+
+            return;
+        }
+
+        // Group properties by group, name, and value. Because CycloneDX supports duplicate
+        // property names, uniqueness can only be determined by also considering the value.
+        final var existingPropertiesByIdentity = component.getProperties().stream()
+                .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
+        final var incomingPropertiesByIdentity = properties.stream()
+                .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
+
+        final var propertyIdentities = new HashSet<ComponentProperty.Identity>();
+        propertyIdentities.addAll(existingPropertiesByIdentity.keySet());
+        propertyIdentities.addAll(incomingPropertiesByIdentity.keySet());
+
+        for (final ComponentProperty.Identity identity : propertyIdentities) {
+            final ComponentProperty existingProperty = existingPropertiesByIdentity.get(identity);
+            final ComponentProperty incomingProperty = incomingPropertiesByIdentity.get(identity);
+
+            if (existingProperty == null) {
+                incomingProperty.setComponent(component);
+                pm.makePersistent(incomingProperty);
+            } else if (incomingProperty == null) {
+                pm.deletePersistent(existingProperty);
+            }
         }
     }
 }

@@ -28,8 +28,8 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -49,14 +49,19 @@ public class WorkflowResource {
     @GET
     @Path("/token/{uuid}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Retrieves workflow states associated with the token received from bom upload .", response = IsTokenBeingProcessedResponse.class)
+    @ApiOperation(
+            value = "Retrieves workflow states associated with the token received from bom upload .",
+            response = WorkflowState.class,
+            responseContainer = "List"
+    )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized")
+            @ApiResponse(code = 401, message = "Unauthorized"),
+            @ApiResponse(code = 404, message = "Workflow does not exist")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
     public Response getWorkflowStates(
             @ApiParam(value = "The UUID of the token to query", required = true)
-            @PathParam("uuid") String uuid) {
+            @PathParam("uuid") @ValidUuid String uuid) {
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
             workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));

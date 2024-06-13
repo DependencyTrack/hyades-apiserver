@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -27,6 +28,7 @@ import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -42,6 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -109,9 +112,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
         );
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
@@ -171,6 +174,30 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
         assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
+
+        assertThat(component.getProperties()).satisfiesExactlyInAnyOrder(
+                property -> {
+                    assertThat(property.getGroupName()).isEqualTo("foo");
+                    assertThat(property.getPropertyName()).isEqualTo("bar");
+                    assertThat(property.getPropertyValue()).isEqualTo("baz");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                },
+                property -> {
+                    assertThat(property.getGroupName()).isNull();
+                    assertThat(property.getPropertyName()).isEqualTo("foo");
+                    assertThat(property.getPropertyValue()).isEqualTo("bar");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                },
+                property -> {
+                    assertThat(property.getGroupName()).isEqualTo("foo");
+                    assertThat(property.getPropertyName()).isEqualTo("bar");
+                    assertThat(property.getPropertyValue()).isEqualTo("qux");
+                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    assertThat(property.getDescription()).isNull();
+                }
+        );
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
@@ -235,9 +262,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
         );
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
@@ -400,7 +427,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
                     assertThat(state.getStatus()).isEqualTo(FAILED);
-                    assertThat(state.getFailureReason()).isEqualTo("Failed to parse BOM");
+                    assertThat(state.getFailureReason()).isEqualTo("Unable to parse BOM from byte array");
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
@@ -492,6 +519,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
 
@@ -586,6 +614,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // Ensure processing does not fail, and the number of components ingested doesn't change.
         for (int i = 0; i < 3; i++) {
             var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
             assertBomProcessedNotification();
             kafkaMockProducer.clear();
@@ -599,8 +628,11 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informIssue2859Test() {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        assertThatNoException()
-                .isThrownBy(() -> new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2859.xml"))));
+        assertThatNoException().isThrownBy(() -> {
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2859.xml"));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+        });
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/1905
@@ -609,6 +641,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         for (int i = 0; i < 3; i++) {
             var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue1905.json"));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
 
             assertBomProcessedNotification();
@@ -651,6 +684,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         };
 
         var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue3309.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertProjectAuthors.run();
@@ -658,6 +692,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         kafkaMockProducer.clear();
 
         bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue3309.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertProjectAuthors.run();
@@ -668,6 +703,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-components.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
 
         assertThat(kafkaMockProducer.history())
@@ -768,9 +804,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
                 // (No REPO_META_ANALYSIS_COMMAND event because the component doesn't have a PURL)
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
 
         assertThat(qm.getAllComponents(project))
@@ -793,10 +829,10 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(
@@ -831,8 +867,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
@@ -859,8 +895,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
@@ -883,14 +919,228 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getLicense()).isNull();
             assertThat(component.getLicenseExpression()).isNull();
             assertThat(component.getResolvedLicense()).isNull();
+        });
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/3433
+    public void informIssue3433Test() throws Exception {
+        final var license = new License();
+        license.setLicenseId("GPL-3.0-or-later");
+        license.setName("GPL-3.0-or-later");
+        qm.persist(license);
+
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib-x",
+                      "licenses": [
+                        {
+                          "license": {
+                            "name": "GPL-3.0-or-later"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("GPL-3.0-or-later");
+        });
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/3498
+    public void informUpdateExistingLicenseTest() throws Exception {
+        final var existingLicense = new License();
+        existingLicense.setLicenseId("GPL-3.0-or-later");
+        existingLicense.setName("GPL-3.0-or-later");
+        qm.persist(existingLicense);
+
+        final var updatedLicense = new License();
+        updatedLicense.setLicenseId("Apache-2.0");
+        updatedLicense.setName("Apache-2.0");
+        qm.persist(updatedLicense);
+
+        final var project = new Project();
+        project.setName("acme-update-license-app");
+        qm.persist(project);
+
+        final byte[] existingBomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "publisher": "Acme Inc",
+                      "group": "com.acme",
+                      "name": "acme-lib-y",
+                      "version": "2.0.0",
+                      "licenses": [
+                        {
+                          "license": {
+                            "name": "GPL-3.0-or-later"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(existingBomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo(existingLicense.getLicenseId());
+        });
+
+        // Upload bom again but with new license
+        final byte[] updatedBomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "publisher": "Acme Inc",
+                      "group": "com.acme",
+                      "name": "acme-lib-y",
+                      "version": "2.0.0",
+                      "licenses": [
+                        {
+                          "license": {
+                            "name": "Apache-2.0"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(updatedBomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo(updatedLicense.getLicenseId());
+        });
+
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/3498
+    public void informDeleteExistingLicenseTest() throws Exception {
+        final var existingLicense = new License();
+        existingLicense.setLicenseId("GPL-3.0-or-later");
+        existingLicense.setName("GPL-3.0-or-later");
+        qm.persist(existingLicense);
+
+        final var project = new Project();
+        project.setName("acme-update-license-app");
+        qm.persist(project);
+
+        final byte[] existingBomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "publisher": "Acme Inc",
+                      "group": "com.acme",
+                      "name": "acme-lib-y",
+                      "version": "2.0.0",
+                      "licenses": [
+                        {
+                          "license": {
+                            "name": "GPL-3.0-or-later"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(existingBomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo(existingLicense.getLicenseId());
+        });
+
+        // Upload bom again but with license deleted
+        final byte[] updatedBomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "publisher": "Acme Inc",
+                      "group": "com.acme",
+                      "name": "acme-lib-y",
+                      "version": "2.0.0",
+                      "licenses": []
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(updatedBomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNull();
+            assertThat(component.getLicense()).isNull();
+            assertThat(component.getLicenseUrl()).isNull();
+            assertThat(component.getLicenseExpression()).isNull();
         });
     }
 
@@ -906,8 +1156,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
         assertThat(qm.getAllComponents(project)).isNotEmpty();
@@ -1023,6 +1273,68 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(exceptions).isEmpty();
     }
 
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithoutComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setVersion("1.0.0");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-schema1.4.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).isEmpty();
+    }
+
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-component-property.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).satisfiesExactly(property -> {
+            assertThat(property.getGroupName()).isNull();
+            assertThat(property.getPropertyName()).isEqualTo("foo");
+            assertThat(property.getPropertyValue()).isEqualTo("baz");
+            assertThat(property.getUuid()).isNotEqualTo(componentProperty.getUuid());
+        });
+    }
+
     private void assertBomProcessedNotification() throws Exception {
         try {
             assertThat(kafkaMockProducer.history()).anySatisfy(record -> {
@@ -1050,6 +1362,14 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // so create a temporary copy to not impact other tests.
         final Path bomFilePath = Files.createTempFile(null, null);
         Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
+        return bomFilePath.toFile();
+    }
+
+    private static File createTempBomFile(final byte[] bomBytes) throws Exception {
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.
+        final Path bomFilePath = Files.createTempFile(null, null);
+        Files.write(bomFilePath, bomBytes);
         return bomFilePath.toFile();
     }
 

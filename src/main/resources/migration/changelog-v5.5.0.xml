@@ -110,4 +110,44 @@
             <column name="OPERATION_MODE" type="VARCHAR(255)"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.5.0-10" author="sahibamittal">
+        <createTable tableName="COMPONENT_PROPERTY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="COMPONENT_PROPERTY_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="GROUPNAME" type="TEXT"/>
+            <column name="PROPERTYNAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTYVALUE" type="TEXT"/>
+            <column name="PROPERTYTYPE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DESCRIPTION" type="TEXT"/>
+            <column name="UUID" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="COMPONENT_PROPERTY" baseColumnNames="COMPONENT_ID"
+                                 constraintName="COMPONENT_PROPERTY_COMPONENT_ID_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="COMPONENT" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <sql>
+            ALTER TABLE "COMPONENT_PROPERTY" ADD CONSTRAINT "COMPONENT_PROPERTY_TYPE_check"
+            CHECK ("PROPERTYTYPE" IS NULL OR "PROPERTYTYPE"::TEXT = ANY(ARRAY['BOOLEAN', 'INTEGER', 'NUMBER', 'STRING', 'ENCRYPTEDSTRING', 'TIMESTAMP', 'URL', 'UUID']));
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.5.0-11" author="nscuro">
+        <customChange class="org.dependencytrack.persistence.migration.change.v550.ComputeSeveritiesChange"/>
+        <sql splitStatements="true">
+            DROP FUNCTION IF EXISTS "CVSSV2_TO_SEVERITY";
+            DROP FUNCTION IF EXISTS "CVSSV3_TO_SEVERITY";
+            DROP FUNCTION IF EXISTS "CALC_SEVERITY";
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -34,8 +34,10 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -69,8 +71,8 @@ public class NotificationRuleResource extends AlpineResource {
             response = NotificationRule.class,
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of notification rules")
-
     )
+    @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
@@ -189,10 +191,10 @@ public class NotificationRuleResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response addProjectToRule(
-            @ApiParam(value = "The UUID of the rule to add a project to", required = true)
-            @PathParam("ruleUuid") String ruleUuid,
-            @ApiParam(value = "The UUID of the project to add to the rule", required = true)
-            @PathParam("projectUuid") String projectUuid) {
+            @ApiParam(value = "The UUID of the rule to add a project to", format = "uuid", required = true)
+            @PathParam("ruleUuid") @ValidUuid String ruleUuid,
+            @ApiParam(value = "The UUID of the project to add to the rule", format = "uuid", required = true)
+            @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
@@ -230,10 +232,10 @@ public class NotificationRuleResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response removeProjectFromRule(
-            @ApiParam(value = "The UUID of the rule to remove the project from", required = true)
-            @PathParam("ruleUuid") String ruleUuid,
-            @ApiParam(value = "The UUID of the project to remove from the rule", required = true)
-            @PathParam("projectUuid") String projectUuid) {
+            @ApiParam(value = "The UUID of the rule to remove the project from", format = "uuid", required = true)
+            @PathParam("ruleUuid") @ValidUuid String ruleUuid,
+            @ApiParam(value = "The UUID of the project to remove from the rule", format = "uuid", required = true)
+            @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
@@ -271,10 +273,10 @@ public class NotificationRuleResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response addTeamToRule(
-            @ApiParam(value = "The UUID of the rule to add a team to", required = true)
-            @PathParam("ruleUuid") String ruleUuid,
-            @ApiParam(value = "The UUID of the team to add to the rule", required = true)
-            @PathParam("teamUuid") String teamUuid) {
+            @ApiParam(value = "The UUID of the rule to add a team to", format = "uuid", required = true)
+            @PathParam("ruleUuid") @ValidUuid String ruleUuid,
+            @ApiParam(value = "The UUID of the team to add to the rule", format = "uuid", required = true)
+            @PathParam("teamUuid") @ValidUuid String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
@@ -312,10 +314,10 @@ public class NotificationRuleResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response removeTeamFromRule(
-            @ApiParam(value = "The UUID of the rule to remove the project from", required = true)
-            @PathParam("ruleUuid") String ruleUuid,
-            @ApiParam(value = "The UUID of the project to remove from the rule", required = true)
-            @PathParam("teamUuid") String teamUuid) {
+            @ApiParam(value = "The UUID of the rule to remove the project from", format = "uuid", required = true)
+            @PathParam("ruleUuid") @ValidUuid String ruleUuid,
+            @ApiParam(value = "The UUID of the project to remove from the rule", format = "uuid", required = true)
+            @PathParam("teamUuid") @ValidUuid String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {

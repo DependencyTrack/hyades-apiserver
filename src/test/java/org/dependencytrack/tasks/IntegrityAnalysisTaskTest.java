@@ -75,7 +75,7 @@ public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
         integrityMetaComponent.setLastFetch(date);
         IntegrityMetaComponent integrityData = qm.persist(integrityMetaComponent);
 
-        new IntegrityAnalysisTask().inform(new IntegrityAnalysisEvent(c.getUuid(), integrityData));
+        new IntegrityAnalysisTask().inform(new IntegrityAnalysisEvent(c.getUuid(), qm.detach(IntegrityMetaComponent.class, integrityData.getId())));
         IntegrityAnalysis integrityResult = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(integrityResult).isNotNull();
         assertThat(integrityResult.getIntegrityCheckStatus()).isEqualTo(HASH_MATCH_PASSED);
@@ -107,7 +107,7 @@ public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
         integrityMetaComponent.setLastFetch(date);
         IntegrityMetaComponent integrityData = qm.persist(integrityMetaComponent);
 
-        new IntegrityAnalysisTask().inform(new IntegrityAnalysisEvent(null, integrityData));
+        new IntegrityAnalysisTask().inform(new IntegrityAnalysisEvent(null, qm.detach(IntegrityMetaComponent.class, integrityData.getId())));
         IntegrityAnalysis integrityResult = qm.getIntegrityAnalysisByComponentUuid(c.getUuid());
         assertThat(integrityResult).isNull();
     }

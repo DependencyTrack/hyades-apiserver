@@ -9,7 +9,6 @@ DECLARE
   "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
   "v_alias"                                   RECORD; -- Loop variable for iterating over aliases of a vulnerability
   "v_aliases_seen"                            TEXT[]; -- Array of aliases encountered while iterating over vulnerabilities
-  "v_severity"                                VARCHAR; -- Loop variable for the current vulnerability's severity
   "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
   "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
   "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
@@ -99,20 +98,13 @@ BEGIN
 
       "v_vulnerabilities" := "v_vulnerabilities" + 1;
 
-      SELECT "CALC_SEVERITY"(
-        "v_vulnerability"."SEVERITY",
-        "v_vulnerability"."SEVERITY_OVERRIDE",
-        "v_vulnerability"."CVSSV3BASESCORE",
-        "v_vulnerability"."CVSSV2BASESCORE")
-      INTO "v_severity";
-
-      IF "v_severity" = 'CRITICAL' THEN
+      IF COALESCE("v_vulnerability"."SEVERITY_OVERRIDE", "v_vulnerability"."SEVERITY") = 'CRITICAL' THEN
         "v_critical" := "v_critical" + 1;
-      ELSEIF "v_severity" = 'HIGH' THEN
+      ELSEIF COALESCE("v_vulnerability"."SEVERITY_OVERRIDE", "v_vulnerability"."SEVERITY") = 'HIGH' THEN
         "v_high" := "v_high" + 1;
-      ELSEIF "v_severity" = 'MEDIUM' THEN
+      ELSEIF COALESCE("v_vulnerability"."SEVERITY_OVERRIDE", "v_vulnerability"."SEVERITY") = 'MEDIUM' THEN
         "v_medium" := "v_medium" + 1;
-      ELSEIF "v_severity" = 'LOW' THEN
+      ELSEIF COALESCE("v_vulnerability"."SEVERITY_OVERRIDE", "v_vulnerability"."SEVERITY") = 'LOW' THEN
         "v_low" := "v_low" + 1;
       ELSE
         "v_unassigned" := "v_unassigned" + 1;

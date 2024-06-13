@@ -23,13 +23,15 @@ import org.dependencytrack.model.IntegrityMetaComponent;
 
 import java.util.UUID;
 
+import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
+
 public class IntegrityAnalysisEvent implements Event {
 
-    private UUID uuid;
-
-    private IntegrityMetaComponent integrityMetaComponent;
+    private final UUID uuid;
+    private final IntegrityMetaComponent integrityMetaComponent;
 
     public IntegrityAnalysisEvent(UUID uuid, IntegrityMetaComponent integrityMetaComponent) {
+        assertNonPersistent(integrityMetaComponent, "integrityMetaComponent must not be persistent");
         this.uuid = uuid;
         this.integrityMetaComponent = integrityMetaComponent;
     }

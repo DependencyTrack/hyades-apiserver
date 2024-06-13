@@ -36,7 +36,9 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 
 import javax.validation.Validator;
 import javax.ws.rs.Consumes;
@@ -71,6 +73,7 @@ public class RepositoryResource extends AlpineResource {
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of repositories")
     )
+    @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
@@ -90,8 +93,8 @@ public class RepositoryResource extends AlpineResource {
             response = Repository.class,
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of repositories")
-
     )
+    @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
@@ -241,8 +244,8 @@ public class RepositoryResource extends AlpineResource {
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteRepository(
-            @ApiParam(value = "The UUID of the repository to delete", required = true)
-            @PathParam("uuid") String uuid) {
+            @ApiParam(value = "The UUID of the repository to delete", format = "uuid", required = true)
+            @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Repository repository = qm.getObjectByUuid(Repository.class, uuid);
             if (repository != null) {

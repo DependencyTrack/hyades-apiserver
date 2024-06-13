@@ -26,11 +26,10 @@ import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
-import org.datanucleus.PropertyNames;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.InternalComponentIdentificationUtil;
+import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
@@ -57,7 +56,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof InternalComponentIdentificationEvent) {
             try {
-                LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) () -> analyze());
+                LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) this::analyze);
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing internal component identification task", ex);
             }
@@ -71,11 +70,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
         try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
-            // Disable the DataNucleus L2 cache for this persistence manager.
-            // The cache will hold references to the queried objects, preventing them
-            // from being garbage collected. This is not required the case of this task.
-            pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
-
+            final var internalComponentIdentifier = new InternalComponentIdentifier();
             List<Component> components = fetchNextComponentsPage(pm, null);
             while (!components.isEmpty()) {
                 //Extend the lock by 5 min everytime we have a page.
@@ -93,7 +88,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
                         coordinates = component.getGroup() + ":" + coordinates;
                     }
 
-                    final boolean internal = InternalComponentIdentificationUtil.isInternalComponent(component, qm);
+                    final boolean internal = internalComponentIdentifier.isInternal(component);;
                     if (internal) {
                         LOGGER.debug("Component " + coordinates + " (" + component.getUuid() + ") was identified to be internal");
                     }
@@ -122,7 +117,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
                     }
                 }
 
-                final long lastId = components.get(components.size() - 1).getId();
+                final long lastId = components.getLast().getId();
                 components = fetchNextComponentsPage(pm, lastId);
             }
         }

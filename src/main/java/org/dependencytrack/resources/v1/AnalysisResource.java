@@ -39,6 +39,7 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
@@ -78,12 +79,12 @@ public class AnalysisResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response retrieveAnalysis(@ApiParam(value = "The UUID of the project")
-                                     @QueryParam("project") String projectUuid,
-                                     @ApiParam(value = "The UUID of the component", required = true)
-                                     @QueryParam("component") String componentUuid,
-                                     @ApiParam(value = "The UUID of the vulnerability", required = true)
-                                     @QueryParam("vulnerability") String vulnerabilityUuid) {
+    public Response retrieveAnalysis(@ApiParam(value = "The UUID of the project", format = "uuid")
+                                     @QueryParam("project") @ValidUuid String projectUuid,
+                                     @ApiParam(value = "The UUID of the component", format = "uuid", required = true)
+                                     @QueryParam("component") @ValidUuid String componentUuid,
+                                     @ApiParam(value = "The UUID of the vulnerability", format = "uuid", required = true)
+                                     @QueryParam("vulnerability") @ValidUuid String vulnerabilityUuid) {
         failOnValidationError(
                 new ValidationTask(RegexSequence.Pattern.UUID, projectUuid, "Project is not a valid UUID", false), // this is optional
                 new ValidationTask(RegexSequence.Pattern.UUID, componentUuid, "Component is not a valid UUID"),

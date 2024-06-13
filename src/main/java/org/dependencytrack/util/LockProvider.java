@@ -85,11 +85,19 @@ public class LockProvider {
 
     public static void executeWithLockWaiting(final WaitingLockConfiguration lockConfiguration,
                                               final LockingTaskExecutor.Task task) throws Throwable {
+        executeWithLockWaiting(lockConfiguration, () -> {
+            task.call();
+            return null;
+        });
+    }
+
+    public static <T> T executeWithLockWaiting(final WaitingLockConfiguration lockConfiguration,
+                                               final LockingTaskExecutor.TaskWithResult<T> task) throws Throwable {
         final JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
         final var waitingLockProvider = new WaitingLockProvider(jdbcLockProvider,
                 lockConfiguration.getPollInterval(), lockConfiguration.getWaitTimeout());
         final var executor = new DefaultLockingTaskExecutor(waitingLockProvider);
-        executor.executeWithLock(task, lockConfiguration);
+        return executor.executeWithLock(task, lockConfiguration).getResult();
     }
 
     private static JdbcLockProvider getJdbcLockProviderInstance() {
