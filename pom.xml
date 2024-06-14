@@ -617,6 +617,7 @@
                 <configuration>
                     <excludes>
                         <exclude>org/cyclonedx/proto/**/*</exclude>
+                        <exclude>org/dependencytrack/dev/**/*</exclude>
                         <exclude>org/dependencytrack/proto/**/*</exclude>
                     </excludes>
                 </configuration>
@@ -673,6 +674,13 @@
                     <webApp>
                         <contextPath>/</contextPath>
                     </webApp>
+                    <systemProperties>
+                        <!--
+                            Disable Jetty warnings about JARs being scanned from multiple locations.
+                            https://stackoverflow.com/a/73964232
+                        -->
+                        <org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>ERROR</org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>
+                    </systemProperties>
                 </configuration>
             </plugin>
             <plugin>
@@ -725,6 +733,51 @@
             <properties>
                 <war-embedded-finalname>${project.build.finalName}-apiserver</war-embedded-finalname>
             </properties>
+        </profile>
+        <profile>
+            <id>dev-services</id>
+            <properties>
+                <!-- Don't compile test classes, we only want to run Jetty. -->
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>postgresql</artifactId>
+                    <version>${lib.testcontainers.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>redpanda</artifactId>
+                    <version>${lib.testcontainers.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+                <dependency>
+                    <!--
+                        Unfortunately required by testcontainers:
+                        https://github.com/testcontainers/testcontainers-java/issues/970
+                    -->
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                    <version>${lib.junit.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-maven-plugin</artifactId>
+                        <version>${plugin.jetty.version}</version>
+                        <configuration>
+                            <systemProperties>
+                                <dev.services.enabled>true</dev.services.enabled>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
