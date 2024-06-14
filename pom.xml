@@ -93,8 +93,8 @@
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>8.0.3</lib.cyclonedx-java.version>
-        <lib.jackson.version>2.17.0</lib.jackson.version>
-        <lib.jackson-databind.version>2.17.0</lib.jackson-databind.version>
+        <lib.jackson.version>2.17.1</lib.jackson.version>
+        <lib.jackson-databind.version>2.17.1</lib.jackson-databind.version>
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.1</lib.jdbi.version>
         <lib.json-unit.version>3.2.7</lib.json-unit.version>
