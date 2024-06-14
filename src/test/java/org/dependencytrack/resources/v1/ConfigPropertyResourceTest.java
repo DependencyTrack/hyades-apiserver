@@ -39,6 +39,12 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
+
 public class ConfigPropertyResourceTest extends ResourceTest {
 
     @ClassRule
@@ -232,6 +238,116 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(getPlainTextBody(response)).isEqualTo("The property internal.cluster.id can not be modified");
+    }
+
+    @Test
+    public void testRiskScoreInvalid(){
+        qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_HIGH.getGroupName(), 
+                CUSTOM_RISK_SCORE_HIGH.getPropertyName(), 
+                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_HIGH.getPropertyType(), 
+                CUSTOM_RISK_SCORE_HIGH.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_LOW.getGroupName(), 
+                CUSTOM_RISK_SCORE_LOW.getPropertyName(), 
+                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_LOW.getPropertyType(), 
+                CUSTOM_RISK_SCORE_LOW.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDescription()
+            );
+
+        final Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+        .header(X_API_KEY, apiKey)
+        .post(Entity.entity("""
+                {
+                  "groupName": "risk-score",
+                  "propertyName": "weight.critical",
+                  "propertyValue": "11"
+                }
+                """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Risk score \"weight.critical\" must be between 1 and 10. An invalid value of 11 was provided.");
+    }
+
+    @Test
+    public void testRiskScoreUpdate(){
+        qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_HIGH.getGroupName(), 
+                CUSTOM_RISK_SCORE_HIGH.getPropertyName(), 
+                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_HIGH.getPropertyType(), 
+                CUSTOM_RISK_SCORE_HIGH.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_LOW.getGroupName(), 
+                CUSTOM_RISK_SCORE_LOW.getPropertyName(), 
+                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_LOW.getPropertyType(), 
+                CUSTOM_RISK_SCORE_LOW.getDescription()
+            );
+            qm.createConfigProperty(
+                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDescription()
+            );
+
+        final Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+        .header(X_API_KEY, apiKey)
+        .post(Entity.entity("""
+                {
+                  "groupName": "risk-score",
+                  "propertyName": "weight.critical",
+                  "propertyValue": "8"
+                }
+                """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("risk-score", json.getString("groupName"));
+        Assert.assertEquals("weight.critical", json.getString("propertyName"));
+        Assert.assertEquals("8", json.getString("propertyValue"));
+        Assert.assertEquals("INTEGER", json.getString("propertyType"));
+        Assert.assertEquals("Critical severity vulnerability weight (between 1-10)", json.getString("description"));
     }
 
     @Test

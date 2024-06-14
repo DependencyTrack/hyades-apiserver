@@ -88,7 +88,7 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
                     ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())
                 ){
                     if (propertyValue < 1 || propertyValue > 10){
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalud value of " + propertyValue + " was provided.").build();
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalid value of " + propertyValue + " was provided.").build();
                     }
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
