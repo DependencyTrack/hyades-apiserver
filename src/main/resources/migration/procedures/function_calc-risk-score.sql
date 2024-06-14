@@ -24,10 +24,10 @@ WITH "CUSTOM_SCORES" AS (
      AND "PROPERTYTYPE" = 'INTEGER'
 )
 SELECT (
-  ("critical" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.critical'))
-  + ("high" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.high'))
-  + ("medium" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.medium'))
-  + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.low'))
-  + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'riskscore.unassigned'))
+  ("critical" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.critical'))
+  + ("high" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.high'))
+  + ("medium" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.medium'))
+  + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.low'))
+  + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.unassigned'))
 )::NUMERIC;
 $$;

@@ -32,18 +32,11 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
 
-import alpine.model.IConfigProperty;
-
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
@@ -55,11 +48,8 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
@@ -103,11 +93,8 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         // Record initial project metrics
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
@@ -130,11 +117,8 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         var vuln = new Vulnerability();
         vuln.setVulnId("INTERNAL-001");
@@ -246,11 +230,8 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), "10", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_HIGH.getGroupName(), CUSTOM_RISK_SCORE_HIGH.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), "3", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_LOW.getGroupName(), CUSTOM_RISK_SCORE_LOW.getPropertyName(), "1", IConfigProperty.PropertyType.INTEGER, null);
-        qm.createConfigProperty(CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), "5", IConfigProperty.PropertyType.INTEGER, null);
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         // Create a component with an unaudited violation.
         var componentUnaudited = new Component();
