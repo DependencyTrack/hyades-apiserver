@@ -366,7 +366,8 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
                   SELECT 1
                     FROM "PROJECT_ACCESS_TEAMS"
                    WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
-                     AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(%s)
-                )""".formatted(teamIds));
+                     AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:teamIds)
+                )""");
+        params.put("teamIds", teamIds.toArray(new Long[0]));
     }
 }
