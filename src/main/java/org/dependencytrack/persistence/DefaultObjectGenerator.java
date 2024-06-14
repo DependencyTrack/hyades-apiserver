@@ -209,6 +209,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
             qm.createRepository(RepositoryType.CARGO, "crates.io", "https://crates.io", true, false, false, null, null);
             qm.createRepository(RepositoryType.GO_MODULES, "proxy.golang.org", "https://proxy.golang.org", true, false, false, null, null);
             qm.createRepository(RepositoryType.GITHUB, "github.com", "https://github.com", true, false, false, null, null);
+            qm.createRepository(RepositoryType.HACKAGE, "hackage.haskell", "https://hackage.haskell.org/", true, false, false, null, null);
+            qm.createRepository(RepositoryType.NIXPKGS, "nixos.org", "https://channels.nixos.org/nixpkgs-unstable/packages.json.br", true, false, false, null, null);
         }
     }
 
