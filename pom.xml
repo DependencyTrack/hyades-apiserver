@@ -98,7 +98,7 @@
         <lib.jaxb.runtime.version>2.3.6</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.1</lib.jdbi.version>
         <lib.json-unit.version>3.2.7</lib.json-unit.version>
-        <lib.kafka.version>3.6.2</lib.kafka.version>
+        <lib.kafka.version>3.7.0</lib.kafka.version>
         <lib.kafka-junit.version>3.6.0</lib.kafka-junit.version>
         <lib.liquibase.version>4.28.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
