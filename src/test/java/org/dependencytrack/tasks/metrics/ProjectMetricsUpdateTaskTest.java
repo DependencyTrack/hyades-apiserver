@@ -48,6 +48,9 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
         final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -90,6 +93,9 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         // Record initial project metrics
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
         final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -110,6 +116,9 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         var vuln = new Vulnerability();
         vuln.setVulnId("INTERNAL-001");
@@ -220,6 +229,9 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         // Create a component with an unaudited violation.
         var componentUnaudited = new Component();

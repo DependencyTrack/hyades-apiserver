@@ -43,6 +43,7 @@ import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
+
 public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
     @Test
@@ -50,6 +51,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+        
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         var component = new Component();
         component.setProject(project);
@@ -112,6 +116,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
@@ -137,6 +144,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         var component = new Component();
         component.setProject(project);
@@ -218,6 +228,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
+
+        // Create risk score configproperties
+        createTestConfigProperties();
 
         var component = new Component();
         component.setProject(project);
@@ -304,6 +317,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
@@ -359,6 +375,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
 
+        // Create risk score configproperties
+        createTestConfigProperties();
+        
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");

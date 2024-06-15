@@ -62,6 +62,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsEmpty() {
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -99,6 +102,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsUnchanged() throws Exception {
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -119,6 +125,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsDidNotExecuteWhenLockWasHeld() throws Exception {
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
@@ -130,6 +139,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Ensure that the lastOccurrence timestamp was correctly updated
         qm.getPersistenceManager().refresh(metrics);
+
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
     }
 
@@ -145,6 +155,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         projectUnaudited = qm.createProject(projectUnaudited, List.of(), false);
+
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
@@ -155,6 +166,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         projectAudited = qm.createProject(projectAudited, List.of(), false);
+        
+        // Create risk score configproperties
+        createTestConfigProperties();
+
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
@@ -166,6 +181,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         projectSuppressed = qm.createProject(projectSuppressed, List.of(), false);
+        
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
@@ -246,6 +262,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         projectUnaudited = qm.createProject(projectUnaudited, List.of(), false);
+        
+        // Create risk score configproperties
+        createTestConfigProperties();
+        
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
@@ -256,6 +276,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         projectAudited = qm.createProject(projectAudited, List.of(), false);
+        
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
@@ -267,6 +288,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         projectSuppressed = qm.createProject(projectSuppressed, List.of(), false);
+        
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
