@@ -56,7 +56,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         dataSource.setPassword(getPassword());
 
         try {
-            MigrationInitializer.runMigration(dataSource, /* silent */ true);
+            MigrationInitializer.runMigration(dataSource);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
