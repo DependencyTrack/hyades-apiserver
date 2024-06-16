@@ -29,10 +29,6 @@
         <appender-ref ref="JSON_STDOUT" />
     </logger>
 
-    <logger name="org.apache.kafka" level="WARN" additivity="false">
-        <appender-ref ref="JSON_STDOUT" />
-    </logger>
-
     <root level="WARN">
         <appender-ref ref="JSON_STDOUT" />
     </root>
