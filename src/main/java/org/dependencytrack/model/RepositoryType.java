@@ -39,6 +39,8 @@ public enum RepositoryType {
     GO_MODULES,
     CPAN,
     GITHUB,
+    HACKAGE,
+    NIXPKGS,
     UNSUPPORTED;
 
     /**
@@ -68,8 +70,12 @@ public enum RepositoryType {
             return GO_MODULES;
         } else if ("cpan".equals(type)) { // Not defined in StandardTypes
             return CPAN;
-        } else if (PackageURL.StandardTypes.GITHUB.equals(type)) { // Not defined in StandardTypes
+        } else if (PackageURL.StandardTypes.GITHUB.equals(type)) {
             return GITHUB;
+        } else if ("hackage".equals(type)) { // Not defined in StandardTypes
+            return HACKAGE;
+        } else if ("nixpkgs".equals(type)) { // Not defined in StandardTypes
+            return NIXPKGS;
         }
         return UNSUPPORTED;
     }

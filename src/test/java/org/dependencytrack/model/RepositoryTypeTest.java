@@ -108,4 +108,15 @@ public class RepositoryTypeTest {
         Assert.assertEquals(RepositoryType.GITHUB, RepositoryType.resolve(purl));
     }
 
+    @Test
+    public void testResolveHackage() throws Exception {
+        final var purl = new PackageURL("pkg:hackage/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.HACKAGE, RepositoryType.resolve(purl));
+    }
+
+    @Test
+    public void testResolveNixpkgs() throws Exception {
+        final var purl = new PackageURL("pkg:nixpkgs/artifact@1.0.0");
+        Assert.assertEquals(RepositoryType.NIXPKGS, RepositoryType.resolve(purl));
+    }
 } 
