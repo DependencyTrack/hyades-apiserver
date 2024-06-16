@@ -37,7 +37,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
 
         // NB: Container reuse won't be active unless either:
         //  - The environment variable TESTCONTAINERS_REUSE_ENABLE=true is set
-        //  - testcontainers.reuse.enable=false is set in ~/.testcontainers.properties
+        //  - testcontainers.reuse.enable=true is set in ~/.testcontainers.properties
         withReuse(true);
     }
 
@@ -58,7 +58,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         try {
             MigrationInitializer.runMigration(dataSource);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to execute migrations", e);
         }
     }
 

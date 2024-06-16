@@ -73,13 +73,17 @@ public class MigrationInitializer implements ServletContextListener {
     }
 
     public static void runMigration(final DataSource dataSource) throws Exception {
+        runMigration(dataSource, "migration/changelog-main.xml");
+    }
+
+    public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
         final var scopeAttributes = new HashMap<String, Object>();
         scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
         scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
 
         Scope.child(scopeAttributes, () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
+            final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
 
             final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
             updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
