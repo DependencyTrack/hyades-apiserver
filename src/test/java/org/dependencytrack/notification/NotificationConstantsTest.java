@@ -20,6 +20,7 @@ package org.dependencytrack.notification;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class NotificationConstantsTest {
 
@@ -42,5 +43,7 @@ public class NotificationConstantsTest {
         Assert.assertEquals("Analysis Decision: Finding Suppressed", NotificationConstants.Title.ANALYSIS_DECISION_SUPPRESSED);
         Assert.assertEquals("Analysis Decision: Finding UnSuppressed", NotificationConstants.Title.ANALYSIS_DECISION_UNSUPPRESSED);
         Assert.assertEquals("Analysis Decision: Finding Resolved", NotificationConstants.Title.ANALYSIS_DECISION_RESOLVED);
+        Assertions.assertEquals("User Created", NotificationConstants.Title.USER_CREATED);
+        Assertions.assertEquals("User Deleted", NotificationConstants.Title.USER_DELETED);
     }
 }
