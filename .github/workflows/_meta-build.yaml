@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.1.5
+        uses: actions/checkout@v4.1.7
 
       - name: Set up JDK
         uses: actions/setup-java@v4.2.1
@@ -85,7 +85,7 @@ jobs:
       - build-java
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.1.5
+        uses: actions/checkout@v4.1.7
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4.1.7
