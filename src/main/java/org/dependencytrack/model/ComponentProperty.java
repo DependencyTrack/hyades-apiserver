@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.MoreObjects;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.EnumValue;
 
 import javax.jdo.annotations.Column;
@@ -145,7 +146,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
     }
 
     public void setPropertyValue(final String propertyValue) {
-        this.propertyValue = propertyValue;
+        this.propertyValue = StringUtils.abbreviate(propertyValue, 255);
     }
 
     public PropertyType getPropertyType() {
