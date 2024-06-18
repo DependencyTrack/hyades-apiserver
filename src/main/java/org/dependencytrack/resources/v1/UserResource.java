@@ -52,7 +52,7 @@ import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserPrincipalSubject;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.owasp.security.logging.SecurityMarkers;
 
 import javax.ws.rs.Consumes;
@@ -687,7 +687,7 @@ public class UserResource extends AlpineResource {
         }
     }
 
-    private void dispatchUserCreatedNotification(final String content, final UserPrincipalSubject subject) {
+    private void dispatchUserCreatedNotification(final String content, final UserSubject subject) {
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.SYSTEM)
                 .group(NotificationGroup.USER_CREATED)
@@ -697,7 +697,7 @@ public class UserResource extends AlpineResource {
                 .subject(subject));
     }
 
-    private void dispatchUserDeletedNotification(final String content, final UserPrincipalSubject subject) {
+    private void dispatchUserDeletedNotification(final String content, final UserSubject subject) {
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.SYSTEM)
                 .group(NotificationGroup.USER_DELETED)
@@ -707,8 +707,8 @@ public class UserResource extends AlpineResource {
                 .subject(subject));
     }
 
-    private UserPrincipalSubject buildUserSubject(final String username, final String email) {
-        var userBuilder = UserPrincipalSubject.newBuilder().setUsername(username);
+    private UserSubject buildUserSubject(final String username, final String email) {
+        var userBuilder = UserSubject.newBuilder().setUsername(username);
         Optional.ofNullable(email).ifPresent(userBuilder::setEmail);
         return userBuilder.build();
     }

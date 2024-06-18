@@ -39,7 +39,7 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecision
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
 import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.UserPrincipalSubject;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
@@ -249,8 +249,8 @@ public final class KafkaEventConverter {
                 yield requireNonEmpty(subject.getProject().getUuid());
             }
             case GROUP_USER_CREATED, GROUP_USER_DELETED -> {
-                requireSubjectOfTypeAnyOf(notification, List.of(UserPrincipalSubject.class));
-                final var subject = notification.getSubject().unpack(UserPrincipalSubject.class);
+                requireSubjectOfTypeAnyOf(notification, List.of(UserSubject.class));
+                final var subject = notification.getSubject().unpack(UserSubject.class);
                 yield requireNonEmpty(subject.getUsername());
             }
             case GROUP_ANALYZER, GROUP_CONFIGURATION, GROUP_DATASOURCE_MIRRORING,

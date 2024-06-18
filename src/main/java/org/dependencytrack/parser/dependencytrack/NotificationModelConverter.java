@@ -56,7 +56,7 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecision
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
 import org.dependencytrack.proto.notification.v1.Scope;
-import org.dependencytrack.proto.notification.v1.UserPrincipalSubject;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
@@ -190,8 +190,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(pvi)));
         } else if (subject instanceof final org.dependencytrack.model.Project p) {
             return Optional.of(Any.pack(convert(p)));
-        } else if (subject instanceof final UserPrincipalSubject p) {
-            return Optional.of(Any.pack(convert(p)));
+        } else if (subject instanceof final UserSubject p) {
+            return Optional.of(Any.pack(p));
         }
 
         return Optional.empty();
@@ -293,13 +293,6 @@ public final class NotificationModelConverter {
                 .setComponent(convert(subject.getComponent()))
                 .setPolicyViolation(convert(subject.getPolicyViolation()))
                 .build();
-    }
-
-    private static UserPrincipalSubject convert(final UserPrincipalSubject subject) {
-        final UserPrincipalSubject.Builder builder = UserPrincipalSubject.newBuilder()
-                .setUsername(subject.getUsername());
-        Optional.ofNullable(subject.getEmail()).ifPresent(builder::setEmail);
-        return builder.build();
     }
 
     private static Component convert(final org.dependencytrack.model.Component component) {
