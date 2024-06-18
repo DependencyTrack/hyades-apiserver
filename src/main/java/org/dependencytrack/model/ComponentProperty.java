@@ -69,6 +69,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
 
     @Persistent
     @Column(name = "GROUPNAME")
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The groupName must not contain control characters")
     private String groupName;
@@ -76,6 +77,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
     @Persistent
     @Column(name = "PROPERTYNAME", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The propertyName must not contain control characters")
     private String propertyName;
@@ -101,6 +103,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
 
     @Persistent
     @Column(name = "DESCRIPTION")
+    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The description must not contain control characters")
     private String description;
