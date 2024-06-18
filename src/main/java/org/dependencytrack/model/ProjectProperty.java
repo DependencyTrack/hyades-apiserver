@@ -76,7 +76,7 @@ public class ProjectProperty implements IConfigProperty, Serializable {
 
     @Persistent
     @Column(name = "PROPERTYVALUE", length = 1024)
-    @Size(min = 0, max = 1024)
+    @Size(max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The propertyValue must not contain control characters")
     private String propertyValue;
