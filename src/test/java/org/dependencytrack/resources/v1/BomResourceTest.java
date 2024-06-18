@@ -46,10 +46,12 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -77,6 +79,8 @@ import java.util.UUID;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
@@ -93,6 +97,21 @@ public class BomResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
                     .register(MultiPartFeature.class));
+
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
+
+        qm.createConfigProperty(
+                BOM_VALIDATION_ENABLED.getGroupName(),
+                BOM_VALIDATION_ENABLED.getPropertyName(),
+                "true",
+                BOM_VALIDATION_ENABLED.getPropertyType(),
+                null
+        );
+
+    }
 
     @Test
     public void exportProjectAsCycloneDxTest() {
@@ -224,6 +243,7 @@ public class BomResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
 
         final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
         assertThatJson(jsonResponse)
                 .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
@@ -396,6 +416,7 @@ public class BomResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
 
         final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
         assertThatJson(jsonResponse)
                 .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vulnerability.getUuid().toString()))
@@ -590,6 +611,7 @@ public class BomResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
 
         final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
         assertThatJson(jsonResponse)
                 .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vulnerability.getUuid().toString()))
@@ -807,7 +829,13 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The specified BOM is not in a supported format. Supported formats are XML and JSON", getPlainTextBody(response));
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status":400,
+                  "title": "The uploaded BOM is invalid",
+                  "detail": "BOM is neither valid JSON nor XML"
+                }
+                """);
     }
 
     @Test
@@ -830,7 +858,18 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("The uploaded CycloneDX BOM is invalid: $.version: is missing but it is required; $.components[0].type: is missing but it is required; $.components[0].name: is missing but it is required", getPlainTextBody(response));
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "The uploaded BOM is invalid",
+                  "detail": "Schema validation failed",
+                  "errors": [
+                    "$.version: is missing but it is required",
+                    "$.components[0].type: is missing but it is required",
+                    "$.components[0].name: is missing but it is required"
+                  ]
+                }
+                """);
     }
 
     @Test
@@ -844,7 +883,13 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertEquals("Unable to parse BOM from byte array", getPlainTextBody(response));
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "The uploaded BOM is invalid",
+                  "detail": "BOM is neither valid JSON nor XML"
+                }
+                """);
     }
 
     @Test
@@ -1075,4 +1120,98 @@ public class BomResourceTest extends ResourceTest {
                     }
                 """));
     }
+
+    @Test
+    public void uploadBomInvalidJsonTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final String encodedBom = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.2",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "foo",
+                      "name": "acme-library",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes());
+
+        final Response response = jersey.target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "bom": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "The uploaded BOM is invalid",
+                  "detail": "Schema validation failed",
+                  "errors": [
+                    "$.components[0].type: does not have a value in the enumeration [application, framework, library, container, operating-system, device, firmware, file]"
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void uploadBomInvalidXmlTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final String encodedBom = Base64.getEncoder().encodeToString("""
+                <?xml version="1.0"?>
+                <bom serialNumber="urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79" version="1" xmlns="http://cyclonedx.org/schema/bom/1.2">
+                    <components>
+                        <component type="foo">
+                            <name>acme-library</name>
+                            <version>1.0.0</version>
+                        </component>
+                    </components>
+                </bom>
+                """.getBytes());
+
+        final Response response = jersey.target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "bom": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "The uploaded BOM is invalid",
+                  "detail": "Schema validation failed",
+                  "errors": [
+                    "cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration '[application, framework, library, container, operating-system, device, firmware, file]'. It must be a value from the enumeration.",
+                    "cvc-attribute.3: The value 'foo' of attribute 'type' on element 'component' is not valid with respect to its type, 'classification'."
+                  ]
+                }
+                """);
+    }
+
 }

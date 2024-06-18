@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import com.fasterxml.jackson.core.JsonParseException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -32,13 +31,8 @@ import io.swagger.annotations.Authorization;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.BomParserFactory;
 import org.cyclonedx.CycloneDxMediaType;
-import org.cyclonedx.CycloneDxSchema;
 import org.cyclonedx.exception.GeneratorException;
-import org.cyclonedx.exception.ParseException;
-import org.cyclonedx.model.Bom;
-import org.cyclonedx.parsers.Parser;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.Component;
@@ -47,7 +41,11 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
+import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
+import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
@@ -66,6 +64,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
@@ -79,9 +78,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -212,8 +210,22 @@ public class BomResource extends AlpineResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Upload a supported bill of material format document", notes = "Expects CycloneDX along and a valid project UUID. If a UUID is not specified, then the projectName and projectVersion must be specified. Optionally, if autoCreate is specified and 'true' and the project does not exist, the project will be created. In this scenario, the principal making the request will additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.", response = BomUploadResponse.class, nickname = "UploadBomBase64Encoded")
+    @ApiOperation(
+            value = "Upload a supported bill of material format document",
+            notes = """
+                    Expects CycloneDX and a valid project UUID. If a UUID is not specified, \
+                    then the projectName and projectVersion must be specified. \
+                    Optionally, if autoCreate is specified and 'true' and the project does not exist, \
+                    the project will be created. In this scenario, the principal making the request will \
+                    additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.
+                    The BOM will be validated against the CycloneDX schema. If schema validation fails, \
+                    a response with problem details in RFC 9457 format will be returned. In this case, \
+                    the response's content type will be application/problem+json.""",
+            response = BomUploadResponse.class,
+            nickname = "UploadBomBase64Encoded"
+    )
     @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "Invalid BOM", response = InvalidBomProblemDetails.class),
             @ApiResponse(code = 400, message = "The uploaded BOM is invalid"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
@@ -278,8 +290,22 @@ public class BomResource extends AlpineResource {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Upload a supported bill of material format document", notes = "Expects CycloneDX along and a valid project UUID. If a UUID is not specified, then the projectName and projectVersion must be specified. Optionally, if autoCreate is specified and 'true' and the project does not exist, the project will be created. In this scenario, the principal making the request will additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.", response = BomUploadResponse.class, nickname = "UploadBom")
+    @ApiOperation(
+            value = "Upload a supported bill of material format document",
+            notes = """
+                    Expects CycloneDX and a valid project UUID. If a UUID is not specified, \
+                    then the projectName and projectVersion must be specified. \
+                    Optionally, if autoCreate is specified and 'true' and the project does not exist, \
+                    the project will be created. In this scenario, the principal making the request will \
+                    additionally need the PORTFOLIO_MANAGEMENT or PROJECT_CREATION_UPLOAD permission.
+                    The BOM will be validated against the CycloneDX schema. If schema validation fails, \
+                    a response with problem details in RFC 9457 format will be returned. In this case, \
+                    the response's content type will be application/problem+json.""",
+            response = BomUploadResponse.class,
+            nickname = "UploadBom"
+    )
     @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "Invalid BOM", response = InvalidBomProblemDetails.class),
             @ApiResponse(code = 400, message = "The uploaded BOM is invalid"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
@@ -376,9 +402,6 @@ public class BomResource extends AlpineResource {
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
                 bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
-            } catch (IllegalArgumentException | ParseException e) {
-                LOGGER.debug("Failed to validate BOM uploaded to project: " + project.getUuid(), e);
-                return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -411,9 +434,6 @@ public class BomResource extends AlpineResource {
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
                     bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
-                } catch (IllegalArgumentException | ParseException e) {
-                    LOGGER.debug("Failed to validate BOM uploaded to project: " + project.getUuid(), e);
-                    return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -436,39 +456,11 @@ public class BomResource extends AlpineResource {
         return Response.ok().build();
     }
 
-    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException, ParseException {
-        final List<ParseException> validationErrors;
-        try {
-            final Parser parser = BomParserFactory.createParser(bomBytes);
-
-            // Have to parse the entire BOM in order to determine the spec version :c
-            final Bom bom = parser.parse(bomBytes);
-            final CycloneDxSchema.Version specVersion = switch (trimToEmpty(bom.getSpecVersion())) {
-                case "1.0" -> CycloneDxSchema.Version.VERSION_10;
-                case "1.1" -> CycloneDxSchema.Version.VERSION_11;
-                case "1.2" -> CycloneDxSchema.Version.VERSION_12;
-                case "1.3" -> CycloneDxSchema.Version.VERSION_13;
-                case "1.4" -> CycloneDxSchema.Version.VERSION_14;
-                case "1.5" -> CycloneDxSchema.Version.VERSION_15;
-                // Default to latest schema version when the BOM does not specify
-                // one explicitly. Validation will fail anyway though, as specifying
-                // a schema version is mandatory across all spec versions.
-                default -> CycloneDxSchema.VERSION_LATEST;
-            };
-
-            validationErrors = parser.validate(bomBytes, specVersion);
-        } catch (JsonParseException e) {
-            throw new IllegalArgumentException("The uploaded file contains malformed JSON or XML", e);
-        }
-
-        if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("The uploaded CycloneDX BOM is invalid: " + validationErrors.stream()
-                    .map(Throwable::getMessage)
-                    .collect(Collectors.joining("; ")));
-        }
+    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
+        validate(bomBytes);
 
         // TODO: Store externally so other instances of the API server can pick it up.
-        // https://github.com/CycloneDX/cyclonedx-bom-repo-server
+        //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
         final java.nio.file.Path tmpPath = Files.createTempFile("dtrack-bom-%s".formatted(project.getUuid()), null);
         final File tmpFile = tmpPath.toFile();
         tmpFile.deleteOnExit();
@@ -480,4 +472,36 @@ public class BomResource extends AlpineResource {
 
         return tmpFile;
     }
+
+    static void validate(final byte[] bomBytes) {
+        try (final var qm = new QueryManager()) {
+            if (!qm.isEnabled(BOM_VALIDATION_ENABLED)) {
+                return;
+            }
+        }
+
+        try {
+            CycloneDxValidator.getInstance().validate(bomBytes);
+        } catch (InvalidBomException e) {
+            final var problemDetails = new InvalidBomProblemDetails();
+            problemDetails.setStatus(400);
+            problemDetails.setTitle("The uploaded BOM is invalid");
+            problemDetails.setDetail(e.getMessage());
+            if (!e.getValidationErrors().isEmpty()) {
+                problemDetails.setErrors(e.getValidationErrors());
+            }
+
+            final Response response = Response.status(Response.Status.BAD_REQUEST)
+                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
+                    .entity(problemDetails)
+                    .build();
+
+            throw new WebApplicationException(response);
+        } catch (RuntimeException e) {
+            LOGGER.error("Failed to validate BOM", e);
+            final Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            throw new WebApplicationException(response);
+        }
+    }
+
 }
