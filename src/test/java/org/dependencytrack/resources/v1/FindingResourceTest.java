@@ -739,118 +739,118 @@ public class FindingResourceTest extends ResourceTest {
                               }
                             },
                             "results": [
-                              {
-                                "ruleId": "Vuln-1",
-                                "message": {
-                                  "text": "This is a description"
-                                },
-                                "locations": [
-                                  {
-                                    "logicalLocations": [
-                                      {
-                                        "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                      }
-                                    ]
+                                {
+                                  "ruleId": "Vuln-1",
+                                  "message": {
+                                    "text": "This is a description"
+                                  },
+                                  "locations": [
+                                    {
+                                      "logicalLocations": [
+                                        {
+                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "level": "error",
+                                  "properties": {
+                                    "name": "Component 1",
+                                    "group": "org.acme",
+                                    "version": "1.1.4",
+                                    "source": "INTERNAL",
+                                    "cweId": "80",
+                                    "cvssV3BaseScore": "",
+                                    "epssScore": "",
+                                    "epssPercentile": "",
+                                    "severityRank": "0",
+                                    "recommendation": ""
                                   }
-                                ],
-                                "level": "error",
-                                "properties": {
-                                  "name": "Component 1",
-                                  "group": "org.acme",
-                                  "version": "1.1.4",
-                                  "source": "INTERNAL",
-                                  "cweId": "80",
-                                  "cvssV3BaseScore": "",
-                                  "epssScore": "",
-                                  "epssPercentile": "",
-                                  "severityRank": "0",
-                                  "recommendation": ""
-                                }
-                              },
-                              {
-                                "ruleId": "Vuln-2",
-                                "message": {
-                                  "text": "Yet another description but with surrounding whitespaces"
                                 },
-                                "locations": [
-                                  {
-                                    "logicalLocations": [
-                                      {
-                                        "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                      }
-                                    ]
+                                {
+                                  "ruleId": "Vuln-3",
+                                  "message": {
+                                    "text": "A description-with-hyphens-(and parentheses)"
+                                  },
+                                  "locations": [
+                                    {
+                                      "logicalLocations": [
+                                        {
+                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "level": "note",
+                                  "properties": {
+                                    "name": "Component 1",
+                                    "group": "org.acme",
+                                    "version": "1.1.4",
+                                    "source": "INTERNAL",
+                                    "cweId": "23",
+                                    "cvssV3BaseScore": "",
+                                    "epssScore": "",
+                                    "epssPercentile": "",
+                                    "severityRank": "3",
+                                    "recommendation": "Recommendation with whitespaces"
                                   }
-                                ],
-                                "level": "error",
-                                "properties": {
-                                  "name": "Component 1",
-                                  "group": "org.acme",
-                                  "version": "1.1.4",
-                                  "source": "INTERNAL",
-                                  "cweId": "46",
-                                  "cvssV3BaseScore": "",
-                                  "epssScore": "",
-                                  "epssPercentile": "",
-                                  "severityRank": "1",
-                                  "recommendation": ""
-                                }
-                              },
-                              {
-                                "ruleId": "Vuln-3",
-                                "message": {
-                                  "text": "A description-with-hyphens-(and parentheses)"
                                 },
-                                "locations": [
-                                  {
-                                    "logicalLocations": [
-                                      {
-                                        "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                      }
-                                    ]
+                                {
+                                  "ruleId": "Vuln-2",
+                                  "message": {
+                                    "text": "Yet another description but with surrounding whitespaces"
+                                  },
+                                  "locations": [
+                                    {
+                                      "logicalLocations": [
+                                        {
+                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "level": "error",
+                                  "properties": {
+                                    "name": "Component 1",
+                                    "group": "org.acme",
+                                    "version": "1.1.4",
+                                    "source": "INTERNAL",
+                                    "cweId": "46",
+                                    "cvssV3BaseScore": "",
+                                    "epssScore": "",
+                                    "epssPercentile": "",
+                                    "severityRank": "1",
+                                    "recommendation": ""
                                   }
-                                ],
-                                "level": "note",
-                                "properties": {
-                                  "name": "Component 1",
-                                  "group": "org.acme",
-                                  "version": "1.1.4",
-                                  "source": "INTERNAL",
-                                  "cweId": "23",
-                                  "cvssV3BaseScore": "",
-                                  "epssScore": "",
-                                  "epssPercentile": "",
-                                  "severityRank": "3",
-                                  "recommendation": "Recommendation with whitespaces"
-                                }
-                              },
-                              {
-                                "ruleId": "Vuln-3",
-                                "message": {
-                                  "text": "A description-with-hyphens-(and parentheses)"
                                 },
-                                "locations": [
-                                  {
-                                    "logicalLocations": [
-                                      {
-                                        "fullyQualifiedName": "pkg:maven/com.xyz/component2@2.78.123?type=jar"
-                                      }
-                                    ]
+                                {
+                                  "ruleId": "Vuln-3",
+                                  "message": {
+                                    "text": "A description-with-hyphens-(and parentheses)"
+                                  },
+                                  "locations": [
+                                    {
+                                      "logicalLocations": [
+                                        {
+                                          "fullyQualifiedName": "pkg:maven/com.xyz/component2@2.78.123?type=jar"
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "level": "note",
+                                  "properties": {
+                                    "name": "Component 2",
+                                    "group": "com.xyz",
+                                    "version": "2.78.123",
+                                    "source": "INTERNAL",
+                                    "cweId": "23",
+                                    "cvssV3BaseScore": "",
+                                    "epssScore": "",
+                                    "epssPercentile": "",
+                                    "severityRank": "3",
+                                    "recommendation": "Recommendation with whitespaces"
                                   }
-                                ],
-                                "level": "note",
-                                "properties": {
-                                  "name": "Component 2",
-                                  "group": "com.xyz",
-                                  "version": "2.78.123",
-                                  "source": "INTERNAL",
-                                  "cweId": "23",
-                                  "cvssV3BaseScore": "",
-                                  "epssScore": "",
-                                  "epssPercentile": "",
-                                  "severityRank": "3",
-                                  "recommendation": "Recommendation with whitespaces"
                                 }
-                              }
                             ]
                           }
                         ]
