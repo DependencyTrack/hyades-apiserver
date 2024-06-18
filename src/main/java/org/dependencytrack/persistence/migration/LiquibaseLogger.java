@@ -38,15 +38,15 @@ class LiquibaseLogger extends AbstractLogger {
 
     @Override
     public void log(final Level level, final String message, final Throwable e) {
-        if (level == Level.SEVERE) {
+        if (Level.SEVERE.equals(level)) {
             logger.error(message, e);
-        } else if (level == Level.WARNING) {
+        } else if (Level.WARNING.equals(level)) {
             logger.warn(message, e);
-        } else if (level == Level.INFO) {
+        } else if (Level.INFO.equals(level)) {
             logger.info(message, e);
-        } else if (level == Level.CONFIG || level == Level.FINE) {
+        } else if (Level.CONFIG.equals(level) || Level.FINE.equals(level)) {
             logger.debug(message, e);
-        } else if (level == Level.FINER || level == Level.FINEST) {
+        } else if (Level.FINER.equals(level) || Level.FINEST.equals(level)) {
             logger.trace(message, e);
         }
     }
