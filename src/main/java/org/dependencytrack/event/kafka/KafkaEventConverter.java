@@ -39,9 +39,11 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecision
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
 import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
+import org.dependencytrack.proto.vulnanalysis.v1.Component;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
 
@@ -55,7 +57,7 @@ import java.util.UUID;
 import static org.apache.commons.lang3.ObjectUtils.requireNonEmpty;
 
 /**
- * Utility class to convert {@link alpine.event.framework.Event}s and {@link alpine.notification.Notification}s
+ * Utility class to convert {@link Event}s and {@link alpine.notification.Notification}s
  * to {@link KafkaEvent}s.
  */
 public final class KafkaEventConverter {
@@ -103,7 +105,7 @@ public final class KafkaEventConverter {
     }
 
     static KafkaEvent<ScanKey, ScanCommand> convert(final ComponentVulnerabilityAnalysisEvent event) {
-        final var componentBuilder = org.dependencytrack.proto.vulnanalysis.v1.Component.newBuilder()
+        final var componentBuilder = Component.newBuilder()
                 .setUuid(event.uuid().toString());
         Optional.ofNullable(event.cpe()).ifPresent(componentBuilder::setCpe);
         Optional.ofNullable(event.purl()).ifPresent(componentBuilder::setPurl);
@@ -181,6 +183,7 @@ public final class KafkaEventConverter {
             case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
             case GROUP_REPOSITORY -> KafkaTopics.NOTIFICATION_REPOSITORY;
             case GROUP_VEX_CONSUMED, GROUP_VEX_PROCESSED -> KafkaTopics.NOTIFICATION_VEX;
+            case GROUP_USER_CREATED, GROUP_USER_DELETED -> KafkaTopics.NOTIFICATION_USER;
             case GROUP_UNSPECIFIED, UNRECOGNIZED -> throw new IllegalArgumentException("""
                     Unable to determine destination topic because the notification does not \
                     specify a notification group: %s""".formatted(notification.getGroup()));
@@ -244,6 +247,11 @@ public final class KafkaEventConverter {
                 requireSubjectOfTypeAnyOf(notification, List.of(VexConsumedOrProcessedSubject.class));
                 final var subject = notification.getSubject().unpack(VexConsumedOrProcessedSubject.class);
                 yield requireNonEmpty(subject.getProject().getUuid());
+            }
+            case GROUP_USER_CREATED, GROUP_USER_DELETED -> {
+                requireSubjectOfTypeAnyOf(notification, List.of(UserSubject.class));
+                final var subject = notification.getSubject().unpack(UserSubject.class);
+                yield requireNonEmpty(subject.getUsername());
             }
             case GROUP_ANALYZER, GROUP_CONFIGURATION, GROUP_DATASOURCE_MIRRORING,
                  GROUP_FILE_SYSTEM, GROUP_INTEGRATION, GROUP_REPOSITORY -> null;

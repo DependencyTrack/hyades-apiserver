@@ -47,6 +47,7 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_PROJECT_CREATED;
     public static final Topic<String, Notification> NOTIFICATION_REPOSITORY;
     public static final Topic<String, Notification> NOTIFICATION_VEX;
+    public static final Topic<String, Notification> NOTIFICATION_USER;
     public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
     public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
@@ -82,6 +83,7 @@ public final class KafkaTopics {
         VULN_ANALYSIS_RESULT_PROCESSED = new Topic<>("dtrack.vuln-analysis.result.processed", Serdes.String(), new KafkaProtobufSerde<>(ScanResult.parser()));
         NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE = new Topic<>("dtrack.notification.project-vuln-analysis-complete", Serdes.String(), NOTIFICATION_SERDE);
         NEW_EPSS = new Topic<>("dtrack.epss", Serdes.String(), new KafkaProtobufSerde<>(EpssItem.parser()));
+        NOTIFICATION_USER = new Topic<>("dtrack.notification.user", Serdes.String(), NOTIFICATION_SERDE);
     }
 
     public record Topic<K, V>(String name, Serde<K> keySerde, Serde<V> valueSerde) {

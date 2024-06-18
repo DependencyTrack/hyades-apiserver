@@ -53,8 +53,9 @@ public class NotificationConstants {
         public static final String VEX_CONSUMED = "Vulnerability Exploitability Exchange (VEX) Consumed";
         public static final String VEX_PROCESSED = "Vulnerability Exploitability Exchange (VEX) Processed";
         public static final String PROJECT_CREATED = "Project Added";
-
         public static final String PROJECT_VULN_ANALYSIS_COMPLETE = "Project vulnerability analysis complete";
+        public static final String USER_CREATED = "User Created";
+        public static final String USER_DELETED = "User Deleted";
     }
 
 }

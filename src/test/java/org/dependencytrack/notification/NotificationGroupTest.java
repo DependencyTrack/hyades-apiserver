@@ -39,5 +39,7 @@ public class NotificationGroupTest {
         //Assert.assertEquals("FIXED_OUTDATED", NotificationGroup.FIXED_OUTDATED.name());
         //Assert.assertEquals("GLOBAL_AUDIT_CHANGE", NotificationGroup.GLOBAL_AUDIT_CHANGE.name());
         Assert.assertEquals("PROJECT_AUDIT_CHANGE", NotificationGroup.PROJECT_AUDIT_CHANGE.name());
+        Assert.assertEquals("USER_CREATED", NotificationGroup.USER_CREATED.name());
+        Assert.assertEquals("USER_DELETED", NotificationGroup.USER_DELETED.name());
     }
 }

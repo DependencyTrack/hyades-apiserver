@@ -23,8 +23,11 @@ import com.github.packageurl.PackageURL;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
@@ -53,6 +56,7 @@ import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecision
 import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
 import org.dependencytrack.proto.notification.v1.Project;
 import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
@@ -81,6 +85,8 @@ import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREA
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_REPOSITORY;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_CREATED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_CONSUMED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_VEX_PROCESSED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
@@ -160,10 +166,12 @@ public final class NotificationModelConverter {
             case POLICY_VIOLATION -> GROUP_POLICY_VIOLATION;
             case PROJECT_CREATED -> GROUP_PROJECT_CREATED;
             case PROJECT_VULN_ANALYSIS_COMPLETE -> GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
+            case USER_CREATED -> GROUP_USER_CREATED;
+            case USER_DELETED -> GROUP_USER_DELETED;
         };
     }
 
-    private static Optional<com.google.protobuf.Any> convert(final Object subject) {
+    private static Optional<Any> convert(final Object subject) {
         if (subject instanceof final NewVulnerabilityIdentified nvi) {
             return Optional.of(Any.pack(convert(nvi)));
         } else if (subject instanceof final NewVulnerableDependency nvd) {
@@ -182,6 +190,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(pvi)));
         } else if (subject instanceof final org.dependencytrack.model.Project p) {
             return Optional.of(Any.pack(convert(p)));
+        } else if (subject instanceof final UserSubject p) {
+            return Optional.of(Any.pack(p));
         }
 
         return Optional.empty();
@@ -381,7 +391,7 @@ public final class NotificationModelConverter {
                 .build();
     }
 
-    private static VulnerabilityAnalysis convert(final org.dependencytrack.model.Analysis analysis) {
+    private static VulnerabilityAnalysis convert(final Analysis analysis) {
         final VulnerabilityAnalysis.Builder builder = VulnerabilityAnalysis.newBuilder()
                 .setComponent(convert(analysis.getComponent()))
                 .setProject(convert(analysis.getProject()))
@@ -393,7 +403,7 @@ public final class NotificationModelConverter {
         return builder.build();
     }
 
-    private static PolicyViolationAnalysis convert(final org.dependencytrack.model.ViolationAnalysis analysis) {
+    private static PolicyViolationAnalysis convert(final ViolationAnalysis analysis) {
         final PolicyViolationAnalysis.Builder builder = PolicyViolationAnalysis.newBuilder()
                 .setComponent(convert(analysis.getComponent()))
                 .setProject(convert(analysis.getComponent().getProject()))
@@ -405,7 +415,7 @@ public final class NotificationModelConverter {
         return builder.build();
     }
 
-    private static Vulnerability.Cwe convert(final org.dependencytrack.model.Cwe cwe) {
+    private static Vulnerability.Cwe convert(final Cwe cwe) {
         return Vulnerability.Cwe.newBuilder()
                 .setCweId(cwe.getCweId())
                 .setName(cwe.getName())
