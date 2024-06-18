@@ -65,7 +65,8 @@ public class LicenseGroupResource extends AlpineResource {
             value = "Returns a list of all license groups",
             response = LicenseGroup.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of license groups")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of license groups"),
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -84,7 +85,8 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Returns a specific license group",
-            response = License.class
+            response = License.class,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -110,7 +112,8 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new license group",
             response = LicenseGroup.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -139,7 +142,8 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates a license group",
-            response = LicenseGroup.class
+            response = LicenseGroup.class,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -169,7 +173,8 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a license group",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -196,7 +201,8 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Adds the license to the specified license group.",
-            response = LicenseGroup.class
+            response = LicenseGroup.class,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The license group already has the specified license assigned"),
@@ -235,7 +241,8 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Removes the license from the license group.",
-            response = LicenseGroup.class
+            response = LicenseGroup.class,
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The license is not a member with the license group"),

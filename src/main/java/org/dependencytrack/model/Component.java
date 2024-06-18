@@ -618,6 +618,7 @@ public class Component implements Serializable {
     }
 
     @JsonSerialize(using = CustomPackageURLSerializer.class)
+    @ApiModelProperty(dataType = "string", accessMode = ApiModelProperty.AccessMode.READ_ONLY)
     public PackageURL getPurlCoordinates() {
         if (purlCoordinates == null) {
             return null;
@@ -822,10 +823,13 @@ public class Component implements Serializable {
         this.componentMetaInformation = componentMetaInformation;
     }
 
+    @JsonIgnore
+    @ApiModelProperty(hidden = true)
     public boolean isNew() {
         return isNew;
     }
 
+    @JsonIgnore
     public void setNew(final boolean aNew) {
         isNew = aNew;
     }
@@ -838,28 +842,26 @@ public class Component implements Serializable {
         this.lastInheritedRiskScore = lastInheritedRiskScore;
     }
 
+    @JsonIgnore
+    @ApiModelProperty(hidden = true)
     public String getBomRef() {
         return bomRef;
     }
 
+    @JsonIgnore
     public void setBomRef(String bomRef) {
         this.bomRef = bomRef;
     }
 
+    @JsonIgnore
+    @ApiModelProperty(hidden = true)
     public List<org.cyclonedx.model.License> getLicenseCandidates() {
         return licenseCandidates;
     }
 
+    @JsonIgnore
     public void setLicenseCandidates(final List<org.cyclonedx.model.License> licenseCandidates) {
         this.licenseCandidates = licenseCandidates;
-    }
-
-    public int getUsedBy() {
-        return usedBy;
-    }
-
-    public void setUsedBy(int usedBy) {
-        this.usedBy = usedBy;
     }
 
     public Set<String> getDependencyGraph() {

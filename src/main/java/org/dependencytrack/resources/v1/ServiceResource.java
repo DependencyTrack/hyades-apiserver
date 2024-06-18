@@ -65,7 +65,8 @@ public class ServiceResource extends AlpineResource {
             value = "Returns a list of all services for a given project",
             response = ServiceComponent.class,
             responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of services")
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of services"),
+            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -96,7 +97,8 @@ public class ServiceResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Returns a specific service",
-            response = ServiceComponent.class
+            response = ServiceComponent.class,
+            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -130,7 +132,8 @@ public class ServiceResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new service",
             response = ServiceComponent.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -157,7 +160,7 @@ public class ServiceResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (! qm.hasAccess(super.getPrincipal(), project)) {
+            if (!qm.hasAccess(super.getPrincipal(), project)) {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
             ServiceComponent service = new ServiceComponent();
@@ -182,7 +185,8 @@ public class ServiceResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates a service",
-            response = ServiceComponent.class
+            response = ServiceComponent.class,
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -201,7 +205,7 @@ public class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, jsonService.getUuid());
             if (service != null) {
-                if (! qm.hasAccess(super.getPrincipal(), service.getProject())) {
+                if (!qm.hasAccess(super.getPrincipal(), service.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
                 }
                 // Name cannot be empty or null - prevent it
@@ -232,7 +236,8 @@ public class ServiceResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a service",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -246,7 +251,7 @@ public class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid, ServiceComponent.FetchGroup.ALL.name());
             if (service != null) {
-                if (! qm.hasAccess(super.getPrincipal(), service.getProject())) {
+                if (!qm.hasAccess(super.getPrincipal(), service.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
                 }
                 qm.recursivelyDelete(service, false);

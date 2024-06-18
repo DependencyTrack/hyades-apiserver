@@ -59,7 +59,7 @@ import java.util.List;
  * @since 3.2.0
  */
 @Path("/v1/notification/publisher")
-@Api(authorizations = @Authorization(value = "X-Api-Key"))
+@Api(value = "notification", authorizations = @Authorization(value = "X-Api-Key"))
 public class NotificationPublisherResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(NotificationPublisherResource.class);
@@ -69,7 +69,8 @@ public class NotificationPublisherResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a list of all notification publishers",
             response = NotificationPublisher.class,
-            responseContainer = "List"
+            responseContainer = "List",
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
@@ -88,7 +89,8 @@ public class NotificationPublisherResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new notification publisher",
             response = NotificationPublisher.class,
-            code = 201
+            code = 201,
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Invalid notification class or trying to modify a default publisher"),
@@ -124,7 +126,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 );
                 return Response.status(Response.Status.CREATED).entity(notificationPublisherCreated).build();
             } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class "+jsonNotificationPublisher.getPublisherClass()+" is not valid.").build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
             }
         }
     }
@@ -134,7 +136,8 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Updates a notification publisher",
-            response = NotificationRule.class
+            response = NotificationRule.class,
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Invalid notification class or trying to modify a default publisher"),
@@ -157,14 +160,14 @@ public class NotificationPublisherResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             NotificationPublisher existingPublisher = qm.getObjectByUuid(NotificationPublisher.class, jsonNotificationPublisher.getUuid());
             if (existingPublisher != null) {
-                if(existingPublisher.isDefaultPublisher()) {
+                if (existingPublisher.isDefaultPublisher()) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("The modification of a default publisher is forbidden").build();
                 }
 
-                if(!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
+                if (!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
                     NotificationPublisher existingNotificationPublisherWithModifiedName = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-                    if(existingNotificationPublisherWithModifiedName != null) {
-                        return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '"+existingNotificationPublisherWithModifiedName.getName()+"' already exist").build();
+                    if (existingNotificationPublisherWithModifiedName != null) {
+                        return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '" + existingNotificationPublisherWithModifiedName.getName() + "' already exist").build();
                     }
                 }
                 existingPublisher.setName(jsonNotificationPublisher.getName());
@@ -174,7 +177,7 @@ public class NotificationPublisherResource extends AlpineResource {
                         clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
                     existingPublisher.setPublisherClass(jsonNotificationPublisher.getPublisherClass());
                 } else {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class "+jsonNotificationPublisher.getPublisherClass()+" is not valid.").build();
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
                 }
                 existingPublisher.setTemplate(jsonNotificationPublisher.getTemplate());
                 existingPublisher.setTemplateMimeType(jsonNotificationPublisher.getTemplateMimeType());
@@ -193,7 +196,8 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a notification publisher and all related notification rules",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Deleting a default notification publisher is forbidden"),
@@ -206,7 +210,7 @@ public class NotificationPublisherResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
             if (notificationPublisher != null) {
-                if(notificationPublisher.isDefaultPublisher()) {
+                if (notificationPublisher.isDefaultPublisher()) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("Deleting a default notification publisher is forbidden.").build();
                 } else {
                     qm.deleteNotificationPublisher(notificationPublisher);
@@ -223,7 +227,8 @@ public class NotificationPublisherResource extends AlpineResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
-            value = "Restore the default notification publisher templates using the ones in the solution classpath"
+            value = "Restore the default notification publisher templates using the ones in the solution classpath",
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")

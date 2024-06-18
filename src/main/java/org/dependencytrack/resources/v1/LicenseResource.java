@@ -122,7 +122,8 @@ public class LicenseResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Creates a new custom license",
-            response = License.class
+            response = License.class,
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -137,7 +138,7 @@ public class LicenseResource extends AlpineResource {
         );
         try (QueryManager qm = new QueryManager()) {
             License license = qm.getLicense(jsonLicense.getLicenseId());
-            if (license == null){
+            if (license == null) {
                 license = qm.createCustomLicense(jsonLicense, true);
                 LOGGER.info("License " + license.getName() + " created by " + super.getPrincipal().getName());
                 return Response.status(Response.Status.CREATED).entity(license).build();
@@ -152,7 +153,8 @@ public class LicenseResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Deletes a custom license",
-            code = 204
+            code = 204,
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
