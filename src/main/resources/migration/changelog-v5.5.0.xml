@@ -151,4 +151,11 @@
             DROP FUNCTION IF EXISTS "CALC_SEVERITY"(VARCHAR, VARCHAR, NUMERIC, NUMERIC);
         </sql>
     </changeSet>
+
+    <changeSet id="v5.5.0-12" author="sahibamittal">
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="GROUPNAME" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="PROPERTYNAME" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="PROPERTYVALUE" newDataType="VARCHAR(1024)"/>
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="DESCRIPTION" newDataType="VARCHAR(255)"/>
+    </changeSet>
 </databaseChangeLog>

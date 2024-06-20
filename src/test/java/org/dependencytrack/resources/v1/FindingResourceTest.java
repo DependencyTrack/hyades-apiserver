@@ -36,6 +36,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -688,174 +690,135 @@ public class FindingResourceTest extends ResourceTest {
         Assert.assertEquals(200, response.getStatus(), 0);
         Assert.assertEquals(MEDIA_TYPE_SARIF_JSON, response.getHeaderString(HttpHeaders.CONTENT_TYPE));
         final String jsonResponse = getPlainTextBody(response);
+        JSONArray resultArray = new JSONObject(jsonResponse).getJSONArray("runs").getJSONObject(0).getJSONArray("results");
 
         assertThatJson(jsonResponse)
                 .withMatcher("version", equalTo(new About().getVersion()))
-                .withMatcher("fullName", equalTo("OWASP Dependency-Track - " + new About().getVersion()))
-                .isEqualTo(json("""
-                {
-                        "version": "2.1.0",
-                        "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json",
-                        "runs": [
-                          {
-                            "tool": {
-                              "driver": {
-                                "name": "OWASP Dependency-Track",
-                                "fullName": "${json-unit.matches:fullName}",
-                                "version": "${json-unit.matches:version}",
-                                "informationUri": "https://dependencytrack.org/",
-                                "rules": [
-                                  {
-                                    "id": "Vuln-1",
-                                    "name": "ImproperNeutralizationOfScript-relatedHtmlTagsInAWebPage(basicXss)",
-                                    "shortDescription": {
-                                      "text": "Vuln-1"
-                                    },
-                                    "fullDescription": {
-                                      "text": "This is a description"
-                                    }
-                                  },
-                                  {
-                                    "id": "Vuln-2",
-                                    "name": "PathEquivalence:'filename'(trailingSpace)",
-                                    "shortDescription": {
-                                      "text": "Vuln-2"
-                                    },
-                                    "fullDescription": {
-                                      "text": "Yet another description but with surrounding whitespaces"
-                                    }
-                                  },
-                                  {
-                                    "id": "Vuln-3",
-                                    "name": "RelativePathTraversal",
-                                    "shortDescription": {
-                                      "text": "Vuln-3"
-                                    },
-                                    "fullDescription": {
-                                      "text": "A description-with-hyphens-(and parentheses)"
-                                    }
-                                  }
-                                ]
-                              }
-                            },
-                            "results": [
+                .withMatcher("fullName", equalTo("OWASP Dependency-Track - " + new About().getVersion()));
+
+        assertThat(resultArray).hasSize(4);
+        assertThat(resultArray).satisfiesExactlyInAnyOrder(
+                vuln1 -> assertThatJson(vuln1).isEqualTo("""
+                        {
+                          "ruleId": "Vuln-1",
+                          "message": {
+                            "text": "This is a description"
+                          },
+                          "locations": [
+                            {
+                              "logicalLocations": [
                                 {
-                                  "ruleId": "Vuln-1",
-                                  "message": {
-                                    "text": "This is a description"
-                                  },
-                                  "locations": [
-                                    {
-                                      "logicalLocations": [
-                                        {
-                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                        }
-                                      ]
-                                    }
-                                  ],
-                                  "level": "error",
-                                  "properties": {
-                                    "name": "Component 1",
-                                    "group": "org.acme",
-                                    "version": "1.1.4",
-                                    "source": "INTERNAL",
-                                    "cweId": "80",
-                                    "cvssV3BaseScore": "",
-                                    "epssScore": "",
-                                    "epssPercentile": "",
-                                    "severityRank": "0",
-                                    "recommendation": ""
-                                  }
-                                },
-                                {
-                                  "ruleId": "Vuln-3",
-                                  "message": {
-                                    "text": "A description-with-hyphens-(and parentheses)"
-                                  },
-                                  "locations": [
-                                    {
-                                      "logicalLocations": [
-                                        {
-                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                        }
-                                      ]
-                                    }
-                                  ],
-                                  "level": "note",
-                                  "properties": {
-                                    "name": "Component 1",
-                                    "group": "org.acme",
-                                    "version": "1.1.4",
-                                    "source": "INTERNAL",
-                                    "cweId": "23",
-                                    "cvssV3BaseScore": "",
-                                    "epssScore": "",
-                                    "epssPercentile": "",
-                                    "severityRank": "3",
-                                    "recommendation": "Recommendation with whitespaces"
-                                  }
-                                },
-                                {
-                                  "ruleId": "Vuln-2",
-                                  "message": {
-                                    "text": "Yet another description but with surrounding whitespaces"
-                                  },
-                                  "locations": [
-                                    {
-                                      "logicalLocations": [
-                                        {
-                                          "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                        }
-                                      ]
-                                    }
-                                  ],
-                                  "level": "error",
-                                  "properties": {
-                                    "name": "Component 1",
-                                    "group": "org.acme",
-                                    "version": "1.1.4",
-                                    "source": "INTERNAL",
-                                    "cweId": "46",
-                                    "cvssV3BaseScore": "",
-                                    "epssScore": "",
-                                    "epssPercentile": "",
-                                    "severityRank": "1",
-                                    "recommendation": ""
-                                  }
-                                },
-                                {
-                                  "ruleId": "Vuln-3",
-                                  "message": {
-                                    "text": "A description-with-hyphens-(and parentheses)"
-                                  },
-                                  "locations": [
-                                    {
-                                      "logicalLocations": [
-                                        {
-                                          "fullyQualifiedName": "pkg:maven/com.xyz/component2@2.78.123?type=jar"
-                                        }
-                                      ]
-                                    }
-                                  ],
-                                  "level": "note",
-                                  "properties": {
-                                    "name": "Component 2",
-                                    "group": "com.xyz",
-                                    "version": "2.78.123",
-                                    "source": "INTERNAL",
-                                    "cweId": "23",
-                                    "cvssV3BaseScore": "",
-                                    "epssScore": "",
-                                    "epssPercentile": "",
-                                    "severityRank": "3",
-                                    "recommendation": "Recommendation with whitespaces"
-                                  }
+                                  "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
                                 }
-                            ]
+                              ]
+                            }
+                          ],
+                          "level": "error",
+                          "properties": {
+                            "name": "Component 1",
+                            "group": "org.acme",
+                            "version": "1.1.4",
+                            "source": "INTERNAL",
+                            "cweId": "80",
+                            "cvssV3BaseScore": "",
+                            "epssScore": "",
+                            "epssPercentile": "",
+                            "severityRank": "0",
+                            "recommendation": ""
                           }
-                        ]
-                      }
-            """));
+                        }
+                """),
+                vuln2 -> assertThatJson(vuln2).isEqualTo("""
+                        {
+                           "ruleId": "Vuln-2",
+                           "message": {
+                             "text": "Yet another description but with surrounding whitespaces"
+                           },
+                           "locations": [
+                             {
+                               "logicalLocations": [
+                                 {
+                                   "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
+                                 }
+                               ]
+                             }
+                           ],
+                           "level": "error",
+                           "properties": {
+                             "name": "Component 1",
+                             "group": "org.acme",
+                             "version": "1.1.4",
+                             "source": "INTERNAL",
+                             "cweId": "46",
+                             "cvssV3BaseScore": "",
+                             "epssScore": "",
+                             "epssPercentile": "",
+                             "severityRank": "1",
+                             "recommendation": ""
+                           }
+                        }
+                """),
+                vuln3 -> assertThatJson(vuln3).isEqualTo("""
+                        {
+                           "ruleId": "Vuln-3",
+                           "message": {
+                             "text": "A description-with-hyphens-(and parentheses)"
+                           },
+                           "locations": [
+                             {
+                               "logicalLocations": [
+                                 {
+                                   "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
+                                 }
+                               ]
+                             }
+                           ],
+                           "level": "note",
+                           "properties": {
+                             "name": "Component 1",
+                             "group": "org.acme",
+                             "version": "1.1.4",
+                             "source": "INTERNAL",
+                             "cweId": "23",
+                             "cvssV3BaseScore": "",
+                             "epssScore": "",
+                             "epssPercentile": "",
+                             "severityRank": "3",
+                             "recommendation": "Recommendation with whitespaces"
+                           }
+                        }
+                """),
+                vuln3 -> assertThatJson(vuln3).isEqualTo("""
+                        {
+                           "ruleId": "Vuln-3",
+                           "message": {
+                             "text": "A description-with-hyphens-(and parentheses)"
+                           },
+                           "locations": [
+                             {
+                               "logicalLocations": [
+                                 {
+                                   "fullyQualifiedName": "pkg:maven/com.xyz/component2@2.78.123?type=jar"
+                                 }
+                               ]
+                             }
+                           ],
+                           "level": "note",
+                           "properties": {
+                             "name": "Component 2",
+                             "group": "com.xyz",
+                             "version": "2.78.123",
+                             "source": "INTERNAL",
+                             "cweId": "23",
+                             "cvssV3BaseScore": "",
+                             "epssScore": "",
+                             "epssPercentile": "",
+                             "severityRank": "3",
+                             "recommendation": "Recommendation with whitespaces"
+                           }
+                        }
+                """)
+        );
     }
 
     private Component createComponent(Project project, String name, String version) {

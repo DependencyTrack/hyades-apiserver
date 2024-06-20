@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.MoreObjects;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.EnumValue;
 
 import javax.jdo.annotations.Column;
@@ -35,6 +36,7 @@ import javax.jdo.annotations.Unique;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -67,6 +69,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
 
     @Persistent
     @Column(name = "GROUPNAME")
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The groupName must not contain control characters")
     private String groupName;
@@ -74,12 +77,14 @@ public class ComponentProperty implements IConfigProperty, Serializable {
     @Persistent
     @Column(name = "PROPERTYNAME", allowsNull = "false")
     @NotBlank
+    @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The propertyName must not contain control characters")
     private String propertyName;
 
     @Persistent
-    @Column(name = "PROPERTYVALUE")
+    @Column(name = "PROPERTYVALUE", length = 1024)
+    @Size(max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The propertyValue must not contain control characters")
     private String propertyValue;
@@ -98,6 +103,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
 
     @Persistent
     @Column(name = "DESCRIPTION")
+    @Size(max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = "\\P{Cc}+", message = "The description must not contain control characters")
     private String description;
@@ -145,7 +151,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
     }
 
     public void setPropertyValue(final String propertyValue) {
-        this.propertyValue = propertyValue;
+        this.propertyValue = StringUtils.abbreviate(propertyValue, 1024);
     }
 
     public PropertyType getPropertyType() {
