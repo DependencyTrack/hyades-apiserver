@@ -80,18 +80,6 @@ import java.util.UUID;
         @FetchGroup(name = "IDENTITY", members = {
                 @Persistent(name = "id"),
                 @Persistent(name = "uuid")
-        }),
-        @FetchGroup(name = "INTERNAL_IDENTIFICATION", members = {
-                @Persistent(name = "id"),
-                @Persistent(name = "group"),
-                @Persistent(name = "name"),
-                @Persistent(name = "internal"),
-                @Persistent(name = "uuid")
-        }),
-        @FetchGroup(name = "METRICS_UPDATE", members = {
-                @Persistent(name = "id"),
-                @Persistent(name = "lastInheritedRiskScore"),
-                @Persistent(name = "uuid")
         })
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -104,9 +92,7 @@ public class Component implements Serializable {
      */
     public enum FetchGroup {
         ALL,
-        IDENTITY,
-        INTERNAL_IDENTIFICATION,
-        METRICS_UPDATE
+        IDENTITY
     }
 
     @PrimaryKey
