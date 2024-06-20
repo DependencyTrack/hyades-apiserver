@@ -43,6 +43,10 @@ import static alpine.Config.AlpineKey.DATABASE_USERNAME;
 import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_COMPACT;
 import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_CONFIG;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_ENABLED;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
 /**
@@ -52,58 +56,70 @@ public class DevServicesInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(DevServicesInitializer.class);
 
-    // TODO: Consider making these configurable.
-    private static final String POSTGRES_IMAGE = "postgres:16-alpine";
-    private static final String REDPANDA_IMAGE = "docker.redpanda.com/vectorized/redpanda:v24.1.7";
-    private static final String FRONTEND_IMAGE = "ghcr.io/dependencytrack/hyades-frontend:snapshot";
-
     private AutoCloseable postgresContainer;
-    private AutoCloseable redpandaContainer;
+    private AutoCloseable kafkaContainer;
     private AutoCloseable frontendContainer;
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!"true".equals(System.getProperty("dev.services.enabled"))) {
+        if (!"true".equals(getProperty(DEV_SERVICES_ENABLED))) {
             return;
+        }
+
+        try {
+            // Testcontainers will not be available outside the test scope,
+            // except when running via the dev-services Maven profile.
+            Class.forName("org.testcontainers.Testcontainers");
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Dev services are not available for production builds");
         }
 
         final String postgresJdbcUrl;
         final String postgresUsername;
         final String postgresPassword;
-        final String redpandaBootstrapServers;
+        final String kafkaBootstrapServers;
         final Integer postgresPort;
-        final Integer redpandaPort;
+        final Integer kafkaPort;
         final Integer frontendPort;
         try {
             final Class<?> startablesClass = Class.forName("org.testcontainers.lifecycle.Startables");
             final Method deepStartMethod = startablesClass.getDeclaredMethod("deepStart", Collection.class);
 
+            final Class<?> imagePullPolicyClass = Class.forName("org.testcontainers.images.ImagePullPolicy");
+            final Class<?> pullPolicyClass = Class.forName("org.testcontainers.images.PullPolicy");
+            final Object alwaysPullPolicy = pullPolicyClass.getDeclaredMethod("alwaysPull").invoke(null);
+
             final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
-            postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(POSTGRES_IMAGE);
+            postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
 
-            final Class<?> redpandaContainerClass = Class.forName("org.testcontainers.redpanda.RedpandaContainer");
-            final Constructor<?> redpandaContainerConstructor = redpandaContainerClass.getDeclaredConstructor(String.class);
-            redpandaContainer = (AutoCloseable) redpandaContainerConstructor.newInstance(REDPANDA_IMAGE);
+            // TODO: Detect when Apache Kafka is requested vs. when Redpanda is requested,
+            //   and pick the corresponding Testcontainers class accordingly.
+            final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.redpanda.RedpandaContainer");
+            final Constructor<?> kafkaContainerConstructor = kafkaContainerClass.getDeclaredConstructor(String.class);
+            kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_KAFKA));
 
             final Class<?> frontendContainerClass = Class.forName("org.testcontainers.containers.GenericContainer");
             final Constructor<?> frontendContainerConstructor = frontendContainerClass.getDeclaredConstructor(String.class);
-            frontendContainer = (AutoCloseable) frontendContainerConstructor.newInstance(FRONTEND_IMAGE);
+            frontendContainer = (AutoCloseable) frontendContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_FRONTEND));
             frontendContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
             frontendContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
+            if (Config.getInstance().getProperty(DEV_SERVICES_IMAGE_FRONTEND).endsWith(":snapshot")) {
+                frontendContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
+            }
 
-            LOGGER.info("Starting PostgreSQL, Redpanda, and frontend containers");
-            final var deepStartFuture = (CompletableFuture<?>) deepStartMethod.invoke(null, List.of(postgresContainer, redpandaContainer, frontendContainer));
+            LOGGER.info("Starting PostgreSQL, Kafka, and frontend containers");
+            final var deepStartFuture = (CompletableFuture<?>) deepStartMethod.invoke(null, List.of(postgresContainer, kafkaContainer, frontendContainer));
             deepStartFuture.join();
 
             postgresJdbcUrl = (String) postgresContainerClass.getDeclaredMethod("getJdbcUrl").invoke(postgresContainer);
             postgresUsername = (String) postgresContainerClass.getDeclaredMethod("getUsername").invoke(postgresContainer);
             postgresPassword = (String) postgresContainerClass.getDeclaredMethod("getPassword").invoke(postgresContainer);
-            redpandaBootstrapServers = (String) redpandaContainerClass.getDeclaredMethod("getBootstrapServers").invoke(redpandaContainer);
+            kafkaBootstrapServers = (String) kafkaContainerClass.getDeclaredMethod("getBootstrapServers").invoke(kafkaContainer);
 
             final Class<?> containerStateClass = Class.forName("org.testcontainers.containers.ContainerState");
             postgresPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(postgresContainer, 5432);
-            redpandaPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(redpandaContainer, 9092);
+            kafkaPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(kafkaContainer, 9092);
             frontendPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(frontendContainer, 8080);
         } catch (Exception e) {
             throw new RuntimeException("Failed to launch containers", e);
@@ -120,7 +136,7 @@ public class DevServicesInitializer implements ServletContextListener {
         configOverrides.put(DATABASE_URL.getPropertyName(), postgresJdbcUrl);
         configOverrides.put(DATABASE_USERNAME.getPropertyName(), postgresUsername);
         configOverrides.put(DATABASE_PASSWORD.getPropertyName(), postgresPassword);
-        configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), redpandaBootstrapServers);
+        configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), kafkaBootstrapServers);
 
         try {
             LOGGER.info("Applying config overrides: %s".formatted(configOverrides));
@@ -157,7 +173,7 @@ public class DevServicesInitializer implements ServletContextListener {
                 new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED.name(), 1, (short) 1)
         ));
 
-        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, redpandaBootstrapServers))) {
+        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers))) {
             LOGGER.info("Creating topics: %s".formatted(topicsToCreate));
             adminClient.createTopics(topicsToCreate).all().get();
         } catch (ExecutionException | InterruptedException e) {
@@ -165,7 +181,7 @@ public class DevServicesInitializer implements ServletContextListener {
         }
 
         LOGGER.info("PostgreSQL is listening at localhost:%d".formatted(postgresPort));
-        LOGGER.info("Redpanda is listening at localhost:%d".formatted(redpandaPort));
+        LOGGER.info("Kafka is listening at localhost:%d".formatted(kafkaPort));
         LOGGER.info("Frontend is listening at http://localhost:%d".formatted(frontendPort));
     }
 
@@ -179,12 +195,12 @@ public class DevServicesInitializer implements ServletContextListener {
                 LOGGER.error("Failed to stop PostgreSQL container", e);
             }
         }
-        if (redpandaContainer != null) {
-            LOGGER.info("Stopping redpanda container");
+        if (kafkaContainer != null) {
+            LOGGER.info("Stopping Kafka container");
             try {
-                redpandaContainer.close();
+                kafkaContainer.close();
             } catch (Exception e) {
-                LOGGER.error("Failed to stop Redpanda container", e);
+                LOGGER.error("Failed to stop Kafka container", e);
             }
         }
         if (frontendContainer != null) {
@@ -195,6 +211,19 @@ public class DevServicesInitializer implements ServletContextListener {
                 LOGGER.error("Failed to stop frontend container", e);
             }
         }
+    }
+
+    private static String getProperty(final Config.Key configKey) {
+        // Allow configs to be set via system properties, and fall
+        // back to the usual Config mechanism otherwise.
+        // Since setting environment variables via Maven profiles is
+        // not possible, system properties provide a better UX over
+        // manually editing application.properties, or manually setting
+        // environment variables.
+        return System.getProperty(
+                configKey.getPropertyName(),
+                Config.getInstance().getProperty(configKey)
+        );
     }
 
 }
