@@ -18,15 +18,6 @@
  */
 package org.dependencytrack.persistence.migration.change.v550;
 
-import liquibase.Liquibase;
-import liquibase.Scope;
-import liquibase.command.CommandScope;
-import liquibase.command.core.UpdateCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
-import liquibase.database.Database;
-import liquibase.database.DatabaseFactory;
-import liquibase.database.jvm.JdbcConnection;
-import liquibase.resource.ClassLoaderResourceAccessor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,10 +27,10 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.Collections;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.migration.MigrationInitializer.runMigration;
 
 public class ComputeSeveritiesChangeTest {
 
@@ -86,15 +77,7 @@ public class ComputeSeveritiesChangeTest {
 
         assertThat(hasVulnsWithoutSeverity(dataSource.getConnection())).isTrue();
 
-        Scope.child(Collections.emptyMap(), () -> {
-            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/custom/ComputeSeveritiesChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
-
-            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-            updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
-            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-            updateCommand.execute();
-        });
+        runMigration(dataSource, "migration/custom/ComputeSeveritiesChangeTest-changelog.xml");
 
         assertThat(hasVulnsWithoutSeverity(dataSource.getConnection())).isFalse();
     }

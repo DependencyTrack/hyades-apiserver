@@ -24,14 +24,16 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import liquibase.Liquibase;
 import liquibase.Scope;
+import liquibase.UpdateSummaryOutputEnum;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
+import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
+import liquibase.command.core.helpers.ShowSummaryArgument;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
-import liquibase.logging.core.NoOpLogService;
 import liquibase.resource.ClassLoaderResourceAccessor;
+import liquibase.ui.LoggerUIService;
 import org.dependencytrack.common.ConfigKey;
 
 import javax.servlet.ServletContextEvent;
@@ -64,25 +66,29 @@ public class MigrationInitializer implements ServletContextListener {
 
         LOGGER.info("Running migrations");
         try (final HikariDataSource dataSource = createDataSource()) {
-            runMigration(dataSource, false);
+            runMigration(dataSource);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }
     }
 
-    public static void runMigration(final DataSource dataSource, final boolean silent) throws Exception {
+    public static void runMigration(final DataSource dataSource) throws Exception {
+        runMigration(dataSource, "migration/changelog-main.xml");
+    }
+
+    public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
         final var scopeAttributes = new HashMap<String, Object>();
-        if (silent) {
-            scopeAttributes.put(Scope.Attr.logService.name(), new NoOpLogService());
-        }
+        scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
+        scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
 
         Scope.child(scopeAttributes, () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/changelog-main.xml", new ClassLoaderResourceAccessor(), database);
+            final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
 
             final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-            updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
+            updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
             updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+            updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
             updateCommand.execute();
         });
     }

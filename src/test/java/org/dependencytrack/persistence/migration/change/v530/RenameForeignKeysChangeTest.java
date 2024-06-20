@@ -18,15 +18,7 @@
  */
 package org.dependencytrack.persistence.migration.change.v530;
 
-import liquibase.Liquibase;
-import liquibase.Scope;
-import liquibase.command.CommandScope;
-import liquibase.command.core.UpdateCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
-import liquibase.database.Database;
-import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
-import liquibase.resource.ClassLoaderResourceAccessor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,9 +26,8 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.Collections;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.migration.MigrationInitializer.runMigration;
 import static org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange.getForeignNameMappings;
 
 public class RenameForeignKeysChangeTest {
@@ -65,15 +56,7 @@ public class RenameForeignKeysChangeTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        Scope.child(Collections.emptyMap(), () -> {
-            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase("migration/custom/RenameForeignKeysChangeTest-changelog.xml", new ClassLoaderResourceAccessor(), database);
-
-            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-            updateCommand.addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, liquibase.getDatabase());
-            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-            updateCommand.execute();
-        });
+        runMigration(dataSource, "migration/custom/RenameForeignKeysChangeTest-changelog.xml");
 
         assertThat(getForeignNameMappings(new JdbcConnection(dataSource.getConnection()))).isEmpty();
     }
