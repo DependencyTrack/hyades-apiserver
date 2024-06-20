@@ -145,9 +145,10 @@
     <changeSet id="v5.5.0-11" author="nscuro">
         <customChange class="org.dependencytrack.persistence.migration.change.v550.ComputeSeveritiesChange"/>
         <sql splitStatements="true">
-            DROP FUNCTION IF EXISTS "CVSSV2_TO_SEVERITY";
-            DROP FUNCTION IF EXISTS "CVSSV3_TO_SEVERITY";
-            DROP FUNCTION IF EXISTS "CALC_SEVERITY";
+            DROP FUNCTION IF EXISTS "CVSSV2_TO_SEVERITY"(NUMERIC);
+            DROP FUNCTION IF EXISTS "CVSSV3_TO_SEVERITY"(NUMERIC);
+            DROP FUNCTION IF EXISTS "CALC_SEVERITY"(VARCHAR, NUMERIC, NUMERIC);
+            DROP FUNCTION IF EXISTS "CALC_SEVERITY"(VARCHAR, VARCHAR, NUMERIC, NUMERIC);
         </sql>
     </changeSet>
 </databaseChangeLog>
