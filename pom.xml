@@ -101,7 +101,7 @@
         <lib.kafka.version>3.7.0</lib.kafka.version>
         <lib.liquibase.version>4.28.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.10</lib.minio.version>
+        <lib.minio.version>8.5.11</lib.minio.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
