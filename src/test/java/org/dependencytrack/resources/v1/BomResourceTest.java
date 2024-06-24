@@ -861,18 +861,20 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(400, response.getStatus(), 0);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                {
-                  "status": 400,
-                  "title": "The uploaded BOM is invalid",
-                  "detail": "Schema validation failed",
-                  "errors": [
-                    "$.version: is missing but it is required",
-                    "$.components[0].type: is missing but it is required",
-                    "$.components[0].name: is missing but it is required"
-                  ]
-                }
-                """);
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo("""
+                        {
+                          "status": 400,
+                          "title": "The uploaded BOM is invalid",
+                          "detail": "Schema validation failed",
+                          "errors": [
+                            "$: required property 'version' not found",
+                            "$.components[0]: required property 'type' not found",
+                            "$.components[0]: required property 'name' not found"
+                          ]
+                        }
+                        """);
     }
 
     @Test

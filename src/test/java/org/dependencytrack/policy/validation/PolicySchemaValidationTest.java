@@ -63,7 +63,7 @@ public class PolicySchemaValidationTest {
                 error -> assertThat(error.getMessage()).isEqualTo("$.ratings[0].severity: does not have a value in the enumeration [CRITICAL, HIGH, MEDIUM, LOW, INFO, UNASSIGNED]"),
                 error -> assertThat(error.getMessage()).contains("$.ratings[0].vector: does not match the regex pattern"),
                 error -> assertThat(error.getMessage()).isEqualTo("$.ratings[0].score: string found, number expected"),
-                error -> assertThat(error.getMessage()).isEqualTo("$.operationMode: is missing but it is required")
+                error -> assertThat(error.getMessage()).isEqualTo("$: required property 'operationMode' not found")
         );
     }
 }
