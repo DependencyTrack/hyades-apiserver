@@ -158,4 +158,10 @@
         <modifyDataType tableName="COMPONENT_PROPERTY" columnName="PROPERTYVALUE" newDataType="VARCHAR(1024)"/>
         <modifyDataType tableName="COMPONENT_PROPERTY" columnName="DESCRIPTION" newDataType="VARCHAR(255)"/>
     </changeSet>
+
+    <changeSet id="v5.5.0-13" author="nscuro">
+        <sql>UPDATE "PROJECT" SET "ACTIVE" = TRUE WHERE "ACTIVE" IS NULL</sql>
+        <addDefaultValue tableName="PROJECT" columnName="ACTIVE" defaultValueBoolean="true"/>
+        <addNotNullConstraint tableName="PROJECT" columnName="ACTIVE"/>
+    </changeSet>
 </databaseChangeLog>

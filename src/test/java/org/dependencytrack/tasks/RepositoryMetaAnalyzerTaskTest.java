@@ -85,19 +85,6 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentProjectE.setInternal(true);
         qm.persist(componentProjectE);
 
-        // Create an active project where the active flag is `null`.
-        // We only consider projects to be inactive when the active flag is set to `false` explicitly.
-        final var projectF = qm.createProject("acme-app-f", null, "6.0.0", null, null, null, true, false);
-        projectF.setActive(null);
-        qm.persist(projectF);
-        final var componentProjectF = new Component();
-        componentProjectF.setProject(projectF);
-        componentProjectF.setName("acme-lib-f");
-        componentProjectF.setVersion("6.0.1");
-        componentProjectF.setPurl("pkg:maven/acme/acme-lib-f@6.0.1?fizz=buzz");
-        componentProjectF.setPurlCoordinates("pkg:maven/acme/acme-lib-f@6.0.1");
-        qm.persist(componentProjectF);
-
         new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
@@ -106,7 +93,6 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectD
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectE
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectF
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
@@ -121,12 +107,6 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
                     assertThat(command.getComponent().getInternal()).isTrue();
-                },
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-f@6.0.1");
-                    assertThat(command.getComponent().getInternal()).isFalse();
                 }
         );
     }

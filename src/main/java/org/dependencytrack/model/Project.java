@@ -283,7 +283,7 @@ public class Project implements Serializable {
     @Persistent
     @Column(name = "ACTIVE")
     @JsonSerialize(nullsUsing = BooleanDefaultTrueSerializer.class)
-    private Boolean active; // Added in v3.6. Existing records need to be nullable on upgrade.
+    private boolean active = true;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
     @Join(column = "PROJECT_ID")
@@ -506,11 +506,11 @@ public class Project implements Serializable {
         this.externalReferences = externalReferences;
     }
 
-    public Boolean isActive() {
+    public boolean isActive() {
         return active;
     }
 
-    public void setActive(Boolean active) {
+    public void setActive(boolean active) {
         this.active = active;
     }
 
