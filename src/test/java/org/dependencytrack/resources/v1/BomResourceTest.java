@@ -1029,8 +1029,8 @@ public class BomResourceTest extends ResourceTest {
 
     @SuppressWarnings("unused")
     private Object[] uploadBomSchemaValidationTestParameters() throws Exception {
-        final PathMatcher pathMatcherJson = FileSystems.getDefault().getPathMatcher("glob:**/bom-schema*.json");
-        final PathMatcher pathMatcherXml = FileSystems.getDefault().getPathMatcher("glob:**/bom-schema*.xml");
+        final PathMatcher pathMatcherJson = FileSystems.getDefault().getPathMatcher("glob:**/valid-bom-*.json");
+        final PathMatcher pathMatcherXml = FileSystems.getDefault().getPathMatcher("glob:**/valid-bom-*.xml");
         final var bomFilePaths = new ArrayList<Path>();
 
         Files.walkFileTree(Paths.get("./src/test/resources"), new SimpleFileVisitor<>() {
