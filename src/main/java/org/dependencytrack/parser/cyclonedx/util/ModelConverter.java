@@ -32,6 +32,7 @@ import org.cyclonedx.model.LicenseChoice;
 import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Swid;
 import org.cyclonedx.model.Tool;
+import org.cyclonedx.model.license.Expression;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -226,9 +227,9 @@ public class ModelConverter {
         }
 
         final var licenseCandidates = new ArrayList<org.cyclonedx.model.License>();
-        if (cdxComponent.getLicenseChoice() != null) {
-            if (cdxComponent.getLicenseChoice().getLicenses() != null) {
-                cdxComponent.getLicenseChoice().getLicenses().stream()
+        if (cdxComponent.getLicenses() != null) {
+            if (cdxComponent.getLicenses().getLicenses() != null) {
+                cdxComponent.getLicenses().getLicenses().stream()
                         .filter(license -> isNotBlank(license.getId()) || isNotBlank(license.getName()))
                         .peek(license -> {
                             // License text can be large, but we don't need it for further processing. Drop it.
@@ -237,12 +238,13 @@ public class ModelConverter {
                         .forEach(licenseCandidates::add);
             }
 
-            if (isNotBlank(cdxComponent.getLicenseChoice().getExpression())) {
+            final Expression licenseExpression = cdxComponent.getLicenses().getExpression();
+            if (licenseExpression != null && isNotBlank(licenseExpression.getValue())) {
                 // If the expression consists of just one license ID, add it as another option.
                 final var expressionParser = new SpdxExpressionParser();
-                final SpdxExpression expression = expressionParser.parse(cdxComponent.getLicenseChoice().getExpression());
+                final SpdxExpression expression = expressionParser.parse(licenseExpression.getValue());
                 if (!SpdxExpression.INVALID.equals(expression)) {
-                    component.setLicenseExpression(trim(cdxComponent.getLicenseChoice().getExpression()));
+                    component.setLicenseExpression(trim(licenseExpression.getValue()));
 
                     if (expression.getSpdxLicenseId() != null) {
                         final var expressionLicense = new org.cyclonedx.model.License();
@@ -254,7 +256,7 @@ public class ModelConverter {
                     LOGGER.warn("""
                             Encountered invalid license expression "%s" for \
                             Component{group=%s, name=%s, version=%s, bomRef=%s}; Skipping\
-                            """.formatted(cdxComponent.getLicenseChoice().getExpression(), component.getGroup(),
+                            """.formatted(cdxComponent.getLicenses().getExpression(), component.getGroup(),
                             component.getName(), component.getVersion(), component.getBomRef()));
                 }
             }
@@ -626,28 +628,30 @@ public class ModelConverter {
             cycloneComponent.addHash(new Hash(Hash.Algorithm.SHA3_512, component.getSha3_512()));
         }
 
-        final LicenseChoice licenseChoice = new LicenseChoice();
+        final LicenseChoice licenses = new LicenseChoice();
         if (component.getResolvedLicense() != null) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setId(component.getResolvedLicense().getLicenseId());
             license.setUrl(component.getLicenseUrl());
-            licenseChoice.addLicense(license);
-            cycloneComponent.setLicenseChoice(licenseChoice);
+            licenses.addLicense(license);
+            cycloneComponent.setLicenses(licenses);
         } else if (component.getLicense() != null) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setName(component.getLicense());
             license.setUrl(component.getLicenseUrl());
-            licenseChoice.addLicense(license);
-            cycloneComponent.setLicenseChoice(licenseChoice);
+            licenses.addLicense(license);
+            cycloneComponent.setLicenses(licenses);
         } else if (StringUtils.isNotEmpty(component.getLicenseUrl())) {
             final org.cyclonedx.model.License license = new org.cyclonedx.model.License();
             license.setUrl(component.getLicenseUrl());
-            licenseChoice.addLicense(license);
-            cycloneComponent.setLicenseChoice(licenseChoice);
+            licenses.addLicense(license);
+            cycloneComponent.setLicenses(licenses);
         }
         if (component.getLicenseExpression() != null) {
-            licenseChoice.setExpression(component.getLicenseExpression());
-            cycloneComponent.setLicenseChoice(licenseChoice);
+            final var licenseExpression = new Expression();
+            licenseExpression.setValue(component.getLicenseExpression());
+            licenses.setExpression(licenseExpression);
+            cycloneComponent.setLicenses(licenses);
         }
 
         if (component.getExternalReferences() != null && !component.getExternalReferences().isEmpty()) {

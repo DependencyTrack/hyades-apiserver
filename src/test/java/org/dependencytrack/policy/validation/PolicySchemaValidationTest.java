@@ -42,7 +42,7 @@ public class PolicySchemaValidationTest {
         ObjectMapper objMapper = new ObjectMapper(new YAMLFactory());
         final String jsonSchemaContent = resourceToString("/schema/vulnerability-policy-v1.schema.json", StandardCharsets.UTF_8);
         final String policyContent = resourceToString("/unit/policy/vulnerability-policy-v1-valid.yaml", StandardCharsets.UTF_8);
-        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).objectMapper(objMapper).build();
+        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).jsonMapper(objMapper).build();
         JsonSchema schema = factory.getSchema(jsonSchemaContent);
         JsonNode jsonNode = objMapper.readTree(policyContent);
         Set<ValidationMessage> validateMsg = schema.validate(jsonNode);
@@ -54,7 +54,7 @@ public class PolicySchemaValidationTest {
         ObjectMapper objMapper = new ObjectMapper(new YAMLFactory());
         final String jsonSchemaContent = resourceToString("/schema/vulnerability-policy-v1.schema.json", StandardCharsets.UTF_8);
         final String policyContent = resourceToString("/unit/policy/vulnerability-policy-v1-invalid.yaml", StandardCharsets.UTF_8);
-        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).objectMapper(objMapper).build();
+        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).jsonMapper(objMapper).build();
         JsonSchema schema = factory.getSchema(jsonSchemaContent);
         JsonNode jsonNode = objMapper.readTree(policyContent);
         Set<ValidationMessage> validateMsg = schema.validate(jsonNode);
@@ -63,7 +63,7 @@ public class PolicySchemaValidationTest {
                 error -> assertThat(error.getMessage()).isEqualTo("$.ratings[0].severity: does not have a value in the enumeration [CRITICAL, HIGH, MEDIUM, LOW, INFO, UNASSIGNED]"),
                 error -> assertThat(error.getMessage()).contains("$.ratings[0].vector: does not match the regex pattern"),
                 error -> assertThat(error.getMessage()).isEqualTo("$.ratings[0].score: string found, number expected"),
-                error -> assertThat(error.getMessage()).isEqualTo("$.operationMode: is missing but it is required")
+                error -> assertThat(error.getMessage()).isEqualTo("$: required property 'operationMode' not found")
         );
     }
 }

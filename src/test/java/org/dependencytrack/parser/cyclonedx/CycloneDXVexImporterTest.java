@@ -19,7 +19,7 @@
 package org.dependencytrack.parser.cyclonedx;
 
 import org.assertj.core.api.Assertions;
-import org.cyclonedx.BomParserFactory;
+import org.cyclonedx.parsers.BomParserFactory;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;

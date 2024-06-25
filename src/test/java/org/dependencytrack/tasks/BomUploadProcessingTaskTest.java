@@ -1300,7 +1300,21 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         componentProperty.setPropertyType(PropertyType.STRING);
         qm.persist(componentProperty);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-schema1.4.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("""
+                {
+                  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes()));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
