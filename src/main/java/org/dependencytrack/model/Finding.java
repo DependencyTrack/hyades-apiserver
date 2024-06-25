@@ -19,17 +19,12 @@
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.sql.Clob;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -185,16 +180,8 @@ public class Finding implements Serializable {
         optValue(vulnerability, "vulnId", o[8]);
         optValue(vulnerability, "title", o[9]);
         optValue(vulnerability, "subtitle", o[10]);
-        if (o[11] instanceof final Clob clob) {
-            optValue(vulnerability, "description", toString(clob));
-        } else {
-            optValue(vulnerability, "description", o[11]);
-        }
-        if (o[12] instanceof final Clob clob) {
-            optValue(vulnerability, "recommendation", toString(clob));
-        } else {
-            optValue(vulnerability, "recommendation", o[12]);
-        }
+        optValue(vulnerability, "description", o[11]);
+        optValue(vulnerability, "recommendation", o[12]);
         final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[16], (BigDecimal) o[17], (BigDecimal) o[18]);
         optValue(vulnerability, "cvssV2BaseScore", o[14]);
         optValue(vulnerability, "cvssV3BaseScore", o[15]);
@@ -308,18 +295,6 @@ public class Finding implements Serializable {
             uniqueAliases.add(map);
         }
         vulnerability.put("aliases",uniqueAliases);
-    }
-
-    private static String toString(final Clob clob) {
-        if (clob == null) {
-            return null;
-        }
-
-        try (final var reader = new BufferedReader(clob.getCharacterStream())) {
-            return IOUtils.toString(reader);
-        } catch (IOException | SQLException e) {
-            throw new RuntimeException("Failed to read CLOB value", e);
-        }
     }
 
 }
