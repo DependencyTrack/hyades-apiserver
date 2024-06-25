@@ -90,7 +90,7 @@ public class ProcessorManager implements AutoCloseable {
     private final Map<String, ManagedProcessor> managedProcessors = new LinkedHashMap<>();
     private final UUID instanceId;
     private final Config config;
-    private final AdminClient adminClient;
+    private AdminClient adminClient;
 
     public ProcessorManager() {
         this(UUID.randomUUID(), Config.getInstance());
@@ -99,7 +99,6 @@ public class ProcessorManager implements AutoCloseable {
     public ProcessorManager(final UUID instanceId, final Config config) {
         this.instanceId = instanceId;
         this.config = config;
-        this.adminClient = createAdminClient();
     }
 
     /**
@@ -165,8 +164,8 @@ public class ProcessorManager implements AutoCloseable {
                     ? HealthCheckResponse.Status.UP.name()
                     : HealthCheckResponse.Status.DOWN.name());
             if (isProcessorUp
-                && parallelConsumer instanceof final ParallelEoSStreamProcessor<?, ?> concreteParallelConsumer
-                && concreteParallelConsumer.getFailureCause() != null) {
+                    && parallelConsumer instanceof final ParallelEoSStreamProcessor<?, ?> concreteParallelConsumer
+                    && concreteParallelConsumer.getFailureCause() != null) {
                 responseBuilder.withData("%s_failure_reason".formatted(processorName),
                         concreteParallelConsumer.getFailureCause().getMessage());
             }
@@ -198,7 +197,7 @@ public class ProcessorManager implements AutoCloseable {
         final List<String> topicNames = managedProcessors.values().stream().map(ManagedProcessor::topic).toList();
         LOGGER.info("Verifying existence of subscribed topics: %s".formatted(topicNames));
 
-        final DescribeTopicsResult topicsResult = adminClient.describeTopics(topicNames, new DescribeTopicsOptions().timeoutMs(3_000));
+        final DescribeTopicsResult topicsResult = adminClient().describeTopics(topicNames, new DescribeTopicsOptions().timeoutMs(3_000));
         final var exceptionsByTopicName = new HashMap<String, Throwable>();
         for (final Map.Entry<String, KafkaFuture<TopicDescription>> entry : topicsResult.topicNameValues().entrySet()) {
             final String topicName = entry.getKey();
@@ -225,7 +224,7 @@ public class ProcessorManager implements AutoCloseable {
 
     private int getTopicPartitionCount(final String topicName) {
         LOGGER.debug("Determining partition count of topic %s".formatted(topicName));
-        final DescribeTopicsResult topicsResult = adminClient.describeTopics(List.of(topicName), new DescribeTopicsOptions().timeoutMs(3_000));
+        final DescribeTopicsResult topicsResult = adminClient().describeTopics(List.of(topicName), new DescribeTopicsOptions().timeoutMs(3_000));
         final KafkaFuture<TopicDescription> topicDescriptionFuture = topicsResult.topicNameValues().get(topicName);
 
         try {
@@ -343,14 +342,19 @@ public class ProcessorManager implements AutoCloseable {
         return consumer;
     }
 
-    private AdminClient createAdminClient() {
+    private AdminClient adminClient() {
+        if (adminClient != null) {
+            return adminClient;
+        }
+
         final var adminClientConfig = new HashMap<String, Object>();
         adminClientConfig.put(BOOTSTRAP_SERVERS_CONFIG, config.getProperty(KAFKA_BOOTSTRAP_SERVERS));
         adminClientConfig.put(CLIENT_ID_CONFIG, "%s-admin-client".formatted(instanceId));
         adminClientConfig.putAll(getGlobalTlsConfig());
 
         LOGGER.debug("Creating admin client with options %s".formatted(adminClientConfig));
-        return AdminClient.create(adminClientConfig);
+        adminClient = AdminClient.create(adminClientConfig);
+        return adminClient;
     }
 
     private Map<String, Object> getGlobalTlsConfig() {

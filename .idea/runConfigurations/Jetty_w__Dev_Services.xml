@@ -1,17 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Jetty" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Jetty w/ Dev Services" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings">
         <MavenRunnerSettings>
           <option name="delegateBuildToMaven" value="false" />
           <option name="environmentProperties">
-            <map>
-              <entry key="ALPINE_DATABASE_PASSWORD" value="dtrack" />
-              <entry key="ALPINE_DATABASE_URL" value="jdbc:postgresql://localhost:5432/dtrack" />
-              <entry key="ALPINE_DATABASE_USERNAME" value="dtrack" />
-              <entry key="KAFKA_BOOTSTRAP_SERVERS" value="localhost:9092" />
-            </map>
+            <map />
           </option>
           <option name="jreName" value="#USE_PROJECT_JDK" />
           <option name="mavenProperties">
@@ -40,6 +35,7 @@
           <option name="pomFileName" />
           <option name="profilesMap">
             <map>
+              <entry key="dev-services" value="true" />
               <entry key="enhance" value="true" />
             </map>
           </option>
