@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.dependencytrack.util.PrincipalUtil.getPrincipalTeamIds;
+
 public class FindingsSearchQueryManager extends QueryManager implements IQueryManager {
 
     private static final Map<String, String> sortingAttributes = Map.ofEntries(
@@ -354,7 +356,7 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
             queryFilter.append(" AND ");
         }
 
-        final var teamIds = new ArrayList<>(getTeamIds(principal));
+        final var teamIds = new ArrayList<>(getPrincipalTeamIds(principal));
         if (teamIds.isEmpty()) {
             queryFilter.append(":false");
             params.put("false", false);
