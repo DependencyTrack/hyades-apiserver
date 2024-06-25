@@ -62,7 +62,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.substringAfter;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
@@ -399,8 +399,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             if (!compositeNodeFilter.hasInMemoryFilters()) {
                 final Query query = jdbiHandle.createQuery("""                     
                         WITH
@@ -471,8 +470,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             if (!compositeNodeFilter.hasInMemoryFilters()) {
                 final Query query = jdbiHandle.createQuery("""
                         -- Determine the project the given leaf component is part of.
@@ -647,8 +645,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             // If the component is a direct dependency of the project,
             // it can no longer be a dependency exclusively introduced
             // through another component.
