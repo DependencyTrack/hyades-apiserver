@@ -171,6 +171,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         if (apiRequest.getPrincipal() == null
             || !isAclEnabled(ctx)
             || hasAccessManagementPermission(ctx, apiRequest.getPrincipal())) {
+            ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }
 
