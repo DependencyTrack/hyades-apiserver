@@ -43,8 +43,11 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
+import org.dependencytrack.resources.v1.vo.ConciseProject;
 
 import javax.jdo.FetchGroup;
 import javax.validation.Validator;
@@ -70,6 +73,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
@@ -118,6 +122,80 @@ public class ProjectResource extends AlpineResource {
             final PaginatedResult result = (name != null) ? qm.getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam) : qm.getProjects(true, excludeInactive, onlyRoot, notAssignedToTeam);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
+    }
+
+    @GET
+    @Path("/concise")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Returns a list of all projects, in a concise representation.",
+            response = ConciseProject.class,
+            responseContainer = "List",
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
+            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(code = 401, message = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getProjectsConcise(
+            @ApiParam(value = "Name to filter on. Must be exact match.")
+            @QueryParam("name") final String nameFilter,
+            @ApiParam(value = "Classifier to filter on. Must be exact match.")
+            @QueryParam("classifier") final String classifierFilter,
+            @ApiParam(value = "Tag to filter on. Must be exact match.")
+            @QueryParam("tag") final String tagFilter,
+            @ApiParam(value = "Whether to show only active, or only inactive projects.")
+            @QueryParam("active") final Boolean activeFilter,
+            @ApiParam(value = "Whether to show only root projects, i.e. those without a parent.")
+            @QueryParam("onlyRoot") final Boolean onlyRootFilter,
+            @ApiParam(value = "Whether to include metrics in the response.")
+            @QueryParam("includeMetrics") final boolean includeMetrics
+    ) {
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+
+        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+        final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
+        return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/concise/{uuid}/children")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Returns a list of a given project's children, in a concise representation.",
+            response = ConciseProject.class,
+            responseContainer = "List",
+            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of child projects"),
+            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(code = 401, message = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getProjectChildrenConcise(
+            @ApiParam(value = "UUID of the project", required = true)
+            @PathParam("uuid") final String parentUuid,
+            @ApiParam(value = "Name to filter on. Must be exact match.")
+            @QueryParam("name") final String nameFilter,
+            @ApiParam(value = "Classifier to filter on. Must be exact match.")
+            @QueryParam("classifier") final String classifierFilter,
+            @ApiParam(value = "Tag to filter on. Must be exact match.")
+            @QueryParam("tag") final String tagFilter,
+            @ApiParam(value = "Whether to show only active, or only inactive projects. Omitting the filter will show both.")
+            @QueryParam("active") final Boolean activeFilter,
+            @ApiParam(value = "Whether to include metrics in the response.")
+            @QueryParam("includeMetrics") final boolean includeMetrics
+    ) {
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, activeFilter, /* onlyRootFilter */ null, parentUuid, includeMetrics));
+
+        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+        final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
+        return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
     }
 
     @GET

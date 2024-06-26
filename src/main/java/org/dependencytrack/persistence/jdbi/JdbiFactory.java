@@ -19,7 +19,8 @@
 package org.dependencytrack.persistence.jdbi;
 
 import alpine.resources.AlpineRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.datanucleus.store.connection.ConnectionManagerImpl;
@@ -192,13 +193,17 @@ public class JdbiFactory {
                 .installPlugin(new Jackson2Plugin())
                 .setTemplateEngine(FreemarkerEngine.instance());
 
-        preparedJdbi.getConfig(Jackson2Config.class).setMapper(createObjectMapper());
+        preparedJdbi.getConfig(Jackson2Config.class).setMapper(createJsonMapper());
         return preparedJdbi;
     }
 
-    private static ObjectMapper createObjectMapper() {
-        return new ObjectMapper()
-                .registerModule(new JavaTimeModule());
+    private static JsonMapper createJsonMapper() {
+        return JsonMapper.builder()
+                // Avoid unnecessary @JsonAlias or "SELECT ... AS ..." statements
+                // for mapping upper-cased columns to camel-cased Java fields.
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                .addModule(new JavaTimeModule())
+                .build();
     }
 
 }
