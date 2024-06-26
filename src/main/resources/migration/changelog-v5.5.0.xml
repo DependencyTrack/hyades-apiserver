@@ -164,4 +164,10 @@
         <addDefaultValue tableName="PROJECT" columnName="ACTIVE" defaultValueBoolean="true"/>
         <addNotNullConstraint tableName="PROJECT" columnName="ACTIVE"/>
     </changeSet>
+
+    <changeSet id="v5.5.0-14" author="nscuro">
+        <sql>UPDATE "VULNERABILITY_POLICY" SET "OPERATION_MODE" = 'APPLY' WHERE "OPERATION_MODE" IS NULL</sql>
+        <addDefaultValue tableName="VULNERABILITY_POLICY" columnName="OPERATION_MODE" defaultValue="APPLY"/>
+        <addNotNullConstraint tableName="VULNERABILITY_POLICY" columnName="OPERATION_MODE"/>
+    </changeSet>
 </databaseChangeLog>
