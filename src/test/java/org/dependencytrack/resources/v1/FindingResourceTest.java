@@ -137,6 +137,29 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getFindingsByProjectEmptyTest() {
+        final var metaComponent = new RepositoryMetaComponent();
+        metaComponent.setRepositoryType(RepositoryType.MAVEN);
+        metaComponent.setNamespace("com.acme");
+        metaComponent.setName("acme-lib");
+        metaComponent.setLatestVersion("1.2.3");
+        metaComponent.setLastCheck(new Date());
+        qm.persist(metaComponent);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_FINDING + "/project/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
     public void getFindingsByProjectInvalidTest() {
         Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
