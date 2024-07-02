@@ -135,7 +135,7 @@ public class Analysis implements Serializable {
     @Persistent
     @Column(name = "VULNERABILITY_POLICY_ID", allowsNull = "true")
     @JsonIgnore
-    private VulnerabilityPolicy vulnerabilityPolicy;
+    private Long vulnerabilityPolicyId;
 
     public long getId() {
         return id;
@@ -270,11 +270,11 @@ public class Analysis implements Serializable {
         this.owaspScore = owaspScore;
     }
 
-    public VulnerabilityPolicy getVulnerabilityPolicy() {
-        return vulnerabilityPolicy;
+    public Long getVulnerabilityPolicyId() {
+        return vulnerabilityPolicyId;
     }
 
-    public void setVulnerabilityPolicy(VulnerabilityPolicy vulnerabilityPolicy) {
-        this.vulnerabilityPolicy = vulnerabilityPolicy;
+    public void setVulnerabilityPolicyId(Long vulnerabilityPolicyId) {
+        this.vulnerabilityPolicyId = vulnerabilityPolicyId;
     }
 }
