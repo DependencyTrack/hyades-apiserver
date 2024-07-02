@@ -70,6 +70,15 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 @SuppressWarnings("JavadocReference")
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
+    static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
+    static final String TEMPLATE_PROJECT_ACL_CONDITION = """
+            EXISTS (
+              SELECT 1
+                FROM "PROJECT_ACCESS_TEAMS"
+               WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "%s"."ID"
+                 AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:projectAclTeamIds)
+            )""";
+
     private final AlpineRequest apiRequest;
 
     ApiRequestStatementCustomizer(final AlpineRequest apiRequest) {
@@ -182,14 +191,11 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
 
         final ApiRequestConfig config = ctx.getConfig(ApiRequestConfig.class);
 
-        ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, """
-                EXISTS (
-                  SELECT 1
-                    FROM "PROJECT_ACCESS_TEAMS"
-                   WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "%s"."ID"
-                     AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:projectAclTeamIds)
-                )""".formatted(config.projectAclProjectTableName()));
-        ctx.getBinding().addNamed("projectAclTeamIds", principalTeamIds,
+        ctx.define(
+                ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                TEMPLATE_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectTableName())
+        );
+        ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_TEAM_IDS, principalTeamIds,
                 QualifiedType.of(parameterizeClass(Set.class, Long.class)));
     }
 
