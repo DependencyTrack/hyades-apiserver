@@ -46,6 +46,9 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -78,6 +81,8 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -971,6 +976,31 @@ public class ProjectResourceTest extends ResourceTest {
                 AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false);
         qm.makeAnalysisComment(analysis, "comment", "commenter");
 
+        final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
+            final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+            policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.EXPLOITABLE);
+
+            final var policy = new VulnerabilityPolicy();
+            policy.setName("foo");
+            policy.setAnalysis(policyAnalysis);
+            policy.setConditions(List.of("true"));
+            return handle.attach(VulnerabilityPolicyDao.class).create(policy);
+        });
+        useJdbiHandle(handle -> handle.createUpdate("""
+                        WITH "VULN_POLICY" AS (
+                          SELECT "ID"
+                            FROM "VULNERABILITY_POLICY"
+                           WHERE "NAME" = :policyName
+                        )
+                        UPDATE "ANALYSIS"
+                           SET "VULNERABILITY_POLICY_ID" = (SELECT "ID" FROM "VULN_POLICY")
+                         WHERE "ID" = :analysisId
+                        """)
+                .bind("policyName", vulnPolicy.getName())
+                .bind("analysisId", analysis.getId())
+                .execute());
+
+
         final Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json("""
@@ -1052,6 +1082,7 @@ public class ProjectResourceTest extends ResourceTest {
                             assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
                             assertThat(clonedAnalysis.getAnalysisDetails()).isEqualTo("details");
                             assertThat(clonedAnalysis.isSuppressed()).isFalse();
+                            assertThat(clonedAnalysis.getVulnerabilityPolicyId()).isNotNull();
                         });
                     });
 

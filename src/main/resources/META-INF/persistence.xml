@@ -58,7 +58,6 @@
         <class>org.dependencytrack.model.VulnerableSoftware</class>
         <class>org.dependencytrack.model.WorkflowState</class>
         <class>org.dependencytrack.model.IntegrityAnalysis</class>
-        <class>org.dependencytrack.model.VulnerabilityPolicy</class>
         <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
     </persistence-unit>

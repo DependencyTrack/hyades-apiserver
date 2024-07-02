@@ -31,11 +31,15 @@ import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
@@ -55,6 +59,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -765,6 +771,66 @@ public class AnalysisResourceTest extends ResourceTest {
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
+    }
+
+    @Test
+    public void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var vuln = new Vulnerability();
+        vuln.setVulnId("CVE-123");
+        vuln.setSource(Vulnerability.Source.NVD);
+        qm.persist(vuln);
+
+        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        final Analysis analysis = qm.makeAnalysis(component, vuln, AnalysisState.NOT_AFFECTED, null, null, null, true);
+
+        final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
+            final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+            policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.EXPLOITABLE);
+
+            final var policy = new VulnerabilityPolicy();
+            policy.setName("foo");
+            policy.setAnalysis(policyAnalysis);
+            policy.setConditions(List.of("true"));
+            return handle.attach(VulnerabilityPolicyDao.class).create(policy);
+        });
+
+        useJdbiHandle(handle -> handle.createUpdate("""
+                        WITH "VULN_POLICY" AS (
+                          SELECT "ID"
+                            FROM "VULNERABILITY_POLICY"
+                           WHERE "NAME" = :policyName
+                        )
+                        UPDATE "ANALYSIS"
+                           SET "VULNERABILITY_POLICY_ID" = (SELECT "ID" FROM "VULN_POLICY")
+                         WHERE "ID" = :analysisId
+                        """)
+                .bind("policyName", vulnPolicy.getName())
+                .bind("analysisId", analysis.getId())
+                .execute());
+
+        final Response response = jersey.target(V1_ANALYSIS)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "project": "%s",
+                          "component": "%s",
+                          "vulnerability": "%s",
+                          "comment": "foo"
+                        }
+                        """.formatted(project.getUuid(), component.getUuid(), vuln.getUuid()), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
 }
