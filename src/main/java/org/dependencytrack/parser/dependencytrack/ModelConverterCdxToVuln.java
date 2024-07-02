@@ -274,6 +274,7 @@ public final class ModelConverterCdxToVuln {
             case SCANNER_INTERNAL -> AnalyzerIdentity.INTERNAL_ANALYZER;
             case SCANNER_OSSINDEX -> AnalyzerIdentity.OSSINDEX_ANALYZER;
             case SCANNER_SNYK -> AnalyzerIdentity.SNYK_ANALYZER;
+            case SCANNER_TRIVY -> AnalyzerIdentity.TRIVY_ANALYZER;
             default -> AnalyzerIdentity.NONE;
         };
     }
