@@ -23,6 +23,7 @@ import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -32,13 +33,14 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
@@ -66,6 +68,8 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -81,6 +85,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
@@ -126,10 +131,10 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsWithAclEnabledTest() {
         // Enable portfolio access control.
         qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 null
         );
 
@@ -266,6 +271,877 @@ public class ProjectResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
         Assert.assertEquals("DEF", json.getJsonObject(0).getString("name"));
+    }
+
+    @Test
+    public void getProjectsConciseTest() {
+        final var project = new Project();
+        project.setGroup("com.acme");
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        qm.bind(project, List.of(qm.createTag("foo")));
+
+        final Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo("""
+                        [
+                          {
+                            "uuid": "${json-unit.matches:projectUuid}",
+                            "group": "com.acme",
+                            "name": "acme-app",
+                            "version": "1.0.0",
+                            "classifier": "APPLICATION",
+                            "active": true,
+                            "tags": [
+                              {
+                                "name": "foo"
+                              }
+                            ],
+                            "hasChildren": false
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    public void getProjectsConciseWithAclTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        // Only grant access to acme-app-a.
+        projectA.addAccessTeam(team);
+
+        final Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseEmptyTest() {
+        final Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void getProjectsConcisePaginationTest() {
+        for (int i = 0; i < 3; i++) {
+            final var project = new Project();
+            project.setName("acme-app-" + (i+1));
+            qm.persist(project);
+        }
+
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-1",
+                    "active": true,
+                    "hasChildren": false
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-2",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-3",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseFilterByNameTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("name", "acme")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("name", "acme-app-b")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseFilterByTagTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        qm.bind(projectB, List.of(qm.createTag("foo")));
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("tag", "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("tag", "foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "tags": [
+                      {
+                        "name": "foo"
+                      }
+                    ],
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseOnlyRootTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setParent(projectA);
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        // Should return both when onlyRoot is not set at all.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": true,
+                    "hasChildren": true
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should return both when onlyRoot=false.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("onlyRoot", "false")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": true,
+                    "hasChildren": true
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should return only the parent when onlyRoot=true.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("onlyRoot", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": true,
+                    "hasChildren": true
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseWithFilterByActiveTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        projectA.setActive(false);
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        // Should return both when active is not set at all.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": false,
+                    "hasChildren": false
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should return only active when active=true
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("active", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should return only inactive active=false.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("active", "false")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "active": false,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseWithLatestMetricsTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Instant now = Instant.now();
+        final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
+        final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
+
+        final var projectMetricsOld = new ProjectMetrics();
+        projectMetricsOld.setProject(project);
+        projectMetricsOld.setCritical(666);
+        projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+        projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+        qm.persist(projectMetricsOld);
+
+        final var projectMetricsLatest = new ProjectMetrics();
+        projectMetricsLatest.setProject(project);
+        projectMetricsLatest.setComponents(1);
+        projectMetricsLatest.setCritical(2);
+        projectMetricsLatest.setHigh(3);
+        projectMetricsLatest.setLow(4);
+        projectMetricsLatest.setMedium(5);
+        projectMetricsLatest.setPolicyViolationsFail(6);
+        projectMetricsLatest.setPolicyViolationsInfo(7);
+        projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+        projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+        projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+        projectMetricsLatest.setPolicyViolationsTotal(11);
+        projectMetricsLatest.setPolicyViolationsWarn(12);
+        projectMetricsLatest.setInheritedRiskScore(13.13);
+        projectMetricsLatest.setUnassigned(14);
+        projectMetricsLatest.setVulnerabilities(15);
+        projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+        projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+        qm.persist(projectMetricsLatest);
+
+        // Should not include metrics if not explicitly requested.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should include metrics when explicitly requested.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("includeMetrics", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app",
+                    "active": true,
+                    "hasChildren": false,
+                    "metrics": {
+                      "components": 1,
+                      "critical": 2,
+                      "high": 3,
+                      "low": 4,
+                      "medium": 5,
+                      "policyViolationsFail": 6,
+                      "policyViolationsInfo": 7,
+                      "policyViolationsLicenseTotal": 8,
+                      "policyViolationsOperationalTotal": 9,
+                      "policyViolationsSecurityTotal": 10,
+                      "policyViolationsTotal": 11,
+                      "policyViolationsWarn": 12,
+                      "inheritedRiskScore": 13.13,
+                      "unassigned": 14,
+                      "vulnerabilities": 15
+                    }
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseTest() {
+        final var parentProject = new Project();
+        parentProject.setGroup("com.acme");
+        parentProject.setName("acme-app");
+        parentProject.setVersion("1.0.0");
+        parentProject.setClassifier(Classifier.APPLICATION);
+        qm.persist(parentProject);
+
+        final var childProject = new Project();
+        childProject.setParent(parentProject);
+        childProject.setGroup("com.acme");
+        childProject.setName("acme-child-app");
+        childProject.setVersion("2.0.0");
+        childProject.setClassifier(Classifier.APPLICATION);
+        qm.persist(childProject);
+
+        qm.bind(childProject, List.of(qm.createTag("foo")));
+
+        final Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("childProjectUuid", equalTo(childProject.getUuid().toString()))
+                .isEqualTo("""
+                        [
+                          {
+                            "uuid": "${json-unit.matches:childProjectUuid}",
+                            "group": "com.acme",
+                            "name": "acme-child-app",
+                            "version": "2.0.0",
+                            "classifier": "APPLICATION",
+                            "active": true,
+                            "tags": [
+                              {
+                                "name": "foo"
+                              }
+                            ],
+                            "hasChildren": false
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseWithAclTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProjectA = new Project();
+        childProjectA.setParent(parentProject);
+        childProjectA.setName("acme-child-app-a");
+        qm.persist(childProjectA);
+
+        final var childProjectB = new Project();
+        childProjectB.setParent(parentProject);
+        childProjectB.setName("acme-child-app-b");
+        qm.persist(childProjectB);
+
+        // Only grant access to acme-app.
+        parentProject.addAccessTeam(team);
+
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Additionally grant access to acme-child-app-a.
+        childProjectA.addAccessTeam(team);
+
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-a",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Revoke access from acme-app.
+        parentProject.setAccessTeams(null);
+
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void getProjectChildrenConciseEmptyTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void getProjectChildrenConciseWithParentNotExistsTest() {
+        final Response response = jersey.target(V1_PROJECT + "/concise/6ce40fad-0cff-427a-86ce-acb248872b5b/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void getProjectChildrenConcisePaginationTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        for (int i = 0; i < 3; i++) {
+            final var childProject = new Project();
+            childProject.setParent(parentProject);
+            childProject.setName("acme-child-app-" + (i+1));
+            qm.persist(childProject);
+        }
+
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-1",
+                    "active": true,
+                    "hasChildren": false
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-2",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-3",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseFilterByNameTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProjectA = new Project();
+        childProjectA.setParent(parentProject);
+        childProjectA.setName("acme-child-app-a");
+        qm.persist(childProjectA);
+
+        final var childProjectB = new Project();
+        childProjectB.setParent(parentProject);
+        childProjectB.setName("acme-child-app-b");
+        qm.persist(childProjectB);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("name", "acme")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("name", "acme-child-app-b")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-b",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseFilterByTagTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProjectA = new Project();
+        childProjectA.setParent(parentProject);
+        childProjectA.setName("acme-child-app-a");
+        qm.persist(childProjectA);
+
+        final var childProjectB = new Project();
+        childProjectB.setParent(parentProject);
+        childProjectB.setName("acme-child-app-b");
+        qm.persist(childProjectB);
+
+        qm.bind(childProjectB, List.of(qm.createTag("foo")));
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("tag", "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("tag", "foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-b",
+                    "active": true,
+                    "tags": [
+                      {
+                        "name": "foo"
+                      }
+                    ],
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseWithLatestMetricsTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProject = new Project();
+        childProject.setParent(parentProject);
+        childProject.setName("acme-child-app");
+        qm.persist(childProject);
+
+        final Instant now = Instant.now();
+        final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
+        final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
+
+        final var projectMetricsOld = new ProjectMetrics();
+        projectMetricsOld.setProject(childProject);
+        projectMetricsOld.setCritical(666);
+        projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+        projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+        qm.persist(projectMetricsOld);
+
+        final var projectMetricsLatest = new ProjectMetrics();
+        projectMetricsLatest.setProject(childProject);
+        projectMetricsLatest.setComponents(1);
+        projectMetricsLatest.setCritical(2);
+        projectMetricsLatest.setHigh(3);
+        projectMetricsLatest.setLow(4);
+        projectMetricsLatest.setMedium(5);
+        projectMetricsLatest.setPolicyViolationsFail(6);
+        projectMetricsLatest.setPolicyViolationsInfo(7);
+        projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+        projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+        projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+        projectMetricsLatest.setPolicyViolationsTotal(11);
+        projectMetricsLatest.setPolicyViolationsWarn(12);
+        projectMetricsLatest.setInheritedRiskScore(13.13);
+        projectMetricsLatest.setUnassigned(14);
+        projectMetricsLatest.setVulnerabilities(15);
+        projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+        projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+        qm.persist(projectMetricsLatest);
+
+        // Should not include metrics if not explicitly requested.
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app",
+                    "active": true,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+
+        // Should include metrics when explicitly requested.
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("includeMetrics", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app",
+                    "active": true,
+                    "hasChildren": false,
+                    "metrics": {
+                      "components": 1,
+                      "critical": 2,
+                      "high": 3,
+                      "low": 4,
+                      "medium": 5,
+                      "policyViolationsFail": 6,
+                      "policyViolationsInfo": 7,
+                      "policyViolationsLicenseTotal": 8,
+                      "policyViolationsOperationalTotal": 9,
+                      "policyViolationsSecurityTotal": 10,
+                      "policyViolationsTotal": 11,
+                      "policyViolationsWarn": 12,
+                      "inheritedRiskScore": 13.13,
+                      "unassigned": 14,
+                      "vulnerabilities": 15
+                    }
+                  }
+                ]
+                """);
     }
 
     @Test
@@ -1117,10 +1993,10 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void cloneProjectWithAclTest() {
         qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 null
         );
 
