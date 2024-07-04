@@ -146,6 +146,17 @@
         </repository>
     </repositories>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Managed dependency to override vulnerable version in the parent POM -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>oauth2-oidc-sdk</artifactId>
+                <version>${nimbusds-oauth2-oidc-sdk}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Alpine -->
         <dependency>
@@ -179,11 +190,6 @@
                     <artifactId>h2</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.nimbusds</groupId>
-            <artifactId>oauth2-oidc-sdk</artifactId>
-            <version>${nimbusds-oauth2-oidc-sdk}</version>
         </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
