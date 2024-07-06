@@ -542,13 +542,7 @@ public class BomResource extends AlpineResource {
             if (!e.getValidationErrors().isEmpty()) {
                 problemDetails.setErrors(e.getValidationErrors());
             }
-
-            final Response response = Response.status(Response.Status.BAD_REQUEST)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(problemDetails)
-                    .build();
-
-            throw new WebApplicationException(response);
+            throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
             LOGGER.error("Failed to validate BOM", e);
             final Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

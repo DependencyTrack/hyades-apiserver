@@ -21,13 +21,13 @@ package org.dependencytrack.resources.v1.exception;
 import com.fasterxml.jackson.core.exc.StreamConstraintsException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.annotation.Priority;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
 
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.ExceptionMapper;
-import jakarta.ws.rs.ext.Provider;
 import java.util.Objects;
 
 /**
@@ -43,12 +43,7 @@ public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingEx
         problemDetails.setStatus(400);
         problemDetails.setTitle("The provided JSON payload could not be mapped");
         problemDetails.setDetail(createDetail(exception));
-
-        return Response
-                .status(Response.Status.BAD_REQUEST)
-                .type(ProblemDetails.MEDIA_TYPE_JSON)
-                .entity(problemDetails)
-                .build();
+        return problemDetails.toResponse();
     }
 
     private static String createDetail(final JsonMappingException exception) {
