@@ -59,7 +59,7 @@ public enum ConfigPropertyConstants {
     SCANNER_SNYK_BASE_URL("scanner", "snyk.base.url", "https://api.snyk.io", PropertyType.URL, "Base Url pointing to the hostname and path for Snyk analysis", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_TRIVY_ENABLED("scanner", "trivy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Trivy Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_TRIVY_API_TOKEN("scanner", "trivy.api.token", null, PropertyType.ENCRYPTEDSTRING, "The API token used for Trivy API authentication", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_TRIVY_BASE_URL("scanner", "trivy.base.url", "http://localhost:8081", PropertyType.URL, "Base Url pointing to the hostname and path for Trivy analysis", ConfigPropertyAccessMode.READ_WRITE),
+    SCANNER_TRIVY_BASE_URL("scanner", "trivy.base.url", null, PropertyType.URL, "Base Url pointing to the hostname and path for Trivy analysis", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_TRIVY_IGNORE_UNFIXED("scanner", "trivy.ignore.unfixed", "false", PropertyType.BOOLEAN, "Flag to ignore unfixed vulnerabilities", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_POLICY_FILE_LAST_MODIFIED_HASH("vulnerability-policy", "vulnerability.policy.file.last.modified.hash", null,  PropertyType.STRING, "Hash value or etag of the last fetched bundle if any", ConfigPropertyAccessMode.READ_ONLY),
     VULNERABILITY_SOURCE_NVD_ENABLED("vuln-source", "nvd.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable National Vulnerability Database", ConfigPropertyAccessMode.READ_WRITE),
