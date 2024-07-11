@@ -3,3 +3,4 @@ name: github.com/DependencyTrack/hyades-apiserver
 lint:
   ignore:
   - org/cyclonedx/v1_4/cyclonedx.proto
+  - org/cyclonedx/v1_6/cyclonedx.proto
