@@ -31,6 +31,7 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
+import org.dependencytrack.event.HistoricalRiskScoreUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
@@ -81,6 +82,23 @@ public class MetricsResource extends AlpineResource {
         }
     }
 
+    @GET 
+    @Path("/riskscore/refresh")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(
+        value = "Requests a refresh of the historical risk score metrics",
+        response = PortfolioMetrics.class,
+        notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(code = 401, message = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    public Response RefreshHistoricalRiskScoreMetrics() {
+        Event.dispatch(new HistoricalRiskScoreUpdateEvent());
+        return Response.ok().build();
+    }
+    
     @GET
     @Path("/portfolio/current")
     @Produces(MediaType.APPLICATION_JSON)

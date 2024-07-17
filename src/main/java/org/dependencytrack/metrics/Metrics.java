@@ -63,6 +63,17 @@ public final class Metrics {
         StoredProcedures.execute(Procedure.UPDATE_PORTFOLIO_METRICS);
     }
 
+
+    /**
+     * Update historical risk scores for the entire portfolio.
+     * <p>
+     *
+     * @since 5.0.0
+     */
+    public static void updateHistoricalRiskScores() {
+        StoredProcedures.execute(Procedure.UPDATE_HISTORICAL_RISK_SCORES);
+    }
+
     /**
      * Update metrics for a given {@link Project}.
      * <p>

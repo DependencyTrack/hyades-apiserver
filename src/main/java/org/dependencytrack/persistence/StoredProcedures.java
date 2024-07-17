@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 public final class StoredProcedures {
 
     public enum Procedure {
+        UPDATE_HISTORICAL_RISK_SCORES,
         UPDATE_COMPONENT_METRICS,
         UPDATE_PROJECT_METRICS,
         UPDATE_PORTFOLIO_METRICS;
