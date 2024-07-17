@@ -103,6 +103,8 @@
         <lib.liquibase.version>4.28.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.11</lib.minio.version>
+        <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
+        <lib.wiremock.version>3.8.0</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
@@ -379,9 +381,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.tomakehurst</groupId>
-            <artifactId>wiremock-jre8</artifactId>
-            <version>3.0.1</version>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>${lib.wiremock.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -436,6 +438,17 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${lib.minio.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>kotlin-stdlib-jdk8</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <version>${lib.kotlin-stdlib.version}</version>
         </dependency>
 
         <!-- Test Dependencies -->
