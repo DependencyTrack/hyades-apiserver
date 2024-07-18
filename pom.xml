@@ -156,6 +156,8 @@
                 <artifactId>oauth2-oidc-sdk</artifactId>
                 <version>${nimbusds-oauth2-oidc-sdk}</version>
             </dependency>
+
+            <!-- Managed dependencies to exclude/override vulnerable version of kotlin-stdlib-jdk8 -->
             <dependency>
                 <groupId>io.minio</groupId>
                 <artifactId>minio</artifactId>
