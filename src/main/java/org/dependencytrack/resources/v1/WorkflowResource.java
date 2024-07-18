@@ -20,28 +20,35 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.Authorization;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.UUID;
 
 @Path("/v1/workflow")
-@Api(value = "workflow", authorizations = @Authorization(value = "X-Api-Key"))
+@Tag(name = "workflow")
+@SecurityRequirements({
+        @SecurityRequirement(name = "ApiKeyAuth"),
+        @SecurityRequirement(name = "BearerAuth")
+})
 public class WorkflowResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
@@ -49,19 +56,18 @@ public class WorkflowResource {
     @GET
     @Path("/token/{uuid}/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Retrieves workflow states associated with the token received from bom upload .",
-            response = WorkflowState.class,
-            responseContainer = "List",
-            notes = "<p>Requires permission <strong>BOM_UPLOAD</strong></p>"
+    @Operation(
+            summary = "Retrieves workflow states associated with the token received from bom upload .",
+            description = "<p>Requires permission <strong>BOM_UPLOAD</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "Workflow does not exist")
+            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = WorkflowState.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Workflow does not exist")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD) // TODO: Should be a more generic permission.
     public Response getWorkflowStates(
-            @ApiParam(value = "The UUID of the token to query", required = true)
+            @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {

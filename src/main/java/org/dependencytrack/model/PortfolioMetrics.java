@@ -20,7 +20,8 @@ package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -28,7 +29,6 @@ import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -52,22 +52,22 @@ public class PortfolioMetrics implements Serializable {
 
     @Persistent
     @Column(name = "CRITICAL")
-    @ApiModelProperty(required = true)
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int critical;
 
     @Persistent
     @Column(name = "HIGH")
-    @ApiModelProperty(required = true)
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int high;
 
     @Persistent
     @Column(name = "MEDIUM")
-    @ApiModelProperty(required = true)
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int medium;
 
     @Persistent
     @Column(name = "LOW")
-    @ApiModelProperty(required = true)
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int low;
 
     @Persistent
@@ -127,65 +127,77 @@ public class PortfolioMetrics implements Serializable {
     private Integer policyViolationsInfo;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_AUDITED", allowsNull = "true") // New column, must allow nulls on existing databases)
+    @Column(name = "POLICYVIOLATIONS_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing databases)
     private Integer policyViolationsAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing databases)
+    @Column(name = "POLICYVIOLATIONS_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing databases)
     private Integer policyViolationsUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_SECURITY_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_SECURITY_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsSecurityUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_LICENSE_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_LICENSE_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsLicenseUnaudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_TOTAL", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_TOTAL", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalTotal;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_AUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_AUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalAudited;
 
     @Persistent
-    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", allowsNull = "true") // New column, must allow nulls on existing data bases)
+    @Column(name = "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", allowsNull = "true")
+    // New column, must allow nulls on existing data bases)
     private Integer policyViolationsOperationalUnaudited;
 
     @Persistent
     @Column(name = "FIRST_OCCURRENCE", allowsNull = "false")
     @NotNull
     @Index(name = "PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX")
-    @ApiModelProperty(required = true, dataType = "number")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, type = "number")
     private Date firstOccurrence;
 
     @Persistent
     @Column(name = "LAST_OCCURRENCE", allowsNull = "false")
     @NotNull
     @Index(name = "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX")
-    @ApiModelProperty(required = true, dataType = "number")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, type = "number")
     private Date lastOccurrence;
 
     public long getId() {

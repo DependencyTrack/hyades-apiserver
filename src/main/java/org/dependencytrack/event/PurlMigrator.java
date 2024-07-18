@@ -25,8 +25,8 @@ import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 import static org.dependencytrack.tasks.LockName.INTEGRITY_META_INITIALIZER_LOCK;
 

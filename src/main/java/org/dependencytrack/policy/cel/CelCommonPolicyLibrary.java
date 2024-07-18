@@ -23,6 +23,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
+import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -44,7 +45,6 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
-import javax.annotation.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;

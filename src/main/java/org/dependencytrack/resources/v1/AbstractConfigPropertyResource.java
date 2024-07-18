@@ -24,12 +24,12 @@ import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import alpine.server.resources.AlpineResource;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
-import javax.ws.rs.core.Response;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -67,28 +67,28 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
 
         if (property.getPropertyType() == IConfigProperty.PropertyType.BOOLEAN) {
             boolean propertyValue = BooleanUtil.valueOf(json.getPropertyValue());
-            if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HISTORY_ENABLED.getPropertyName().equals(json.getPropertyName())){
+            if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HISTORY_ENABLED.getPropertyName().equals(json.getPropertyName())) {
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Attribute \"" + json.getPropertyName() + "\" was changed to value: " + String.valueOf(propertyValue) + " by user " + super.getPrincipal().getName());
             }
             property.setPropertyValue(String.valueOf(BooleanUtil.valueOf(json.getPropertyValue())));
         } else if (property.getPropertyType() == IConfigProperty.PropertyType.INTEGER) {
             try {
                 int propertyValue = Integer.parseInt(json.getPropertyValue());
-                if(ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName().equals(json.getGroupName()) && propertyValue <= 0) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("A Task scheduler cadence ("+json.getPropertyName()+") cannot be inferior to one hour.A value of "+propertyValue+" was provided.").build();
+                if (ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName().equals(json.getGroupName()) && propertyValue <= 0) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("A Task scheduler cadence (" + json.getPropertyName() + ") cannot be inferior to one hour.A value of " + propertyValue + " was provided.").build();
                 }
-                if(ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 100)) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Lucene index delta threshold ("+json.getPropertyName()+") cannot be inferior to 1 or superior to 100.A value of "+propertyValue+" was provided.").build();
+                if (ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 100)) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Lucene index delta threshold (" + json.getPropertyName() + ") cannot be inferior to 1 or superior to 100.A value of " + propertyValue + " was provided.").build();
                 }
 
-                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())
-                ){
-                    if (propertyValue < 1 || propertyValue > 10){
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalid value of " + propertyValue + " was provided.").build();
+                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())
+                ) {
+                    if (propertyValue < 1 || propertyValue > 10) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \"" + json.getPropertyName() + "\" must be between 1 and 10. An invalid value of " + propertyValue + " was provided.").build();
                     }
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
