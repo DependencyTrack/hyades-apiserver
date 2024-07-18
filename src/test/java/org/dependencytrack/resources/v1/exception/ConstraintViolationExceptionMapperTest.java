@@ -64,7 +64,7 @@ public class ConstraintViolationExceptionMapperTest extends ResourceTest {
                           },
                           {
                             "message": "must match \\"^[a-z]+$\\"",
-                            "messageTemplate": "{javax.validation.constraints.Pattern.message}",
+                             "messageTemplate": "{jakarta.validation.constraints.Pattern.message}",
                             "path": "get.foo",
                             "invalidValue": "666"
                           }
