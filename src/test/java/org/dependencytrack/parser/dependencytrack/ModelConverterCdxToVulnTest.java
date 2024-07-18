@@ -19,12 +19,12 @@
 package org.dependencytrack.parser.dependencytrack;
 
 import com.google.protobuf.Timestamp;
-import org.cyclonedx.proto.v1_4.Advisory;
-import org.cyclonedx.proto.v1_4.Bom;
-import org.cyclonedx.proto.v1_4.Property;
-import org.cyclonedx.proto.v1_4.Source;
-import org.cyclonedx.proto.v1_4.VulnerabilityRating;
-import org.cyclonedx.proto.v1_4.VulnerabilityReference;
+import org.cyclonedx.proto.v1_6.Advisory;
+import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_6.Property;
+import org.cyclonedx.proto.v1_6.Source;
+import org.cyclonedx.proto.v1_6.VulnerabilityRating;
+import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
@@ -33,10 +33,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_OWASP;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
 public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
 
@@ -48,7 +48,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvert() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("CVE-2021-44228")
                         .setSource(Source.newBuilder().setName("NVD").build())
                         .setDescription("Foo Bar Description")
@@ -115,7 +115,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvertWithRatingFromSnykAsAuthoritativeSource() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
                         .setSource(Source.newBuilder().setName("SNYK").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -151,7 +151,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvertWithRatingsWithoutVector() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
                         .setSource(Source.newBuilder().setName("SNYK").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -181,7 +181,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvertWithNoRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("Foo")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .build()).build();
@@ -204,7 +204,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvertWithOnlyThirdPartyRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -235,7 +235,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
     @Test
     public void testConvertWithRatingWithoutMethod() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_4.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .addRatings(VulnerabilityRating.newBuilder()

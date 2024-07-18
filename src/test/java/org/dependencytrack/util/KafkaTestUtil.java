@@ -20,7 +20,7 @@ package org.dependencytrack.util;
 
 import com.google.protobuf.util.JsonFormat;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.cyclonedx.proto.v1_4.Bom;
+import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.event.kafka.KafkaTopics;
 
 import java.io.IOException;
