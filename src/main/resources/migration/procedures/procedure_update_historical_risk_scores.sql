@@ -11,4 +11,5 @@ DECLARE
   "v_risk_score"                              NUMERIC; -- Inherited risk score
 BEGIN 
     UPDATE "DEPENDENCYMETRICS" SET "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
+END;
 $$;
