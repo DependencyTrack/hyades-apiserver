@@ -104,7 +104,7 @@
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.11</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
-        <lib.wiremock.version>3.8.0</lib.wiremock.version>
+        <lib.wiremock.version>3.9.0</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
