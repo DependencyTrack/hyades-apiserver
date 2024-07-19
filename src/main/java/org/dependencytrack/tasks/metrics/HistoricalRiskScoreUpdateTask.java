@@ -19,31 +19,17 @@
 package org.dependencytrack.tasks.metrics;
 
 import alpine.common.logging.Logger;
-import alpine.common.util.SystemUtil;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import net.javacrumbs.shedlock.core.LockConfiguration;
-import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import org.apache.commons.collections4.ListUtils;
-import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.HistoricalRiskScoreUpdateEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.LockProvider;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
 
 
 /**
@@ -59,7 +45,7 @@ public class HistoricalRiskScoreUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final HistoricalRiskScoreUpdateEvent event) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isWeightHistoryEnabled()));
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
