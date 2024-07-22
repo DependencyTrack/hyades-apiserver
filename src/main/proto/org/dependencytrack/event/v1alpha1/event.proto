@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package org.dependencytrack.event.v1alpha1;
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.event.v1alpha1";
+
+// Notifies that a BOM was uploaded.
+message BomUploadedEvent {
+  string token = 1; // Foo
+  Project project = 2; // Project the BOM was uploaded to.
+
+  message Project {
+    string uuid = 1; // UUID of the project.
+    string name = 2; // Name of the project.
+    string version = 3; // Version of the project.
+  }
+
+}

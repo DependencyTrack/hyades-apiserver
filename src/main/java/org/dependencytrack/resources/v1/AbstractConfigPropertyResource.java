@@ -25,9 +25,11 @@ import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import alpine.server.resources.AlpineResource;
 import jakarta.ws.rs.core.Response;
+import com.github.luben.zstd.Zstd;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.storage.BomUploadStorageProvider;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.math.BigDecimal;
@@ -63,6 +65,24 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
                     .status(Response.Status.BAD_REQUEST)
                     .entity("The property %s.%s can not be modified".formatted(property.getGroupName(), property.getPropertyName()))
                     .build();
+        }
+
+        if (wellKnownProperty == ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER
+                && !BomUploadStorageProvider.exists(json.getPropertyValue())) {
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("%s is not a known storage provider".formatted(json.getPropertyValue()))
+                    .build();
+        } else if (wellKnownProperty == ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL
+                && json.getPropertyValue() != null) {
+            final int compressionLevel = Integer.parseInt(json.getPropertyValue());
+            if (compressionLevel < 1 || compressionLevel > Zstd.maxCompressionLevel()) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Compression level %d is out of the valid [1..%d] range"
+                                .formatted(compressionLevel, Zstd.maxCompressionLevel()))
+                        .build();
+            }
         }
 
         if (property.getPropertyType() == IConfigProperty.PropertyType.BOOLEAN) {

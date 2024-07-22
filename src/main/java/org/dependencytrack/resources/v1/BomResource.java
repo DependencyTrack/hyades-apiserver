@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
+import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,6 +51,7 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
@@ -65,16 +66,14 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
+import org.dependencytrack.storage.BomUploadStorageProvider;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
@@ -83,6 +82,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.function.Predicate.not;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 
 /**
@@ -478,21 +479,21 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
 
-            final File bomFile;
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()));
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+                validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-            Event.dispatch(bomUploadEvent);
+            new KafkaEventDispatcher().dispatchEvent(bomUploadEvent)/* .join() */;
 
-            BomUploadResponse bomUploadResponse = new BomUploadResponse();
+            final var bomUploadResponse = new BomUploadResponse();
             bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
             return Response.ok(bomUploadResponse).build();
         } else {
@@ -511,21 +512,18 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
 
-                final File bomFile;
+                final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()));
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+                    validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
-                // todo: make option to combine all the bom data so components are reconciled in a single pass.
-                // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-
                 qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-                Event.dispatch(bomUploadEvent);
+                new KafkaEventDispatcher().dispatchEvent(bomUploadEvent)/* .join() */;
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
                 bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
@@ -537,21 +535,27 @@ public class BomResource extends AlpineResource {
         return Response.ok().build();
     }
 
-    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
+    private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes) throws IOException {
         validate(bomBytes);
 
-        // TODO: Store externally so other instances of the API server can pick it up.
-        //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
-        final java.nio.file.Path tmpPath = Files.createTempFile("dtrack-bom-%s".formatted(project.getUuid()), null);
-        final File tmpFile = tmpPath.toFile();
-        tmpFile.deleteOnExit();
+        final ConfigProperty storageProviderProperty = qm.getConfigProperty(
+                BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
+                BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName()
+        );
+        final String storageProviderClassName = storageProviderProperty != null
+                ? storageProviderProperty.getPropertyValue()
+                : BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue();
+        final var storageProvider = BomUploadStorageProvider.getForClassName(storageProviderClassName);
 
-        LOGGER.debug("Writing BOM for project %s to %s".formatted(project.getUuid(), tmpPath));
-        try (final var tmpOutputStream = Files.newOutputStream(tmpPath, StandardOpenOption.WRITE)) {
-            tmpOutputStream.write(bomBytes);
-        }
+        final ConfigProperty compressionLevelProperty = qm.getConfigProperty(
+                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getGroupName(),
+                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getPropertyName()
+        );
+        final int compressionLevel = compressionLevelProperty != null
+                ? Integer.parseInt(compressionLevelProperty.getPropertyValue())
+                : Integer.parseInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getDefaultPropertyValue());
 
-        return tmpFile;
+        storageProvider.storeBomCompressed(token, bomBytes, compressionLevel);
     }
 
     static void validate(final byte[] bomBytes) {

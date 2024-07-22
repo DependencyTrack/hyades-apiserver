@@ -35,6 +35,8 @@ public class ProcessorInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing processors");
 
+        PROCESSOR_MANAGER.registerProcessor(BomUploadProcessor.PROCESSOR_NAME,
+                KafkaTopics.EVENT_BOM_UPLOADED, new BomUploadProcessor());
         PROCESSOR_MANAGER.registerProcessor(VulnerabilityMirrorProcessor.PROCESSOR_NAME,
                 KafkaTopics.NEW_VULNERABILITY, new VulnerabilityMirrorProcessor());
         PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,

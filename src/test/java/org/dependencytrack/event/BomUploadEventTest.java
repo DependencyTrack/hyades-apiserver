@@ -18,21 +18,16 @@
  */
 package org.dependencytrack.event;
 
-import alpine.common.util.SystemUtil;
 import org.dependencytrack.model.Project;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.File;
 
 public class BomUploadEventTest {
 
     @Test
     public void testFileConstructor() {
         Project project = new Project();
-        File bitBucket = new File(SystemUtil.getBitBucket());
-        BomUploadEvent event = new BomUploadEvent(project, bitBucket);
+        BomUploadEvent event = new BomUploadEvent(project);
         Assert.assertEquals(project, event.getProject());
-        Assert.assertEquals(bitBucket, event.getFile());
     }
 }

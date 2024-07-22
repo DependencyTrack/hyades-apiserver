@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
@@ -42,12 +41,12 @@ import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.dependencytrack.tasks.VulnerabilityScanCleanupTask;
 import org.dependencytrack.tasks.WorkflowStateCleanupTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -75,7 +74,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing asynchronous event subsystem");
 
-        EVENT_SERVICE.subscribe(BomUploadEvent.class, BomUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(VexUploadEvent.class, VexUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
@@ -114,7 +112,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Shutting down asynchronous event subsystem");
         TaskScheduler.getInstance().shutdown();
 
-        EVENT_SERVICE.unsubscribe(BomUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
