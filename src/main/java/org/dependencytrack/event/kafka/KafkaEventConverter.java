@@ -21,6 +21,7 @@ package org.dependencytrack.event.kafka;
 import alpine.event.framework.Event;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.EpssMirrorEvent;
@@ -30,6 +31,7 @@ import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.dependencytrack.NotificationModelConverter;
+import org.dependencytrack.proto.event.v1alpha1.BomUploadedEvent;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
@@ -68,6 +70,7 @@ public final class KafkaEventConverter {
 
     static KafkaEvent<?, ?> convert(final Event event) {
         return switch (event) {
+            case BomUploadEvent e -> convert(e);
             case ComponentRepositoryMetaAnalysisEvent e -> convert(e);
             case ComponentVulnerabilityAnalysisEvent e -> convert(e);
             case GitHubAdvisoryMirrorEvent e -> convert(e);
@@ -103,6 +106,22 @@ public final class KafkaEventConverter {
         }
 
         return kafkaEvents;
+    }
+
+    static KafkaEvent<UUID, BomUploadedEvent> convert(final BomUploadEvent event) {
+        final BomUploadedEvent.Project.Builder projectBuilder = BomUploadedEvent.Project.newBuilder()
+                .setUuid(event.getProject().getUuid().toString())
+                .setName(event.getProject().getName());
+        Optional.ofNullable(event.getProject().getVersion()).ifPresent(projectBuilder::setVersion);
+
+        return new KafkaEvent<>(
+                KafkaTopics.EVENT_BOM_UPLOADED,
+                event.getProject().getUuid(),
+                BomUploadedEvent.newBuilder()
+                        .setToken(event.getChainIdentifier().toString())
+                        .setProject(projectBuilder)
+                        .build()
+        );
     }
 
     static KafkaEvent<ScanKey, ScanCommand> convert(final ComponentVulnerabilityAnalysisEvent event) {

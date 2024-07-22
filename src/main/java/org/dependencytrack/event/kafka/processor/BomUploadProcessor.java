@@ -16,32 +16,34 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+package org.dependencytrack.event.kafka.processor;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
-import alpine.event.framework.Subscriber;
+import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
 import org.datanucleus.store.query.QueryNotUniqueException;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
+import org.dependencytrack.event.kafka.processor.api.Processor;
+import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -52,7 +54,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
@@ -62,8 +64,9 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.event.v1alpha1.BomUploadedEvent;
+import org.dependencytrack.storage.BomUploadStorageProvider;
 import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -71,9 +74,6 @@ import javax.jdo.JDOUserException;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -107,6 +107,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -115,18 +116,17 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertTo
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
-import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 /**
- * Subscriber task that performs processing of bill-of-material (bom)
- * when it is uploaded.
- *
- * @author Steve Springett
- * @since 3.0.0
+ * @since 5.6.0
  */
-public class BomUploadProcessingTask implements Subscriber {
+public class BomUploadProcessor implements Processor<UUID, BomUploadedEvent> {
+
+    private static final Logger LOGGER = Logger.getLogger(BomUploadProcessor.class);
+
+    static final String PROCESSOR_NAME = "bom.upload";
 
     private static final class Context {
 
@@ -139,52 +139,71 @@ public class BomUploadProcessingTask implements Subscriber {
         private Date bomTimestamp;
         private Integer bomVersion;
 
-        private Context(final UUID token, final Project project) {
+        private Context(final UUID token, final BomUploadedEvent.Project project) {
             this.token = token;
-            this.project = project;
+            this.project = new Project();
+            this.project.setUuid(UUID.fromString(project.getUuid()));
+            this.project.setName(project.getName());
+            this.project.setVersion(project.getVersion());
             this.bomFormat = Bom.Format.CYCLONEDX;
             this.startTimeNs = System.nanoTime();
         }
 
     }
 
-    private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
-
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
-    public BomUploadProcessingTask() {
+    public BomUploadProcessor() {
         this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
     }
-
-    BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
+    BomUploadProcessor(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void inform(final Event e) {
-        if (!(e instanceof final BomUploadEvent event)) {
-            return;
+    @Override
+    public void process(final ConsumerRecord<UUID, BomUploadedEvent> record) throws ProcessingException {
+        final BomUploadedEvent event = record.value();
+
+        final BomUploadStorageProvider storageProvider;
+        try (final var qm = new QueryManager()) {
+            final ConfigProperty storageProviderProperty = qm.getConfigProperty(
+                    BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
+                    BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName()
+            );
+            final String storageProviderClassName = storageProviderProperty != null
+                    ? storageProviderProperty.getPropertyValue()
+                    : BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue();
+            storageProvider = BomUploadStorageProvider.getForClassName(storageProviderClassName);
         }
 
-        final var ctx = new Context(event.getChainIdentifier(), event.getProject());
+        final var ctx = new Context(UUID.fromString(event.getToken()), event.getProject());
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
              var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
-            processEvent(ctx, event);
+            processEvent(ctx, storageProvider);
+        } finally {
+            try {
+                storageProvider.deleteBomByToken(ctx.token);
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("Failed to delete BOM from storage", e);
+            }
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event) {
+    private void processEvent(final Context ctx, final BomUploadStorageProvider storageProvider) {
         startBomConsumptionWorkflowStep(ctx);
 
         final ConsumedBom consumedBom;
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
-            final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
+        try {
+            final byte[] cdxBomBytes = storageProvider.getDecompressedBomByToken(ctx.token);
+            if (cdxBomBytes == null) {
+                LOGGER.warn("No BOM found in storage");
+                return;
+            }
+
             final Parser parser = BomParserFactory.createParser(cdxBomBytes);
             final org.cyclonedx.model.Bom cdxBom = parser.parse(cdxBomBytes);
 
@@ -199,6 +218,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
+            LOGGER.error("Failed to consume BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
@@ -212,11 +232,9 @@ public class BomUploadProcessingTask implements Subscriber {
              var ignoredMdcBomSpecVersion = MDC.putCloseable(MDC_BOM_SPEC_VERSION, ctx.bomSpecVersion);
              var ignoredMdcBomSerialNumber = MDC.putCloseable(MDC_BOM_SERIAL_NUMBER, ctx.bomSerialNumber);
              var ignoredMdcBomVersion = MDC.putCloseable(MDC_BOM_VERSION, String.valueOf(ctx.bomVersion))) {
-            // Prevent BOMs for the same project to be processed concurrently.
-            // Note that this is an edge case, we're not expecting any lock waits under normal circumstances.
-            final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
-            processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
+            processedBom = processBom(ctx, consumedBom);
         } catch (Throwable e) {
+            LOGGER.error("Failed to process BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
@@ -923,7 +941,7 @@ public class BomUploadProcessingTask implements Subscriber {
             //   Requires a bit of refactoring in QueryManager#createVulnerabilityScan.
 
             qm.createVulnerabilityScan(
-                    TargetType.PROJECT,
+                    VulnerabilityScan.TargetType.PROJECT,
                     ctx.project.getUuid(),
                     ctx.token,
                     events.size()
@@ -1073,17 +1091,6 @@ public class BomUploadProcessingTask implements Subscriber {
         }
         //don't send event because integrity metadata would be sent recently and don't want to send again
         return false;
-    }
-
-    private static WaitingLockConfiguration createLockConfiguration(final Context ctx) {
-        return new WaitingLockConfiguration(
-                /* createdAt */ Instant.now(),
-                /* name */ "%s-%s".formatted(BomUploadProcessingTask.class.getSimpleName(), ctx.project.getUuid()),
-                /* lockAtMostFor */ Duration.ofMinutes(5),
-                /* lockAtLeastFor */ Duration.ZERO,
-                /* pollInterval */ Duration.ofMillis(100),
-                /* waitTimeout */ Duration.ofMinutes(5)
-        );
     }
 
 }

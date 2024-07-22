@@ -1,0 +1,2 @@
+org.dependencytrack.storage.DatabaseBomUploadStorageProvider
+org.dependencytrack.storage.LocalBomUploadStorageProvider
