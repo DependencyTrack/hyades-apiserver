@@ -144,7 +144,6 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                                 StringUtils.trimToNull(json.getDescription()));
                         updatePropertyValue(qm, json, property);
                         qm.getPersistenceManager().detachCopy(project);
-                        qm.close();
                         if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
                             property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
                         }

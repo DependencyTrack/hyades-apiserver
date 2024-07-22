@@ -1670,7 +1670,8 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "tag4"
                             }
                           ],
-                          "active": false
+                          "active": false,
+                          "children": []
                         }
                         """);
     }
