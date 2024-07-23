@@ -371,8 +371,12 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static Project processProject(final Context ctx, final QueryManager qm,
-                                          final Project project, final ProjectMetadata projectMetadata) {
+    private static Project processProject(
+            final Context ctx,
+            final QueryManager qm,
+            final Project project,
+            final ProjectMetadata projectMetadata
+    ) {
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
         query.setFilter("uuid == :uuid");
         query.setParameters(ctx.project.getUuid());
@@ -426,11 +430,13 @@ public class BomUploadProcessingTask implements Subscriber {
         return persistentProject;
     }
 
-    private static Map<ComponentIdentity, Component> processComponents(final QueryManager qm,
-                                                                       final Project project,
-                                                                       final List<Component> components,
-                                                                       final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                       final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Map<ComponentIdentity, Component> processComponents(
+            final QueryManager qm,
+            final Project project,
+            final List<Component> components,
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
+    ) {
         assertPersistent(project, "Project must be persistent");
 
         // Fetch IDs of all components that exist in the project already.
@@ -529,11 +535,13 @@ public class BomUploadProcessingTask implements Subscriber {
         return persistentComponents;
     }
 
-    private static Map<ComponentIdentity, ServiceComponent> processServices(final QueryManager qm,
-                                                                            final Project project,
-                                                                            final List<ServiceComponent> services,
-                                                                            final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Map<ComponentIdentity, ServiceComponent> processServices(
+            final QueryManager qm,
+            final Project project,
+            final List<ServiceComponent> services,
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
+    ) {
         assertPersistent(project, "Project must be persistent");
 
         // Fetch IDs of all services that exist in the project already.
@@ -584,15 +592,23 @@ public class BomUploadProcessingTask implements Subscriber {
         return persistentServices;
     }
 
-    private void processDependencyGraph(final QueryManager qm,
-                                        final Project project,
-                                        final MultiValuedMap<String, String> dependencyGraph,
-                                        final Map<ComponentIdentity, Component> componentsByIdentity,
-                                        final Map<String, ComponentIdentity> identitiesByBomRef) {
+    private void processDependencyGraph(
+            final QueryManager qm,
+            final Project project,
+            final MultiValuedMap<String, String> dependencyGraph,
+            final Map<ComponentIdentity, Component> componentsByIdentity,
+            final Map<String, ComponentIdentity> identitiesByBomRef
+    ) {
         assertPersistent(project, "Project must be persistent");
 
         if (project.getBomRef() != null) {
             final Collection<String> directDependencyBomRefs = dependencyGraph.get(project.getBomRef());
+            if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
+                LOGGER.warn("""
+                        The dependency graph has %d entries, but the project (metadata.component node of the BOM) \
+                        is not one of them; Graph will be incomplete because it is not possible to determine its root\
+                        """.formatted(dependencyGraph.size()));
+            }
             final String directDependenciesJson = resolveDirectDependenciesJson(project.getBomRef(), directDependencyBomRefs, identitiesByBomRef);
             if (!Objects.equals(directDependenciesJson, project.getDirectDependencies())) {
                 project.setDirectDependencies(directDependenciesJson);
@@ -650,9 +666,11 @@ public class BomUploadProcessingTask implements Subscriber {
         project.setLastBomImportFormat("%s %s".formatted(ctx.bomFormat.getFormatShortName(), ctx.bomSpecVersion));
     }
 
-    private String resolveDirectDependenciesJson(final String dependencyBomRef,
-                                                 final Collection<String> directDependencyBomRefs,
-                                                 final Map<String, ComponentIdentity> identitiesByBomRef) {
+    private String resolveDirectDependenciesJson(
+            final String dependencyBomRef,
+            final Collection<String> directDependencyBomRefs,
+            final Map<String, ComponentIdentity> identitiesByBomRef
+    ) {
         if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
             return null;
         }
@@ -701,10 +719,12 @@ public class BomUploadProcessingTask implements Subscriber {
         return pm.newQuery(ServiceComponent.class, ":ids.contains(id)").deletePersistentAll(serviceIds);
     }
 
-    private static void resolveAndApplyLicense(final QueryManager qm,
-                                               final Component component,
-                                               final Map<String, License> licenseCache,
-                                               final Map<String, License> customLicenseCache) {
+    private static void resolveAndApplyLicense(
+            final QueryManager qm,
+            final Component component,
+            final Map<String, License> licenseCache,
+            final Map<String, License> customLicenseCache
+    ) {
         // CycloneDX components can declare multiple licenses, but we currently
         // only support one. We assume that the licenseCandidates list is ordered
         // by priority, and simply take the first resolvable candidate.
@@ -788,8 +808,10 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static Predicate<Component> distinctComponentsByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                     final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Predicate<Component> distinctComponentsByIdentity(
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
+    ) {
         final var identitiesSeen = new HashSet<ComponentIdentity>();
         return component -> {
             final var componentIdentity = new ComponentIdentity(component);
@@ -814,8 +836,10 @@ public class BomUploadProcessingTask implements Subscriber {
         };
     }
 
-    private static Predicate<ServiceComponent> distinctServicesByIdentity(final Map<String, ComponentIdentity> identitiesByBomRef,
-                                                                          final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity) {
+    private static Predicate<ServiceComponent> distinctServicesByIdentity(
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
+    ) {
         final var identitiesSeen = new HashSet<ComponentIdentity>();
         return service -> {
             final var componentIdentity = new ComponentIdentity(service);
@@ -870,7 +894,11 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static void failWorkflowStepAndCancelDescendants(final Context ctx, final WorkflowStep step, final Throwable failureCause) {
+    private static void failWorkflowStepAndCancelDescendants(
+            final Context ctx,
+            final WorkflowStep step,
+            final Throwable failureCause
+    ) {
         try (var qm = new QueryManager()) {
             qm.runInTransaction(() -> {
                 final var now = new Date();
@@ -883,7 +911,10 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private List<CompletableFuture<?>> initiateVulnerabilityAnalysis(final Context ctx, final Collection<ComponentVulnerabilityAnalysisEvent> events) {
+    private List<CompletableFuture<?>> initiateVulnerabilityAnalysis(
+            final Context ctx,
+            final Collection<ComponentVulnerabilityAnalysisEvent> events
+    ) {
         if (events.isEmpty()) {
             // No components to be sent for vulnerability analysis.
             // If the BOM_PROCESSED notification was delayed, dispatch it now.
@@ -989,7 +1020,10 @@ public class BomUploadProcessingTask implements Subscriber {
                 .subject(new BomProcessingFailed(ctx.token, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat, ctx.bomSpecVersion)));
     }
 
-    private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(final Context ctx, final Collection<Component> components) {
+    private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(
+            final Context ctx,
+            final Collection<Component> components
+    ) {
         return components.stream()
                 .map(component -> new ComponentVulnerabilityAnalysisEvent(
                         ctx.token,
