@@ -1356,6 +1356,77 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
+    @Test
+    public void informIssue3981Test() throws Exception {
+        final Project project = qm.createProject("acme-license-app", null, "1.2.3", null, null, null, true, false);
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "metadata": {
+                    "authors": [
+                      {
+                        "name": "foo",
+                        "email": "foo@example.com"
+                      }
+                    ]
+                  },
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes()));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        var clonedProject = qm.clone(project.getUuid(), "3.2.1", true, true, true, true, true, true, true);
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, clonedProject.getId()), createTempBomFile("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "metadata": {
+                    "authors": [
+                      {
+                        "name": "bar",
+                        "email": "bar@example.com"
+                      }
+                    ]
+                  },
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes()));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(project.getMetadata().getAuthors()).satisfiesExactly(author -> {
+            assertThat(author.getName()).isEqualTo("foo");
+            assertThat(author.getEmail()).isEqualTo("foo@example.com");
+        });
+
+        assertThat(clonedProject.getMetadata().getAuthors()).satisfiesExactly(author -> {
+            assertThat(author.getName()).isEqualTo("bar");
+            assertThat(author.getEmail()).isEqualTo("bar@example.com");
+        });
+    }
+
     private void assertBomProcessedNotification() throws Exception {
         try {
             assertThat(kafkaMockProducer.history()).anySatisfy(record -> {

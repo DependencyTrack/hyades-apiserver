@@ -26,10 +26,13 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
+import org.slf4j.MDC;
 
 import java.util.Date;
 import java.util.UUID;
 
+import static org.dependencytrack.common.MdcKeys.MDC_EVENT_TOKEN;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
 
@@ -41,11 +44,13 @@ public class CloneProjectTask implements Subscriber {
      * {@inheritDoc}
      */
     public void inform(final Event e) {
-        if (e instanceof CloneProjectEvent) {
-            final CloneProjectEvent event = (CloneProjectEvent)e;
+        if (e instanceof final CloneProjectEvent event) {
             final CloneProjectRequest request = event.getRequest();
             final UUID chainIdentifier = ((CloneProjectEvent) e).getChainIdentifier();
-            try (QueryManager qm = new QueryManager()) {
+            try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, request.getProject());
+                 var ignoredMdcEventToken = MDC.putCloseable(MDC_EVENT_TOKEN, event.getChainIdentifier().toString());
+                 QueryManager qm = new QueryManager()
+            ) {
                 WorkflowState workflowState = qm.updateStartTimeIfWorkflowStateExists(chainIdentifier, PROJECT_CLONE);
                 if (workflowState == null) {
                     final var now = new Date();
@@ -58,12 +63,19 @@ public class CloneProjectTask implements Subscriber {
                     qm.getPersistenceManager().makePersistent(workflowState);
                 }
                 try {
-                    LOGGER.info("Cloning project: " + request.getProject());
-                    final Project project = qm.clone(UUID.fromString(request.getProject()),
-                            request.getVersion(), request.includeTags(), request.includeProperties(),
-                            request.includeComponents(), request.includeServices(), request.includeAuditHistory(), request.includeACL(), request.includePolicyViolations());
+                    LOGGER.info("Cloning project for version %s".formatted(request.getVersion()));
+                    final Project project = qm.clone(
+                            UUID.fromString(request.getProject()),
+                            request.getVersion(),
+                            request.includeTags(),
+                            request.includeProperties(),
+                            request.includeComponents(),
+                            request.includeServices(),
+                            request.includeAuditHistory(),
+                            request.includeACL(),
+                            request.includePolicyViolations());
                     qm.updateWorkflowStateToComplete(workflowState);
-                    LOGGER.info("Cloned project: " + request.getProject() + " to " + project.getUuid());
+                    LOGGER.info("Cloned project for version %s into project %s".formatted(project.getVersion(), project.getUuid()));
                 } catch (Exception ex) {
                     LOGGER.error("An error occurred while cloning project %s".formatted(request.getProject()), ex);
                     qm.updateWorkflowStateToFailed(workflowState, ex.getMessage());
