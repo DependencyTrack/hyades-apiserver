@@ -34,7 +34,7 @@ public enum ConfigKey implements Config.Key {
     KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION("kafka.producer.drain.timeout.duration", "PT30S"),
     KAFKA_TLS_ENABLED("kafka.tls.enabled", false),
     KAFKA_TLS_PROTOCOL("kafka.security.protocol", ""),
-    KAFKA_TOPIC_PREFIX("kafka.topic.prefix", ""),
+    DT_KAFKA_TOPIC_PREFIX("dt.kafka.topic.prefix", ""),
     KAFKA_TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
     KAFKA_TRUST_STORE_PATH("kafka.truststore.path", ""),
 

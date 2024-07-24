@@ -59,12 +59,12 @@ there's no need to deploy it in an application server like Tomcat or WildFly.
 ## Running
 
 In case you want to provide a topic prefix to use in conjunction with hyades application then the environment variable
-to export is KAFKA_TOPIC_PREFIX<br/>
+to export is DT_KAFKA_TOPIC_PREFIX<br/>
 If the host environment requires ssl configuration then below configurations need to be passed:
 
 | Environment Variable                    | Description                              | Default | Required |
 |:----------------------------------------|:-----------------------------------------|:--------|:--------:|
-| `KAFKA_TOPIC_PREFIX`                      | Prefix for topic names                   | -       |    ✅     |
+| `DT_KAFKA_TOPIC_PREFIX`                 | Prefix for topic names                   | -       |    ✅     |
 | `KAFKA_TLS_ENABLED`                     | Whether tls is enabled                   | false   |    ❌     |
 | `KAFKA_SECURTY_PROTOCOL`                | Security protocol to be used             | -       |    ❌     |
 | `KAFKA_TRUSTSTORE_PATH`                 | Trust store path to be used              | -       |    ❌     |
