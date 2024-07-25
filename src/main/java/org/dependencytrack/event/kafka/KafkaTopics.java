@@ -90,7 +90,7 @@ public final class KafkaTopics {
 
         @Override
         public String name() {
-            return Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX) + name;
+            return Config.getInstance().getProperty(ConfigKey.DT_KAFKA_TOPIC_PREFIX) + name;
         }
 
     }
