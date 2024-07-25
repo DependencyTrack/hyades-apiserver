@@ -123,13 +123,13 @@ public class LicenseResource extends AlpineResource {
     @ApiOperation(
             value = "Creates a new custom license",
             response = License.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 409, message = "A license with the specified ID already exists.")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response createLicense(License jsonLicense) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -154,14 +154,14 @@ public class LicenseResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a custom license",
             code = 204,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The license could not be found"),
             @ApiResponse(code = 409, message = "Only custom licenses can be deleted.")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response deleteLicense(
             @ApiParam(value = "The SPDX License ID of the license to delete", required = true)
             @PathParam("licenseId") String licenseId) {

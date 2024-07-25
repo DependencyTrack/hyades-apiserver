@@ -80,14 +80,14 @@ public class VexResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a VEX for a project in CycloneDX format",
             response = String.class,
-            notes = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></p>"
+            notes = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
     public Response exportProjectAsCycloneDx(
             @ApiParam(value = "The UUID of the project to export", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -139,7 +139,7 @@ public class VexResource extends AlpineResource {
                       When uploading large VEX files, the <code>POST</code> endpoint is preferred,
                       as it does not have this limit.
                     </p>
-                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></p>"""
+                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Invalid VEX", response = InvalidBomProblemDetails.class),
@@ -147,7 +147,7 @@ public class VexResource extends AlpineResource {
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
     public Response uploadVex(VexSubmitRequest request) {
         final Validator validator = getValidator();
         if (request.getProject() != null) {
@@ -187,7 +187,7 @@ public class VexResource extends AlpineResource {
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
                     </p>
-                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></p>"""
+                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(code = 400, message = "Invalid VEX", response = InvalidBomProblemDetails.class),
@@ -195,7 +195,7 @@ public class VexResource extends AlpineResource {
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
     public Response uploadVex(@FormDataParam("project") String projectUuid,
                               @FormDataParam("projectName") String projectName,
                               @FormDataParam("projectVersion") String projectVersion,

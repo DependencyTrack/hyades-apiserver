@@ -101,7 +101,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             value = "Creates a new component property",
             response = ComponentProperty.class,
             code = 201,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -109,7 +109,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(code = 404, message = "The component could not be found"),
             @ApiResponse(code = 409, message = "A property with the specified component/group/name combination already exists")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response createProperty(
             @ApiParam(value = "The UUID of the component to create a property for", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -159,14 +159,14 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @ApiOperation(
             value = "Deletes a config property",
             response = ComponentProperty.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified component is forbidden"),
             @ApiResponse(code = 404, message = "The component or component property could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProperty(
             @ApiParam(value = "The UUID of the component to delete a property from", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid final String componentUuid,

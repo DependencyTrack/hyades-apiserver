@@ -211,6 +211,7 @@ public class ProjectResource extends AlpineResource {
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
     })
+    
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProject(
             @ApiParam(value = "The UUID of the project to retrieve", format = "uuid", required = true)
@@ -330,7 +331,7 @@ public class ProjectResource extends AlpineResource {
             value = "Creates a new project",
             notes = """
                     <p>If a parent project exists, <code>parent.uuid</code> is required</p>
-                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>""",
+                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>""",
             response = Project.class,
             code = 201
     )
@@ -342,7 +343,7 @@ public class ProjectResource extends AlpineResource {
                       <li>A project with the specified name already exists</li>
                     </ul>"""),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response createProject(Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -392,7 +393,7 @@ public class ProjectResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a project",
             response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -405,7 +406,7 @@ public class ProjectResource extends AlpineResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response updateProject(Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -462,7 +463,7 @@ public class ProjectResource extends AlpineResource {
     @ApiOperation(
             value = "Partially updates a project",
             response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -475,7 +476,7 @@ public class ProjectResource extends AlpineResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response patchProject(
             @ApiParam(value = "The UUID of the project to modify", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -598,7 +599,7 @@ public class ProjectResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a project",
             code = 204,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
@@ -606,7 +607,7 @@ public class ProjectResource extends AlpineResource {
             @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
             @ApiResponse(code = 500, message = "Unable to delete components of the project")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProject(
             @ApiParam(value = "The UUID of the project to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -635,13 +636,13 @@ public class ProjectResource extends AlpineResource {
     @ApiOperation(
             value = "Clones a project",
             response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response cloneProject(CloneProjectRequest jsonRequest) {
         final Validator validator = super.getValidator();
         failOnValidationError(

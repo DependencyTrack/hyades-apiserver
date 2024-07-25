@@ -78,12 +78,12 @@ public class LdapResource extends AlpineResource {
                       This API performs a pass-through query to the configured LDAP server.
                       Search criteria results are cached using default Alpine CacheManager policy.
                     <p>
-                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"""
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response retrieveLdapGroups() {
         if (!LdapConnectionWrapper.LDAP_CONFIGURED) {
             return Response.ok().build();
@@ -123,13 +123,13 @@ public class LdapResource extends AlpineResource {
             value = "Returns the DNs of all groups mapped to the specified team",
             response = String.class,
             responseContainer = "List",
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the team could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response retrieveLdapGroups(@ApiParam(value = "The UUID of the team to retrieve mappings for", format = "uuid", required = true)
                                        @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -149,14 +149,14 @@ public class LdapResource extends AlpineResource {
     @ApiOperation(
             value = "Adds a mapping",
             response = MappedLdapGroup.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the team could not be found"),
             @ApiResponse(code = 409, message = "A mapping with the same team and dn already exists")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response addMapping(MappedLdapGroupRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -184,13 +184,13 @@ public class LdapResource extends AlpineResource {
     @ApiOperation(
             value = "Removes a mapping",
             response = MappedLdapGroup.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the mapping could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteMapping(
             @ApiParam(value = "The UUID of the mapping to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

@@ -133,14 +133,14 @@ public class ServiceResource extends AlpineResource {
             value = "Creates a new service",
             response = ServiceComponent.class,
             code = 201,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
             @ApiResponse(code = 404, message = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response createService(@ApiParam(value = "The UUID of the project", format = "uuid", required = true)
                                   @PathParam("uuid") @ValidUuid String uuid, ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
@@ -186,14 +186,14 @@ public class ServiceResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a service",
             response = ServiceComponent.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified service is forbidden"),
             @ApiResponse(code = 404, message = "The UUID of the service could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response updateService(ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -237,14 +237,14 @@ public class ServiceResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a service",
             code = 204,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 403, message = "Access to the specified service is forbidden"),
             @ApiResponse(code = 404, message = "The UUID of the service could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteService(
             @ApiParam(value = "The UUID of the service to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

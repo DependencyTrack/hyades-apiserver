@@ -170,7 +170,11 @@ public class DefaultObjectGenerator implements ServletContextListener {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission: fullList) {
             if (permission.getName().equals(Permissions.Constants.VIEW_PORTFOLIO) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT)) {
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_READ) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE)) {
                 permissions.add(permission);
             }
         }

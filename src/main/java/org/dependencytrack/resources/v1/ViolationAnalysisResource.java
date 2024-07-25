@@ -103,7 +103,7 @@ public class ViolationAnalysisResource extends AlpineResource {
     @ApiOperation(
             value = "Records a violation analysis decision",
             response = ViolationAnalysis.class,
-            notes = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_VIOLATION_ANALYSIS</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),

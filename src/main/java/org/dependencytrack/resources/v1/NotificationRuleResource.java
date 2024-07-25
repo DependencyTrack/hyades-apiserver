@@ -71,13 +71,13 @@ public class NotificationRuleResource extends AlpineResource {
             response = NotificationRule.class,
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of notification rules"),
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getAllNotificationRules() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getNotificationRules();
@@ -92,13 +92,13 @@ public class NotificationRuleResource extends AlpineResource {
             value = "Creates a new notification rule",
             response = NotificationRule.class,
             code = 201,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the notification publisher could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response createNotificationRule(NotificationRule jsonRule) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -129,13 +129,13 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a notification rule",
             response = NotificationRule.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the notification rule could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response updateNotificationRule(NotificationRule jsonRule) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -161,13 +161,13 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a notification rule",
             code = 204,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the notification rule could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response deleteNotificationRule(NotificationRule jsonRule) {
         try (QueryManager qm = new QueryManager()) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
@@ -187,14 +187,14 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Adds a project to a notification rule",
             response = NotificationRule.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The rule already has the specified project assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The notification rule or project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response addProjectToRule(
             @ApiParam(value = "The UUID of the rule to add a project to", format = "uuid", required = true)
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
@@ -229,14 +229,14 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Removes a project from a notification rule",
             response = NotificationRule.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The rule does not have the specified project assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The notification rule or project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response removeProjectFromRule(
             @ApiParam(value = "The UUID of the rule to remove the project from", format = "uuid", required = true)
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
@@ -271,14 +271,14 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Adds a team to a notification rule",
             response = NotificationRule.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The rule already has the specified team assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The notification rule or team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response addTeamToRule(
             @ApiParam(value = "The UUID of the rule to add a team to", format = "uuid", required = true)
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
@@ -313,14 +313,14 @@ public class NotificationRuleResource extends AlpineResource {
     @ApiOperation(
             value = "Removes a team from a notification rule",
             response = NotificationRule.class,
-            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            notes = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The rule does not have the specified team assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The notification rule or team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response removeTeamFromRule(
             @ApiParam(value = "The UUID of the rule to remove the project from", format = "uuid", required = true)
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,

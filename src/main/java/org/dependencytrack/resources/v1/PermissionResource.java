@@ -64,12 +64,12 @@ public class PermissionResource extends AlpineResource {
             value = "Returns a list of all permissions",
             response = alpine.model.Permission.class,
             responseContainer = "List",
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response getAllPermissions() {
         try (QueryManager qm = new QueryManager()) {
             final List<Permission> permissions = qm.getPermissions();
@@ -84,14 +84,14 @@ public class PermissionResource extends AlpineResource {
     @ApiOperation(
             value = "Adds the permission to the specified username.",
             response = UserPrincipal.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The user already has the specified permission assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The user could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response addPermissionToUser(
             @ApiParam(value = "A valid username", required = true)
             @PathParam("username") String username,
@@ -125,14 +125,14 @@ public class PermissionResource extends AlpineResource {
     @ApiOperation(
             value = "Removes the permission from the user.",
             response = UserPrincipal.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The user already has the specified permission assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The user could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response removePermissionFromUser(
             @ApiParam(value = "A valid username", required = true)
             @PathParam("username") String username,
@@ -166,14 +166,14 @@ public class PermissionResource extends AlpineResource {
     @ApiOperation(
             value = "Adds the permission to the specified team.",
             response = Team.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The team already has the specified permission assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response addPermissionToTeam(
             @ApiParam(value = "A valid team uuid", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -207,14 +207,14 @@ public class PermissionResource extends AlpineResource {
     @ApiOperation(
             value = "Removes the permission from the team.",
             response = Team.class,
-            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The team already has the specified permission assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response removePermissionFromTeam(
             @ApiParam(value = "A valid team uuid", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,

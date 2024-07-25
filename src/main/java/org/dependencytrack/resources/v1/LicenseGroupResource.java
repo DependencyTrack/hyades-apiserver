@@ -66,13 +66,13 @@ public class LicenseGroupResource extends AlpineResource {
             response = LicenseGroup.class,
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of license groups"),
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
     public Response getLicenseGroups() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getLicenseGroups();
@@ -86,13 +86,13 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a specific license group",
             response = License.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The license group could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
     public Response getLicenseGroup(
             @ApiParam(value = "The UUID of the license group to retrieve", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -113,13 +113,13 @@ public class LicenseGroupResource extends AlpineResource {
             value = "Creates a new license group",
             response = LicenseGroup.class,
             code = 201,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 409, message = "A license group with the specified name already exists")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_CREATE})
     public Response createLicenseGroup(LicenseGroup jsonLicenseGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -143,13 +143,13 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a license group",
             response = LicenseGroup.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The license group could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response updateLicenseGroup(LicenseGroup jsonLicenseGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -174,13 +174,13 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a license group",
             code = 204,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the license group could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
     public Response deleteLicenseGroup(
             @ApiParam(value = "The UUID of the license group to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -202,14 +202,14 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Adds the license to the specified license group.",
             response = LicenseGroup.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The license group already has the specified license assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The license group or license could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response addLicenseToLicenseGroup(
             @ApiParam(value = "A valid license group", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -242,14 +242,14 @@ public class LicenseGroupResource extends AlpineResource {
     @ApiOperation(
             value = "Removes the license from the license group.",
             response = LicenseGroup.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The license is not a member with the license group"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The license group or license could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response removeLicenseFromLicenseGroup(
             @ApiParam(value = "A valid license group", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid,

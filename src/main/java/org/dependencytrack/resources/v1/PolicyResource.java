@@ -67,13 +67,13 @@ public class PolicyResource extends AlpineResource {
             response = Policy.class,
             responseContainer = "List",
             responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of policies"),
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
     public Response getPolicies() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getPolicies();
@@ -87,13 +87,13 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Returns a specific policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
     public Response getPolicy(
             @ApiParam(value = "The UUID of the policy to retrieve", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -114,13 +114,13 @@ public class PolicyResource extends AlpineResource {
             value = "Creates a new policy",
             response = Policy.class,
             code = 201,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 409, message = "A policy with the specified name already exists")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_CREATE})
     public Response createPolicy(Policy jsonPolicy) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -154,13 +154,13 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Updates a policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response updatePolicy(Policy jsonPolicy) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -188,13 +188,13 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Deletes a policy",
             code = 204,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The UUID of the policy could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
     public Response deletePolicy(
             @ApiParam(value = "The UUID of the policy to delete", format = "uuid", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -216,14 +216,14 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Adds a project to a policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The policy already has the specified project assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy or project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response addProjectToPolicy(
             @ApiParam(value = "The UUID of the policy to add a project to", format = "uuid", required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
@@ -255,14 +255,14 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Removes a project from a policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The policy does not have the specified project assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy or project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
     public Response removeProjectFromPolicy(
             @ApiParam(value = "The UUID of the policy to remove the project from", format = "uuid", required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
@@ -294,14 +294,14 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Adds a tag to a policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The policy already has the specified tag assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy or tag could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response addTagToPolicy(
             @ApiParam(value = "The UUID of the policy to add a project to", format = "uuid", required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
@@ -334,14 +334,14 @@ public class PolicyResource extends AlpineResource {
     @ApiOperation(
             value = "Removes a tag from a policy",
             response = Policy.class,
-            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            notes = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 304, message = "The policy does not have the specified tag assigned"),
             @ApiResponse(code = 401, message = "Unauthorized"),
             @ApiResponse(code = 404, message = "The policy or tag could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
     public Response removeTagFromPolicy(
             @ApiParam(value = "The UUID of the policy to remove the tag from", format = "uuid", required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
