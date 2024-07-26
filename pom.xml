@@ -88,7 +88,7 @@
         <lib.awaitility.version>4.2.1</lib.awaitility.version>
         <lib.cel-tools.version>0.4.4</lib.cel-tools.version>
         <lib.checkstyle.version>10.17.0</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.19.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.19.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.26.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
