@@ -20,13 +20,10 @@ package org.dependencytrack.model;
 
 import alpine.model.IConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
-import com.github.luben.zstd.Zstd;
 import org.apache.commons.lang3.SystemUtils;
-import org.dependencytrack.storage.DatabaseBomUploadStorageProvider;
 
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 public enum ConfigPropertyConstants {
 
@@ -79,9 +76,6 @@ public enum ConfigPropertyConstants {
     BOM_VALIDATION_MODE("artifact", "bom.validation.mode", BomValidationMode.ENABLED.name(), PropertyType.STRING, "Flag to control the BOM validation mode", ConfigPropertyAccessMode.READ_WRITE),
     BOM_VALIDATION_TAGS_INCLUSIVE("artifact", "bom.validation.tags.inclusive", "[]", PropertyType.STRING, "JSON array of tags for which BOM validation shall be performed", ConfigPropertyAccessMode.READ_WRITE),
     BOM_VALIDATION_TAGS_EXCLUSIVE("artifact", "bom.validation.tags.exclusive", "[]", PropertyType.STRING, "JSON array of tags for which BOM validation shall NOT be performed", ConfigPropertyAccessMode.READ_WRITE),
-    BOM_UPLOAD_STORAGE_PROVIDER("artifact", "bom.upload.storage.provider", DatabaseBomUploadStorageProvider.class.getName(), PropertyType.STRING, "Class of the BOM upload storage provider", ConfigPropertyAccessMode.READ_WRITE),
-    BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL("artifact", "bom.upload.storage.compression.level", String.valueOf(Zstd.defaultCompressionLevel()), PropertyType.INTEGER, "Compression level to use for storage of uploaded BOMs", ConfigPropertyAccessMode.READ_WRITE),
-    BOM_UPLOAD_STORAGE_RETENTION_MS("artifact", "bom.upload.storage.retention.ms", String.valueOf(TimeUnit.HOURS.toMillis(1)), PropertyType.INTEGER, "Maximum storage retention duration for uploaded BOMs in milliseconds", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_ENABLED("integrations", "fortify.ssc.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Fortify SSC integration", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_SYNC_CADENCE("integrations", "fortify.ssc.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_URL("integrations", "fortify.ssc.url", null, PropertyType.URL, "Base URL to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),

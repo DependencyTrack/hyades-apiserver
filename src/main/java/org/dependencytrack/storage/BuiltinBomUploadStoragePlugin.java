@@ -16,22 +16,27 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.storage;
 
-import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-public class PluginManagerTestUtil {
+import java.util.Collection;
+import java.util.List;
 
-    public static void loadPlugins() {
-        PluginManager.getInstance().loadPlugins();
-    }
+/**
+ * @since 5.6.0
+ */
+public class BuiltinBomUploadStoragePlugin implements Plugin {
 
-    public static void unloadPlugins() {
-        PluginManager.getInstance().unloadPlugins();
-    }
-
-    public static ConfigRegistry createConfigRegistry(final String extensionPointName, final String extensionName) {
-        return ConfigRegistryImpl.forExtension(extensionPointName, extensionName);
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(
+                new DatabaseBomUploadStorageFactory(),
+                new LocalBomUploadStorageFactory(),
+                new S3BomUploadStorageFactory()
+        );
     }
 
 }

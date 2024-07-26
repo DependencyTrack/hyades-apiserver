@@ -19,31 +19,57 @@
 package org.dependencytrack.storage;
 
 import com.github.luben.zstd.Zstd;
+import org.dependencytrack.plugin.api.ExtensionPoint;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.NoSuchElementException;
-import java.util.ServiceLoader;
 import java.util.UUID;
 
 /**
  * @since 5.6.0
  */
-public interface BomUploadStorageProvider {
+public interface BomUploadStorage extends ExtensionPoint {
 
+    /**
+     * @param token The token to store the BOM for.
+     * @param bom   The BOM to store.
+     * @throws IOException When storing the BOM failed.
+     */
     void storeBom(final UUID token, final byte[] bom) throws IOException;
 
+    /**
+     * @param token The token to get the BOM for.
+     * @return The BOM, or {@code null} when no BOM was found.
+     * @throws IOException When getting the BOM failed.
+     */
     byte[] getBomByToken(final UUID token) throws IOException;
 
+    /**
+     * @param token The token to delete the BOM for.
+     * @return {@code true} when the BOM was deleted, otherwise {@code false}.
+     * @throws IOException When deleting the BOM failed.
+     */
     boolean deleteBomByToken(final UUID token) throws IOException;
 
     int deleteBomsForRetentionDuration(final Duration duration) throws IOException;
 
+    /**
+     * @param token            The token to store the BOM for.
+     * @param bom              The BOM to store.
+     * @param compressionLevel The compression level to use.
+     * @throws IOException When storing the BOM failed.
+     * @see #storeBom(UUID, byte[])
+     */
     default void storeBomCompressed(final UUID token, final byte[] bom, final int compressionLevel) throws IOException {
         final byte[] compressedBom = Zstd.compress(bom, compressionLevel);
         storeBom(token, compressedBom);
     }
 
+    /**
+     * @param token The token to get the BOM for.
+     * @return The BOM, or {@code null} when no BOM was found.
+     * @throws IOException When getting the BOM failed.
+     */
     default byte[] getDecompressedBomByToken(final UUID token) throws IOException {
         final byte[] compressedBom = getBomByToken(token);
         if (compressedBom == null) {
@@ -56,20 +82,6 @@ public interface BomUploadStorageProvider {
         }
 
         return Zstd.decompress(compressedBom, (int) decompressedSize);
-    }
-
-    static BomUploadStorageProvider getForClassName(final String providerClassName) {
-        final var serviceLoader = ServiceLoader.load(BomUploadStorageProvider.class);
-        return serviceLoader.stream()
-                .filter(provider -> provider.type().getName().equals(providerClassName))
-                .findFirst()
-                .map(ServiceLoader.Provider::get)
-                .orElseThrow(() -> new NoSuchElementException("%s is not a known storage provider".formatted(providerClassName)));
-    }
-
-    static boolean exists(final String providerClassName) {
-        final var serviceLoader = ServiceLoader.load(BomUploadStorageProvider.class);
-        return serviceLoader.stream().anyMatch(provider -> provider.type().getName().equals(providerClassName));
     }
 
 }

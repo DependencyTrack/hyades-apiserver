@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
@@ -71,11 +70,12 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.storage.BomUploadStorageProvider;
+import org.dependencytrack.storage.BomUploadStorage;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -91,8 +91,6 @@ import java.util.List;
 import java.util.Set;
 
 import static java.util.function.Predicate.not;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
@@ -504,24 +502,9 @@ public class BomResource extends AlpineResource {
     private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes, final Project project) throws IOException {
         validate(bomBytes, project);
 
-        final ConfigProperty storageProviderProperty = qm.getConfigProperty(
-                BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
-                BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName()
-        );
-        final String storageProviderClassName = storageProviderProperty != null
-                ? storageProviderProperty.getPropertyValue()
-                : BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue();
-        final var storageProvider = BomUploadStorageProvider.getForClassName(storageProviderClassName);
-
-        final ConfigProperty compressionLevelProperty = qm.getConfigProperty(
-                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getGroupName(),
-                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getPropertyName()
-        );
-        final int compressionLevel = compressionLevelProperty != null
-                ? Integer.parseInt(compressionLevelProperty.getPropertyValue())
-                : Integer.parseInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getDefaultPropertyValue());
-
-        storageProvider.storeBomCompressed(token, bomBytes, compressionLevel);
+        try (final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
+            storageProvider.storeBomCompressed(token, bomBytes, /* TODO: Make configurable */ 3);
+        }
     }
 
     static void validate(final byte[] bomBytes, final Project project) {

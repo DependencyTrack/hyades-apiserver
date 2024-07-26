@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
-import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.collections4.MultiValuedMap;
@@ -64,8 +63,9 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.event.v1alpha1.BomUploadedEvent;
-import org.dependencytrack.storage.BomUploadStorageProvider;
+import org.dependencytrack.storage.BomUploadStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -107,7 +107,6 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -157,6 +156,7 @@ public class BomUploadProcessor implements Processor<UUID, BomUploadedEvent> {
     public BomUploadProcessor() {
         this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
     }
+
     BomUploadProcessor(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
@@ -166,25 +166,14 @@ public class BomUploadProcessor implements Processor<UUID, BomUploadedEvent> {
     public void process(final ConsumerRecord<UUID, BomUploadedEvent> record) throws ProcessingException {
         final BomUploadedEvent event = record.value();
 
-        final BomUploadStorageProvider storageProvider;
-        try (final var qm = new QueryManager()) {
-            final ConfigProperty storageProviderProperty = qm.getConfigProperty(
-                    BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
-                    BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName()
-            );
-            final String storageProviderClassName = storageProviderProperty != null
-                    ? storageProviderProperty.getPropertyValue()
-                    : BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue();
-            storageProvider = BomUploadStorageProvider.getForClassName(storageProviderClassName);
-        }
-
         final var ctx = new Context(UUID.fromString(event.getToken()), event.getProject());
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
+             final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
             processEvent(ctx, storageProvider);
-        } finally {
+
             try {
                 storageProvider.deleteBomByToken(ctx.token);
             } catch (IOException | RuntimeException e) {
@@ -193,7 +182,7 @@ public class BomUploadProcessor implements Processor<UUID, BomUploadedEvent> {
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadStorageProvider storageProvider) {
+    private void processEvent(final Context ctx, final BomUploadStorage storageProvider) {
         startBomConsumptionWorkflowStep(ctx);
 
         final ConsumedBom consumedBom;
