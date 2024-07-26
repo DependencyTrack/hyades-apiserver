@@ -18,14 +18,13 @@
  */
 package org.dependencytrack.storage;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
-import org.dependencytrack.common.ClusterInfo;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
@@ -33,27 +32,25 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
+ * A {@link BomUploadStorage} that stores uploaded BOMs on the local filesystem.
+ *
  * @since 5.6.0
  */
-public class LocalBomUploadStorageProvider implements BomUploadStorageProvider {
+class LocalBomUploadStorage implements BomUploadStorage {
 
-    private static final Logger LOGGER = Logger.getLogger(LocalBomUploadStorageProvider.class);
+    private static final Logger LOGGER = Logger.getLogger(LocalBomUploadStorage.class);
+    static final String EXTENSION_NAME = "local";
 
     private final Path baseDirPath;
 
-    @SuppressWarnings("unused") // Used by ServiceLoader.
-    public LocalBomUploadStorageProvider() {
-        this(defaultBaseDirPath());
-    }
-
-    LocalBomUploadStorageProvider(final Path baseDirPath) {
+    LocalBomUploadStorage(final Path baseDirPath) {
         this.baseDirPath = baseDirPath;
     }
 
     @Override
     public void storeBom(final UUID token, final byte[] bom) throws IOException {
         final Path outputFilePath = baseDirPath.resolve(token.toString());
-        LOGGER.info("Storing BOM at %s".formatted(outputFilePath));
+        LOGGER.debug("Storing BOM at %s".formatted(outputFilePath));
 
         try (final var fileOutputStream = Files.newOutputStream(outputFilePath);
              final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
@@ -64,15 +61,19 @@ public class LocalBomUploadStorageProvider implements BomUploadStorageProvider {
     @Override
     public byte[] getBomByToken(final UUID token) throws IOException {
         final Path inputFilePath = baseDirPath.resolve(token.toString());
-        LOGGER.info("Retrieving BOM from %s".formatted(inputFilePath));
+        LOGGER.debug("Retrieving BOM from %s".formatted(inputFilePath));
 
-        return Files.readAllBytes(inputFilePath);
+        try {
+            return Files.readAllBytes(inputFilePath);
+        } catch (NoSuchFileException e) {
+            return null;
+        }
     }
 
     @Override
     public boolean deleteBomByToken(final UUID token) throws IOException {
         final Path bomFilePath = baseDirPath.resolve(token.toString());
-        LOGGER.info("Deleting BOM from %s".formatted(token));
+        LOGGER.debug("Deleting BOM from %s".formatted(token));
 
         return Files.deleteIfExists(bomFilePath);
     }
@@ -94,27 +95,13 @@ public class LocalBomUploadStorageProvider implements BomUploadStorageProvider {
             // TODO: Is this problematic for network volumes in other timezones?
             final var attributes = Files.readAttributes(filePath, BasicFileAttributes.class);
             if (retentionCutoff.isAfter(attributes.lastModifiedTime().toInstant())) {
-                LOGGER.info("Deleting BOM from %s".formatted(filePath));
+                LOGGER.debug("Deleting BOM from %s".formatted(filePath));
                 Files.delete(filePath);
                 bomFilesDeleted++;
             }
         }
 
         return bomFilesDeleted;
-    }
-
-    private static Path defaultBaseDirPath() {
-        // TODO: Use separate, operator-controllable directory.
-        final Path dataDirPath = Config.getInstance().getDataDirectorty().toPath();
-        final Path bomUploadsDirPath = dataDirPath.resolve("bom-uploads").resolve(ClusterInfo.getClusterId());
-
-        try {
-            return Files.createDirectories(bomUploadsDirPath);
-        } catch (IOException e) {
-            throw new IllegalStateException("""
-                    Failed to create directory for BOM upload storage at %s\
-                    """.formatted(bomUploadsDirPath), e);
-        }
     }
 
 }

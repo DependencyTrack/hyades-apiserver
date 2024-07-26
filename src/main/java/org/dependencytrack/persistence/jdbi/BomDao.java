@@ -34,6 +34,10 @@ public interface BomDao {
     @SqlUpdate("""
             INSERT INTO "BOM_UPLOAD" ("TOKEN", "UPLOADED_AT", "BOM")
             VALUES (:token, NOW(), :bomBytes)
+                ON CONFLICT ("TOKEN")
+                DO UPDATE
+               SET "UPLOADED_AT" = NOW()
+                 , "BOM" = :bomBytes
             """)
     void createUpload(@Bind UUID token, @Bind byte[] bomBytes);
 

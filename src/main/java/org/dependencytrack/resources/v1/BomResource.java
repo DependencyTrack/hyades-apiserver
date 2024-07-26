@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,12 +60,13 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
-import org.dependencytrack.storage.BomUploadStorageProvider;
+import org.dependencytrack.storage.BomUploadStorage;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -82,8 +82,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.function.Predicate.not;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 
 /**
@@ -484,7 +482,7 @@ public class BomResource extends AlpineResource {
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
                 final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
-                validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
+                validateAndStoreBom(bomUploadEvent.getChainIdentifier(), bomBytes);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -516,7 +514,7 @@ public class BomResource extends AlpineResource {
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
                     final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
-                    validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
+                    validateAndStoreBom(bomUploadEvent.getChainIdentifier(), bomBytes);
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -535,27 +533,12 @@ public class BomResource extends AlpineResource {
         return Response.ok().build();
     }
 
-    private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes) throws IOException {
+    private void validateAndStoreBom(final UUID token, final byte[] bomBytes) throws IOException {
         validate(bomBytes);
 
-        final ConfigProperty storageProviderProperty = qm.getConfigProperty(
-                BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
-                BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName()
-        );
-        final String storageProviderClassName = storageProviderProperty != null
-                ? storageProviderProperty.getPropertyValue()
-                : BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue();
-        final var storageProvider = BomUploadStorageProvider.getForClassName(storageProviderClassName);
-
-        final ConfigProperty compressionLevelProperty = qm.getConfigProperty(
-                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getGroupName(),
-                BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getPropertyName()
-        );
-        final int compressionLevel = compressionLevelProperty != null
-                ? Integer.parseInt(compressionLevelProperty.getPropertyValue())
-                : Integer.parseInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getDefaultPropertyValue());
-
-        storageProvider.storeBomCompressed(token, bomBytes, compressionLevel);
+        try (final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
+            storageProvider.storeBomCompressed(token, bomBytes, /* TODO: Make configurable */ 3);
+        }
     }
 
     static void validate(final byte[] bomBytes) {

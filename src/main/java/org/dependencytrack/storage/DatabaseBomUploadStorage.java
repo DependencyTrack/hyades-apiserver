@@ -28,9 +28,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
+ * A {@link BomUploadStorage} that stores uploaded BOMs in the {@code BOM_UPLOAD} database table.
+ *
  * @since 5.6.0
  */
-public class DatabaseBomUploadStorageProvider implements BomUploadStorageProvider {
+class DatabaseBomUploadStorage implements BomUploadStorage {
+
+    static final String EXTENSION_NAME = "database";
 
     @Override
     public void storeBom(final UUID token, final byte[] bom) {

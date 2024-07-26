@@ -37,7 +37,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
@@ -238,96 +237,6 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(getPlainTextBody(response)).isEqualTo("The property internal.cluster.id can not be modified");
-    }
-
-    @Test
-    public void updateConfigPropertyBomStorageProviderTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER.getGroupName(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER.getPropertyName(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER.getDefaultPropertyValue(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER.getPropertyType(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_PROVIDER.getDescription()
-        );
-
-        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity("""
-                        {
-                          "groupName": "artifact",
-                          "propertyName": "bom.upload.storage.provider",
-                          "propertyValue": "foobar"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThat(getPlainTextBody(response)).isEqualTo("foobar is not a known storage provider");
-
-        response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity("""
-                        {
-                          "groupName": "artifact",
-                          "propertyName": "bom.upload.storage.provider",
-                          "propertyValue": "org.dependencytrack.storage.LocalBomUploadStorageProvider"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                {
-                  "groupName": "artifact",
-                  "propertyName": "bom.upload.storage.provider",
-                  "propertyValue": "org.dependencytrack.storage.LocalBomUploadStorageProvider",
-                  "propertyType": "STRING",
-                  "description": ""
-                }
-                """);
-    }
-
-    @Test
-    public void updateConfigPropertyBomStorageCompressionLevelTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getGroupName(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getPropertyName(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getDefaultPropertyValue(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getPropertyType(),
-                ConfigPropertyConstants.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL.getDescription()
-        );
-
-        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity("""
-                        {
-                          "groupName": "artifact",
-                          "propertyName": "bom.upload.storage.compression.level",
-                          "propertyValue": "999"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThat(getPlainTextBody(response)).isEqualTo("Compression level 999 is out of the valid [1..22] range");
-
-        response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity("""
-                        {
-                          "groupName": "artifact",
-                          "propertyName": "bom.upload.storage.compression.level",
-                          "propertyValue": "11"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                {
-                  "groupName": "artifact",
-                  "propertyName": "bom.upload.storage.compression.level",
-                  "propertyValue": "11",
-                  "propertyType": "INTEGER",
-                  "description": ""
-                }
-                """);
     }
 
     @Test
