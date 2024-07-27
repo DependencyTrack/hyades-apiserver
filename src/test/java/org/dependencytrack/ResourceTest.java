@@ -27,6 +27,7 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -63,6 +64,7 @@ public abstract class ResourceTest {
     protected final String V1_NOTIFICATION_RULE = "/v1/notification/rule";
     protected final String V1_OIDC = "/v1/oidc";
     protected final String V1_PERMISSION = "/v1/permission";
+    protected final String V1_PLUGIN = "/v1/plugin";
     protected final String V1_OSV_ECOSYSTEM = "/v1/integration/osv/ecosystem";
     protected final String V1_POLICY = "/v1/policy";
     protected final String V1_POLICY_VIOLATION = "/v1/violation";
@@ -105,6 +107,8 @@ public abstract class ResourceTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
+
+        PluginManagerTestUtil.loadPlugins();
     }
 
     @Before
@@ -136,6 +140,8 @@ public abstract class ResourceTest {
 
     @AfterClass
     public static void tearDownClass() {
+        PluginManagerTestUtil.unloadPlugins();
+
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }
