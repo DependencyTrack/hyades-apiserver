@@ -25,6 +25,7 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -53,6 +54,8 @@ public abstract class PersistenceCapableTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
+
+        PluginManagerTestUtil.loadPlugins();
     }
 
     @Before
@@ -83,6 +86,8 @@ public abstract class PersistenceCapableTest {
 
     @AfterClass
     public static void tearDownClass() {
+        PluginManagerTestUtil.unloadPlugins();
+
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }

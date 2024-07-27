@@ -29,13 +29,13 @@
         <listener-class>alpine.server.metrics.MetricsInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>alpine.server.persistence.PersistenceInitializer</listener-class>
-    </listener>
-    <listener>
         <listener-class>org.dependencytrack.persistence.migration.MigrationInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>
