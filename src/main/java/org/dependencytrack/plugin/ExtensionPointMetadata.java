@@ -18,5 +18,25 @@
  */
 package org.dependencytrack.plugin;
 
-public interface DummyProviderFactory extends ProviderFactory<DummyProvider> {
+/**
+ * @since 5.6.0
+ */
+public interface ExtensionPointMetadata<T extends ExtensionPoint> {
+
+    /**
+     * @return The name of the {@link ExtensionPoint}. Can contain lowercase letters, numbers, and periods.
+     */
+    String name();
+
+    /**
+     * @return Whether the {@link ExtensionPoint} is required.
+     * Required extension points must have at least one active implementation.
+     */
+    boolean required();
+
+    /**
+     * @return The {@link Class} of the {@link ExtensionPoint}.
+     */
+    Class<T> extensionPointClass();
+
 }

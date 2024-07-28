@@ -18,29 +18,21 @@
  */
 package org.dependencytrack.plugin;
 
+import java.util.Collection;
+
 /**
  * @since 5.6.0
  */
 public interface Plugin {
 
     /**
-     * @return The name of the plugin. Can contain lowercase letters, numbers, and periods.
+     * @return The name of the plugin.
      */
     String name();
 
     /**
-     * @return Whether this plugin is required. Required plugins must have at least one active {@link Provider}.
+     * @return The {@link ExtensionFactory}s provided by the plugin.
      */
-    boolean required();
-
-    /**
-     * @return Class of the {@link ProviderFactory}
-     */
-    Class<? extends ProviderFactory<? extends Provider>> providerFactoryClass();
-
-    /**
-     * @return Class of the {@link Provider}
-     */
-    Class<? extends Provider> providerClass();
+    Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories();
 
 }

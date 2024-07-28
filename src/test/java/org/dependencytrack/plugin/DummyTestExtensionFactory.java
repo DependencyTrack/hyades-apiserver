@@ -18,19 +18,36 @@
  */
 package org.dependencytrack.plugin;
 
-import java.util.Collection;
-import java.util.List;
+public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
 
-public class DummyPlugin implements Plugin {
+    private ConfigRegistry configRegistry;
 
     @Override
-    public String name() {
-        return "dummy123";
+    public String extensionName() {
+        return DummyTestExtension.NAME;
     }
 
     @Override
-    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
-        return List.of(new DummyTestExtensionFactory());
+    public Class<? extends TestExtensionPoint> extensionClass() {
+        return DummyTestExtension.class;
+    }
+
+    @Override
+    public int priority() {
+        return PRIORITY_LOWEST;
+    }
+
+    @Override
+    public void init(final ConfigRegistry configRegistry) {
+        this.configRegistry = configRegistry;
+    }
+
+    @Override
+    public DummyTestExtension create() {
+        return new DummyTestExtension(
+                configRegistry.getRuntimeProperty("foo").orElse(null),
+                configRegistry.getDeploymentProperty("bar").orElse(null)
+        );
     }
 
 }

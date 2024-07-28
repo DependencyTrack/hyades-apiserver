@@ -18,21 +18,28 @@
  */
 package org.dependencytrack.plugin;
 
+import java.io.Closeable;
+
 /**
  * @since 5.6.0
  */
-public interface ProviderFactory<T extends Provider> extends AutoCloseable {
+public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
 
     int PRIORITY_HIGHEST = 0;
     int PRIORITY_LOWEST = Integer.MAX_VALUE;
 
     /**
-     * @return Name of the provider. Can contain lowercase letters, numbers, and periods.
+     * @return Name of the extension. Can contain lowercase letters, numbers, and periods.
      */
-    String providerName();
+    String extensionName();
 
     /**
-     * @return Priority of the provider. Must be a value between {@value #PRIORITY_HIGHEST}
+     * @return {@link Class} of the extension.
+     */
+    Class<? extends T> extensionClass();
+
+    /**
+     * @return Priority of the extension. Must be a value between {@value #PRIORITY_HIGHEST}
      * (highest priority) and {@value #PRIORITY_LOWEST} (lowest priority).
      */
     int priority();
@@ -45,7 +52,7 @@ public interface ProviderFactory<T extends Provider> extends AutoCloseable {
     void init(final ConfigRegistry configRegistry);
 
     /**
-     * @return An instance of {@link T}.
+     * @return An extension instance.
      */
     T create();
 

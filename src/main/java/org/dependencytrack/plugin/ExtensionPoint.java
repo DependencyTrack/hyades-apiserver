@@ -18,26 +18,19 @@
  */
 package org.dependencytrack.plugin;
 
-public class TestDummyProviderFactory implements DummyProviderFactory {
+import java.io.Closeable;
 
-    @Override
-    public String providerName() {
-        return "test";
-    }
+/**
+ * @since 5.6.0
+ */
+public interface ExtensionPoint extends Closeable {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public int priority() {
-        return 0;
-    }
-
-    @Override
-    public void init(final ConfigRegistry ignored) {
-        // Nothing to do.
-    }
-
-    @Override
-    public DummyProvider create() {
-        return null;
+    default void close() {
+        // Default no-op to remove checked exception from method signature.
     }
 
 }

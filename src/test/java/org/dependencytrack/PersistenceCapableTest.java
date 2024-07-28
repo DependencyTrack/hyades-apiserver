@@ -54,8 +54,6 @@ public abstract class PersistenceCapableTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
-
-        PluginManagerTestUtil.loadPlugins();
     }
 
     @Before
@@ -67,10 +65,14 @@ public abstract class PersistenceCapableTest {
 
         environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
+
+        PluginManagerTestUtil.loadPlugins();
     }
 
     @After
     public void after() {
+        PluginManagerTestUtil.unloadPlugins();
+
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
         // code base can leave such a broken state behind if they run into unexpected
@@ -86,8 +88,6 @@ public abstract class PersistenceCapableTest {
 
     @AfterClass
     public static void tearDownClass() {
-        PluginManagerTestUtil.unloadPlugins();
-
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }
