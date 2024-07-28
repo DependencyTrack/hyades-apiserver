@@ -16,20 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources.v1.vo;
+package org.dependencytrack.plugin;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.annotations.ApiModelProperty;
+public class DummyTestExtension implements TestExtensionPoint {
 
-import java.util.List;
+    static final String NAME = "dummy";
 
-/**
- * @since 5.6.0
- */
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public record LoadedPluginListResponseItem(
-        @ApiModelProperty(value = "Name of the plugin", required = true) String name,
-        @ApiModelProperty(value = "Names of all loaded providers for the plugin") List<String> providers,
-        @ApiModelProperty(value = "Name of the default provider for the plugin") String defaultProvider
-) {
+    private final String runtimeConfigValue;
+    private final String deploymentConfigValue;
+
+    DummyTestExtension(final String runtimeConfigValue, final String deploymentConfigValue) {
+        this.runtimeConfigValue = runtimeConfigValue;
+        this.deploymentConfigValue = deploymentConfigValue;
+    }
+
+    @Override
+    public String test() {
+        return "%s-%s".formatted(runtimeConfigValue, deploymentConfigValue);
+    }
+
 }

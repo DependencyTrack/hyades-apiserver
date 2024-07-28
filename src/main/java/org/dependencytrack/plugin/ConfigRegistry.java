@@ -29,14 +29,14 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  * A read-only registry for accessing application configuration.
  * <p>
  * The registry enforces namespacing of property names,
- * to prevent {@link Provider}s from accessing values
- * belonging to the core application, or other plugins.
+ * to prevent {@link ExtensionPoint}s from accessing values
+ * belonging to the core application, or other extension points.
  * <p>
- * Namespacing is based on the plugin's, and the provider's name.
- * Provider {@code foo} of plugin {@code bar} can access:
+ * Namespacing is based on the extension point's, and the extension's name.
+ * Extension {@code bar} of extension point {@code foo} can access:
  * <ul>
- *     <li>Runtime properties with {@code groupName} of {@code plugin} and {@code propertyName} starting with {@code bar.provider.foo}</li>
- *     <li>Deployment properties prefix {@code bar.provider.foo}</li>
+ *     <li>Runtime properties with {@code groupName} of {@code foo} and {@code propertyName} prefixed with {@code extension.bar}</li>
+ *     <li>Deployment properties prefixed with {@code foo.extension.bar}</li>
  * </ul>
  * <p>
  * Runtime properties are sourced from the {@code CONFIGPROPERTY} database table.
@@ -46,12 +46,12 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  */
 public class ConfigRegistry {
 
-    private final String pluginName;
-    private final String providerName;
+    private final String extensionPointName;
+    private final String extensionName;
 
-    public ConfigRegistry(final String pluginName, final String providerName) {
-        this.pluginName = requireNonNull(pluginName);
-        this.providerName = requireNonNull(providerName);
+    public ConfigRegistry(final String extensionPointName, final String extensionName) {
+        this.extensionPointName = requireNonNull(extensionPointName);
+        this.extensionName = requireNonNull(extensionName);
     }
 
     /**
@@ -59,14 +59,15 @@ public class ConfigRegistry {
      * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
      */
     public Optional<String> getRuntimeProperty(final String propertyName) {
-        final String namespacedPropertyName = "%s.provider.%s.%s".formatted(pluginName, providerName, propertyName);
+        final String namespacedPropertyName = "extension.%s.%s".formatted(extensionName, propertyName);
 
         return withJdbiHandle(handle -> handle.createQuery("""
                         SELECT "PROPERTYVALUE"
                           FROM "CONFIGPROPERTY"
-                         WHERE "GROUPNAME" = 'plugin'
+                         WHERE "GROUPNAME" = :extensionPointName
                            AND "PROPERTYNAME" = :propertyName
                         """)
+                .bind("extensionPointName", extensionPointName)
                 .bind("propertyName", namespacedPropertyName)
                 .mapTo(String.class)
                 .findOne());
@@ -77,23 +78,23 @@ public class ConfigRegistry {
      * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
      */
     public Optional<String> getDeploymentProperty(final String propertyName) {
-        final var key = new DeploymentConfigKey(pluginName, providerName, propertyName);
+        final var key = new DeploymentConfigKey(extensionPointName, extensionName, propertyName);
         return Optional.ofNullable(Config.getInstance().getProperty(key));
     }
 
-    record DeploymentConfigKey(String pluginName, String providerName, String name) implements Config.Key {
+    record DeploymentConfigKey(String extensionPointName, String extensionName, String name) implements Config.Key {
 
-        DeploymentConfigKey(final String pluginName, final String name) {
-            this(pluginName, null, name);
+        DeploymentConfigKey(final String extensionPointName, final String name) {
+            this(extensionPointName, null, name);
         }
 
         @Override
         public String getPropertyName() {
-            if (providerName == null) {
-                return "%s.%s".formatted(pluginName, name);
+            if (extensionName == null) {
+                return "%s.%s".formatted(extensionPointName, name);
             }
 
-            return "%s.provider.%s.%s".formatted(pluginName, providerName, name);
+            return "%s.extension.%s.%s".formatted(extensionPointName, extensionName, name);
         }
 
         @Override

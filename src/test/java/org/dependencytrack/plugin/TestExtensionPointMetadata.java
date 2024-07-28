@@ -18,5 +18,21 @@
  */
 package org.dependencytrack.plugin;
 
-public interface DummyProvider extends Provider {
+public class TestExtensionPointMetadata implements ExtensionPointMetadata<TestExtensionPoint> {
+
+    @Override
+    public String name() {
+        return "test";
+    }
+
+    @Override
+    public boolean required() {
+        return false;
+    }
+
+    @Override
+    public Class<TestExtensionPoint> extensionPointClass() {
+        return TestExtensionPoint.class;
+    }
+
 }

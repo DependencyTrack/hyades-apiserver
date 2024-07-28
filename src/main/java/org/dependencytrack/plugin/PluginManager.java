@@ -22,7 +22,9 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import org.dependencytrack.plugin.ConfigRegistry.DeploymentConfigKey;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,41 +39,44 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
-import static org.dependencytrack.plugin.ProviderFactory.PRIORITY_HIGHEST;
-import static org.dependencytrack.plugin.ProviderFactory.PRIORITY_LOWEST;
+import static org.dependencytrack.plugin.ExtensionFactory.PRIORITY_HIGHEST;
+import static org.dependencytrack.plugin.ExtensionFactory.PRIORITY_LOWEST;
 
 /**
  * @since 5.6.0
  */
 public class PluginManager {
 
-    private record ProviderIdentity(Class<? extends Provider> clazz, String name) {
+    private record ExtensionIdentity(Class<? extends ExtensionPoint> clazz, String name) {
     }
 
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern PLUGIN_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
-    private static final Pattern PROVIDER_NAME_PATTERN = PLUGIN_NAME_PATTERN;
-    private static final String PROPERTY_PROVIDER_ENABLED = "enabled";
-    private static final String PROPERTY_DEFAULT_PROVIDER = "default.provider";
+    private static final Pattern EXTENSION_POINT_NAME_PATTERN = PLUGIN_NAME_PATTERN;
+    private static final Pattern EXTENSION_NAME_PATTERN = PLUGIN_NAME_PATTERN;
+    private static final String PROPERTY_EXTENSION_ENABLED = "enabled";
+    private static final String PROPERTY_DEFAULT_EXTENSION = "default.extension";
     private static final PluginManager INSTANCE = new PluginManager();
 
     private final List<Plugin> loadedPlugins;
-    private final Map<Class<? extends Provider>, Plugin> pluginByProviderClass;
-    private final Map<Class<? extends Provider>, Set<String>> providerNamesByProviderClass;
-    private final Map<ProviderIdentity, ProviderFactory<?>> factoryByProviderKey;
-    private final Map<Class<? extends Provider>, ProviderFactory<?>> defaultFactoryByProviderClass;
-    private final Comparator<ProviderFactory<?>> providerFactoryComparator;
+    private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
+    private final Map<Class<? extends ExtensionPoint>, ExtensionPointMetadata<?>> metadataByExtensionPointClass;
+    private final Map<Class<? extends ExtensionPoint>, Set<String>> extensionNamesByExtensionPointClass;
+    private final Map<ExtensionIdentity, ExtensionFactory<?>> factoryByExtensionIdentity;
+    private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
+    private final Comparator<ExtensionFactory<?>> factoryComparator;
     private final ReentrantLock lock;
 
     private PluginManager() {
         this.loadedPlugins = new ArrayList<>();
-        this.pluginByProviderClass = new HashMap<>();
-        this.providerNamesByProviderClass = new HashMap<>();
-        this.factoryByProviderKey = new HashMap<>();
-        this.defaultFactoryByProviderClass = new HashMap<>();
-        this.providerFactoryComparator = Comparator
-                .<ProviderFactory<?>>comparingInt(ProviderFactory::priority)
-                .thenComparing(ProviderFactory::providerName);
+        this.factoriesByPlugin = new HashMap<>();
+        this.metadataByExtensionPointClass = new HashMap<>();
+        this.extensionNamesByExtensionPointClass = new HashMap<>();
+        this.factoryByExtensionIdentity = new HashMap<>();
+        this.defaultFactoryByExtensionPointClass = new HashMap<>();
+        this.factoryComparator = Comparator
+                .<ExtensionFactory<?>>comparingInt(ExtensionFactory::priority)
+                .thenComparing(ExtensionFactory::extensionName);
         this.lock = new ReentrantLock();
     }
 
@@ -84,8 +89,18 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends Provider, U extends ProviderFactory<T>> U getFactory(final Class<T> providerClass) {
-        final ProviderFactory<?> factory = defaultFactoryByProviderClass.get(providerClass);
+    public <T extends ExtensionPoint> T getExtension(final Class<T> extensionPointClass) {
+        final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
+        if (factory == null) {
+            return null;
+        }
+
+        return (T) factory.create();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(final Class<T> extensionPointClass) {
+        final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
             return null;
         }
@@ -94,16 +109,16 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends Provider, U extends ProviderFactory<T>> SortedSet<U> getFactories(final Class<T> providerClass) {
-        final Set<String> providerNames = providerNamesByProviderClass.get(providerClass);
-        if (providerNames == null) {
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SortedSet<U> getFactories(final Class<T> extensionPointClass) {
+        final Set<String> extensionNames = extensionNamesByExtensionPointClass.get(extensionPointClass);
+        if (extensionNames == null) {
             return Collections.emptySortedSet();
         }
 
-        final var factories = new TreeSet<U>(providerFactoryComparator);
-        for (final String providerName : providerNames) {
-            final var providerKey = new ProviderIdentity(providerClass, providerName);
-            final ProviderFactory<?> factory = factoryByProviderKey.get(providerKey);
+        final var factories = new TreeSet<U>(factoryComparator);
+        for (final String extensionName : extensionNames) {
+            final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
+            final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
             if (factory != null) {
                 factories.add((U) factory);
             }
@@ -131,120 +146,184 @@ public class PluginManager {
     private void loadPluginsLocked() {
         assert lock.isHeldByCurrentThread() : "Lock is not held by current thread";
 
+        LOGGER.debug("Discovering extension points");
+        final var extensionPointMetadataLoader = ServiceLoader.load(ExtensionPointMetadata.class);
+        for (final ExtensionPointMetadata<?> metadata : extensionPointMetadataLoader) {
+            if (!EXTENSION_POINT_NAME_PATTERN.matcher(metadata.name()).matches()) {
+                throw new IllegalStateException("%s is not a valid extension point name".formatted(metadata.name()));
+            }
+
+            LOGGER.debug("Discovered extension point %s".formatted(metadata.name()));
+            metadataByExtensionPointClass.put(metadata.extensionPointClass(), metadata);
+        }
+
         LOGGER.debug("Discovering plugins");
-        final var pluginServiceLoader = ServiceLoader.load(Plugin.class);
-        for (final Plugin plugin : pluginServiceLoader) {
+        final var pluginLoader = ServiceLoader.load(Plugin.class);
+        for (final Plugin plugin : pluginLoader) {
             if (!PLUGIN_NAME_PATTERN.matcher(plugin.name()).matches()) {
                 throw new IllegalStateException("%s is not a valid plugin name".formatted(plugin.name()));
             }
 
-            loadProvidersForPlugin(plugin);
+            loadExtensionsForPlugin(plugin);
 
-            LOGGER.debug("Loaded plugin %s".formatted(plugin.name()));
+            LOGGER.info("Loaded plugin %s".formatted(plugin.name()));
             loadedPlugins.add(plugin);
         }
 
-        determineDefaultProviders();
+        determineDefaultExtensions();
 
-        assertRequiredPlugins();
+        assertRequiredExtensionPoints();
     }
 
-    private void loadProvidersForPlugin(final Plugin plugin) {
-        LOGGER.debug("Discovering providers for plugin %s".formatted(plugin.name()));
-        final ServiceLoader<? extends ProviderFactory<? extends Provider>> providerFactoryServiceLoader = ServiceLoader.load(plugin.providerFactoryClass());
-        for (final ProviderFactory<? extends Provider> providerFactory : providerFactoryServiceLoader) {
-            if (!PROVIDER_NAME_PATTERN.matcher(providerFactory.providerName()).matches()) {
-                throw new IllegalStateException("%s is not a valid provider name".formatted(providerFactory.providerName()));
+    private void loadExtensionsForPlugin(final Plugin plugin) {
+        final Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories = plugin.extensionFactories();
+        if (extensionFactories == null || extensionFactories.isEmpty()) {
+            return;
+        }
+
+        LOGGER.debug("Discovering extensions for plugin %s".formatted(plugin.name()));
+        for (final ExtensionFactory<? extends ExtensionPoint> extensionFactory : extensionFactories) {
+            if (extensionFactory.extensionName() == null
+                || !EXTENSION_NAME_PATTERN.matcher(extensionFactory.extensionName()).matches()) {
+                throw new IllegalStateException("%s is not a valid extension name".formatted(extensionFactory.extensionName()));
             }
 
-            LOGGER.debug("Discovered provider %s for plugin %s".formatted(providerFactory.providerName(), plugin.name()));
-            final var configRegistry = new ConfigRegistry(plugin.name(), providerFactory.providerName());
-            final boolean isEnabled = configRegistry.getDeploymentProperty(PROPERTY_PROVIDER_ENABLED).map(Boolean::parseBoolean).orElse(true);
+            if (extensionFactory.extensionClass() == null) {
+                throw new IllegalStateException("Extension %s from plugin %s does not define an extension class"
+                        .formatted(extensionFactory.extensionName(), plugin.name()));
+            }
+
+            // Prevent plugins from registering their extensions as non-concrete classes.
+            // The purpose of tracking extension classes is to differentiate them from another,
+            // which would be impossible if we allowed interfaces or abstract classes.
+            if (extensionFactory.extensionClass().isInterface()
+                || Modifier.isAbstract(extensionFactory.extensionClass().getModifiers())) {
+                throw new IllegalStateException("""
+                        Class %s of extension %s from plugin %s is either abstract or an interface; \
+                        Extension classes must be concrete""".formatted(extensionFactory.extensionClass().getName(),
+                        extensionFactory.extensionName(), plugin.name()));
+            }
+
+            final ExtensionPointMetadata<?> extensionPointMetadata =
+                    assertKnownExtensionPoint(extensionFactory.extensionClass());
+
+            LOGGER.debug("Discovered extension %s/%s from plugin %s"
+                    .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()));
+            final var configRegistry = new ConfigRegistry(extensionPointMetadata.name(), extensionFactory.extensionName());
+            final boolean isEnabled = configRegistry.getDeploymentProperty(PROPERTY_EXTENSION_ENABLED).map(Boolean::parseBoolean).orElse(true);
             if (!isEnabled) {
-                LOGGER.debug("Provider %s for plugin %s is disabled; Skipping".formatted(providerFactory.providerName(), plugin.name()));
+                LOGGER.debug("Extension %s/%s from plugin %s is disabled; Skipping"
+                        .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()));
                 continue;
             }
 
-            if (providerFactory.priority() < PRIORITY_HIGHEST) {
+            if (extensionFactory.priority() < PRIORITY_HIGHEST) {
                 throw new IllegalStateException("""
-                        Provider %s has an invalid priority of %d; \
+                        Extension %s/%s from plugin %s has an invalid priority of %d; \
                         Allowed range is [%d..%d] (highest to lowest priority)\
-                        """.formatted(providerFactory.providerName(), providerFactory.priority(), PRIORITY_HIGHEST, PRIORITY_LOWEST)
+                        """.formatted(extensionPointMetadata.name(), extensionFactory.extensionName(),
+                        plugin.name(), extensionFactory.priority(), PRIORITY_HIGHEST, PRIORITY_LOWEST)
                 );
             }
 
-            LOGGER.debug("Initializing provider %s for plugin %s".formatted(providerFactory.providerName(), plugin.name()));
+            LOGGER.info("Initializing extension %s/%s from plugin %s"
+                    .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()));
             try {
-                providerFactory.init(configRegistry);
+                extensionFactory.init(configRegistry);
             } catch (RuntimeException e) {
-                LOGGER.warn("Failed to initialize provider %s for plugin %s; Skipping".formatted(providerFactory.providerName(), plugin.name()), e);
-                continue;
+                throw new IllegalStateException("Failed to initialize extension %s/%s from plugin %s"
+                        .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()), e);
             }
 
-            pluginByProviderClass.put(plugin.providerClass(), plugin);
-
-            providerNamesByProviderClass.compute(plugin.providerClass(), (ignored, providerNames) -> {
-                if (providerNames == null) {
-                    return new HashSet<>(Set.of(providerFactory.providerName()));
+            factoriesByPlugin.compute(plugin, (ignored, factories) -> {
+                if (factories == null) {
+                    return new ArrayList<>(List.of(extensionFactory));
                 }
 
-                providerNames.add(providerFactory.providerName());
-                return providerNames;
+                factories.add(extensionFactory);
+                return factories;
             });
 
-            final var providerIdentity = new ProviderIdentity(plugin.providerClass(), providerFactory.providerName());
-            factoryByProviderKey.put(providerIdentity, providerFactory);
+            extensionNamesByExtensionPointClass.compute(
+                    extensionPointMetadata.extensionPointClass(),
+                    (ignored, extensionNames) -> {
+                        if (extensionNames == null) {
+                            return new HashSet<>(Set.of(extensionFactory.extensionName()));
+                        }
+
+                        extensionNames.add(extensionFactory.extensionName());
+                        return extensionNames;
+                    }
+            );
+
+            final var extensionIdentity = new ExtensionIdentity(
+                    extensionPointMetadata.extensionPointClass(),
+                    extensionFactory.extensionName()
+            );
+            factoryByExtensionIdentity.put(extensionIdentity, extensionFactory);
         }
     }
 
-    private void determineDefaultProviders() {
-        for (final Class<? extends Provider> providerClass : providerNamesByProviderClass.keySet()) {
-            final SortedSet<? extends ProviderFactory<?>> factories = getFactories(providerClass);
+    private void determineDefaultExtensions() {
+        for (final Class<? extends ExtensionPoint> extensionPointClass : extensionNamesByExtensionPointClass.keySet()) {
+            final SortedSet<? extends ExtensionFactory<?>> factories = getFactories(extensionPointClass);
             if (factories == null || factories.isEmpty()) {
-                LOGGER.debug("No factories available for provider class %s; Skipping".formatted(providerClass.getName()));
+                LOGGER.debug("No factories available for extension point class %s; Skipping".formatted(extensionPointClass.getName()));
                 continue;
             }
 
-            final Plugin plugin = pluginByProviderClass.get(providerClass);
-            if (plugin == null) {
+            final ExtensionPointMetadata<?> extensionPointMetadata = metadataByExtensionPointClass.get(extensionPointClass);
+            if (extensionPointMetadata == null) {
                 throw new IllegalStateException("""
-                        No plugin exists for provider class %s; \
+                        No metadata exists for extension point class %s; \
                         This is likely a logic error in the plugin loading procedure\
-                        """.formatted(providerClass));
+                        """.formatted(extensionPointClass));
             }
 
-            final ProviderFactory<?> providerFactory;
-            final var defaultProviderConfigKey = new DeploymentConfigKey(plugin.name(), PROPERTY_DEFAULT_PROVIDER);
-            final String providerName = Config.getInstance().getProperty(defaultProviderConfigKey);
-            if (providerName == null) {
-                LOGGER.debug("""
-                        No default provider configured for plugin %s; \
-                        Choosing based on priority""".formatted(plugin.name()));
-                providerFactory = factories.first();
-                LOGGER.debug("Chose provider %s with priority %d for plugin %s"
-                        .formatted(providerFactory.providerName(), providerFactory.priority(), plugin.name()));
+            final ExtensionFactory<?> extensionFactory;
+            final var defaultProviderConfigKey = new DeploymentConfigKey(extensionPointMetadata.name(), PROPERTY_DEFAULT_EXTENSION);
+            final String defaultExtensionName = Config.getInstance().getProperty(defaultProviderConfigKey);
+            if (defaultExtensionName == null) {
+                LOGGER.warn("""
+                        No default extension configured for extension point %s; \
+                        Choosing based on priority""".formatted(extensionPointMetadata.name()));
+                extensionFactory = factories.first();
+                LOGGER.info("Chose extension %s with priority %d as default for extension point %s"
+                        .formatted(extensionFactory.extensionName(), extensionFactory.priority(), extensionPointMetadata.name()));
             } else {
-                LOGGER.debug("Using configured default provider %s for plugin %s".formatted(providerName, plugin.name()));
-                providerFactory = factories.stream()
-                        .filter(factory -> factory.providerName().equals(providerName))
+                LOGGER.info("Using configured default extension %s for extension point %s"
+                        .formatted(defaultExtensionName, extensionPointMetadata.name()));
+                extensionFactory = factories.stream()
+                        .filter(factory -> factory.extensionName().equals(defaultExtensionName))
                         .findFirst()
                         .orElseThrow(() -> new NoSuchElementException("""
-                                No provider named %s exists for plugin %s\
-                                """.formatted(providerName, plugin.name())));
+                                No extension named %s exists for extension point %s\
+                                """.formatted(defaultExtensionName, extensionPointMetadata.name())));
             }
 
-            defaultFactoryByProviderClass.put(providerClass, providerFactory);
+            defaultFactoryByExtensionPointClass.put(extensionPointClass, extensionFactory);
         }
     }
 
-    private void assertRequiredPlugins() {
-        for (final Plugin plugin : loadedPlugins) {
-            if (!plugin.required()) {
+    private ExtensionPointMetadata<?> assertKnownExtensionPoint(final Class<? extends ExtensionPoint> concreteExtensionClass) {
+        for (final Class<? extends ExtensionPoint> knownExtensionPoint : metadataByExtensionPointClass.keySet()) {
+            if (knownExtensionPoint.isAssignableFrom(concreteExtensionClass)) {
+                return metadataByExtensionPointClass.get(knownExtensionPoint);
+            }
+        }
+
+        throw new IllegalStateException("Extension %s does not implement any known extension point"
+                .formatted(concreteExtensionClass.getName()));
+    }
+
+    private void assertRequiredExtensionPoints() {
+        for (final ExtensionPointMetadata<?> metadata : metadataByExtensionPointClass.values()) {
+            if (!metadata.required()) {
                 continue;
             }
 
-            if (getFactory(plugin.providerClass()) == null) {
-                throw new IllegalStateException("Plugin %s is required, but no provider is active".formatted(plugin.name()));
+            if (getFactory(metadata.extensionPointClass()) == null) {
+                throw new IllegalStateException("Extension point %s is required, but no extension is active".formatted(metadata.name()));
             }
         }
     }
@@ -253,10 +332,10 @@ public class PluginManager {
         lock.lock();
         try {
             unloadPluginsLocked();
-            defaultFactoryByProviderClass.clear();
-            factoryByProviderKey.clear();
-            providerNamesByProviderClass.clear();
-            pluginByProviderClass.clear();
+            defaultFactoryByExtensionPointClass.clear();
+            factoryByExtensionIdentity.clear();
+            extensionNamesByExtensionPointClass.clear();
+            metadataByExtensionPointClass.clear();
             loadedPlugins.clear();
         } finally {
             lock.unlock();
@@ -266,16 +345,29 @@ public class PluginManager {
     private void unloadPluginsLocked() {
         assert lock.isHeldByCurrentThread() : "Lock is not held by current thread";
 
-        for (final Plugin plugin : loadedPlugins) {
-            LOGGER.debug("Closing providers for plugin %s".formatted(plugin.name()));
+        // Unload plugins in reverse order in which they were loaded.
+        for (final Plugin plugin : loadedPlugins.reversed()) {
+            LOGGER.info("Unloading plugin %s".formatted(plugin.name()));
 
-            for (ProviderFactory<?> providerFactory : getFactories(plugin.providerClass())) {
-                LOGGER.debug("Closing provider %s for plugin %s".formatted(providerFactory.providerName(), plugin.name()));
+            final List<ExtensionFactory<?>> factories = factoriesByPlugin.get(plugin);
+            if (factories == null || factories.isEmpty()) {
+                LOGGER.debug("No extensions were loaded for plugin %s; Skipping".formatted(plugin.name()));
+                continue;
+            }
+
+            // Close factories in reverse order in which they were initialized.
+            for (final ExtensionFactory<?> extensionFactory : factories.reversed()) {
+                final ExtensionPointMetadata<?> extensionPointMetadata =
+                        assertKnownExtensionPoint(extensionFactory.extensionClass());
+
+                LOGGER.info("Closing extension %s/%s for plugin %s"
+                        .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()));
 
                 try {
-                    providerFactory.close();
+                    extensionFactory.close();
                 } catch (RuntimeException e) {
-                    LOGGER.warn("Failed to close provider %s for plugin %s".formatted(providerFactory.providerName(), plugin.name()), e);
+                    LOGGER.warn("Failed to close extension %s/%s for plugin %s"
+                            .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()), e);
                 }
             }
 

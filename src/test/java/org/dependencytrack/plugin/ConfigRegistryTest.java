@@ -36,8 +36,8 @@ public class ConfigRegistryTest extends PersistenceCapableTest {
     @Test
     public void testGetRuntimeProperty() {
         qm.createConfigProperty(
-                /* groupName */ "plugin",
-                /* propertyName */ "foo.provider.bar.baz",
+                /* groupName */ "foo",
+                /* propertyName */ "extension.bar.baz",
                 /* propertyValue */ "qux",
                 PropertyType.STRING,
                 /* description */ null
@@ -57,7 +57,7 @@ public class ConfigRegistryTest extends PersistenceCapableTest {
 
     @Test
     public void testDeploymentProperty() {
-        environmentVariables.set("FOO_PROVIDER_BAR_BAZ", "qux");
+        environmentVariables.set("FOO_EXTENSION_BAR_BAZ", "qux");
         final var configRegistry = new ConfigRegistry("foo", "bar");
         final Optional<String> optionalProperty = configRegistry.getDeploymentProperty("baz");
         assertThat(optionalProperty).contains("qux");

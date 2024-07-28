@@ -18,17 +18,8 @@
  */
 package org.dependencytrack.plugin;
 
-/**
- * @since 5.6.0
- */
-public interface Provider extends AutoCloseable {
+public interface TestExtensionPoint extends ExtensionPoint {
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    default void close() {
-        // Default no-op to remove checked exception from method signature.
-    }
+    String test();
 
 }

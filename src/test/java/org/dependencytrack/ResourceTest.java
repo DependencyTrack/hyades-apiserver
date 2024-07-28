@@ -64,7 +64,6 @@ public abstract class ResourceTest {
     protected final String V1_NOTIFICATION_RULE = "/v1/notification/rule";
     protected final String V1_OIDC = "/v1/oidc";
     protected final String V1_PERMISSION = "/v1/permission";
-    protected final String V1_PLUGIN = "/v1/plugin";
     protected final String V1_OSV_ECOSYSTEM = "/v1/integration/osv/ecosystem";
     protected final String V1_POLICY = "/v1/policy";
     protected final String V1_POLICY_VIOLATION = "/v1/violation";
@@ -107,8 +106,6 @@ public abstract class ResourceTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
-
-        PluginManagerTestUtil.loadPlugins();
     }
 
     @Before
@@ -118,6 +115,7 @@ public abstract class ResourceTest {
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
+        PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         team = qm.createTeam("Test Users", true);
         this.apiKey = team.getApiKeys().get(0).getKey();
@@ -125,6 +123,8 @@ public abstract class ResourceTest {
 
     @After
     public void after() {
+        PluginManagerTestUtil.unloadPlugins();
+
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
         // code base can leave such a broken state behind if they run into unexpected
@@ -140,8 +140,6 @@ public abstract class ResourceTest {
 
     @AfterClass
     public static void tearDownClass() {
-        PluginManagerTestUtil.unloadPlugins();
-
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }
