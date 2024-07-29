@@ -83,6 +83,8 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
@@ -777,7 +779,7 @@ public class BomResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -834,7 +836,7 @@ public class BomResourceTest extends ResourceTest {
                 SPDXVersion: SPDX-2.2
                 DataLicense: CC0-1.0
                 """.getBytes());
-        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -863,7 +865,7 @@ public class BomResourceTest extends ResourceTest {
                   ]
                 }
                 """.getBytes());
-        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -890,7 +892,7 @@ public class BomResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
         File file = new File(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -909,7 +911,7 @@ public class BomResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(UUID.randomUUID().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(UUID.randomUUID().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -924,7 +926,7 @@ public class BomResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", true, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -941,7 +943,7 @@ public class BomResourceTest extends ResourceTest {
     public void uploadBomUnauthorizedTest() throws Exception {
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", true, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -956,7 +958,7 @@ public class BomResourceTest extends ResourceTest {
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         // Upload parent project
-        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Parent", "1.0", true, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Parent", "1.0", null, true, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -968,7 +970,7 @@ public class BomResourceTest extends ResourceTest {
         String parentUUID = parent.getUuid().toString();
 
         // Upload first child, search parent by UUID
-        request = new BomSubmitRequest(null, "Acme Example", "1.0", true, parentUUID, null, null, bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, parentUUID, null, null, bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -984,7 +986,7 @@ public class BomResourceTest extends ResourceTest {
 
 
         // Upload second child, search parent by name+ver
-        request = new BomSubmitRequest(null, "Acme Example", "2.0", true, null, "Acme Parent", "1.0", bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "2.0", null, true, null, "Acme Parent", "1.0", bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -999,7 +1001,7 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
 
         // Upload third child, specify parent's UUID, name, ver. Name and ver are ignored when UUID is specified.
-        request = new BomSubmitRequest(null, "Acme Example", "3.0", true, parentUUID, "Non-existent parent", "1.0", bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "3.0", null, true, parentUUID, "Non-existent parent", "1.0", bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1019,7 +1021,7 @@ public class BomResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", true, UUID.randomUUID().toString(), null, null, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, UUID.randomUUID().toString(), null, null, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1027,7 +1029,7 @@ public class BomResourceTest extends ResourceTest {
         String body = getPlainTextBody(response);
         Assert.assertEquals("The parent component could not be found.", body);
 
-        request = new BomSubmitRequest(null, "Acme Example", "2.0", true, null, "Non-existent parent", null, bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "2.0", null, true, null, "Non-existent parent", null, bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1062,7 +1064,7 @@ public class BomResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
         File file = filePath.toFile();
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
-        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, false, bomString);
+        BomSubmitRequest request = new BomSubmitRequest(project.getUuid().toString(), null, null, null, false, bomString);
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1285,6 +1287,32 @@ public class BomResourceTest extends ResourceTest {
 
         final Project project = qm.getProject("Acme Example", "1.0");
         assertThat(project).isNotNull();
+        assertThat(project.getTags())
+                .extracting(Tag::getName)
+                .containsExactlyInAnyOrder("tag1", "tag2");
+    }
+
+    @Test
+    public void uploadBomAutoCreateWithTagsTest() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
+        String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
+        List<Tag> tags = Stream.of("tag1", "tag2").map(name -> {
+            Tag tag = new Tag();
+            tag.setName(name);
+            return tag;
+        }).collect(Collectors.toList());
+        BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", tags, true, bomString);
+        Response response = jersey.target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertNotNull(json.getString("token"));
+        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        Project project = qm.getProject("Acme Example", "1.0");
+        Assert.assertNotNull(project);
         assertThat(project.getTags())
                 .extracting(Tag::getName)
                 .containsExactlyInAnyOrder("tag1", "tag2");
