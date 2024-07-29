@@ -50,6 +50,13 @@ public class Tag implements Serializable {
 
     private static final long serialVersionUID = -7798359808664731988L;
 
+    public Tag() {
+    }
+
+    public Tag(final String name) {
+        this.name = name;
+    }
+
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
