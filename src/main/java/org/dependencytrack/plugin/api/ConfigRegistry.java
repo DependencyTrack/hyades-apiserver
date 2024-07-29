@@ -16,27 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.plugin.api;
+
+import java.util.Optional;
 
 /**
  * @since 5.6.0
  */
-public interface ExtensionPointMetadata<T extends ExtensionPoint> {
+public interface ConfigRegistry {
 
     /**
-     * @return The name of the {@link ExtensionPoint}. Can contain lowercase letters, numbers, and periods.
+     * @param propertyName Name of the runtime property.
+     * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
      */
-    String name();
+    Optional<String> getRuntimeProperty(final String propertyName);
 
     /**
-     * @return Whether the {@link ExtensionPoint} is required.
-     * Required extension points must have at least one active implementation.
+     * @param propertyName Name of the deployment property.
+     * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
      */
-    boolean required();
-
-    /**
-     * @return The {@link Class} of the {@link ExtensionPoint}.
-     */
-    Class<T> extensionPointClass();
+    Optional<String> getDeploymentProperty(final String propertyName);
 
 }

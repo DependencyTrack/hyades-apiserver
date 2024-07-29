@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+
 public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
 
     private ConfigRegistry configRegistry;

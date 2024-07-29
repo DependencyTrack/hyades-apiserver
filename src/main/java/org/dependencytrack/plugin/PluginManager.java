@@ -20,7 +20,11 @@ package org.dependencytrack.plugin;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import org.dependencytrack.plugin.ConfigRegistry.DeploymentConfigKey;
+import org.dependencytrack.plugin.ConfigRegistryImpl.DeploymentConfigKey;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.ExtensionPointMetadata;
+import org.dependencytrack.plugin.api.Plugin;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -39,8 +43,8 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
-import static org.dependencytrack.plugin.ExtensionFactory.PRIORITY_HIGHEST;
-import static org.dependencytrack.plugin.ExtensionFactory.PRIORITY_LOWEST;
+import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_HIGHEST;
+import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_LOWEST;
 
 /**
  * @since 5.6.0
@@ -209,7 +213,7 @@ public class PluginManager {
 
             LOGGER.debug("Discovered extension %s/%s from plugin %s"
                     .formatted(extensionPointMetadata.name(), extensionFactory.extensionName(), plugin.name()));
-            final var configRegistry = new ConfigRegistry(extensionPointMetadata.name(), extensionFactory.extensionName());
+            final var configRegistry = new ConfigRegistryImpl(extensionPointMetadata.name(), extensionFactory.extensionName());
             final boolean isEnabled = configRegistry.getDeploymentProperty(PROPERTY_EXTENSION_ENABLED).map(Boolean::parseBoolean).orElse(true);
             if (!isEnabled) {
                 LOGGER.debug("Extension %s/%s from plugin %s is disabled; Skipping"

@@ -16,25 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.plugin.api;
 
-import org.dependencytrack.plugin.api.ExtensionPointMetadata;
+import java.util.Collection;
 
-public class TestExtensionPointMetadata implements ExtensionPointMetadata<TestExtensionPoint> {
+/**
+ * @since 5.6.0
+ */
+public interface Plugin {
 
-    @Override
-    public String name() {
-        return "test";
-    }
+    /**
+     * @return The name of the plugin.
+     */
+    String name();
 
-    @Override
-    public boolean required() {
-        return false;
-    }
-
-    @Override
-    public Class<TestExtensionPoint> extensionPointClass() {
-        return TestExtensionPoint.class;
-    }
+    /**
+     * @return The {@link ExtensionFactory}s provided by the plugin.
+     */
+    Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories();
 
 }
