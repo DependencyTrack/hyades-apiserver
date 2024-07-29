@@ -18,6 +18,10 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -25,7 +29,7 @@ public class DummyPlugin implements Plugin {
 
     @Override
     public String name() {
-        return "dummy123";
+        return "dummy";
     }
 
     @Override

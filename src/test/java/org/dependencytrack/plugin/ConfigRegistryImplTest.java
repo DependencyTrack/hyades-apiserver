@@ -20,6 +20,7 @@ package org.dependencytrack.plugin;
 
 import alpine.model.IConfigProperty.PropertyType;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -28,7 +29,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ConfigRegistryTest extends PersistenceCapableTest {
+public class ConfigRegistryImplTest extends PersistenceCapableTest {
 
     @Rule
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
@@ -43,14 +44,14 @@ public class ConfigRegistryTest extends PersistenceCapableTest {
                 /* description */ null
         );
 
-        final var configRegistry = new ConfigRegistry("foo", "bar");
+        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
         final Optional<String> optionalProperty = configRegistry.getRuntimeProperty("baz");
         assertThat(optionalProperty).contains("qux");
     }
 
     @Test
     public void testGetRuntimePropertyThatDoesNotExist() {
-        final var configRegistry = new ConfigRegistry("foo", "bar");
+        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
         final Optional<String> optionalProperty = configRegistry.getRuntimeProperty("baz");
         assertThat(optionalProperty).isNotPresent();
     }
@@ -58,14 +59,14 @@ public class ConfigRegistryTest extends PersistenceCapableTest {
     @Test
     public void testDeploymentProperty() {
         environmentVariables.set("FOO_EXTENSION_BAR_BAZ", "qux");
-        final var configRegistry = new ConfigRegistry("foo", "bar");
+        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
         final Optional<String> optionalProperty = configRegistry.getDeploymentProperty("baz");
         assertThat(optionalProperty).contains("qux");
     }
 
     @Test
     public void testDeploymentPropertyThatDoesNotExist() {
-        final var configRegistry = new ConfigRegistry("foo", "bar");
+        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
         final Optional<String> optionalProperty = configRegistry.getDeploymentProperty("baz");
         assertThat(optionalProperty).isNotPresent();
     }

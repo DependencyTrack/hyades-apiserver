@@ -19,6 +19,7 @@
 package org.dependencytrack.plugin;
 
 import alpine.Config;
+import org.dependencytrack.plugin.api.ExtensionPoint;
 
 import java.util.Optional;
 
@@ -44,20 +45,17 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  *
  * @since 5.6.0
  */
-public class ConfigRegistry {
+class ConfigRegistryImpl implements org.dependencytrack.plugin.api.ConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
 
-    public ConfigRegistry(final String extensionPointName, final String extensionName) {
+    public ConfigRegistryImpl(final String extensionPointName, final String extensionName) {
         this.extensionPointName = requireNonNull(extensionPointName);
         this.extensionName = requireNonNull(extensionName);
     }
 
-    /**
-     * @param propertyName Name of the runtime property.
-     * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
-     */
+    @Override
     public Optional<String> getRuntimeProperty(final String propertyName) {
         final String namespacedPropertyName = "extension.%s.%s".formatted(extensionName, propertyName);
 
@@ -73,10 +71,7 @@ public class ConfigRegistry {
                 .findOne());
     }
 
-    /**
-     * @param propertyName Name of the deployment property.
-     * @return An {@link Optional} holding the property value, or {@link Optional#empty()}.
-     */
+    @Override
     public Optional<String> getDeploymentProperty(final String propertyName) {
         final var key = new DeploymentConfigKey(extensionPointName, extensionName, propertyName);
         return Optional.ofNullable(Config.getInstance().getProperty(key));

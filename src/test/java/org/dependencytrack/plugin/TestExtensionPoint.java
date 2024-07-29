@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ExtensionPoint;
+
 public interface TestExtensionPoint extends ExtensionPoint {
 
     String test();

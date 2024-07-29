@@ -16,21 +16,27 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
-
-import java.io.Closeable;
+package org.dependencytrack.plugin.api;
 
 /**
  * @since 5.6.0
  */
-public interface ExtensionPoint extends Closeable {
+public interface ExtensionPointMetadata<T extends ExtensionPoint> {
 
     /**
-     * {@inheritDoc}
+     * @return The name of the {@link ExtensionPoint}. Can contain lowercase letters, numbers, and periods.
      */
-    @Override
-    default void close() {
-        // Default no-op to remove checked exception from method signature.
-    }
+    String name();
+
+    /**
+     * @return Whether the {@link ExtensionPoint} is required.
+     * Required extension points must have at least one active implementation.
+     */
+    boolean required();
+
+    /**
+     * @return The {@link Class} of the {@link ExtensionPoint}.
+     */
+    Class<T> extensionPointClass();
 
 }

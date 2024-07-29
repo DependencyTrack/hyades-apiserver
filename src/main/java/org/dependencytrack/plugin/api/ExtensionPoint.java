@@ -16,23 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.plugin.api;
 
-import java.util.Collection;
+import java.io.Closeable;
 
 /**
  * @since 5.6.0
  */
-public interface Plugin {
+public interface ExtensionPoint extends Closeable {
 
     /**
-     * @return The name of the plugin.
+     * {@inheritDoc}
      */
-    String name();
-
-    /**
-     * @return The {@link ExtensionFactory}s provided by the plugin.
-     */
-    Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories();
+    @Override
+    default void close() {
+        // Default no-op to remove checked exception from method signature.
+    }
 
 }
