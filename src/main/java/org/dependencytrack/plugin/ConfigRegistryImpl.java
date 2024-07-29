@@ -19,6 +19,7 @@
 package org.dependencytrack.plugin;
 
 import alpine.Config;
+import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 
 import java.util.Optional;
@@ -45,7 +46,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  *
  * @since 5.6.0
  */
-class ConfigRegistryImpl implements org.dependencytrack.plugin.api.ConfigRegistry {
+class ConfigRegistryImpl implements ConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
