@@ -45,7 +45,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
     @Test
     public void testGetLoadedPlugins() {
         final List<Plugin> loadedPlugins = PluginManager.getInstance().getLoadedPlugins();
-        assertThat(loadedPlugins).satisfiesExactly(plugin -> assertThat(plugin.name()).isEqualTo("dummy"));
+        assertThat(loadedPlugins).satisfiesExactly(plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class));
         assertThat(loadedPlugins).isUnmodifiable();
     }
 
@@ -141,7 +141,9 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         assertThatExceptionOfType(NoSuchElementException.class)
                 .isThrownBy(pluginManager::loadPlugins)
-                .withMessage("No extension named does.not.exist exists for extension point test");
+                .withMessage("""
+                        No extension named does.not.exist exists for extension point \
+                        test (org.dependencytrack.plugin.TestExtensionPoint)""");
     }
 
 }

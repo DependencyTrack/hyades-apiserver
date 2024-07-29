@@ -26,11 +26,6 @@ import java.util.Collection;
 public interface Plugin {
 
     /**
-     * @return The name of the plugin.
-     */
-    String name();
-
-    /**
      * @return The {@link ExtensionFactory}s provided by the plugin.
      */
     Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories();

@@ -19,9 +19,8 @@
 package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
-
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 /**
  * @since 5.6.0
