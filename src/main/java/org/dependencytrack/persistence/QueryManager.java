@@ -682,6 +682,10 @@ public class QueryManager extends AlpineQueryManager {
         return getLicenseQueryManager().getLicense(licenseId);
     }
 
+    public License getLicenseByIdOrName(final String licenseIdOrName) {
+        return getLicenseQueryManager().getLicenseByIdOrName(licenseIdOrName);
+    }
+
     License synchronizeLicense(License license, boolean commitIndex) {
         return getLicenseQueryManager().synchronizeLicense(license, commitIndex);
     }
@@ -689,6 +693,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public License createCustomLicense(License license, boolean commitIndex) {
         return getLicenseQueryManager().createCustomLicense(license, commitIndex);
+    }
+
+    public License getCustomLicenseByName(final String licenseName) {
+        return getLicenseQueryManager().getCustomLicenseByName(licenseName);
     }
 
     public void deleteLicense(final License license, final boolean commitIndex) {

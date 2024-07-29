@@ -26,6 +26,7 @@ import org.dependencytrack.model.PolicyCondition;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.List;
+import java.util.Map;
 
 final class LicenseQueryManager extends QueryManager implements IQueryManager {
 
@@ -89,6 +90,20 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
         query.getFetchPlan().addGroup(License.FetchGroup.ALL.name());
         query.setRange(0, 1);
         return singleResult(query.execute(licenseId));
+    }
+
+    /**
+     * @since 4.12.0
+     */
+    @Override
+    public License getLicenseByIdOrName(final String licenseIdOrName) {
+        final Query<License> query = pm.newQuery(License.class);
+        query.setFilter("licenseId == :licenseIdOrName || name == :licenseIdOrName");
+        query.setNamedParameters(Map.of("licenseIdOrName", licenseIdOrName));
+        query.setOrdering("licenseId asc"); // Ensure result is consistent.
+        query.setRange(0, 1); // Multiple licenses can have the same name; Pick the first one.
+        final License license = query.executeUnique();
+        return license != null ? license : License.UNRESOLVED;
     }
 
     /**
@@ -158,6 +173,20 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
         license.setCustomLicense(true);
         final License result = persist(license);
         return result;
+    }
+
+    /**
+     * @since 4.12.0
+     */
+    @Override
+    public License getCustomLicenseByName(final String licenseName) {
+        final Query<License> query = pm.newQuery(License.class);
+        query.setFilter("name == :name && customLicense == true");
+        query.setParameters(licenseName);
+        query.setOrdering("licenseId asc"); // Ensure result is consistent.
+        query.setRange(0, 1); // Multiple licenses can have the same name; Pick the first one.
+        final License license = query.executeUnique();
+        return license != null ? license : License.UNRESOLVED;
     }
 
     /**

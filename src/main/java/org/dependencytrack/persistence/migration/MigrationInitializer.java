@@ -68,7 +68,19 @@ public class MigrationInitializer implements ServletContextListener {
         try (final HikariDataSource dataSource = createDataSource()) {
             runMigration(dataSource);
         } catch (Exception e) {
+            if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)) {
+                // Make absolutely sure that we exit with non-zero code so
+                // the container orchestrator knows to restart the container.
+                LOGGER.error("Failed to execute migrations", e);
+                System.exit(1);
+            }
+
             throw new RuntimeException("Failed to execute migrations", e);
+        }
+
+        if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)) {
+            LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
+            System.exit(0);
         }
     }
 
