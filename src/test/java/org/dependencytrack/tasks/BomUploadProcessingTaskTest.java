@@ -117,6 +117,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
         );
         qm.getPersistenceManager().refresh(project);
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
         assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
@@ -205,7 +206,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(property.getDescription()).isNull();
                 }
         );
-
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
@@ -274,6 +275,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
         );
         qm.getPersistenceManager().refresh(project);
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
         assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.5");
@@ -296,7 +298,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("Apache-2.0");
         assertThat(component.getLicense()).isNull();
         assertThat(component.getLicenseUrl()).isEqualTo("https://www.apache.org/licenses/LICENSE-2.0.txt");
-
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
@@ -353,11 +355,10 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
-
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isNull();
         assertThat(project.getLastBomImport()).isNotNull();
-
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
@@ -429,6 +430,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         );
 
         qm.getPersistenceManager().refresh(project);
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
 
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
@@ -483,7 +485,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         var bomUploadEvent = new BomUploadEvent(project, createTempBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
-
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
         assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
                 state -> {
                     assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
@@ -1353,6 +1355,56 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             assertThat(property.getPropertyName()).isEqualTo("foo");
             assertThat(property.getPropertyValue()).isEqualTo("baz");
             assertThat(property.getUuid()).isNotEqualTo(componentProperty.getUuid());
+        });
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/3957
+    public void informIssue3957Test() throws Exception {
+        final var licenseA = new License();
+        licenseA.setLicenseId("GPL-1.0");
+        licenseA.setName("GNU General Public License v1.0 only");
+        qm.persist(licenseA);
+
+        final var licenseB = new License();
+        licenseB.setLicenseId("GPL-1.0-only");
+        licenseB.setName("GNU General Public License v1.0 only");
+        qm.persist(licenseB);
+
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib-x",
+                      "licenses": [
+                        {
+                          "license": {
+                            "name": "GNU General Public License v1.0 only"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getResolvedLicense()).isNotNull();
+            assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("GPL-1.0");
         });
     }
 

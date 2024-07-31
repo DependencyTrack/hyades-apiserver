@@ -20,6 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Policy;
@@ -27,10 +30,6 @@ import org.dependencytrack.model.PolicyCondition;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
-
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,11 +56,19 @@ public class PolicyConditionResourceTest extends ResourceTest {
                           "violationType": "SECURITY"
                         }
                         """, MediaType.APPLICATION_JSON));
-
         assertThat(response.getStatus()).isEqualTo(201);
-        assertThatJson(getPlainTextBody(response))
+        var response1 = getPlainTextBody(response);
+        assertThatJson(response1)
                 .isEqualTo("""
                         {
+                        "policy":{
+                        "name":"policy",
+                        "operator":"ANY",
+                        "violationState":"FAIL",
+                        "uuid":"${json-unit.any-string}",
+                        "includeChildren":false,
+                        "global":true
+                        },
                           "uuid": "${json-unit.any-string}",
                           "subject": "EXPRESSION",
                           "operator": "MATCHES",

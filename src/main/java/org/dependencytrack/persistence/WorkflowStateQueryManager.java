@@ -165,7 +165,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             } else { // Other Databases need the "RECURSIVE" keyword in the "WITH" clause to correctly execute the query
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
             }
-
             preparedStatement.setLong(1, parentWorkflowState.getId());
             preparedStatement.setString(2, parentWorkflowState.getToken().toString());
 
@@ -202,7 +201,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
         }
-
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         try {

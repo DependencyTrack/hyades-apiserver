@@ -20,8 +20,8 @@ package org.dependencytrack.resources.v1.vo;
 
 import alpine.model.Permission;
 import alpine.model.Team;
+import jakarta.annotation.Nonnull;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.UUID;
 

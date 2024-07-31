@@ -60,13 +60,13 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -1670,7 +1670,8 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "tag4"
                             }
                           ],
-                          "active": false
+                          "active": false,
+                          "children": []
                         }
                         """);
     }
@@ -2035,5 +2036,35 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+    }
+
+    @Test
+    public void validateProjectVersionsActiveInactiveTest() {
+        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "2.0", null, null, null, false, false);
+        qm.createProject("ABC", null, "3.0", null, null, null, true, false);
+
+        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("ABC", json.getString("name"));
+        Assert.assertEquals(3, json.getJsonArray("versions").size());
+
+        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(0).getJsonString("uuid").getString());
+        Assert.assertEquals("1.0", json.getJsonArray("versions").getJsonObject(0).getJsonString("version").getString());
+        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
+
+        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(1).getJsonString("uuid").getString());
+        Assert.assertEquals("2.0", json.getJsonArray("versions").getJsonObject(1).getJsonString("version").getString());
+        Assert.assertFalse(json.getJsonArray("versions").getJsonObject(1).getBoolean("active"));
+
+        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(2).getJsonString("uuid").getString());
+        Assert.assertEquals("3.0", json.getJsonArray("versions").getJsonObject(2).getJsonString("version").getString());
+        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(2).getBoolean("active"));
     }
 }

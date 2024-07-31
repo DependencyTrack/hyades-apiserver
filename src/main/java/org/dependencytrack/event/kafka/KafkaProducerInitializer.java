@@ -32,8 +32,8 @@ import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.common.ConfigKey;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;

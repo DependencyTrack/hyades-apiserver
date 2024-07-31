@@ -97,7 +97,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(UUID.randomUUID());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 workflowState -> {
                     assertThat(workflowState.getStatus()).isEqualTo(FAILED);
@@ -209,7 +209,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         qm.getPersistenceManager().refresh(component);
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 state -> {
@@ -300,6 +300,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
         qm.getPersistenceManager().refresh(component);
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 state -> {
                     assertThat(state.getStartedAt()).isNotNull();

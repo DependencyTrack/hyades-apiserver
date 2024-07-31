@@ -22,8 +22,8 @@ import alpine.common.logging.Logger;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 public class ProcessorInitializer implements ServletContextListener {
 

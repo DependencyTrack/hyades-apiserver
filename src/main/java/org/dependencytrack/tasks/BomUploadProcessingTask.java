@@ -346,7 +346,7 @@ public class BomUploadProcessingTask implements Subscriber {
             // See https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle
             qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
 
-            return qm.runInTransaction(() -> {
+            return qm.callInTransaction(() -> {
                 final Project persistentProject = processProject(ctx, qm, bom.project(), bom.projectMetadata());
 
                 LOGGER.info("Processing %d components".formatted(bom.components().size()));
@@ -730,8 +730,7 @@ public class BomUploadProcessingTask implements Subscriber {
         // by priority, and simply take the first resolvable candidate.
         for (final org.cyclonedx.model.License licenseCandidate : component.getLicenseCandidates()) {
             if (isNotBlank(licenseCandidate.getId())) {
-                final License resolvedLicense = licenseCache.computeIfAbsent(licenseCandidate.getId(),
-                        licenseId -> resolveLicense(qm, licenseId));
+                final License resolvedLicense = licenseCache.computeIfAbsent(licenseCandidate.getId(), qm::getLicenseByIdOrName);
                 if (resolvedLicense != License.UNRESOLVED) {
                     component.setResolvedLicense(resolvedLicense);
                     component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
@@ -740,16 +739,15 @@ public class BomUploadProcessingTask implements Subscriber {
             }
 
             if (isNotBlank(licenseCandidate.getName())) {
-                final License resolvedLicense = licenseCache.computeIfAbsent(licenseCandidate.getName(),
-                        licenseName -> resolveLicense(qm, licenseName));
+                final License resolvedLicense = licenseCache.computeIfAbsent(licenseCandidate.getName(), qm::getLicenseByIdOrName);
                 if (resolvedLicense != License.UNRESOLVED) {
                     component.setResolvedLicense(resolvedLicense);
                     component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
                     break;
                 }
 
-                final License resolvedCustomLicense = customLicenseCache.computeIfAbsent(licenseCandidate.getName(),
-                        licenseName -> resolveCustomLicense(qm, licenseName));
+                final License resolvedCustomLicense = customLicenseCache.computeIfAbsent(
+                        licenseCandidate.getName(), qm::getCustomLicenseByName);
                 if (resolvedCustomLicense != License.UNRESOLVED) {
                     component.setResolvedLicense(resolvedCustomLicense);
                     component.setLicenseUrl(trimToNull(licenseCandidate.getUrl()));
@@ -768,30 +766,6 @@ public class BomUploadProcessingTask implements Subscriber {
                         component.setLicense(trim(license.getName()));
                         component.setLicenseUrl(trimToNull(license.getUrl()));
                     });
-        }
-    }
-
-    private static License resolveLicense(final QueryManager qm, final String licenseIdOrName) {
-        final Query<License> query = qm.getPersistenceManager().newQuery(License.class);
-        query.setFilter("licenseId == :licenseIdOrName || name == :licenseIdOrName");
-        query.setNamedParameters(Map.of("licenseIdOrName", licenseIdOrName));
-        try {
-            final License license = query.executeUnique();
-            return license != null ? license : License.UNRESOLVED;
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    private static License resolveCustomLicense(final QueryManager qm, final String licenseName) {
-        final Query<License> query = qm.getPersistenceManager().newQuery(License.class);
-        query.setFilter("name == :name && customLicense == true");
-        query.setParameters(licenseName);
-        try {
-            final License license = query.executeUnique();
-            return license != null ? license : License.UNRESOLVED;
-        } finally {
-            query.closeAll();
         }
     }
 
@@ -1057,7 +1031,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     continue;
                 }
 
-                final boolean shouldFetchIntegrityData = qm.runInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
+                final boolean shouldFetchIntegrityData = qm.callInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
                 if (shouldFetchIntegrityData) {
                     events.add(new ComponentRepositoryMetaAnalysisEvent(
                             component.getUuid(),

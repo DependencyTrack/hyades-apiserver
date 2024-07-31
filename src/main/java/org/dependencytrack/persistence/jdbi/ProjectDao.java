@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.annotation.Nullable;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -26,7 +27,6 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
-import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
