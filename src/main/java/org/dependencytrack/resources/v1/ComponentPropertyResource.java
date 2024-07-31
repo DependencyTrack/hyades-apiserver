@@ -106,7 +106,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new component property",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ComponentProperty.class))),
@@ -115,7 +115,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found"),
             @ApiResponse(responseCode = "409", description = "A property with the specified component/group/name combination already exists")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response createProperty(
             @Parameter(description = "The UUID of the component to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -164,7 +164,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a config property",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204"),
@@ -172,7 +172,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component or component property could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProperty(
             @Parameter(description = "The UUID of the component to delete a property from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String componentUuid,

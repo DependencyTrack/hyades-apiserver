@@ -67,7 +67,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all ProjectProperties for the specified project",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectProperty.class)))),
@@ -75,7 +75,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
     public Response getProperties(
             @Parameter(description = "The UUID of the project to retrieve properties for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -109,7 +109,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new project property",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ProjectProperty.class))),
@@ -118,7 +118,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found"),
             @ApiResponse(responseCode = "409", description = "A property with the specified project/group/name combination already exists")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response createProperty(
             @Parameter(description = "The UUID of the project to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -165,7 +165,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a project property",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ProjectProperty.class))),
@@ -173,7 +173,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response updateProperty(
             @Parameter(description = "The UUID of the project to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -208,7 +208,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a config property",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204"),
@@ -216,7 +216,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project or project property could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProperty(
             @Parameter(description = "The UUID of the project to delete a property from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

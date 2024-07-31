@@ -74,12 +74,12 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all teams",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response getTeams() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final long totalCount = qm.getCount(Team.class);
@@ -93,14 +93,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Team.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response getTeam(
             @Parameter(description = "The UUID of the team to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -119,13 +119,13 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new team along with an associated API key",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = Team.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     //public Response createTeam(String jsonRequest) {
     public Response createTeam(Team jsonTeam) {
         //Team team = MapperUtil.readAsObjectOf(Team.class, jsonRequest);
@@ -146,14 +146,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a team's fields including",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Team.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response updateTeam(Team jsonTeam) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -178,14 +178,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteTeam(Team jsonTeam) {
         try (QueryManager qm = new QueryManager()) {
             final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
@@ -205,14 +205,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Generates an API key and returns its value",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ApiKey.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response generateApiKey(
             @Parameter(description = "The UUID of the team to generate a key for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -232,14 +232,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Regenerates an API key by removing the specified key, generating a new one and returning its value",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ApiKey.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response regenerateApiKey(
             @Parameter(description = "The API key to regenerate", required = true)
             @PathParam("apikey") String apikey) {
@@ -260,14 +260,14 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates an API key's comment",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ApiKey.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response updateApiKeyComment(@PathParam("apikey") final String apikey,
                                         final String comment) {
         try (final var qm = new QueryManager()) {
@@ -291,14 +291,14 @@ public class TeamResource extends AlpineResource {
     @Path("/key/{apikey}")
     @Operation(
             summary = "Deletes the specified API key",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteApiKey(
             @Parameter(description = "The API key to delete", required = true)
             @PathParam("apikey") String apikey) {

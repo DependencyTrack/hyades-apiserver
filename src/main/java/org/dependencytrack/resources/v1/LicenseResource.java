@@ -132,14 +132,14 @@ public class LicenseResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new custom license",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = License.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A license with the specified ID already exists.")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response createLicense(License jsonLicense) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -163,7 +163,7 @@ public class LicenseResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a custom license",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204"),
@@ -171,7 +171,7 @@ public class LicenseResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The license could not be found"),
             @ApiResponse(responseCode = "409", description = "Only custom licenses can be deleted.")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response deleteLicense(
             @Parameter(description = "The SPDX License ID of the license to delete", required = true)
             @PathParam("licenseId") String licenseId) {

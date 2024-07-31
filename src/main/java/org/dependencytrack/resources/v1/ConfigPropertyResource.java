@@ -61,13 +61,13 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all ConfigProperties for the specified groupName",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConfigProperty.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getConfigProperties() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<ConfigProperty> configProperties = qm.getConfigProperties();
@@ -89,14 +89,14 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Updates a config property",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ConfigProperty.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The config property could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response updateConfigProperty(ConfigProperty json) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -115,14 +115,14 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Updates an array of config properties",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConfigProperty.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "One or more config properties could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response updateConfigProperty(List<ConfigProperty> list) {
         final Validator validator = super.getValidator();
         for (ConfigProperty item : list) {

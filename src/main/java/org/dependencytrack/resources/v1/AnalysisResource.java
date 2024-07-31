@@ -125,14 +125,14 @@ public class AnalysisResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Records an analysis decision",
-            description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></p>"
+            description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Analysis.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(
