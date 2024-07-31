@@ -671,7 +671,7 @@ public class ProjectResource extends AlpineResource {
                 }
                 LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
                 CloneProjectEvent event = new CloneProjectEvent(jsonRequest);
-                final Response response = qm.runInTransaction(() -> {
+                final Response response = qm.callInTransaction(() -> {
                     WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
                     if (workflowState != null) {
                         if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {

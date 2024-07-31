@@ -346,7 +346,7 @@ public class BomUploadProcessingTask implements Subscriber {
             // See https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#lifecycle
             qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
 
-            return qm.runInTransaction(() -> {
+            return qm.callInTransaction(() -> {
                 final Project persistentProject = processProject(ctx, qm, bom.project(), bom.projectMetadata());
 
                 LOGGER.info("Processing %d components".formatted(bom.components().size()));
@@ -1031,7 +1031,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     continue;
                 }
 
-                final boolean shouldFetchIntegrityData = qm.runInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
+                final boolean shouldFetchIntegrityData = qm.callInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
                 if (shouldFetchIntegrityData) {
                     events.add(new ComponentRepositoryMetaAnalysisEvent(
                             component.getUuid(),
