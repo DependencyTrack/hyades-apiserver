@@ -76,11 +76,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 
 /**
@@ -295,7 +297,7 @@ public class BomResource extends AlpineResource {
                             }
                         }
 
-                        project = qm.createProject(StringUtils.trimToNull(request.getProjectName()), null, StringUtils.trimToNull(request.getProjectVersion()), null, parent, null, true, true);
+                        project = qm.createProject(StringUtils.trimToNull(request.getProjectName()), null, StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent, null, true, true);
                         Principal principal = getPrincipal();
                         qm.updateNewProjectACL(project, principal);
                     } else {
@@ -342,14 +344,17 @@ public class BomResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response uploadBom(@FormDataParam("project") String projectUuid,
-                              @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
-                              @FormDataParam("projectName") String projectName,
-                              @FormDataParam("projectVersion") String projectVersion,
-                              @FormDataParam("parentName") String parentName,
-                              @FormDataParam("parentVersion") String parentVersion,
-                              @FormDataParam("parentUUID") String parentUUID,
-                              @Parameter(schema = @Schema(type = "string")) @FormDataParam("bom") final List<FormDataBodyPart> artifactParts) {
+    public Response uploadBom(
+            @FormDataParam("project") String projectUuid,
+            @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
+            @FormDataParam("projectName") String projectName,
+            @FormDataParam("projectVersion") String projectVersion,
+            @FormDataParam("projectTags") String projectTags,
+            @FormDataParam("parentName") String parentName,
+            @FormDataParam("parentVersion") String parentVersion,
+            @FormDataParam("parentUUID") String parentUUID,
+            @Parameter(schema = @Schema(type = "string")) @FormDataParam("bom") final List<FormDataBodyPart> artifactParts
+    ) {
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
                 final Project project = qm.getObjectByUuid(Project.class, projectUuid);
@@ -379,7 +384,10 @@ public class BomResource extends AlpineResource {
                                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
                             }
                         }
-                        project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, null, parent, null, true, true);
+                        final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
+                                ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
+                                : null;
+                        project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, true, true);
                         Principal principal = getPrincipal();
                         qm.updateNewProjectACL(project, principal);
                     } else {
