@@ -142,7 +142,7 @@ public class WorkflowStateCleanupTask implements Subscriber {
         int stepsCancelled = 0;
         try {
             for (final WorkflowState state : failedQuery.executeList()) {
-                stepsCancelled += qm.runInTransaction(() -> {
+                stepsCancelled += qm.callInTransaction(() -> {
                     final Date now = new Date();
                     state.setStatus(WorkflowStatus.FAILED);
                     state.setFailureReason("Timed out");
@@ -207,7 +207,7 @@ public class WorkflowStateCleanupTask implements Subscriber {
                     ).isEmpty()
                     """);
             try {
-                stepsDeleted += qm.runInTransaction(() -> (long) workflowDeleteQuery.executeWithMap(Map.of(
+                stepsDeleted += qm.callInTransaction(() -> (long) workflowDeleteQuery.executeWithMap(Map.of(
                         "tokens", tokenBatch,
                         "nonTerminalStatuses", Set.of(WorkflowStatus.PENDING, WorkflowStatus.TIMED_OUT)
                 )));

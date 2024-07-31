@@ -30,6 +30,7 @@ import alpine.notification.NotificationLevel;
 import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
+import alpine.persistence.ScopedCustomization;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
@@ -117,9 +118,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
+import static org.datanucleus.PropertyNames.PROPERTY_QUERY_SQL_ALLOWALL;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
@@ -1483,70 +1485,28 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
-    /**
-     * Convenience method to execute a given {@link Runnable} within the context of a {@link Transaction}.
-     * <p>
-     * Eventually, this may be moved to {@link alpine.persistence.AbstractAlpineQueryManager}.
-     *
-     * @param runnable The {@link Runnable} to execute
-     * @since 4.6.0
-     */
-    public void runInTransaction(final Runnable runnable) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
-            runnable.run();
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-    }
-
-    /**
-     * Convenience method to execute a given {@link Supplier} within the context of a {@link Transaction}.
-     *
-     * @param supplier The {@link Supplier} to execute
-     * @param <T>      Type of the result of {@code supplier}
-     * @return The result of the execution of {@code supplier}
-     */
-    public <T> T runInTransaction(final Supplier<T> supplier) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
-            final T result = supplier.get();
-            trx.commit();
-            return result;
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-    }
-
-    public <T> T runInRetryableTransaction(final Supplier<T> supplier, final Predicate<Throwable> retryOn) {
+    public <T> T runInRetryableTransaction(final Callable<T> supplier, final Predicate<Throwable> retryOn) {
         final var retryConfig = RetryConfig.custom()
                 .retryOnException(retryOn)
                 .maxAttempts(3)
                 .build();
 
         return Retry.of("runInRetryableTransaction", retryConfig)
-                .executeSupplier(() -> runInTransaction(supplier));
+                .executeSupplier(() -> callInTransaction(supplier));
     }
 
     public void recursivelyDeleteTeam(Team team) {
-        pm.setProperty("datanucleus.query.sql.allowAll", true);
-        final Transaction trx = pm.currentTransaction();
-        pm.currentTransaction().begin();
-        pm.deletePersistentAll(team.getApiKeys());
-        String aclDeleteQuery = """
-                DELETE FROM "PROJECT_ACCESS_TEAMS" WHERE "TEAM_ID" = ?
-                """;
-        final Query<?> query = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, aclDeleteQuery);
-        query.executeWithArray(team.getId());
-        pm.deletePersistent(team);
-        pm.currentTransaction().commit();
+        runInTransaction(() -> {
+            pm.deletePersistentAll(team.getApiKeys());
+
+            try (var ignored = new ScopedCustomization(pm).withProperty(PROPERTY_QUERY_SQL_ALLOWALL, "true")) {
+                final Query<?> aclDeleteQuery = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, """
+                        DELETE FROM "PROJECT_ACCESS_TEAMS" WHERE "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ?""");
+                executeAndCloseWithArray(aclDeleteQuery, team.getId());
+            }
+
+            pm.deletePersistent(team);
+        });
     }
 
     /**
