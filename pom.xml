@@ -704,7 +704,6 @@
                 <configuration>
                     <webApp>
                         <contextPath>/</contextPath>
-                        <overrideDescriptor>src/test/webapp/WEB-INF/h2-console-web.xml</overrideDescriptor>
                     </webApp>
                     <systemProperties>
                         <!--
