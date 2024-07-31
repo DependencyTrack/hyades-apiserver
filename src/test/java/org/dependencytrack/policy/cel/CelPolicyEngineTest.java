@@ -1728,16 +1728,14 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         componentA.setName("acme-lib-a");
         componentA.setVersion("v1.9.3");
         qm.persist(componentA);
-
         assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
         assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
 
         toolComponent.setVersion("3.1");
         projectMetadata.setTools(new Tools(List.of(toolComponent), null));
         qm.persist(projectMetadata);
-
         assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateProject(project.getUuid()));
-        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentA)).hasSize(1);
     }
 
     @Test

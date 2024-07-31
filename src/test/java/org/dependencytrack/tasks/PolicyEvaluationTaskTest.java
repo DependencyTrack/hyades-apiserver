@@ -59,7 +59,7 @@ public class PolicyEvaluationTaskTest extends PersistenceCapableTest {
         var componentPolicyEvaluationEvent = new ComponentPolicyEvaluationEvent(component.getUuid());
         qm.createWorkflowSteps(componentPolicyEvaluationEvent.getChainIdentifier());
         new PolicyEvaluationTask().inform(componentPolicyEvaluationEvent);
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentPolicyEvaluationEvent.getChainIdentifier(), POLICY_EVALUATION));
         Assertions.assertThat(qm.getWorkflowStateByTokenAndStep(componentPolicyEvaluationEvent.getChainIdentifier(), POLICY_EVALUATION)).satisfies(
                 state -> {
                     Assertions.assertThat(state.getStartedAt()).isNotNull();
@@ -78,7 +78,7 @@ public class PolicyEvaluationTaskTest extends PersistenceCapableTest {
         var projectPolicyEvaluationTaskEvent = new ProjectPolicyEvaluationEvent(project.getUuid());
         qm.createWorkflowSteps(projectPolicyEvaluationTaskEvent.getChainIdentifier());
         new PolicyEvaluationTask().inform(projectPolicyEvaluationTaskEvent);
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(projectPolicyEvaluationTaskEvent.getChainIdentifier(), POLICY_EVALUATION));
         Assertions.assertThat(qm.getWorkflowStateByTokenAndStep(projectPolicyEvaluationTaskEvent.getChainIdentifier(), POLICY_EVALUATION)).satisfies(
                 state -> {
                     Assertions.assertThat(state.getStartedAt()).isNotNull();

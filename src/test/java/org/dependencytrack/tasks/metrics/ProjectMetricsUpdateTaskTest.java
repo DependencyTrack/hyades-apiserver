@@ -209,7 +209,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
-        qm.getPersistenceManager().refreshAll(project, componentUnaudited, componentAudited, componentSuppressed);
+        qm.getPersistenceManager().refreshAll(project, componentUnaudited, componentAudited, componentSuppressed, qm.getWorkflowStateByTokenAndStep(projectMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         assertThat(project.getLastInheritedRiskScore()).isEqualTo(10.0);
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isEqualTo(5.0);
         assertThat(componentAudited.getLastInheritedRiskScore()).isEqualTo(5.0);

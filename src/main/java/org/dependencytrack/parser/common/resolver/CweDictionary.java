@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.parser.common.resolver;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 

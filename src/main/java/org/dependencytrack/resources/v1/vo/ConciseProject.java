@@ -19,8 +19,7 @@
 package org.dependencytrack.resources.v1.vo;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
@@ -35,19 +34,19 @@ import java.util.UUID;
  * @since 5.5.0
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-@ApiModel(description = "A concise representation of a project")
+@Schema(description = "A concise representation of a project")
 public record ConciseProject(
-        @ApiModelProperty(value = "UUID of the project", required = true) UUID uuid,
-        @ApiModelProperty(value = "Group or namespace of the project") String group,
-        @ApiModelProperty(value = "Name of the project", required = true) String name,
-        @ApiModelProperty(value = "Version of the project") String version,
-        @ApiModelProperty(value = "Classifier of the project") Classifier classifier,
-        @ApiModelProperty(value = "Whether the project is active", required = true) boolean active,
-        @ApiModelProperty(value = "Tags associated with the project") List<Tag> tags,
-        @ApiModelProperty(value = "Timestamp of the last BOM import", dataType = "number", example = "1719499619599") Date lastBomImport,
-        @ApiModelProperty(value = "Format of the last imported BOM") String lastBomImportFormat,
-        @ApiModelProperty(value = "Whether the project has children", required = true) boolean hasChildren,
-        @ApiModelProperty(value = "Latest metrics for the project") ConciseProjectMetrics metrics
+        @Schema(description = "UUID of the project", requiredMode = Schema.RequiredMode.REQUIRED) UUID uuid,
+        @Schema(description = "Group or namespace of the project") String group,
+        @Schema(description = "Name of the project", requiredMode = Schema.RequiredMode.REQUIRED) String name,
+        @Schema(description = "Version of the project") String version,
+        @Schema(description = "Classifier of the project") Classifier classifier,
+        @Schema(description = "Whether the project is active", requiredMode = Schema.RequiredMode.REQUIRED) boolean active,
+        @Schema(description = "Tags associated with the project") List<Tag> tags,
+        @Schema(description = "Timestamp of the last BOM import", type = "number", example = "1719499619599") Date lastBomImport,
+        @Schema(description = "Format of the last imported BOM") String lastBomImportFormat,
+        @Schema(description = "Whether the project has children", requiredMode = Schema.RequiredMode.REQUIRED) boolean hasChildren,
+        @Schema(description = "Latest metrics for the project") ConciseProjectMetrics metrics
 ) {
 
     public ConciseProject(final ConciseProjectListRow row) {

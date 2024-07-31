@@ -18,30 +18,29 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectMetricsRow;
 
 /**
  * @since 5.5.0
  */
-@ApiModel(description = "A concise representation of a project's metrics")
+@Schema(description = "A concise representation of a project's metrics")
 public record ConciseProjectMetrics(
-        @ApiModelProperty(value = "Total number of components", required = true) int components,
-        @ApiModelProperty(value = "Number of vulnerabilities with critical severity", required = true) int critical,
-        @ApiModelProperty(value = "Number of vulnerabilities with high severity", required = true) int high,
-        @ApiModelProperty(value = "Number of vulnerabilities with low severity", required = true) int low,
-        @ApiModelProperty(value = "Number of vulnerabilities with medium severity", required = true) int medium,
-        @ApiModelProperty(value = "Number of policy violations with status FAIL", required = true) int policyViolationsFail,
-        @ApiModelProperty(value = "Number of policy violations with status WARN", required = true) int policyViolationsInfo,
-        @ApiModelProperty(value = "Number of license policy violations", required = true) int policyViolationsLicenseTotal,
-        @ApiModelProperty(value = "Number of operational policy violations", required = true) int policyViolationsOperationalTotal,
-        @ApiModelProperty(value = "Number of security policy violations", required = true) int policyViolationsSecurityTotal,
-        @ApiModelProperty(value = "Total number of policy violations", required = true) int policyViolationsTotal,
-        @ApiModelProperty(value = "Number of policy violations with status WARN", required = true) int policyViolationsWarn,
-        @ApiModelProperty(value = "The inherited risk score", required = true) double inheritedRiskScore,
-        @ApiModelProperty(value = "Number of vulnerabilities with unassigned severity", required = true) int unassigned,
-        @ApiModelProperty(value = "Total number of vulnerabilities", required = true) int vulnerabilities
+        @Schema(description = "Total number of components", requiredMode = Schema.RequiredMode.REQUIRED) int components,
+        @Schema(description = "Number of vulnerabilities with critical severity", requiredMode = Schema.RequiredMode.REQUIRED) int critical,
+        @Schema(description = "Number of vulnerabilities with high severity", requiredMode = Schema.RequiredMode.REQUIRED) int high,
+        @Schema(description = "Number of vulnerabilities with low severity", requiredMode = Schema.RequiredMode.REQUIRED) int low,
+        @Schema(description = "Number of vulnerabilities with medium severity", requiredMode = Schema.RequiredMode.REQUIRED) int medium,
+        @Schema(description = "Number of policy violations with status FAIL", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsFail,
+        @Schema(description = "Number of policy violations with status WARN", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsInfo,
+        @Schema(description = "Number of license policy violations", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsLicenseTotal,
+        @Schema(description = "Number of operational policy violations", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsOperationalTotal,
+        @Schema(description = "Number of security policy violations", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsSecurityTotal,
+        @Schema(description = "Total number of policy violations", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsTotal,
+        @Schema(description = "Number of policy violations with status WARN", requiredMode = Schema.RequiredMode.REQUIRED) int policyViolationsWarn,
+        @Schema(description = "The inherited risk score", requiredMode = Schema.RequiredMode.REQUIRED) double inheritedRiskScore,
+        @Schema(description = "Number of vulnerabilities with unassigned severity", requiredMode = Schema.RequiredMode.REQUIRED) int unassigned,
+        @Schema(description = "Total number of vulnerabilities", requiredMode = Schema.RequiredMode.REQUIRED) int vulnerabilities
 ) {
 
     public ConciseProjectMetrics(final ConciseProjectMetricsRow row) {
