@@ -1352,6 +1352,10 @@ public class QueryManager extends AlpineQueryManager {
         getProjectQueryManager().bind(project, tags);
     }
 
+    public void bind(Policy policy, List<Tag> tags) {
+        getProjectQueryManager().bind(policy, tags);
+    }
+
     public boolean hasAccessManagementPermission(final Object principal) {
         if (principal instanceof final UserPrincipal userPrincipal) {
             return hasAccessManagementPermission(userPrincipal);
@@ -1944,5 +1948,13 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeComponentProperties(final Component component, final List<ComponentProperty> properties) {
         getComponentQueryManager().synchronizeComponentProperties(component, properties);
+    }
+
+    public void tagPolicies(final String tagName, final Collection<String> policyUuids) {
+        getTagQueryManager().tagPolicies(tagName, policyUuids);
+    }
+
+    public void untagPolicies(final String tagName, final Collection<String> policyUuids) {
+        getTagQueryManager().untagPolicies(tagName, policyUuids);
     }
 }

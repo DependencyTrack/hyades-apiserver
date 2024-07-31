@@ -20,6 +20,8 @@ package org.dependencytrack.resources.v1.problems;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 
 import java.net.URI;
 
@@ -68,6 +70,27 @@ public class ProblemDetails {
             example = "https://api.example.org/foo/bar/example-instance"
     )
     private URI instance;
+
+    public ProblemDetails() {
+    }
+
+    public ProblemDetails(final int status, final String title, final String detail) {
+        this.status = status;
+        this.title = title;
+        this.detail = detail;
+    }
+
+    /**
+     * @since 4.12.0
+     */
+    public Response toResponse() {
+        return Response
+                .status(status)
+                .header(HttpHeaders.CONTENT_TYPE, MEDIA_TYPE_JSON)
+                .entity(this)
+                .build();
+    }
+
 
     public URI getType() {
         return type;

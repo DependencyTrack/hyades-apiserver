@@ -31,7 +31,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.constraints.Size;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -41,6 +45,10 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 @Path("/v1/tag")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "tag")
@@ -72,5 +80,97 @@ public class TagResource extends AlpineResource {
             final PaginatedResult result = qm.getTags(policyUuid);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
+    }
+
+    @POST
+    @Path("/{name}/policy")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Tags one or more policies.",
+            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Policies tagged successfully."
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "A tag with the provided name does not exist.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
+            )
+    })
+    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    public Response tagPolicies(
+            @Parameter(description = "Name of the tag to assign", required = true)
+            @PathParam("name") final String tagName,
+            @Parameter(
+                    description = "UUIDs of policies to tag",
+                    required = true,
+                    array = @ArraySchema(schema = @Schema(type = "string", format = "uuid"))
+            )
+            @Size(min = 1, max = 100) final Set<@ValidUuid String> policyUuids
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.tagPolicies(tagName, policyUuids);
+        } catch (RuntimeException e) {
+            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
+            if (e.getCause() instanceof final NoSuchElementException nseException) {
+                return Response
+                        .status(404)
+                        .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
+                        .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
+                        .build();
+            }
+            throw e;
+        }
+        return Response.noContent().build();
+    }
+
+    @DELETE
+    @Path("/{name}/policy")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Untags one or more policies.",
+            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Policies untagged successfully."
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "A tag with the provided name does not exist.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
+            )
+    })
+    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    public Response untagPolicies(
+            @Parameter(description = "Name of the tag", required = true)
+            @PathParam("name") final String tagName,
+            @Parameter(
+                    description = "UUIDs of policies to untag",
+                    required = true,
+                    array = @ArraySchema(schema = @Schema(type = "string", format = "uuid"))
+            )
+            @Size(min = 1, max = 100) final Set<@ValidUuid String> policyUuids
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.untagPolicies(tagName, policyUuids);
+        } catch (RuntimeException e) {
+            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
+            if (e.getCause() instanceof final NoSuchElementException nseException) {
+                return Response
+                        .status(404)
+                        .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
+                        .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
+                        .build();
+            }
+            throw e;
+        }
+        return Response.noContent().build();
     }
 }

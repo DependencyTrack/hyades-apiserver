@@ -29,8 +29,10 @@ import org.dependencytrack.model.Tag;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 public class TagQueryManager extends QueryManager implements IQueryManager {
@@ -166,5 +168,52 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             }
         }
         return new ArrayList<>(persist(newTags));
+    }
+
+    /**
+     * @since 4.12.0
+     */
+    @Override
+    public void tagPolicies(final String tagName, final Collection<String> policyUuids) {
+        runInTransaction(() -> {
+            final Tag tag = getTagByName(tagName);
+            if (tag == null) {
+                throw new NoSuchElementException("A tag with name %s does not exist".formatted(tagName));
+            }
+
+            final Query<Policy> policiesQuery = pm.newQuery(Policy.class);
+            policiesQuery.setFilter(":uuids.contains(uuid)");
+            policiesQuery.setParameters(policyUuids);
+            final List<Policy> policies = executeAndCloseList(policiesQuery);
+
+            for (final Policy policy : policies) {
+                bind(policy, List.of(tag));
+            }
+        });
+    }
+
+    /**
+     * @since 4.12.0
+     */
+    @Override
+    public void untagPolicies(final String tagName, final Collection<String> policyUuids) {
+        runInTransaction(() -> {
+            final Tag tag = getTagByName(tagName);
+            if (tag == null) {
+                throw new NoSuchElementException("A tag with name %s does not exist".formatted(tagName));
+            }
+
+            final Query<Policy> policiesQuery = pm.newQuery(Policy.class);
+            policiesQuery.setFilter(":uuids.contains(uuid)");
+            policiesQuery.setParameters(policyUuids);
+            final List<Policy> policies = executeAndCloseList(policiesQuery);
+
+            for (final Policy policy : policies) {
+                if (policy.getTags() == null || policy.getTags().isEmpty()) {
+                    continue;
+                }
+                policy.getTags().remove(tag);
+            }
+        });
     }
 }

@@ -301,7 +301,10 @@ public class PolicyResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Adds a tag to a policy",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>POST /api/v1/tag/{name}/policy</code> instead.</p>
+                    <p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>
+                    """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Policy.class))),
@@ -310,6 +313,7 @@ public class PolicyResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The policy or tag could not be found")
     })
     @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @Deprecated(forRemoval = true)
     public Response addTagToPolicy(
             @Parameter(description = "The UUID of the policy to add a project to", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
@@ -341,7 +345,10 @@ public class PolicyResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Removes a tag from a policy",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>DELETE /api/v1/tag/{name}/policy</code> instead.</p>
+                    <p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>
+                    """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", content = @Content(schema = @Schema(implementation = Policy.class))),
@@ -350,6 +357,7 @@ public class PolicyResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The policy or tag could not be found")
     })
     @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @Deprecated(forRemoval = true)
     public Response removeTagFromPolicy(
             @Parameter(description = "The UUID of the policy to remove the tag from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
