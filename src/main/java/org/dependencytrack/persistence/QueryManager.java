@@ -1407,8 +1407,8 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().getTaggedPolicies(tagName);
     }
 
-    public PaginatedResult getTags(String policyUuid) {
-        return getTagQueryManager().getTags(policyUuid);
+    public PaginatedResult getTagsForPolicy(String policyUuid) {
+        return getTagQueryManager().getTagsForPolicy(policyUuid);
     }
 
     /**

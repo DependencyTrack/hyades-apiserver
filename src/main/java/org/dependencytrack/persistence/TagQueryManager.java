@@ -251,7 +251,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    public PaginatedResult getTags(String policyUuid) {
+    @Override
+    public PaginatedResult getTagsForPolicy(String policyUuid) {
 
         LOGGER.debug("Retrieving tags under policy " + policyUuid);
 
