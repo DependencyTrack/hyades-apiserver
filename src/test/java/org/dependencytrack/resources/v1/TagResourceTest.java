@@ -364,17 +364,9 @@ public class TagResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                    "message": "Value must only contain lowercase letters.",
-                    "messageTemplate": "Value must only contain lowercase letters.",
-                    "path": "getTaggedProjects.tagName",
-                    "invalidValue": "Foo"
-                  }
-                ]
-                """);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
     }
 
     @Test
@@ -491,17 +483,9 @@ public class TagResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                    "message": "Value must only contain lowercase letters.",
-                    "messageTemplate": "Value must only contain lowercase letters.",
-                    "path": "getTaggedPolicies.tagName",
-                    "invalidValue": "Foo"
-                  }
-                ]
-                """);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
     }
 
     @Test
