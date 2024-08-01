@@ -41,6 +41,14 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.TagQueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.vo.TagListResponseItem;
+import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
+import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
+
+import java.util.List;
+import java.util.UUID;
 
 @Path("/v1/tag")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "tag")
@@ -51,7 +59,110 @@ import org.dependencytrack.persistence.QueryManager;
 public class TagResource extends AlpineResource {
 
     @GET
-    @Path("/{policyUuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all tags",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all tags",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of tags", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TagListResponseItem.class)))
+            )
+    })
+    @PaginatedApi
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getAllTags() {
+        final List<TagQueryManager.TagListRow> tagListRows;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            tagListRows = qm.getTags();
+        }
+
+        final List<TagListResponseItem> tags = tagListRows.stream()
+                .map(row -> new TagListResponseItem(row.name(), row.projectCount(), row.policyCount()))
+                .toList();
+        final long totalCount = tagListRows.isEmpty() ? 0 : tagListRows.getFirst().totalCount();
+        return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/{name}/project")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all projects assigned to the given tag.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects assigned to the given tag",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TaggedProjectListResponseItem.class)))
+            )
+    })
+    @PaginatedApi
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getTaggedProjects(
+            @Parameter(description = "Name of the tag to get projects for.", required = true)
+            @PathParam("name") final String tagName
+    ) {
+        // TODO: Should enforce lowercase for tagName once we are sure that
+        //   users don't have any mixed-case tags in their system anymore.
+        //   Will likely need a migration to cleanup existing tags for this.
+
+        final List<TagQueryManager.TaggedProjectRow> taggedProjectListRows;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            taggedProjectListRows = qm.getTaggedProjects(tagName);
+        }
+
+        final List<TaggedProjectListResponseItem> tags = taggedProjectListRows.stream()
+                .map(row -> new TaggedProjectListResponseItem(UUID.fromString(row.uuid()), row.name(), row.version()))
+                .toList();
+        final long totalCount = taggedProjectListRows.isEmpty() ? 0 : taggedProjectListRows.getFirst().totalCount();
+        return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/{name}/policy")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all policies assigned to the given tag.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all policies assigned to the given tag",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of policies", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TaggedPolicyListResponseItem.class)))
+            )
+    })
+    @PaginatedApi
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getTaggedPolicies(
+            @Parameter(description = "Name of the tag to get policies for.", required = true)
+            @PathParam("name") final String tagName
+    ) {
+        // TODO: Should enforce lowercase for tagName once we are sure that
+        //   users don't have any mixed-case tags in their system anymore.
+        //   Will likely need a migration to cleanup existing tags for this.
+
+        final List<TagQueryManager.TaggedPolicyRow> taggedPolicyListRows;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            taggedPolicyListRows = qm.getTaggedPolicies(tagName);
+        }
+
+        final List<TaggedPolicyListResponseItem> tags = taggedPolicyListRows.stream()
+                .map(row -> new TaggedPolicyListResponseItem(UUID.fromString(row.uuid()), row.name()))
+                .toList();
+        final long totalCount = taggedPolicyListRows.isEmpty() ? 0 : taggedPolicyListRows.getFirst().totalCount();
+        return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/policy/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all tags associated with a given policy",
@@ -66,11 +177,42 @@ public class TagResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getTags(@Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
-                            @PathParam("policyUuid") @ValidUuid String policyUuid) {
+    public Response getTagsForPolicy(
+            @Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
+            @PathParam("uuid") @ValidUuid final String uuid
+    ) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final PaginatedResult result = qm.getTags(policyUuid);
+            final PaginatedResult result = qm.getTagsForPolicy(uuid);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
+    }
+
+    @GET
+    @Path("/{policyUuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all tags associated with a given policy",
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>/api/v1/tag/policy/{uuid}</code> instead.</p>
+                    <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>
+                    """
+    )
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all tags associated with a given policy",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of tags", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Tag.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @Deprecated(forRemoval = true)
+    public Response getTags(
+            @Parameter(description = "The UUID of the policy", required = true)
+            @PathParam("policyUuid") final UUID policyUuid
+    ) {
+        return getTagsForPolicy(String.valueOf(policyUuid));
     }
 }
