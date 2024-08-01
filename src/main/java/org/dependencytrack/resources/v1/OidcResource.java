@@ -74,8 +74,11 @@ public class OidcResource extends AlpineResource {
     @GET
     @Path("/available")
     @Produces(MediaType.TEXT_PLAIN)
-    @Operation(
-            summary = "Indicates if OpenID Connect is available for this application"
+    @Operation(summary = "Indicates if OpenID Connect is available for this application")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Whether OpenID Connect is available",
+            content = @Content(schema = @Schema(type = "boolean"))
     )
     @AuthenticationNotRequired
     public Response isAvailable() {
@@ -90,7 +93,11 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = OidcGroup.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all groups",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = OidcGroup.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
@@ -110,7 +117,11 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = OidcGroup.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created group",
+                    content = @Content(schema = @Schema(implementation = OidcGroup.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
@@ -140,7 +151,11 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = OidcGroup.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated group",
+                    content = @Content(schema = @Schema(implementation = OidcGroup.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
@@ -172,7 +187,7 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Group removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The group could not be found")
     })
@@ -200,7 +215,11 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = Team.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of teams associated with the specified group",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Team.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
@@ -229,7 +248,11 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = MappedOidcGroup.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The created mapping",
+                    content = @Content(schema = @Schema(implementation = MappedOidcGroup.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team or group could not be found"),
             @ApiResponse(responseCode = "409", description = "A mapping with the same team and group name already exists")
@@ -271,7 +294,7 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Mapping removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
@@ -298,7 +321,7 @@ public class OidcResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Mapping removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })

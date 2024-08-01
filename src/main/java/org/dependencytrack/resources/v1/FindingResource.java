@@ -97,8 +97,12 @@ public class FindingResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all findings for a specific project, or a SARIF file",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of findings", schema = @Schema(format = "integer")),
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Finding.class)))
+                    content = {
+                            @Content(array = @ArraySchema(schema = @Schema(implementation = Finding.class)), mediaType = MediaType.APPLICATION_JSON),
+                            @Content(schema = @Schema(type = "string"), mediaType = MEDIA_TYPE_SARIF_JSON)
+                    }
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
@@ -150,7 +154,11 @@ public class FindingResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The findings for the specified project as FPF",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -183,6 +191,7 @@ public class FindingResource extends AlpineResource {
             description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Analysis triggered successfully"),
             @ApiResponse(responseCode = "304", description = "Analysis is already in progress"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
@@ -206,7 +215,11 @@ public class FindingResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BomUploadResponse.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking analysis progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -246,6 +259,7 @@ public class FindingResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all findings",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of findings", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Finding.class)))
             ),
@@ -312,6 +326,7 @@ public class FindingResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all findings grouped by vulnerability",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of findings", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Finding.class)))
             ),

@@ -62,6 +62,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 
@@ -103,7 +104,9 @@ public class ProjectResource extends AlpineResource {
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects",
                     headers = @Header(name = TOTAL_COUNT_HEADER, schema = @Schema(format = "integer"), description = "The total number of projects"),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -141,7 +144,9 @@ public class ProjectResource extends AlpineResource {
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects in concise representation",
                     headers = @Header(name = TOTAL_COUNT_HEADER, schema = @Schema(format = "integer"), description = "The total number of projects"),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConciseProject.class)))
             ),
@@ -179,7 +184,10 @@ public class ProjectResource extends AlpineResource {
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of child projects", schema = @Schema(format = "integer")),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all child projects in a concise representation",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of child projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConciseProject.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
@@ -215,7 +223,11 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -248,7 +260,11 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific project by its name and version",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -284,6 +300,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all projects by tag",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -315,6 +332,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all projects by classifier",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -347,7 +365,11 @@ public class ProjectResource extends AlpineResource {
                     <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"""
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = """
                     <ul>
@@ -407,7 +429,11 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
             @ApiResponse(responseCode = "409", description = """
@@ -477,7 +503,11 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
             @ApiResponse(responseCode = "409", description = """
@@ -613,7 +643,7 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Project removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
@@ -650,7 +680,11 @@ public class ProjectResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Project.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking cloning progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
@@ -715,6 +749,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all children for a project",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -753,6 +788,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all children for a project by classifier",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -795,6 +831,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all children for a project by tag",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),
@@ -837,6 +874,7 @@ public class ProjectResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all projects without the descendants of the selected project",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
             ),

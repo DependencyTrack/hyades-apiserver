@@ -67,7 +67,11 @@ public class BadgeResource extends AlpineResource {
             summary = "Returns current metrics for a specific project"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string", implementation = ProjectMetrics.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A badge displaying current vulnerability metrics for a project in SVG format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "204", description = "Badge support is disabled. No content will be returned."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -99,7 +103,11 @@ public class BadgeResource extends AlpineResource {
             summary = "Returns current metrics for a specific project"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string", implementation = ProjectMetrics.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A badge displaying current vulnerability metrics for a project in SVG format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "204", description = "Badge support is disabled. No content will be returned."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -133,7 +141,11 @@ public class BadgeResource extends AlpineResource {
             summary = "Returns a policy violations badge for a specific project"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A badge displaying current policy violation metrics of a project in SVG format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "204", description = "Badge support is disabled. No content will be returned."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -165,7 +177,11 @@ public class BadgeResource extends AlpineResource {
             summary = "Returns a policy violations badge for a specific project"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A badge displaying current policy violation metrics of a project in SVG format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "204", description = "Badge support is disabled. No content will be returned."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")

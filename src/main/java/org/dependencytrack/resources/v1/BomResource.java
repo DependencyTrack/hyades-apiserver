@@ -109,8 +109,12 @@ public class BomResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Dependency metadata for a project in CycloneDX format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
@@ -179,7 +183,11 @@ public class BomResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Dependency metadata for a specific component in CycloneDX format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
@@ -245,9 +253,19 @@ public class BomResource extends AlpineResource {
             operationId = "UploadBomBase64Encoded"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BomUploadResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid BOM", content = @Content(schema = @Schema(implementation = InvalidBomProblemDetails.class),
-                    mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking BOM processing progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid BOM",
+                    content = @Content(
+                            schema = @Schema(implementation = InvalidBomProblemDetails.class),
+                            mediaType = ProblemDetails.MEDIA_TYPE_JSON
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "The uploaded BOM is invalid"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
@@ -332,11 +350,18 @@ public class BomResource extends AlpineResource {
             operationId = "UploadBom"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BomUploadResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid BOM", content = @Content(
-                    schema = @Schema(implementation = InvalidBomProblemDetails.class),
-                    mediaType = ProblemDetails.MEDIA_TYPE_JSON
-            )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking BOM processing progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid BOM",
+                    content = @Content(
+                            schema = @Schema(implementation = InvalidBomProblemDetails.class),
+                            mediaType = ProblemDetails.MEDIA_TYPE_JSON
+                    )
             ),
             @ApiResponse(responseCode = "400", description = "The uploaded BOM is invalid"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -419,7 +444,11 @@ public class BomResource extends AlpineResource {
                     <p>Requires permission <strong>BOM_UPLOAD</strong></p>
                     <p><strong>Deprecated</strong>. Use <code>/v1/event/token/{uuid}</code> instead.</p>""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = IsTokenBeingProcessedResponse.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The processing status of the provided token",
+                    content = @Content(schema = @Schema(implementation = IsTokenBeingProcessedResponse.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
@@ -435,7 +464,7 @@ public class BomResource extends AlpineResource {
         AtomicBoolean hasTerminalStatus = new AtomicBoolean(true);
         IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
         workflowStates.stream().forEach(workflowState -> hasTerminalStatus.set(hasTerminalStatus.get() && (workflowState.getStatus() != WorkflowStatus.PENDING
-                && workflowState.getStatus() != WorkflowStatus.TIMED_OUT)));
+                                                                                                           && workflowState.getStatus() != WorkflowStatus.TIMED_OUT)));
         response.setProcessing(!hasTerminalStatus.get());
         return Response.ok(response).build();
     }

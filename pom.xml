@@ -112,6 +112,7 @@
         <lib.protobuf-java.version>3.25.3</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.0</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
+        <lib.swagger-parser.version>2.1.22</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <lib.woodstox.version>6.6.2</lib.woodstox.version>
@@ -298,9 +299,10 @@
             <version>${lib.swagger.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-jaxrs2-servlet-initializer-v2</artifactId>
-            <version>${lib.swagger.version}</version>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>${lib.swagger-parser.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -550,6 +552,7 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>application.version</include>
+                    <include>openapi-configuration.yaml</include>
                 </includes>
             </resource>
         </resources>

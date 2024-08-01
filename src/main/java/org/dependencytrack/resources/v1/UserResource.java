@@ -100,7 +100,11 @@ public class UserResource extends AlpineResource {
             summary = "Assert login credentials",
             description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A bearer token to be used for authenticating with the REST API",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Forbidden")
     })
@@ -137,7 +141,11 @@ public class UserResource extends AlpineResource {
             summary = "Login with OpenID Connect",
             description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A bearer token to be used for authenticating with the REST API",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "204", description = "No Content"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Forbidden")
@@ -180,7 +188,7 @@ public class UserResource extends AlpineResource {
             description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200"),
+            @ApiResponse(responseCode = "200", description = "Password changed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Forbidden")
     })
@@ -241,6 +249,7 @@ public class UserResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all managed users",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of managed users", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ManagedUser.class)))
             ),
@@ -265,6 +274,7 @@ public class UserResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
+                    description = "A list of all LDAP users",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of LDAP users", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = LdapUser.class)))
             ),
@@ -292,7 +302,9 @@ public class UserResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of OIDC users", schema = @Schema(format = "integer"))),
+                    description = "A list of all OIDC users",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of OIDC users", schema = @Schema(format = "integer"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
@@ -311,7 +323,11 @@ public class UserResource extends AlpineResource {
             summary = "Returns information about the current logged in user."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Information about the current logged in user",
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response getSelf() {
@@ -341,7 +357,11 @@ public class UserResource extends AlpineResource {
             summary = "Updates information about the current logged in user."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ManagedUser.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated user",
+                    content = @Content(schema = @Schema(implementation = ManagedUser.class))
+            ),
             @ApiResponse(responseCode = "400", description = "An invalid payload was submitted or the user is not a managed user."),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
@@ -391,7 +411,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = LdapUser.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created LDAP user",
+                    content = @Content(schema = @Schema(implementation = LdapUser.class))
+            ),
             @ApiResponse(responseCode = "400", description = "Username cannot be null or blank."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
@@ -423,7 +447,7 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "LDAP user removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
@@ -452,7 +476,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ManagedUser.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created user",
+                    content = @Content(schema = @Schema(implementation = ManagedUser.class))
+            ),
             @ApiResponse(responseCode = "400", description = "Missing required field"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
@@ -500,7 +528,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ManagedUser.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated user",
+                    content = @Content(schema = @Schema(implementation = ManagedUser.class))
+            ),
             @ApiResponse(responseCode = "400", description = "Missing required field"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
@@ -543,7 +575,7 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "User removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
@@ -572,7 +604,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = OidcUser.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created OIDC user",
+                    content = @Content(schema = @Schema(implementation = OidcUser.class))
+            ),
             @ApiResponse(responseCode = "400", description = "Username cannot be null or blank."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
@@ -604,7 +640,7 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "OIDC user removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
@@ -633,7 +669,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated user",
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+            ),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team could not be found")
@@ -673,7 +713,11 @@ public class UserResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated user",
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+            ),
             @ApiResponse(responseCode = "304", description = "The user was not a member of the specified team"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team could not be found")
