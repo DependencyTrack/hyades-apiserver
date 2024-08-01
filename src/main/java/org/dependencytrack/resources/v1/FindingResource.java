@@ -180,13 +180,13 @@ public class FindingResource extends AlpineResource {
     @Path("/portfolio/analyze")
     @Operation(
             summary = "Triggers Vulnerability Analysis for the entire portfolio",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "304", description = "Analysis is already in progress"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION) // Require admin privileges due to system impact
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
     public Response analyzePortfolio() {
         LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
         if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {

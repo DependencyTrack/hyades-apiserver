@@ -75,7 +75,7 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the projects assigned to the specified team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -87,7 +87,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response retrieveProjects(@Parameter(description = "The UUID of the team to retrieve mappings for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @PathParam("uuid") @ValidUuid String uuid,
                                      @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
@@ -118,7 +118,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the team or project could not be found"),
             @ApiResponse(responseCode = "409", description = "A mapping with the same team and project already exists")
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response addMapping(AclMappingRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -148,13 +148,13 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Removes an ACL mapping",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team or project could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteMapping(
             @Parameter(description = "The UUID of the team to delete the mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid,

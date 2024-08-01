@@ -109,7 +109,7 @@ public class ViolationAnalysisResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Records a violation analysis decision",
-            description = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            description = "<p>Requires permission <strong>POLICY_VIOLATION_ANALYSIS</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
