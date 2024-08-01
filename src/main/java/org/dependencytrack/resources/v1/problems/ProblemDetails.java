@@ -20,6 +20,8 @@ package org.dependencytrack.resources.v1.problems;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 
 import java.net.URI;
 
@@ -29,7 +31,10 @@ import java.net.URI;
  */
 @Schema(
         description = "An RFC 9457 problem object",
-        subTypes = InvalidBomProblemDetails.class
+        subTypes = {
+                InvalidBomProblemDetails.class,
+                InvalidCelExpressionProblemDetails.class
+        }
 )
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProblemDetails {
@@ -68,6 +73,14 @@ public class ProblemDetails {
             example = "https://api.example.org/foo/bar/example-instance"
     )
     private URI instance;
+
+    public Response toResponse() {
+        return Response
+                .status(status)
+                .header(HttpHeaders.CONTENT_TYPE, MEDIA_TYPE_JSON)
+                .entity(this)
+                .build();
+    }
 
     public URI getType() {
         return type;

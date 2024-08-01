@@ -79,6 +79,32 @@ public class PolicyConditionResourceTest extends ResourceTest {
     }
 
     @Test
+    public void testCreateExpressionConditionWithoutViolationType() {
+        final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        final Response response = jersey.target("%s/%s/condition".formatted(V1_POLICY, policy.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "subject": "EXPRESSION",
+                          "value": "true"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo("""
+                        {
+                          "status": 400,
+                          "title": "Invalid policy condition",
+                          "detail": "Expression conditions must define a violation type"
+                        }
+                        """);
+    }
+
+    @Test
     public void testCreateExpressionConditionWithError() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
 
@@ -94,10 +120,14 @@ public class PolicyConditionResourceTest extends ResourceTest {
                         """, MediaType.APPLICATION_JSON));
 
         assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo("""
                         {
-                          "celErrors": [
+                          "status": 400,
+                          "title": "Invalid policy expression",
+                          "detail": "The provided policy expression could not be compiled",
+                          "errors": [
                             {
                               "line": 1,
                               "column": 9,
@@ -158,12 +188,16 @@ public class PolicyConditionResourceTest extends ResourceTest {
                         """.formatted(condition.getUuid()), MediaType.APPLICATION_JSON));
 
         assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo("""
                         {
-                          "celErrors": [
+                          "status": 400,
+                          "title": "Invalid policy expression",
+                          "detail": "The provided policy expression could not be compiled",
+                          "errors": [
                             {
-                              "line": 1,
+                              "line":1,
                               "column": 9,
                               "message": "undefined field 'doesNotExist'"
                             }

@@ -49,14 +49,12 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.dependencytrack.policy.cel.CelPolicyType;
-import org.dependencytrack.resources.v1.vo.CelExpressionError;
-import org.projectnessie.cel.common.CELError;
+import org.dependencytrack.resources.v1.problems.InvalidCelExpressionProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
-import java.util.ArrayList;
-import java.util.Map;
 
 /**
  * JAX-RS resources for processing policies.
@@ -174,18 +172,22 @@ public class PolicyConditionResource extends AlpineResource {
         }
 
         if (policyCondition.getViolationType() == null) {
-            throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity("Expression conditions must define a violation type").build());
+            final var problemDetails = new ProblemDetails();
+            problemDetails.setStatus(400);
+            problemDetails.setTitle("Invalid policy condition");
+            problemDetails.setDetail("Expression conditions must define a violation type");
+            throw new BadRequestException(problemDetails.toResponse());
         }
 
         try {
             CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile(policyCondition.getValue(), CacheMode.NO_CACHE);
         } catch (ScriptCreateException e) {
-            final var celErrors = new ArrayList<CelExpressionError>();
-            for (final CELError error : e.getIssues().getErrors()) {
-                celErrors.add(new CelExpressionError(error.getLocation().line(), error.getLocation().column(), error.getMessage()));
-            }
-
-            throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(Map.of("celErrors", celErrors)).build());
+            final var problemDetails = new InvalidCelExpressionProblemDetails(e.getIssues());
+            problemDetails.setStatus(400);
+            problemDetails.setTitle("Invalid policy expression");
+            problemDetails.setDetail("The provided policy expression contains %d error(s)"
+                    .formatted(problemDetails.getErrors().size()));
+            throw new BadRequestException(problemDetails.toResponse());
         }
     }
 
