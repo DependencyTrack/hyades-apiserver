@@ -1381,6 +1381,10 @@ public class QueryManager extends AlpineQueryManager {
         getProjectQueryManager().bind(project, tags);
     }
 
+    public boolean bind(final Policy policy, final Collection<Tag> tags) {
+        return getPolicyQueryManager().bind(policy, tags);
+    }
+
     public boolean hasAccessManagementPermission(final Object principal) {
         if (principal instanceof final UserPrincipal userPrincipal) {
             return hasAccessManagementPermission(userPrincipal);
@@ -1401,6 +1405,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<TagQueryManager.TagListRow> getTags() {
         return getTagQueryManager().getTags();
+    }
+
+    public void deleteTags(final Collection<String> tagNames) {
+        getTagQueryManager().deleteTags(tagNames);
     }
 
     public List<TagQueryManager.TaggedProjectRow> getTaggedProjects(final String tagName) {

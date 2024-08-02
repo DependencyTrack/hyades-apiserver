@@ -60,7 +60,9 @@ public enum Permissions {
     POLICY_MANAGEMENT_CREATE("Allows the creation of a policy"),
     POLICY_MANAGEMENT_READ("Allows reading of policies"),
     POLICY_MANAGEMENT_UPDATE("Allows the modification of a policy"),
-    POLICY_MANAGEMENT_DELETE("Allows the deletion of a policy");
+    POLICY_MANAGEMENT_DELETE("Allows the deletion of a policy"),
+    TAG_MANAGEMENT("Allows the modification and deletion of tags"),
+    TAG_MANAGEMENT_DELETE("Allows the deletion of a tag");
 
     private final String description;
 
@@ -108,6 +110,8 @@ public enum Permissions {
         public static final String POLICY_MANAGEMENT_READ = "POLICY_MANAGEMENT_READ";
         public static final String POLICY_MANAGEMENT_UPDATE = "POLICY_MANAGEMENT_UPDATE";
         public static final String POLICY_MANAGEMENT_DELETE = "POLICY_MANAGEMENT_DELETE";
+        public static final String TAG_MANAGEMENT = "TAG_MANAGEMENT";
+        public static final String TAG_MANAGEMENT_DELETE = "TAG_MANAGEMENT_DELETE";
     }
 
 }

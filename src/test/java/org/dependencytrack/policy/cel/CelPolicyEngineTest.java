@@ -828,8 +828,8 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.createPolicyCondition(policyB, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.name.startsWith("acme-lib")
                 """, PolicyViolation.Type.OPERATIONAL);
-        policyB.setTags(List.of(tag));
         qm.persist(policyB);
+        qm.bind(policyB, List.of(tag));
 
         final var projectA = new Project();
         projectA.setName("acme-app-a");

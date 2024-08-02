@@ -70,8 +70,8 @@ public class PolicyQueryManagerTest extends PersistenceCapableTest {
         tagPolicy.setName("tagPolicy");
         tagPolicy.setOperator(Policy.Operator.ANY);
         tagPolicy.setViolationState(Policy.ViolationState.FAIL);
-        tagPolicy.setTags(List.of(policyTag));
         qm.persist(tagPolicy);
+        qm.bind(tagPolicy, List.of(policyTag));
 
         final var inheritedPolicy = new Policy();
         inheritedPolicy.setName("inheritedPolicy");

@@ -31,6 +31,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -42,12 +43,14 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.exception.TagOperationFailedException;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.TagQueryManager;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.problems.TagOperationProblemDetails;
 import org.dependencytrack.resources.v1.vo.TagListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
@@ -92,6 +95,58 @@ public class TagResource extends AlpineResource {
                 .toList();
         final long totalCount = tagListRows.isEmpty() ? 0 : tagListRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @DELETE
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Deletes one or more tags.",
+            description = """
+                    <p>A tag can only be deleted if no projects or policies are assigned to it.</p>
+                    <p>
+                      Principals with <strong>PORTFOLIO_MANAGEMENT</strong> permission, and access
+                      to <em>all</em> assigned projects (if portfolio ACL is enabled), can delete
+                      a tag with assigned projects.
+                    </p>
+                    <p>
+                      Principals with <strong>POLICY_MANAGEMENT</strong> permission can delete tags
+                      with assigned policies.
+                    </p>
+                    <p>Requires permission <strong>TAG_MANAGEMENT</strong> or <strong>TAG_MANAGEMENT_DELETE</strong></p>
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Tags deleted successfully."
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Operation failed",
+                    content = @Content(schema = @Schema(implementation = TagOperationProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
+            )
+    })
+    @PermissionRequired({Permissions.Constants.TAG_MANAGEMENT, Permissions.Constants.TAG_MANAGEMENT_DELETE})
+    public Response deleteTags(
+            @Parameter(description = "Names of the tags to delete")
+            @Size(min = 1, max = 100) final Set<@NotBlank String> tagNames
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.deleteTags(tagNames);
+        } catch (TagOperationFailedException tofException) {
+            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
+            final var problemDetails = new TagOperationProblemDetails(tofException);
+            return Response
+                    .status(problemDetails.getStatus())
+                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
+                    .entity(problemDetails)
+                    .build();
+        } catch (RuntimeException e) {
+            throw e;
+        }
+
+        return Response.noContent().build();
     }
 
     @GET

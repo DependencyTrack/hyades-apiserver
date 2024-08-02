@@ -56,12 +56,14 @@ import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_C
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
+import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
 
 public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assert.assertEquals(35, Permissions.values().length);
+        Assert.assertEquals(37, Permissions.values().length);
         Assert.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assert.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.PORTFOLIO_MANAGEMENT.name());
@@ -97,6 +99,8 @@ public class PermissionsTest {
         Assert.assertEquals("POLICY_MANAGEMENT_READ", Permissions.POLICY_MANAGEMENT_READ.name());
         Assert.assertEquals("POLICY_MANAGEMENT_UPDATE", Permissions.POLICY_MANAGEMENT_UPDATE.name());
         Assert.assertEquals("POLICY_MANAGEMENT_DELETE", Permissions.POLICY_MANAGEMENT_DELETE.name());
+        Assert.assertEquals("TAG_MANAGEMENT", Permissions.TAG_MANAGEMENT.name());
+        Assert.assertEquals("TAG_MANAGEMENT_DELETE", Permissions.TAG_MANAGEMENT_DELETE.name());
     }
 
     @Test
@@ -136,5 +140,7 @@ public class PermissionsTest {
         Assert.assertEquals("POLICY_MANAGEMENT_READ", POLICY_MANAGEMENT_READ);
         Assert.assertEquals("POLICY_MANAGEMENT_UPDATE", POLICY_MANAGEMENT_UPDATE);
         Assert.assertEquals("POLICY_MANAGEMENT_DELETE", POLICY_MANAGEMENT_DELETE);
+        Assert.assertEquals("TAG_MANAGEMENT", TAG_MANAGEMENT);
+        Assert.assertEquals("TAG_MANAGEMENT_DELETE", TAG_MANAGEMENT_DELETE);
     }
 }
