@@ -98,7 +98,7 @@
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.7.1</lib.kafka.version>
-        <lib.liquibase.version>4.28.0</lib.liquibase.version>
+        <lib.liquibase.version>4.29.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.11</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
