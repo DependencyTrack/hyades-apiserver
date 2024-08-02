@@ -268,11 +268,10 @@
             <artifactId>jakarta.activation-api</artifactId>
             <version>2.1.3</version>
         </dependency>
-    <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
-      <scope>provided</scope>
-      <version>6.1.0</version>
+        <dependency>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+          <scope>provided</scope>
         </dependency>
         <!-- org.json
         This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
