@@ -39,6 +39,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Date;
+import java.util.List;
 
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -306,8 +307,7 @@ public class PolicyResourceTest extends ResourceTest {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Tag tag = qm.createTag("Policy Tag");
 
-        policy.setTags(singletonList(tag));
-        qm.persist(policy);
+        qm.bind(policy, List.of(tag));
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
                 .request()
@@ -322,8 +322,7 @@ public class PolicyResourceTest extends ResourceTest {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Tag tag = qm.createTag("Policy Tag");
 
-        policy.setTags(singletonList(tag));
-        qm.persist(policy);
+        qm.bind(policy, List.of(tag));
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
                 .request()

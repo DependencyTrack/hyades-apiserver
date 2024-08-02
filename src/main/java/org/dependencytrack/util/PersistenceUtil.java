@@ -24,6 +24,7 @@ import org.postgresql.util.PSQLState;
 import javax.jdo.JDOHelper;
 import javax.jdo.ObjectState;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -128,6 +129,21 @@ public final class PersistenceUtil {
         if (!isPersistent(object)) {
             throw new IllegalStateException(message != null ? message : "Object must be persistent");
         }
+    }
+
+    /**
+     * Utility method to ensure that a given {@link Collection} is in a persistent state.
+     *
+     * @param objects The {@link Collection} to check the state of
+     * @param message Message to use for the exception, if object is not persistent
+     * @see #assertPersistent(Object, String)
+     * @since 4.12.0
+     */
+    public static void assertPersistentAll(final Collection<?> objects, final String message) {
+        if (objects == null || objects.isEmpty()) {
+            return;
+        }
+        objects.forEach(object -> assertPersistent(object, message));
     }
 
     /**

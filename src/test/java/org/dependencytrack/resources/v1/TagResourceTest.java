@@ -20,12 +20,14 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthorizationFilter;
 import jakarta.json.JsonArray;
 import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
@@ -53,10 +55,12 @@ public class TagResourceTest extends ResourceTest {
             new ResourceConfig(TagResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
+                    .register(AuthorizationFilter.class)
                     .register(ConstraintViolationExceptionMapper.class));
 
     @Test
     public void getTagsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -92,8 +96,8 @@ public class TagResourceTest extends ResourceTest {
         policy.setName("policy");
         policy.setOperator(Policy.Operator.ALL);
         policy.setViolationState(Policy.ViolationState.INFO);
-        policy.setTags(List.of(tagBar));
         qm.persist(policy);
+        qm.bind(policy, List.of(tagBar));
 
         final Response response = jersey.target(V1_TAG)
                 .request()
@@ -119,6 +123,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         for (int i = 0; i < 5; i++) {
             qm.createTag("tag-" + (i + 1));
         }
@@ -177,6 +182,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithFilterTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         qm.createTag("foo");
         qm.createTag("bar");
 
@@ -200,6 +206,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsSortByProjectCountTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -239,7 +246,223 @@ public class TagResourceTest extends ResourceTest {
     }
 
     @Test
+    public void deleteTagsTest() {
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+
+        qm.createTag("foo");
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of("foo")));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNull();
+    }
+
+    @Test
+    public void deleteTagsWhenNotExistsTest() {
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of("foo")));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) foo could not be deleted",
+                  "errors": {
+                    "foo": "Tag does not exist"
+                  }
+                }
+                """);
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        qm.bind(project, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNull();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToProjectWithoutPortfolioManagementPermissionTest() {
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        qm.bind(project, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) bar could not be deleted",
+                  "errors": {
+                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT permission."
+                  }
+                }
+                """);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNotNull();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToInaccessibleProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        qm.bind(projectA, List.of(usedTag));
+        qm.bind(projectB, List.of(usedTag));
+
+        projectA.addAccessTeam(team);
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) bar could not be deleted",
+                  "errors": {
+                    "bar": "The tag is assigned to 1 project(s) that are not accessible by the authenticated principal."
+                  }
+                }
+                """);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNotNull();
+        assertThat(qm.getTagByName("bar")).isNotNull();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToPolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var policy = new Policy();
+        policy.setName("policy");
+        policy.setOperator(Policy.Operator.ALL);
+        policy.setViolationState(Policy.ViolationState.INFO);
+        qm.persist(policy);
+
+        qm.bind(policy, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNull();
+        assertThat(qm.getTagByName("bar")).isNull();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToPolicyWithoutPolicyManagementPermissionTest() {
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var policy = new Policy();
+        policy.setName("policy");
+        policy.setOperator(Policy.Operator.ALL);
+        policy.setViolationState(Policy.ViolationState.INFO);
+        qm.persist(policy);
+
+        qm.bind(policy, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) bar could not be deleted",
+                  "errors": {
+                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT permission."
+                  }
+                }
+                """);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNotNull();
+        assertThat(qm.getTagByName("bar")).isNotNull();
+    }
+
+    @Test
     public void getTaggedProjectsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -296,6 +519,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -355,6 +579,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_TAG + "/foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -366,6 +591,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithNonLowerCaseTagNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_TAG + "/Foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -377,6 +603,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -400,6 +627,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -421,6 +649,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithNoProjectUuidsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createTag("foo");
 
         final Response response = jersey.target(V1_TAG + "/foo/project")
@@ -442,6 +671,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -475,6 +705,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWhenAlreadyTaggedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -494,6 +725,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -520,6 +752,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -556,6 +789,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -578,6 +812,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithNoProjectUuidsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createTag("foo");
 
         final Response response = jersey.target(V1_TAG + "/foo/project")
@@ -600,6 +835,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithTooManyProjectUuidsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createTag("foo");
 
         final List<String> projectUuids = IntStream.range(0, 101)
@@ -627,6 +863,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWhenNotTaggedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -646,6 +883,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Tag tagFoo = qm.createTag("foo");
         final Tag tagBar = qm.createTag("bar");
 
@@ -653,15 +891,16 @@ public class TagResourceTest extends ResourceTest {
         policyA.setName("policy-a");
         policyA.setOperator(Policy.Operator.ALL);
         policyA.setViolationState(Policy.ViolationState.INFO);
-        policyA.setTags(List.of(tagFoo));
         qm.persist(policyA);
 
         final var policyB = new Policy();
         policyB.setName("policy-b");
         policyB.setOperator(Policy.Operator.ALL);
         policyB.setViolationState(Policy.ViolationState.INFO);
-        policyB.setTags(List.of(tagBar));
         qm.persist(policyB);
+
+        qm.bind(policyA, List.of(tagFoo));
+        qm.bind(policyB, List.of(tagBar));
 
         final Response response = jersey.target(V1_TAG + "/foo/policy")
                 .request()
@@ -683,6 +922,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -690,8 +930,8 @@ public class TagResourceTest extends ResourceTest {
             policy.setName("policy-" + (i + 1));
             policy.setOperator(Policy.Operator.ALL);
             policy.setViolationState(Policy.ViolationState.INFO);
-            policy.setTags(List.of(tag));
             qm.persist(policy);
+            qm.bind(policy, List.of(tag));
         }
 
         Response response = jersey.target(V1_TAG + "/foo/policy")
@@ -743,6 +983,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_TAG + "/foo/policy")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -754,6 +995,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithNonLowerCaseTagNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_TAG + "/Foo/policy")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -765,6 +1007,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithOrderingTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -787,6 +1030,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithPolicyProjectsFilterTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -812,6 +1056,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagWithNonUuidNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         // NB: This is just to ensure that requests to /api/v1/tag/<value>
         // are not matched with the deprecated "getTagsForPolicy" endpoint.
         // Once we implement an endpoint to request individual tags,
