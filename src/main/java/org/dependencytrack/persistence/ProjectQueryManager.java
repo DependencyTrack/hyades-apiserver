@@ -30,6 +30,7 @@ import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
@@ -53,6 +54,8 @@ import org.dependencytrack.notification.NotificationScope;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
+import javax.jdo.metadata.MemberMetadata;
+import javax.jdo.metadata.TypeMetadata;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -851,10 +854,35 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    /**
-     * A similar method exists in ComponentQueryManager
-     */
-    private void preprocessACLs(final Query<Project> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+    @Override
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+        String projectMemberFieldName = null;
+        final org.datanucleus.store.query.Query<?> internalQuery = ((JDOQuery<?>)query).getInternalQuery();
+        if (!Project.class.equals(internalQuery.getCandidateClass())) {
+            // NB: The query does not directly target Project, but if it has a relationship
+            // with Project we can still make the ACL check work. If the query candidate
+            // has EXACTLY one persistent field of type Project, we'll use that.
+            // If there are more than one, or none at all, we fail to avoid unintentional behavior.
+            final TypeMetadata candidateTypeMetadata = pm.getPersistenceManagerFactory().getMetadata(internalQuery.getCandidateClassName());
+
+            for (final MemberMetadata memberMetadata : candidateTypeMetadata.getMembers()) {
+                if (!Project.class.getName().equals(memberMetadata.getFieldType())) {
+                    continue;
+                }
+
+                if (projectMemberFieldName != null) {
+                    throw new IllegalArgumentException("Query candidate class %s has multiple members of type %s"
+                            .formatted(internalQuery.getCandidateClassName(), Project.class.getName()));
+                }
+
+                projectMemberFieldName = memberMetadata.getName();
+            }
+
+            if (projectMemberFieldName == null) {
+                throw new IllegalArgumentException("Query candidate class %s has no member of type %s"
+                        .formatted(internalQuery.getCandidateClassName(), Project.class.getName()));
+            }
+        }
         if (super.principal != null && isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && !bypass) {
             final List<Team> teams;
             if (super.principal instanceof UserPrincipal userPrincipal) {
@@ -871,10 +899,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     return;
                 }
             }
-            if (teams != null && teams.size() > 0) {
+            if (teams != null && !teams.isEmpty()) {
                 final StringBuilder sb = new StringBuilder();
                 for (int i = 0, teamsSize = teams.size(); i < teamsSize; i++) {
                     final Team team = super.getObjectById(Team.class, teams.get(i).getId());
+                    sb.append(" ");
+                    if (projectMemberFieldName != null) {
+                        sb.append(projectMemberFieldName).append(".");
+                    }
                     sb.append(" accessTeams.contains(:team").append(i).append(") ");
                     params.put("team" + i, team);
                     if (i < teamsSize - 1) {
@@ -882,7 +914,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     }
                 }
                 if (inputFilter != null && !inputFilter.isBlank()) {
-                    query.setFilter(inputFilter + " && (" + sb.toString() + ")");
+                    query.setFilter(inputFilter + " && (" + sb + ")");
                 } else {
                     query.setFilter(sb.toString());
                 }
