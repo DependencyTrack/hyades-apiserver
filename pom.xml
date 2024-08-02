@@ -97,7 +97,7 @@
         <lib.jdbi.version>3.45.3</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
-        <lib.kafka.version>3.7.1</lib.kafka.version>
+        <lib.kafka.version>3.8.0</lib.kafka.version>
         <lib.liquibase.version>4.29.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.11</lib.minio.version>
