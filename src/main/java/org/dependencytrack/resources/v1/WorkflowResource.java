@@ -61,7 +61,11 @@ public class WorkflowResource {
             description = "<p>Requires permission <strong>BOM_UPLOAD</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = WorkflowState.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of workflow states",
+                    content = @Content(schema = @Schema(implementation = WorkflowState.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "Workflow does not exist")
     })

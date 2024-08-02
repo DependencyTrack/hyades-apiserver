@@ -26,6 +26,8 @@ import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -77,6 +79,12 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all teams",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of teams", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Team.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
@@ -96,7 +104,11 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific team",
+                    content = @Content(schema = @Schema(implementation = Team.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
@@ -118,11 +130,15 @@ public class TeamResource extends AlpineResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Creates a new team along with an associated API key",
+            summary = "Creates a new team",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created team",
+                    content = @Content(schema = @Schema(implementation = Team.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
@@ -145,11 +161,15 @@ public class TeamResource extends AlpineResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Updates a team's fields including",
+            summary = "Updates a team's fields",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated team",
+                    content = @Content(schema = @Schema(implementation = Team.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
@@ -181,7 +201,7 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Team removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
@@ -208,7 +228,11 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ApiKey.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created API key",
+                    content = @Content(schema = @Schema(implementation = ApiKey.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
@@ -235,7 +259,11 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ApiKey.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The re-generated API key",
+                    content = @Content(schema = @Schema(implementation = ApiKey.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
@@ -263,7 +291,11 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ApiKey.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated API key",
+                    content = @Content(schema = @Schema(implementation = ApiKey.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
@@ -294,7 +326,7 @@ public class TeamResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "API key removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
@@ -320,7 +352,11 @@ public class TeamResource extends AlpineResource {
             summary = "Returns information about the current team."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = TeamSelfResponse.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Information about the current team",
+                    content = @Content(schema = @Schema(implementation = TeamSelfResponse.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "400", description = "Invalid API key supplied"),
             @ApiResponse(responseCode = "404", description = "No Team for the given API key found")

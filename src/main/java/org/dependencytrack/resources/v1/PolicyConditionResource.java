@@ -81,7 +81,11 @@ public class PolicyConditionResource extends AlpineResource {
             description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = PolicyCondition.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created policy condition",
+                    content = @Content(schema = @Schema(implementation = PolicyCondition.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy could not be found")
     })
@@ -117,8 +121,11 @@ public class PolicyConditionResource extends AlpineResource {
             description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = PolicyCondition.class))),
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = PolicyCondition.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated policy condition",
+                    content = @Content(schema = @Schema(implementation = PolicyCondition.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy condition could not be found")
     })
@@ -149,7 +156,7 @@ public class PolicyConditionResource extends AlpineResource {
             description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "Policy condition removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy condition could not be found")
     })

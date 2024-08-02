@@ -77,7 +77,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = VulnerabilityMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The sum of all vulnerabilities in the database by year and month",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = VulnerabilityMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -96,7 +100,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = PortfolioMetrics.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Current metrics for the entire portfolio",
+                    content = @Content(schema = @Schema(implementation = PortfolioMetrics.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -116,7 +124,11 @@ public class MetricsResource extends AlpineResource {
                     <p>Date format must be <code>YYYYMMDD</code></p>
                     <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = PortfolioMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Historical metrics for the entire portfolio from a specific date",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PortfolioMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -142,7 +154,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = PortfolioMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "X days of historical metrics for the entire portfolio",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PortfolioMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -165,7 +181,7 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = PortfolioMetrics.class))),
+            @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
@@ -182,7 +198,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ProjectMetrics.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Current metrics for a specific project",
+                    content = @Content(schema = @Schema(implementation = ProjectMetrics.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -216,7 +236,11 @@ public class MetricsResource extends AlpineResource {
                     <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"""
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Historical metrics for a specific project from a specific date",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -240,8 +264,12 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "X days of historical metrics for a specific project",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectMetrics.class)))),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
@@ -264,6 +292,7 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -295,7 +324,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = DependencyMetrics.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Current metrics for a specific component",
+                    content = @Content(schema = @Schema(implementation = DependencyMetrics.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
@@ -329,7 +362,11 @@ public class MetricsResource extends AlpineResource {
                     <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"""
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Historical metrics for a specific component from a specific date",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
@@ -356,7 +393,11 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyMetrics.class)))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "X days of historical metrics for a specific component",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyMetrics.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
@@ -380,6 +421,7 @@ public class MetricsResource extends AlpineResource {
             description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
             @ApiResponse(responseCode = "404", description = "The component could not be found")

@@ -55,6 +55,7 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -90,7 +91,11 @@ public class VexResource extends AlpineResource {
             description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_READ</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(type = "string"))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A VEX for a project in CycloneDX format",
+                    content = @Content(schema = @Schema(type = "string"))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
@@ -151,6 +156,11 @@ public class VexResource extends AlpineResource {
     )
     @ApiResponses(value = {
             @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking VEX processing progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "400",
                     description = "Invalid VEX",
                     content = @Content(
@@ -204,6 +214,11 @@ public class VexResource extends AlpineResource {
                     <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"""
     )
     @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking VEX processing progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
             @ApiResponse(
                     responseCode = "400",
                     description = "Invalid VEX",

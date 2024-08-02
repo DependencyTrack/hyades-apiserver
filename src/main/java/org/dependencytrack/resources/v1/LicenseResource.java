@@ -72,7 +72,9 @@ public class LicenseResource extends AlpineResource {
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all licenses with complete metadata for each license",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of licenses", schema = @Schema(format = "integeger")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = License.class)))
             ),
@@ -92,9 +94,12 @@ public class LicenseResource extends AlpineResource {
             summary = "Returns a concise listing of all licenses"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A concise listing of all licenses",
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of licenses", schema = @Schema(format = "integer")),
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = License.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = License.class)))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response getLicenseListing() {
@@ -111,7 +116,11 @@ public class LicenseResource extends AlpineResource {
             summary = "Returns a specific license"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = License.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific license",
+                    content = @Content(schema = @Schema(implementation = License.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license could not be found")
     })
@@ -135,7 +144,11 @@ public class LicenseResource extends AlpineResource {
             description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = License.class))),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created license",
+                    content = @Content(schema = @Schema(implementation = License.class))
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A license with the specified ID already exists.")
     })
@@ -166,7 +179,7 @@ public class LicenseResource extends AlpineResource {
             description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204"),
+            @ApiResponse(responseCode = "204", description = "License removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license could not be found"),
             @ApiResponse(responseCode = "409", description = "Only custom licenses can be deleted.")
