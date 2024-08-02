@@ -536,6 +536,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().hasAccess(principal, project);
     }
 
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+        getProjectQueryManager().preprocessACLs(query, inputFilter, params, bypass);
+    }
+
     public PaginatedResult getProjects(final Tag tag, final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
         return getProjectQueryManager().getProjects(tag, includeMetrics, excludeInactive, onlyRoot);
     }
@@ -1401,6 +1405,14 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<TagQueryManager.TaggedProjectRow> getTaggedProjects(final String tagName) {
         return getTagQueryManager().getTaggedProjects(tagName);
+    }
+
+    public void tagProjects(final String tagName, final Collection<String> projectUuids) {
+        getTagQueryManager().tagProjects(tagName, projectUuids);
+    }
+
+    public void untagProjects(final String tagName, final Collection<String> projectUuids) {
+        getTagQueryManager().untagProjects(tagName, projectUuids);
     }
 
     public List<TagQueryManager.TaggedPolicyRow> getTaggedPolicies(final String tagName) {
