@@ -18,18 +18,17 @@
  */
 package org.dependencytrack.plugin.api;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
-
 /**
+ * @param name       Name of the configuration.
+ * @param source     Where the configuration shall be loaded from.
+ * @param isRequired Whether the configuration is mandatory.
+ * @param isSecret   Whether the configuration is confidential.
  * @since 5.6.0
  */
-public interface ConfigRegistry {
-
-    Optional<String> getOptionalValue(final ConfigDefinition config);
-
-    default String getValue(final ConfigDefinition config) {
-        return getOptionalValue(config).orElseThrow(NoSuchElementException::new);
-    }
-
+public record ConfigDefinition(
+        String name,
+        ConfigSource source,
+        boolean isRequired,
+        boolean isSecret
+) {
 }

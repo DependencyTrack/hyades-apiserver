@@ -19,8 +19,11 @@
 package org.dependencytrack.plugin;
 
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.plugin.api.ConfigSource;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -28,6 +31,7 @@ import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class ConfigRegistryImplTest extends PersistenceCapableTest {
 
@@ -35,7 +39,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Test
-    public void testGetRuntimeProperty() {
+    public void testGetRuntimeConfigValue() {
         qm.createConfigProperty(
                 /* groupName */ "foo",
                 /* propertyName */ "extension.bar.baz",
@@ -44,31 +48,86 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
                 /* description */ null
         );
 
-        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
-        final Optional<String> optionalProperty = configRegistry.getRuntimeProperty("baz");
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.RUNTIME, false, false);
+        final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).contains("qux");
     }
 
     @Test
-    public void testGetRuntimePropertyThatDoesNotExist() {
-        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
-        final Optional<String> optionalProperty = configRegistry.getRuntimeProperty("baz");
+    public void testGetRuntimeConfigValueThatDoesNotExist() {
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.RUNTIME, false, false);
+        final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).isNotPresent();
+    }
+
+    @Test
+    public void testGetRequiredRuntimeConfigValueThatDoesNotExist() {
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.RUNTIME, true, false);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> configRegistry.getOptionalValue(configDef))
+                .withMessage("Config baz is defined as required, but no value has been found");
+    }
+
+    @Test
+    public void testGetSecretRuntimeConfig() throws Exception {
+        qm.createConfigProperty(
+                /* groupName */ "foo",
+                /* propertyName */ "extension.bar.baz",
+                /* propertyValue */ DataEncryption.encryptAsString("qux"),
+                PropertyType.ENCRYPTEDSTRING,
+                /* description */ null
+        );
+
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.RUNTIME, false, true);
+        final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
+        assertThat(optionalProperty).contains("qux");
+    }
+
+    @Test
+    public void testGetSecretRuntimeConfigWhenNotEncrypted() {
+        qm.createConfigProperty(
+                /* groupName */ "foo",
+                /* propertyName */ "extension.bar.baz",
+                /* propertyValue */ "qux",
+                PropertyType.STRING,
+                /* description */ null
+        );
+
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.RUNTIME, false, true);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> configRegistry.getOptionalValue(configDef))
+                .withMessage("Config baz is defined as secret, but its value is not encrypted");
     }
 
     @Test
     public void testDeploymentProperty() {
         environmentVariables.set("FOO_EXTENSION_BAR_BAZ", "qux");
-        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
-        final Optional<String> optionalProperty = configRegistry.getDeploymentProperty("baz");
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.DEPLOYMENT, false, false);
+        final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).contains("qux");
     }
 
     @Test
     public void testDeploymentPropertyThatDoesNotExist() {
-        final ConfigRegistry configRegistry = new ConfigRegistryImpl("foo", "bar");
-        final Optional<String> optionalProperty = configRegistry.getDeploymentProperty("baz");
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.DEPLOYMENT, false, false);
+        final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).isNotPresent();
+    }
+
+    @Test
+    public void testGetRequiredDeploymentConfigValueThatDoesNotExist() {
+        final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
+        final var configDef = new ConfigDefinition("baz", ConfigSource.DEPLOYMENT, true, false);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> configRegistry.getOptionalValue(configDef))
+                .withMessage("Config baz is defined as required, but no value has been found");
     }
 
 }
