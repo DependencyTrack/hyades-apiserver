@@ -19,9 +19,16 @@
 package org.dependencytrack.plugin;
 
 import alpine.Config;
+import alpine.model.ConfigProperty;
+import alpine.model.IConfigProperty.PropertyType;
+import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.util.DebugDataEncryption;
+import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -51,46 +58,47 @@ class ConfigRegistryImpl implements ConfigRegistry {
     private final String extensionPointName;
     private final String extensionName;
 
-    public ConfigRegistryImpl(final String extensionPointName, final String extensionName) {
-        this.extensionPointName = requireNonNull(extensionPointName);
-        this.extensionName = requireNonNull(extensionName);
+    private ConfigRegistryImpl(final String extensionPointName, final String extensionName) {
+        this.extensionPointName = extensionPointName;
+        this.extensionName = extensionName;
+    }
+
+    /**
+     * Create a {@link ConfigRegistryImpl} for accessing extension point configuration.
+     *
+     * @param extensionPointName Name of the extension point.
+     * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName}.
+     */
+    static ConfigRegistryImpl forExtensionPoint(final String extensionPointName) {
+        return new ConfigRegistryImpl(requireNonNull(extensionPointName), null);
+    }
+
+    /**
+     * Create a {@link ConfigRegistryImpl} for accessing extension configuration.
+     *
+     * @param extensionPointName Name of the extension point.
+     * @param extensionName      Name of the extension.
+     * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName} and {@code extensionName}.
+     */
+    static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
+        return new ConfigRegistryImpl(requireNonNull(extensionPointName), Objects.requireNonNull(extensionName));
     }
 
     @Override
-    public Optional<String> getRuntimeProperty(final String propertyName) {
-        final String namespacedPropertyName = "extension.%s.%s".formatted(extensionName, propertyName);
-
-        return withJdbiHandle(handle -> handle.createQuery("""
-                        SELECT "PROPERTYVALUE"
-                          FROM "CONFIGPROPERTY"
-                         WHERE "GROUPNAME" = :extensionPointName
-                           AND "PROPERTYNAME" = :propertyName
-                        """)
-                .bind("extensionPointName", extensionPointName)
-                .bind("propertyName", namespacedPropertyName)
-                .mapTo(String.class)
-                .findOne());
+    public Optional<String> getOptionalValue(final ConfigDefinition config) {
+        return switch (config.source()) {
+            case DEPLOYMENT -> getDeploymentConfigValue(config);
+            case RUNTIME -> getRuntimeConfigValue(config);
+            case ANY -> getDeploymentConfigValue(config).or(() -> getRuntimeConfigValue(config));
+            case null -> throw new IllegalArgumentException("No config source specified");
+        };
     }
 
-    @Override
-    public Optional<String> getDeploymentProperty(final String propertyName) {
-        final var key = new DeploymentConfigKey(extensionPointName, extensionName, propertyName);
-        return Optional.ofNullable(Config.getInstance().getProperty(key));
-    }
-
-    record DeploymentConfigKey(String extensionPointName, String extensionName, String name) implements Config.Key {
-
-        DeploymentConfigKey(final String extensionPointName, final String name) {
-            this(extensionPointName, null, name);
-        }
+    private record DeploymentConfigKey(String name) implements Config.Key {
 
         @Override
         public String getPropertyName() {
-            if (extensionName == null) {
-                return "%s.%s".formatted(extensionPointName, name);
-            }
-
-            return "%s.extension.%s.%s".formatted(extensionPointName, extensionName, name);
+            return name;
         }
 
         @Override
@@ -98,6 +106,85 @@ class ConfigRegistryImpl implements ConfigRegistry {
             return null;
         }
 
+    }
+
+    private Optional<String> getDeploymentConfigValue(final ConfigDefinition config) {
+        final var key = new DeploymentConfigKey(namespacedDeploymentConfigName(config));
+
+        final String value = Config.getInstance().getProperty(key);
+        if (value == null) {
+            if (config.isRequired()) {
+                throw new IllegalStateException("""
+                        Config %s is defined as required, but no value has been found\
+                        """.formatted(config.name()));
+            }
+
+            return Optional.empty();
+        }
+
+        return Optional.of(value);
+    }
+
+    private Optional<String> getRuntimeConfigValue(final ConfigDefinition config) {
+        final Pair<String, String> groupAndName = namespacedRuntimeConfigGroupAndName(config);
+        final String groupName = groupAndName.getLeft();
+        final String propertyName = groupAndName.getRight();
+
+        final ConfigProperty property = withJdbiHandle(handle -> handle.createQuery("""
+                        SELECT "PROPERTYVALUE"
+                             , "PROPERTYTYPE"
+                          FROM "CONFIGPROPERTY"
+                         WHERE "GROUPNAME" = :groupName
+                           AND "PROPERTYNAME" = :propertyName
+                        """)
+                .bind("groupName", groupName)
+                .bind("propertyName", propertyName)
+                .map(BeanMapper.of(ConfigProperty.class))
+                .findOne()
+                .orElse(null));
+        if (property == null || property.getPropertyValue() == null) {
+            if (config.isRequired()) {
+                throw new IllegalStateException("""
+                        Config %s is defined as required, but no value has been found\
+                        """.formatted(config.name()));
+            }
+
+            return Optional.empty();
+        }
+
+        if (!config.isSecret()) {
+            return Optional.of(property.getPropertyValue());
+        }
+
+        final boolean isEncrypted = property.getPropertyType() == PropertyType.ENCRYPTEDSTRING;
+        if (!isEncrypted) {
+            throw new IllegalStateException("""
+                    Config %s is defined as secret, but its value is not encrypted\
+                    """.formatted(config.name()));
+        }
+
+        try {
+            final String decryptedValue = DebugDataEncryption.decryptAsString(property.getPropertyValue());
+            return Optional.of(decryptedValue);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to decrypt value of config %s".formatted(config.name()), e);
+        }
+    }
+
+    private String namespacedDeploymentConfigName(final ConfigDefinition config) {
+        if (extensionName == null) {
+            return "%s.%s".formatted(extensionPointName, config.name());
+        }
+
+        return "%s.extension.%s.%s".formatted(extensionPointName, extensionName, config.name());
+    }
+
+    private Pair<String, String> namespacedRuntimeConfigGroupAndName(final ConfigDefinition config) {
+        if (extensionName == null) {
+            return Pair.of(extensionPointName, config.name());
+        }
+
+        return Pair.of(extensionPointName, "extension.%s.%s".formatted(extensionName, config.name()));
     }
 
 }

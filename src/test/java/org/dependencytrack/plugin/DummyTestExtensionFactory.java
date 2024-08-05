@@ -18,10 +18,15 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.plugin.api.ConfigSource;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 
 public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
+
+    private static final ConfigDefinition CONFIG_FOO = new ConfigDefinition("foo", ConfigSource.RUNTIME, false, false);
+    private static final ConfigDefinition CONFIG_BAR = new ConfigDefinition("bar", ConfigSource.DEPLOYMENT, false, false);
 
     private ConfigRegistry configRegistry;
 
@@ -48,8 +53,8 @@ public class DummyTestExtensionFactory implements ExtensionFactory<TestExtension
     @Override
     public DummyTestExtension create() {
         return new DummyTestExtension(
-                configRegistry.getRuntimeProperty("foo").orElse(null),
-                configRegistry.getDeploymentProperty("bar").orElse(null)
+                configRegistry.getOptionalValue(CONFIG_FOO).orElse(null),
+                configRegistry.getOptionalValue(CONFIG_BAR).orElse(null)
         );
     }
 

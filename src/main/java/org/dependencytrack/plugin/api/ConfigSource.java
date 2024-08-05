@@ -18,18 +18,15 @@
  */
 package org.dependencytrack.plugin.api;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
-
 /**
  * @since 5.6.0
  */
-public interface ConfigRegistry {
+public enum ConfigSource {
 
-    Optional<String> getOptionalValue(final ConfigDefinition config);
+    ANY,
 
-    default String getValue(final ConfigDefinition config) {
-        return getOptionalValue(config).orElseThrow(NoSuchElementException::new);
-    }
+    DEPLOYMENT,
+
+    RUNTIME
 
 }

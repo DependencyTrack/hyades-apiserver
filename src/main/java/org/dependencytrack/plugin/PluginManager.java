@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
-import org.dependencytrack.plugin.ConfigRegistryImpl.DeploymentConfigKey;
+import org.dependencytrack.plugin.api.ConfigDefinition;
+import org.dependencytrack.plugin.api.ConfigSource;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointMetadata;
@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.SequencedMap;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -69,8 +70,8 @@ public class PluginManager {
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
-    private static final String PROPERTY_EXTENSION_ENABLED = "enabled";
-    private static final String PROPERTY_DEFAULT_EXTENSION = "default.extension";
+    private static final ConfigDefinition CONFIG_EXTENSION_ENABLED = new ConfigDefinition("enabled", ConfigSource.DEPLOYMENT, false, false);
+    private static final ConfigDefinition CONFIG_DEFAULT_EXTENSION = new ConfigDefinition("default.extension", ConfigSource.DEPLOYMENT, false, false);
     private static final PluginManager INSTANCE = new PluginManager();
 
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
@@ -216,7 +217,7 @@ public class PluginManager {
             // The purpose of tracking extension classes is to differentiate them from another,
             // which would be impossible if we allowed interfaces or abstract classes.
             if (extensionFactory.extensionClass().isInterface()
-                    || Modifier.isAbstract(extensionFactory.extensionClass().getModifiers())) {
+                || Modifier.isAbstract(extensionFactory.extensionClass().getModifiers())) {
                 throw new IllegalStateException("""
                         Class %s of extension %s from plugin %s is either abstract or an interface; \
                         Extension classes must be concrete""".formatted(extensionFactory.extensionClass().getName(),
@@ -257,8 +258,8 @@ public class PluginManager {
                     .formatted(conflictingPlugin.getClass().getName()));
         }
 
-        final var configRegistry = new ConfigRegistryImpl(extensionPointMetadata.name(), extensionIdentity.name());
-        final boolean isEnabled = configRegistry.getDeploymentProperty(PROPERTY_EXTENSION_ENABLED).map(Boolean::parseBoolean).orElse(true);
+        final var configRegistry = ConfigRegistryImpl.forExtension(extensionPointMetadata.name(), extensionIdentity.name());
+        final boolean isEnabled = configRegistry.getOptionalValue(CONFIG_EXTENSION_ENABLED).map(Boolean::parseBoolean).orElse(true);
         if (!isEnabled) {
             LOGGER.debug("Extension is disabled; Skipping");
             return;
@@ -325,22 +326,22 @@ public class PluginManager {
                     continue;
                 }
 
-                final var defaultExtensionConfigKey = new DeploymentConfigKey(extensionPointMetadata.name(), PROPERTY_DEFAULT_EXTENSION);
-                final String defaultExtensionName = Config.getInstance().getProperty(defaultExtensionConfigKey);
+                final var configRegistry = ConfigRegistryImpl.forExtensionPoint(extensionPointName);
+                final Optional<String> defaultExtensionName = configRegistry.getOptionalValue(CONFIG_DEFAULT_EXTENSION);
 
                 final ExtensionFactory<?> extensionFactory;
-                if (defaultExtensionName == null) {
+                if (defaultExtensionName.isEmpty()) {
                     LOGGER.warn("No default extension configured; Choosing based on priority");
                     extensionFactory = factories.first();
                     LOGGER.info("Chose extension %s (%s) with priority %d as default"
                             .formatted(extensionFactory.extensionName(), extensionFactory.extensionClass().getName(), extensionFactory.priority()));
                 } else {
                     extensionFactory = factories.stream()
-                            .filter(factory -> factory.extensionName().equals(defaultExtensionName))
+                            .filter(factory -> factory.extensionName().equals(defaultExtensionName.get()))
                             .findFirst()
                             .orElseThrow(() -> new NoSuchElementException("""
                                     No extension named %s exists for extension point %s (%s)"""
-                                    .formatted(defaultExtensionName, MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
+                                    .formatted(defaultExtensionName.get(), MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
                     LOGGER.info("Using extension %s (%s) as default"
                             .formatted(extensionFactory.extensionName(), extensionFactory.extensionClass().getName()));
                 }
