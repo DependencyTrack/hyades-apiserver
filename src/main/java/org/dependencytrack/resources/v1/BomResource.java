@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
@@ -91,6 +92,7 @@ import java.util.List;
 import java.util.Set;
 
 import static java.util.function.Predicate.not;
+import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
@@ -502,8 +504,9 @@ public class BomResource extends AlpineResource {
     private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes, final Project project) throws IOException {
         validate(bomBytes, project);
 
+        final int compressionLevel = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL);
         try (final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
-            storageProvider.storeBomCompressed(token, bomBytes, /* TODO: Make configurable */ 3);
+            storageProvider.storeBomCompressed(token, bomBytes, compressionLevel);
         }
     }
 

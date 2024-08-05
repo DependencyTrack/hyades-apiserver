@@ -38,6 +38,7 @@ public enum ConfigKey implements Config.Key {
 
     TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
     TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
+    BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL("bom.upload.storage.compression.level", "3"),
     TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
