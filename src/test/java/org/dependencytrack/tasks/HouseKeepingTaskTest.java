@@ -22,15 +22,20 @@ import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.HouseKeepingEvent;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.junit.Test;
 
+import java.sql.Date;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.mockito.ArgumentMatchers.eq;
@@ -74,6 +79,31 @@ public class HouseKeepingTaskTest extends PersistenceCapableTest {
                 .mapTo(Integer.class)
                 .one());
         assertThat(remainingBoms).isEqualTo(5);
+    }
+
+    @Test
+    public void testVulnerabilityScanRetentionEnforcement() {
+        qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-123", 5);
+        final var scanB = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-xyz", 1);
+        qm.runInTransaction(() -> scanB.setUpdatedAt(Date.from(Instant.now().minus(25, ChronoUnit.HOURS))));
+        final var scanC = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-1y3", 3);
+        qm.runInTransaction(() -> scanC.setUpdatedAt(Date.from(Instant.now().minus(13, ChronoUnit.HOURS))));
+
+        useJdbiHandle(handle -> handle.createQuery("""
+                SELECT AGE("UPDATED_AT")
+                  FROM "VULNERABILITYSCAN"
+                """)
+                .mapTo(Duration.class)
+                .forEach(System.out::println));
+
+        final var configMock = mock(Config.class);
+
+        final var task = new HouseKeepingTask(configMock);
+        assertThatNoException().isThrownBy(() -> task.inform(new HouseKeepingEvent()));
+
+        assertThat(qm.getVulnerabilityScan("token-123")).isNotNull();
+        assertThat(qm.getVulnerabilityScan("token-xyz")).isNull();
+        assertThat(qm.getVulnerabilityScan("token-1y3")).isNotNull();
     }
 
 }

@@ -44,7 +44,6 @@ import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
-import org.dependencytrack.tasks.VulnerabilityScanCleanupTask;
 import org.dependencytrack.tasks.WorkflowStateCleanupTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
@@ -92,7 +91,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(KennaSecurityUploadEventAbstract.class, KennaSecurityUploadTask.class);
         EVENT_SERVICE.subscribe(InternalComponentIdentificationEvent.class, InternalComponentIdentificationTask.class);
         EVENT_SERVICE.subscribe(CallbackEvent.class, CallbackTask.class);
-        EVENT_SERVICE.subscribe(VulnerabilityScanCleanupEvent.class, VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.subscribe(NistMirrorEvent.class, NistMirrorTask.class);
         EVENT_SERVICE.subscribe(VulnerabilityPolicyFetchEvent.class, VulnerabilityPolicyFetchTask.class);
         EVENT_SERVICE.subscribe(EpssMirrorEvent.class, EpssMirrorTask.class);
@@ -129,7 +127,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(KennaSecurityUploadTask.class);
         EVENT_SERVICE.unsubscribe(InternalComponentIdentificationTask.class);
         EVENT_SERVICE.unsubscribe(CallbackTask.class);
-        EVENT_SERVICE.unsubscribe(VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.unsubscribe(NistMirrorTask.class);
         EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
         EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);

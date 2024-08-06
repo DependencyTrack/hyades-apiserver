@@ -41,7 +41,6 @@ import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
-import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
 import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
@@ -64,7 +63,6 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_BUNDLE_FETCH_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
@@ -97,7 +95,6 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
                     Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
                     Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
-                    Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
                     Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK))),
                     Map.entry(new WorkflowStateCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK))),
                     Map.entry(new IntegrityMetaInitializerEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK))),
