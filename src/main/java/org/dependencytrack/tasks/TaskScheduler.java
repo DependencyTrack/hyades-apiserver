@@ -36,6 +36,7 @@ import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
+import org.dependencytrack.event.maintenance.BomUploadStorageMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
@@ -44,6 +45,7 @@ import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.tasks.maintenance.BomUploadStorageMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
@@ -90,6 +92,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
                 Map.entry(new PortfolioVulnerabilityAnalysisEvent(), getCronScheduleForTask(VulnerabilityAnalysisTask.class)),
                 Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), getCronScheduleForTask(RepositoryMetaAnalysisTask.class)),
                 Map.entry(new IntegrityMetaInitializerEvent(), getCronScheduleForTask(IntegrityMetaInitializerTask.class)),
+                Map.entry(new BomUploadStorageMaintenanceEvent(), getCronScheduleForTask(BomUploadStorageMaintenanceTask.class)),
                 Map.entry(new ComponentMetadataMaintenanceEvent(), getCronScheduleForTask(ComponentMetadataMaintenanceTask.class)),
                 Map.entry(new MetricsMaintenanceEvent(), getCronScheduleForTask(MetricsMaintenanceTask.class)),
                 Map.entry(new TagMaintenanceEvent(), getCronScheduleForTask(TagMaintenanceTask.class)),

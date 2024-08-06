@@ -450,7 +450,7 @@ public class BomResource extends AlpineResource {
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
                 final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
-                validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
+                validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes, project);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -482,7 +482,7 @@ public class BomResource extends AlpineResource {
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
                     final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
-                    validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes);
+                    validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes, project);
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
