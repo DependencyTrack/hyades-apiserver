@@ -7,7 +7,7 @@ option java_package = "org.dependencytrack.proto.event.v1alpha1";
 
 // Notifies that a BOM was uploaded.
 message BomUploadedEvent {
-  string token = 1; // Foo
+  string token = 1; // Event token for which the BOM was uploaded.
   Project project = 2; // Project the BOM was uploaded to.
 
   message Project {
@@ -15,5 +15,4 @@ message BomUploadedEvent {
     string name = 2; // Name of the project.
     string version = 3; // Version of the project.
   }
-
 }

@@ -37,7 +37,7 @@ public class LocalBomUploadStorageFactory implements ExtensionFactory<BomUploadS
 
     private static final Logger LOGGER = Logger.getLogger(LocalBomUploadStorageFactory.class);
 
-    private static final ConfigDefinition CONFIG_DIRECTORY = new ConfigDefinition("directory", ConfigSource.DEPLOYMENT, false, false);
+    private static final ConfigDefinition CONFIG_DIRECTORY = new ConfigDefinition("directory", ConfigSource.DEPLOYMENT, /* isRequired */ false, /* isSecret */ false);
 
     private Path directoryPath;
 

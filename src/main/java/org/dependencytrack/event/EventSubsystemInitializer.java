@@ -22,6 +22,8 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
@@ -29,6 +31,7 @@ import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
 import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
+import org.dependencytrack.tasks.HouseKeepingTask;
 import org.dependencytrack.tasks.IntegrityAnalysisTask;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
@@ -48,8 +51,6 @@ import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.time.Duration;
 
 /**
@@ -100,6 +101,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(WorkflowStateCleanupEvent.class, WorkflowStateCleanupTask.class);
         EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, IntegrityAnalysisTask.class);
+        EVENT_SERVICE.subscribe(HouseKeepingEvent.class, HouseKeepingTask.class);
 
         TaskScheduler.getInstance();
     }
@@ -135,6 +137,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
+        EVENT_SERVICE.unsubscribe(HouseKeepingTask.class);
         EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
     }
 }

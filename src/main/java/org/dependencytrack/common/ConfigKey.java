@@ -21,6 +21,7 @@ package org.dependencytrack.common;
 import alpine.Config;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 public enum ConfigKey implements Config.Key {
 
@@ -55,6 +56,7 @@ public enum ConfigKey implements Config.Key {
     CRON_EXPRESSION_FOR_KENNA_SYNC("task.cron.kenna.sync", "0 2 * * *"),
     CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK("task.cron.workflow.state.cleanup", "*/15 * * * *"),
     CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK("task.cron.integrityInitializer", "0 */12 * * *"),
+    CRON_EXPRESSION_FOR_HOUSEKEEPING_TASK("task.cron.housekeeping", "45 * * * *"),
     TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
     TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
     TASK_PORTFOLIO_LOCK_AT_MOST_FOR("task.metrics.portfolio.lockAtMostForInMillis", "900000"),
@@ -75,8 +77,11 @@ public enum ConfigKey implements Config.Key {
     TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR("task.portfolio.vulnAnalysis.lockAtLeastForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_MOST_FOR("task.vulnerability.policy.bundle.fetch.lockAtMostForInMillis", String.valueOf(Duration.ofMinutes(5).toMillis())),
     TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_LEAST_FOR("task.vulnerability.policy.bundle.fetch.lockAtLeastForInMillis", String.valueOf(Duration.ofSeconds(5).toMillis())),
+    TASK_HOUSEKEEPING_LOCK_AT_MOST_FOR("task.housekeeping.lockAtMostForInMillis", TimeUnit.MINUTES.toMillis(15)),
+    TASK_HOUSEKEEPING_LOCK_AT_LEAST_FOR("task.housekeeping.lockAtLeastForInMillis", TimeUnit.MINUTES.toMillis(5)),
     BOM_UPLOAD_PROCESSING_TRX_FLUSH_THRESHOLD("bom.upload.processing.trx.flush.threshold", "10000"),
     BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL("bom.upload.storage.compression.level", "3"),
+    BOM_UPLOAD_STORAGE_RETENTION_DURATION("bom.upload.storage.retention.duration", "PT3H"),
     WORKFLOW_RETENTION_DURATION("workflow.retention.duration", "P3D"),
     WORKFLOW_STEP_TIMEOUT_DURATION("workflow.step.timeout.duration", "PT1H"),
     TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),

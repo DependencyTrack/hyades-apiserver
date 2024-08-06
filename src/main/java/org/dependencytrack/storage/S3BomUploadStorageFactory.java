@@ -35,11 +35,11 @@ public class S3BomUploadStorageFactory implements ExtensionFactory<BomUploadStor
 
     private static final Logger LOGGER = Logger.getLogger(S3BomUploadStorageFactory.class);
 
-    private static final ConfigDefinition CONFIG_ENDPOINT = new ConfigDefinition("endpoint", ConfigSource.DEPLOYMENT, true, false);
-    private static final ConfigDefinition CONFIG_BUCKET = new ConfigDefinition("bucket", ConfigSource.DEPLOYMENT, true, false);
-    private static final ConfigDefinition CONFIG_ACCESS_KEY = new ConfigDefinition("access.key", ConfigSource.DEPLOYMENT, false, true);
-    private static final ConfigDefinition CONFIG_SECRET_KEY = new ConfigDefinition("secret.key", ConfigSource.DEPLOYMENT, false, true);
-    private static final ConfigDefinition CONFIG_REGION = new ConfigDefinition("region", ConfigSource.DEPLOYMENT, false, false);
+    private static final ConfigDefinition CONFIG_ENDPOINT = new ConfigDefinition("endpoint", ConfigSource.DEPLOYMENT, /* isRequired */ true, /* isSecret */ false);
+    private static final ConfigDefinition CONFIG_BUCKET = new ConfigDefinition("bucket", ConfigSource.DEPLOYMENT, /* isRequired */ true, /* isSecret */ false);
+    private static final ConfigDefinition CONFIG_ACCESS_KEY = new ConfigDefinition("access.key", ConfigSource.DEPLOYMENT, /* isRequired */ false, /* isSecret */ true);
+    private static final ConfigDefinition CONFIG_SECRET_KEY = new ConfigDefinition("secret.key", ConfigSource.DEPLOYMENT, /* isRequired */ false, /* isSecret */ true);
+    private static final ConfigDefinition CONFIG_REGION = new ConfigDefinition("region", ConfigSource.DEPLOYMENT, /* isRequired */ false, /* isSecret */ false);
 
     private MinioClient s3Client;
     private String bucketName;

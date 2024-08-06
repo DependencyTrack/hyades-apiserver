@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.storage;
 
+import alpine.common.logging.Logger;
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
@@ -36,6 +37,8 @@ import java.util.UUID;
  * @since 5.6.0
  */
 class S3BomUploadStorage implements BomUploadStorage {
+
+    private static final Logger LOGGER = Logger.getLogger(S3BomUploadStorage.class);
 
     static final String EXTENSION_NAME = "s3";
 
@@ -99,7 +102,8 @@ class S3BomUploadStorage implements BomUploadStorage {
     }
 
     @Override
-    public int deleteBomsForRetentionDuration(final Duration duration) throws IOException {
+    public int deleteBomsForRetentionDuration(final Duration duration) {
+        LOGGER.info("Not deleting any BOMs; Retention is managed via bucket retention policy");
         return 0;
     }
 
