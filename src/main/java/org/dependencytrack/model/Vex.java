@@ -20,13 +20,15 @@ package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.UUID;
@@ -71,6 +73,7 @@ public class Vex implements Serializable {
     @Persistent
     @Column(name = "IMPORTED", allowsNull = "false")
     @NotNull
+    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date imported;
 
     @Persistent
