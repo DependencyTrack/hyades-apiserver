@@ -48,6 +48,7 @@ import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceB
 import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CpeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CweCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.EpssCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.LicenseCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.LicenseGroupCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuilder;
@@ -120,6 +121,7 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder());
         SCRIPT_BUILDERS.put(Subject.VERSION_DISTANCE, new VersionDistanceCelScriptBuilder());
+        SCRIPT_BUILDERS.put(Subject.EPSS, new EpssCelPolicyScriptSourceBuilder());
     }
 
     private final CelPolicyScriptHost scriptHost;

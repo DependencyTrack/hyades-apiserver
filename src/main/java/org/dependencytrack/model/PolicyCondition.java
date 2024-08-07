@@ -79,7 +79,8 @@ public class PolicyCondition implements Serializable {
         COMPONENT_HASH(PolicyViolation.Type.OPERATIONAL),
         CWE(PolicyViolation.Type.SECURITY),
         VULNERABILITY_ID(PolicyViolation.Type.SECURITY),
-        VERSION_DISTANCE(PolicyViolation.Type.OPERATIONAL);
+        VERSION_DISTANCE(PolicyViolation.Type.OPERATIONAL),
+        EPSS(PolicyViolation.Type.SECURITY);
 
         private final PolicyViolation.Type violationType;
 
