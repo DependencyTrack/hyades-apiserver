@@ -27,7 +27,9 @@ import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.notification.NotificationLevel;
+import alpine.persistence.AbstractAlpineQueryManager;
 import alpine.persistence.AlpineQueryManager;
+import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.persistence.ScopedCustomization;
@@ -105,13 +107,15 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
 import javax.jdo.datastore.JDOConnection;
-import java.lang.reflect.Field;
+import javax.jdo.metadata.MemberMetadata;
+import javax.jdo.metadata.TypeMetadata;
 import java.security.Principal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -201,8 +205,18 @@ public class QueryManager extends AlpineQueryManager {
         this.request = request;
     }
 
+    /**
+     * Override of {@link AbstractAlpineQueryManager#decorate(Query)} to modify the
+     * method's behavior such that it always sorts by ID, in addition to whatever field
+     * is requested to be sorted by via {@link #orderBy}.
+     * <p>
+     * This is to ensure stable ordering in case {@link #orderBy} refers to a field that
+     * allows duplicates.
+     *
+     * @since 5.2.0
+     */
     @Override
-    public Query decorate(final Query query) {
+    public <T> Query<T> decorate(final Query<T> query) {
         // Clear the result to fetch if previously specified (i.e. by getting count)
         query.setResult(null);
         if (pagination != null && pagination.isPaginated()) {
@@ -213,16 +227,39 @@ public class QueryManager extends AlpineQueryManager {
         if (orderBy != null && RegexSequence.Pattern.STRING_IDENTIFIER.matcher(orderBy).matches() && orderDirection != OrderDirection.UNSPECIFIED) {
             // Check to see if the specified orderBy field is defined in the class being queried.
             boolean found = false;
-            final org.datanucleus.store.query.Query iq = ((JDOQuery) query).getInternalQuery();
+            // NB: Only persistent fields can be used as sorting subject.
+            final org.datanucleus.store.query.Query<T> iq = ((JDOQuery<T>) query).getInternalQuery();
             final String candidateField = orderBy.contains(".") ? orderBy.substring(0, orderBy.indexOf('.')) : orderBy;
-            for (final Field field : iq.getCandidateClass().getDeclaredFields()) {
-                if (candidateField.equals(field.getName())) {
-                    found = true;
+            final TypeMetadata candidateTypeMetadata = pm.getPersistenceManagerFactory().getMetadata(iq.getCandidateClassName());
+            if (candidateTypeMetadata == null) {
+                // NB: If this happens then the entire query is broken and needs programmatic fixing.
+                // Throwing an exception here to make this painfully obvious.
+                throw new IllegalStateException("""
+                        Persistence type metadata for candidate class %s could not be found. \
+                        Querying for non-persistent types is not supported, correct your query.\
+                        """.formatted(iq.getCandidateClassName()));
+            }
+            boolean foundPersistentMember = false;
+            for (final MemberMetadata memberMetadata : candidateTypeMetadata.getMembers()) {
+                if (candidateField.equals(memberMetadata.getName())) {
+                    foundPersistentMember = true;
                     break;
                 }
             }
-            if (found) {
+            if (foundPersistentMember) {
+                // NB: Changed from AbstractAlpineQueryManager#decorate to always sort by ID.
                 query.setOrdering(orderBy + " " + orderDirection.name().toLowerCase() + ", id asc");
+            } else {
+                // Is it a non-persistent (transient) field?
+                final boolean foundNonPersistentMember = Arrays.stream(iq.getCandidateClass().getDeclaredFields())
+                        .anyMatch(field -> field.getName().equals(candidateField));
+                if (foundNonPersistentMember) {
+                    throw new NotSortableException(iq.getCandidateClass().getSimpleName(), candidateField,
+                            "The field is computed and can not be queried or sorted by");
+                }
+
+                throw new NotSortableException(iq.getCandidateClass().getSimpleName(), candidateField,
+                        "The field does not exist");
             }
         }
         return query;
@@ -1462,7 +1499,7 @@ public class QueryManager extends AlpineQueryManager {
      * even the default one. If inclusion of the default fetch group is desired, it must be
      * included in {@code fetchGroups} explicitly.
      * <p>
-     * Eventually, this may be moved to {@link alpine.persistence.AbstractAlpineQueryManager}.
+     * Eventually, this may be moved to {@link AbstractAlpineQueryManager}.
      *
      * @param object      The persistent object to detach
      * @param fetchGroups Fetch groups to use for this operation
@@ -1521,7 +1558,7 @@ public class QueryManager extends AlpineQueryManager {
      * even the default one. If inclusion of the default fetch group is desired, it must be
      * included in {@code fetchGroups} explicitly.
      * <p>
-     * Eventually, this may be moved to {@link alpine.persistence.AbstractAlpineQueryManager}.
+     * Eventually, this may be moved to {@link AbstractAlpineQueryManager}.
      *
      * @param clazz       Class of the object to fetch
      * @param uuid        {@link UUID} of the object to fetch
