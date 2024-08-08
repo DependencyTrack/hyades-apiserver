@@ -21,8 +21,6 @@ package org.dependencytrack.event;
 import alpine.event.framework.AbstractChainableEvent;
 import org.dependencytrack.model.Project;
 
-import java.io.File;
-
 /**
  * Defines an event triggered when a bill-of-material (bom) document is submitted.
  *
@@ -32,18 +30,13 @@ import java.io.File;
 public class BomUploadEvent extends AbstractChainableEvent {
 
     private final Project project;
-    private final File file;
 
-    public BomUploadEvent(final Project project, final File file) {
+    public BomUploadEvent(final Project project) {
         this.project = project;
-        this.file = file;
     }
 
     public Project getProject() {
         return project;
     }
 
-    public File getFile() {
-        return file;
-    }
 }

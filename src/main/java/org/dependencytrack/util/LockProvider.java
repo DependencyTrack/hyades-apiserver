@@ -40,6 +40,8 @@ import static org.dependencytrack.common.ConfigKey.INTEGRITY_META_INITIALIZER_LO
 import static org.dependencytrack.common.ConfigKey.INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_HOUSEKEEPING_LOCK_AT_LEAST_FOR;
+import static org.dependencytrack.common.ConfigKey.TASK_HOUSEKEEPING_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_LDAP_SYNC_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR;
@@ -57,6 +59,7 @@ import static org.dependencytrack.common.ConfigKey.TASK_VULNERABILITY_POLICY_BUN
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR;
 import static org.dependencytrack.common.ConfigKey.TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR;
 import static org.dependencytrack.tasks.LockName.EPSS_MIRROR_TASK_LOCK;
+import static org.dependencytrack.tasks.LockName.HOUSEKEEPING_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.INTEGRITY_META_INITIALIZER_LOCK;
 import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
 import static org.dependencytrack.tasks.LockName.LDAP_SYNC_TASK_LOCK;
@@ -138,46 +141,72 @@ public class LockProvider {
 
     public static LockConfiguration getLockConfigurationByLockName(LockName lockName) {
         return switch (lockName) {
-            case PORTFOLIO_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+            case PORTFOLIO_METRICS_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     PORTFOLIO_METRICS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_LEAST_FOR)));
-            case LDAP_SYNC_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_LOCK_AT_LEAST_FOR))
+            );
+            case LDAP_SYNC_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     LDAP_SYNC_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_LDAP_SYNC_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR)));
-            case EPSS_MIRROR_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_LDAP_SYNC_LOCK_AT_LEAST_FOR))
+            );
+            case EPSS_MIRROR_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     EPSS_MIRROR_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR)));
-            case VULNERABILITY_METRICS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_MIRROR_EPSS_LOCK_AT_LEAST_FOR))
+            );
+            case VULNERABILITY_METRICS_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     VULNERABILITY_METRICS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_METRICS_VULNERABILITY_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR)));
-            case INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_METRICS_VULNERABILITY_LOCK_AT_LEAST_FOR))
+            );
+            case INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR)));
-            case WORKFLOW_STEP_CLEANUP_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_COMPONENT_IDENTIFICATION_LOCK_AT_LEAST_FOR))
+            );
+            case WORKFLOW_STEP_CLEANUP_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     WORKFLOW_STEP_CLEANUP_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR)));
-            case PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_WORKFLOW_STEP_CLEANUP_LOCK_AT_LEAST_FOR))
+            );
+            case PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_LEAST_FOR)));
-            case PORTFOLIO_VULN_ANALYSIS_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_REPO_META_ANALYSIS_LOCK_AT_LEAST_FOR))
+            );
+            case PORTFOLIO_VULN_ANALYSIS_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     PORTFOLIO_VULN_ANALYSIS_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR)));
-            case INTEGRITY_META_INITIALIZER_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_PORTFOLIO_VULN_ANALYSIS_LOCK_AT_LEAST_FOR))
+            );
+            case INTEGRITY_META_INITIALIZER_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     INTEGRITY_META_INITIALIZER_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(INTEGRITY_META_INITIALIZER_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR)));
-            case VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK -> new LockConfiguration(Instant.now(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(INTEGRITY_META_INITIALIZER_LOCK_AT_LEAST_FOR))
+            );
+            case VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
                     VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK.name(),
                     Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_MOST_FOR)),
-                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_LEAST_FOR)));
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_VULNERABILITY_POLICY_BUNDLE_FETCH_LOCK_AT_LEAST_FOR))
+            );
+            case HOUSEKEEPING_TASK_LOCK -> new LockConfiguration(
+                    Instant.now(),
+                    HOUSEKEEPING_TASK_LOCK.name(),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_HOUSEKEEPING_LOCK_AT_MOST_FOR)),
+                    Duration.ofMillis(Config.getInstance().getPropertyAsInt(TASK_HOUSEKEEPING_LOCK_AT_LEAST_FOR))
+            );
         };
 
     }
