@@ -240,8 +240,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         queryParams.put("projectId", project.getId());
         if (filter != null) {
             queryString += """
-                    AND LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
-                    OR LOWER("A0"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    AND (LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    OR LOWER("A0"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%'))
                     """;
             queryParams.put("nameFilter", filter);
         }
