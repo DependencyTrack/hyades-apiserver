@@ -16,17 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+package org.dependencytrack.event.maintenance;
 
-public enum LockName {
-    PORTFOLIO_METRICS_TASK_LOCK,
-    LDAP_SYNC_TASK_LOCK,
-    EPSS_MIRROR_TASK_LOCK,
-    VULNERABILITY_METRICS_TASK_LOCK,
-    INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK,
-    WORKFLOW_STEP_CLEANUP_TASK_LOCK,
-    PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK,
-    PORTFOLIO_VULN_ANALYSIS_TASK_LOCK,
-    INTEGRITY_META_INITIALIZER_LOCK,
-    VULNERABILITY_POLICY_BUNDLE_FETCH_TASK_LOCK
+import alpine.event.framework.Event;
+
+/**
+ * @since 5.6.0
+ */
+public class WorkflowMaintenanceEvent implements Event {
 }

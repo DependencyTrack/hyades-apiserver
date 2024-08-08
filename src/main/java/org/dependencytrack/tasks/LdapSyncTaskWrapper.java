@@ -22,9 +22,9 @@ import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.server.tasks.LdapSyncTask;
-import org.dependencytrack.util.LockProvider;
 
-import static org.dependencytrack.tasks.LockName.LDAP_SYNC_TASK_LOCK;
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 public class LdapSyncTaskWrapper implements Subscriber {
 
@@ -41,7 +41,10 @@ public class LdapSyncTaskWrapper implements Subscriber {
     @Override
     public void inform(Event e) {
         if (e instanceof LdapSyncEvent) {
-            LockProvider.executeWithLock(LDAP_SYNC_TASK_LOCK, (Runnable) () -> this.ldapSyncTask.inform(new LdapSyncEvent()));
+            executeWithLock(
+                    getLockConfigForTask(LdapSyncTask.class),
+                    (Runnable) () -> this.ldapSyncTask.inform(new LdapSyncEvent())
+            );
         }
     }
 }

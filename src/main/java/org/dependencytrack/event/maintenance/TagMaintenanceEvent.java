@@ -16,16 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.event.maintenance;
 
 import alpine.event.framework.Event;
-import org.dependencytrack.model.VulnerabilityScan;
 
 /**
- * Defines an {@link Event} that is triggered to clean up {@link VulnerabilityScan}s
- * that have not been updated for a certain amount of time.
- *
- * @since 5.0.0
+ * @since 5.6.0
  */
-public record VulnerabilityScanCleanupEvent() implements Event {
+public class TagMaintenanceEvent implements Event {
 }

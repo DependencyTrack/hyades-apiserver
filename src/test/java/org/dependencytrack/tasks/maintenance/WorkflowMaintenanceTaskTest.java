@@ -16,34 +16,49 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+package org.dependencytrack.tasks.maintenance;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.WorkflowStateCleanupEvent;
+import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
-import java.sql.Date;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 
-public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
+public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
-    public void testTransitionToTimedOut() {
-        final Duration timeoutDuration = Duration.ofHours(6);
-        final Duration retentionDuration = Duration.ofHours(666); // Not relevant for this test.
+    public void testWithTransitionToTimedOut() {
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
+                "666", // Not relevant for this test.
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyType(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getDescription()
+        );
+
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getGroupName(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyName(),
+                "360", // 6 hours
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyType(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getDescription()
+        );
+
         final Instant now = Instant.now();
-        final Instant timeoutCutoff = now.minus(timeoutDuration);
+        final Instant timeoutCutoff = now.minus(6, ChronoUnit.HOURS);
 
         final var token = UUID.randomUUID();
         final var parentState = new WorkflowState();
@@ -61,7 +76,8 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var task = new WorkflowMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.TIMED_OUT);
@@ -71,11 +87,25 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testTransitionTimedOutToFailed() {
-        final Duration timeoutDuration = Duration.ofHours(6);
-        final Duration retentionDuration = Duration.ofHours(666); // Not relevant for this test.
+    public void testWithTransitionTimedOutToFailed() {
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
+                "666", // Not relevant for this test.
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyType(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getDescription()
+        );
+
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getGroupName(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyName(),
+                "360", // 6 hours
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyType(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getDescription()
+        );
+
         final Instant now = Instant.now();
-        final Instant timeoutCutoff = now.minus(timeoutDuration);
+        final Instant timeoutCutoff = now.minus(6, ChronoUnit.HOURS);
 
         final var token = UUID.randomUUID();
         final var parentState = new WorkflowState();
@@ -93,7 +123,8 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var task = new WorkflowMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.FAILED);
@@ -105,11 +136,25 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testDeleteExpiredWorkflows() {
-        final Duration timeoutDuration = Duration.ofHours(666); // Not relevant for this test.
-        final Duration retentionDuration = Duration.ofHours(6);
+    public void testWithDeleteExpired() {
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
+                "6",
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyType(),
+                MAINTENANCE_WORKFLOW_RETENTION_HOURS.getDescription()
+        );
+
+        qm.createConfigProperty(
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getGroupName(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyName(),
+                "39960", // 666 hours; Not relevant for this test.
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getPropertyType(),
+                MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES.getDescription()
+        );
+
         final Instant now = Instant.now();
-        final Instant retentionCutoff = now.minus(retentionDuration);
+        final Instant retentionCutoff = now.minus(6, ChronoUnit.HOURS);
 
         // Create a workflow where all steps are in a terminal state,
         // and they all fall below the retention cutoff time.
@@ -166,7 +211,8 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childStateC.setUpdatedAt(Date.from(retentionCutoff.minus(1, ChronoUnit.HOURS)));
         qm.persist(childStateC);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var task = new WorkflowMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
         // Workflow A must've been deleted, because all steps are in terminal status, and fall below the retention cutoff.
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(WorkflowState.class, childStateA.getId()));
