@@ -186,14 +186,14 @@ public class ProjectMetrics implements Serializable {
     @Column(name = "FIRST_OCCURRENCE", allowsNull = "false")
     @NotNull
     @Index(name = "PROJECTMETRICS_FIRST_OCCURRENCE_IDX")
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, type = "number")
+    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date firstOccurrence;
 
     @Persistent
     @Column(name = "LAST_OCCURRENCE", allowsNull = "false")
     @NotNull
     @Index(name = "PROJECTMETRICS_LAST_OCCURRENCE_IDX")
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, type = "number")
+    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date lastOccurrence;
 
     public long getId() {
