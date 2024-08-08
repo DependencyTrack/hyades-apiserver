@@ -61,7 +61,7 @@ public class ProcessorManagerTest {
 
     @Rule
     public RedpandaContainer kafkaContainer = new RedpandaContainer(DockerImageName
-            .parse("docker.redpanda.com/vectorized/redpanda:v24.2.1"));
+            .parse("docker.redpanda.com/vectorized/redpanda:v24.2.2"));
 
     private AdminClient adminClient;
     private Producer<String, String> producer;
