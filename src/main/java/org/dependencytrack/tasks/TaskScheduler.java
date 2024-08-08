@@ -30,6 +30,7 @@ import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
+import org.dependencytrack.event.HouseKeepingEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
@@ -40,8 +41,6 @@ import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
-import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
-import org.dependencytrack.event.WorkflowStateCleanupEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -53,6 +52,7 @@ import java.util.stream.Stream;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK;
+import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_HOUSEKEEPING_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_LDAP_SYNC_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK;
@@ -62,8 +62,6 @@ import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_BUNDLE_FETCH_TASK;
 import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
@@ -95,10 +93,9 @@ public final class TaskScheduler extends BaseTaskScheduler {
                     Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
                     Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
                     Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
-                    Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
                     Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK))),
-                    Map.entry(new WorkflowStateCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK))),
-                    Map.entry(new IntegrityMetaInitializerEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK)))
+                    Map.entry(new IntegrityMetaInitializerEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK))),
+                    Map.entry(new HouseKeepingEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_HOUSEKEEPING_TASK)))
             );
 
             if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {

@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.WorkflowStateCleanupEvent;
+import org.dependencytrack.event.HouseKeepingEvent;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
@@ -35,11 +37,34 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_RETENTION_DURATION;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_STEP_TIMEOUT_DURATION;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
-public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
+public class HouseKeepingTaskTest extends PersistenceCapableTest {
 
     @Test
-    public void testTransitionToTimedOut() {
+    public void testVulnerabilityScanHouseKeeping() {
+        qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-123", 5);
+        final var scanB = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-xyz", 1);
+        qm.runInTransaction(() -> scanB.setUpdatedAt(Date.from(Instant.now().minus(25, ChronoUnit.HOURS))));
+        final var scanC = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-1y3", 3);
+        qm.runInTransaction(() -> scanC.setUpdatedAt(Date.from(Instant.now().minus(13, ChronoUnit.HOURS))));
+
+        final var configMock = spy(Config.class);
+
+        final var task = new HouseKeepingTask(configMock);
+        assertThatNoException().isThrownBy(() -> task.inform(new HouseKeepingEvent()));
+
+        assertThat(qm.getVulnerabilityScan("token-123")).isNotNull();
+        assertThat(qm.getVulnerabilityScan("token-xyz")).isNull();
+        assertThat(qm.getVulnerabilityScan("token-1y3")).isNotNull();
+    }
+
+    @Test
+    public void testWorkflowHouseKeepingWithTransitionToTimedOut() {
         final Duration timeoutDuration = Duration.ofHours(6);
         final Duration retentionDuration = Duration.ofHours(666); // Not relevant for this test.
         final Instant now = Instant.now();
@@ -61,7 +86,12 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var configMock = spy(Config.class);
+        doReturn(retentionDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_RETENTION_DURATION));
+        doReturn(timeoutDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_STEP_TIMEOUT_DURATION));
+
+        final var task = new HouseKeepingTask(configMock);
+        assertThatNoException().isThrownBy(() -> task.inform(new HouseKeepingEvent()));
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.TIMED_OUT);
@@ -71,7 +101,7 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testTransitionTimedOutToFailed() {
+    public void testWorkflowHouseKeepingWithTransitionTimedOutToFailed() {
         final Duration timeoutDuration = Duration.ofHours(6);
         final Duration retentionDuration = Duration.ofHours(666); // Not relevant for this test.
         final Instant now = Instant.now();
@@ -93,7 +123,12 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var configMock = spy(Config.class);
+        doReturn(retentionDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_RETENTION_DURATION));
+        doReturn(timeoutDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_STEP_TIMEOUT_DURATION));
+
+        final var task = new HouseKeepingTask(configMock);
+        assertThatNoException().isThrownBy(() -> task.inform(new HouseKeepingEvent()));
 
         qm.getPersistenceManager().refreshAll(parentState, childState);
         assertThat(parentState.getStatus()).isEqualTo(WorkflowStatus.FAILED);
@@ -105,7 +140,7 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testDeleteExpiredWorkflows() {
+    public void testWorkflowHouseKeepingWithDeleteExpired() {
         final Duration timeoutDuration = Duration.ofHours(666); // Not relevant for this test.
         final Duration retentionDuration = Duration.ofHours(6);
         final Instant now = Instant.now();
@@ -166,7 +201,12 @@ public class WorkflowStateCleanupTaskTest extends PersistenceCapableTest {
         childStateC.setUpdatedAt(Date.from(retentionCutoff.minus(1, ChronoUnit.HOURS)));
         qm.persist(childStateC);
 
-        new WorkflowStateCleanupTask(timeoutDuration, retentionDuration).inform(new WorkflowStateCleanupEvent());
+        final var configMock = spy(Config.class);
+        doReturn(retentionDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_RETENTION_DURATION));
+        doReturn(timeoutDuration.toString()).when(configMock).getProperty(eq(WORKFLOW_STEP_TIMEOUT_DURATION));
+
+        final var task = new HouseKeepingTask(configMock);
+        assertThatNoException().isThrownBy(() -> task.inform(new HouseKeepingEvent()));
 
         // Workflow A must've been deleted, because all steps are in terminal status, and fall below the retention cutoff.
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(WorkflowState.class, childStateA.getId()));

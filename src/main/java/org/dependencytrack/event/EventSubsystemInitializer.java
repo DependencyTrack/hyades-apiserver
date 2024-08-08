@@ -22,6 +22,8 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
@@ -30,6 +32,7 @@ import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
 import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
+import org.dependencytrack.tasks.HouseKeepingTask;
 import org.dependencytrack.tasks.IntegrityAnalysisTask;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
@@ -42,15 +45,11 @@ import org.dependencytrack.tasks.RepositoryMetaAnalyzerTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
-import org.dependencytrack.tasks.VulnerabilityScanCleanupTask;
-import org.dependencytrack.tasks.WorkflowStateCleanupTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.time.Duration;
 
 /**
@@ -93,15 +92,14 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(KennaSecurityUploadEventAbstract.class, KennaSecurityUploadTask.class);
         EVENT_SERVICE.subscribe(InternalComponentIdentificationEvent.class, InternalComponentIdentificationTask.class);
         EVENT_SERVICE.subscribe(CallbackEvent.class, CallbackTask.class);
-        EVENT_SERVICE.subscribe(VulnerabilityScanCleanupEvent.class, VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.subscribe(NistMirrorEvent.class, NistMirrorTask.class);
         EVENT_SERVICE.subscribe(VulnerabilityPolicyFetchEvent.class, VulnerabilityPolicyFetchTask.class);
         EVENT_SERVICE.subscribe(EpssMirrorEvent.class, EpssMirrorTask.class);
         EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
-        EVENT_SERVICE.subscribe(WorkflowStateCleanupEvent.class, WorkflowStateCleanupTask.class);
         EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, IntegrityAnalysisTask.class);
+        EVENT_SERVICE.subscribe(HouseKeepingEvent.class, HouseKeepingTask.class);
 
         TaskScheduler.getInstance();
     }
@@ -130,14 +128,13 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(KennaSecurityUploadTask.class);
         EVENT_SERVICE.unsubscribe(InternalComponentIdentificationTask.class);
         EVENT_SERVICE.unsubscribe(CallbackTask.class);
-        EVENT_SERVICE.unsubscribe(VulnerabilityScanCleanupTask.class);
         EVENT_SERVICE.unsubscribe(NistMirrorTask.class);
         EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
         EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);
-        EVENT_SERVICE.unsubscribe(WorkflowStateCleanupTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
+        EVENT_SERVICE.unsubscribe(HouseKeepingTask.class);
         EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
     }
 }
