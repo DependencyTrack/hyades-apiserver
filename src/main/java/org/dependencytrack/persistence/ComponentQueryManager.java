@@ -241,6 +241,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (filter != null) {
             queryString += """
                     AND LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    OR LOWER("A0"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%')
                     """;
             queryParams.put("nameFilter", filter);
         }
