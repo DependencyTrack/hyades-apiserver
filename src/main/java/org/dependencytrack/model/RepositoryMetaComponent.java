@@ -45,6 +45,21 @@ public class RepositoryMetaComponent implements Serializable {
 
     private static final long serialVersionUID = 4415041595179460918L;
 
+    /**
+     * @since 5.6.0
+     */
+    public record Identity(
+            RepositoryType repositoryType,
+            String namespace,
+            String name
+    ) {
+
+        public static Identity of(final RepositoryMetaComponent metaComponent) {
+            return new Identity(metaComponent.getRepositoryType(), metaComponent.getNamespace(), metaComponent.getName());
+        }
+
+    }
+
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore

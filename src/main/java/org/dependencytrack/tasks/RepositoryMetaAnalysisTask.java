@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import com.github.packageurl.PackageURL;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
@@ -31,7 +32,7 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
+import org.dependencytrack.util.PurlUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -50,7 +51,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
  * analysis.
  * <p>
  * As repository metadata analysis is purely based on PURLs, and does not (currently) consider PURL qualifiers,
- * components are submitted by distinct PURL coordinates. As such, there is no 1:1 correlation between total number
+ * components are submitted by distinct PURLs. As such, there is no 1:1 correlation between total number
  * of components in the portfolio or project, and records submitted for analysis.
  */
 public class RepositoryMetaAnalysisTask implements Subscriber {
@@ -138,13 +139,13 @@ public class RepositoryMetaAnalysisTask implements Subscriber {
 
     private void dispatchComponents(final List<ComponentProjection> components) {
         for (final var component : components) {
-            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(null, component.purlCoordinates(), component.internal(), FetchMeta.FETCH_META_LATEST_VERSION));
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(component.purl(), component.internal()));
         }
     }
 
     private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final long offset) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "project.active == :projectActive && purlCoordinates != null";
+            var filter = "project.active == :projectActive && purl != null";
             var params = new HashMap<String, Object>();
             params.put("projectActive", true);
             if (project != null) {
@@ -153,14 +154,19 @@ public class RepositoryMetaAnalysisTask implements Subscriber {
             }
             query.setFilter(filter);
             query.setNamedParameters(params);
-            query.setOrdering("purlCoordinates ASC"); // Keep the order somewhat consistent
+            query.setOrdering("purl ASC"); // Keep the order somewhat consistent
             query.setRange(offset, offset + 5000);
-            query.setResult("DISTINCT purlCoordinates, internal");
+            query.setResult("DISTINCT purl, internal");
             return List.copyOf(query.executeResultList(ComponentProjection.class));
         }
     }
 
-    public record ComponentProjection(String purlCoordinates, Boolean internal) {
+    public record ComponentProjection(PackageURL purl, Boolean internal) {
+
+        public ComponentProjection(String purl, Boolean internal) {
+            this(PurlUtil.silentPurl(purl), internal);
+        }
+
     }
 
 }

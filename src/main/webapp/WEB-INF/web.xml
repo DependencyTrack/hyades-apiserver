@@ -56,9 +56,6 @@
     <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
     </listener>
-    <listener>
-        <listener-class>org.dependencytrack.event.PurlMigrator</listener-class>
-    </listener>
 
     <filter>
         <filter-name>WhitelistUrlFilter</filter-name>

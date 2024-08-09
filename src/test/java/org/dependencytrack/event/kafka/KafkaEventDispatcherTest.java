@@ -20,6 +20,7 @@ package org.dependencytrack.event.kafka;
 
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
+import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
@@ -33,7 +34,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,16 +64,15 @@ public class KafkaEventDispatcherTest {
     }
 
     @Test
-    public void testDispatchEventWithComponentRepositoryMetaAnalysisEvent() {
-        final var event = new ComponentRepositoryMetaAnalysisEvent(UUID.randomUUID(),
-                "pkg:maven/foo/bar@1.2.3", /* internal */ false, FetchMeta.FETCH_META_LATEST_VERSION);
+    public void testDispatchEventWithComponentRepositoryMetaAnalysisEvent() throws Exception {
+        final var event = new ComponentRepositoryMetaAnalysisEvent(new PackageURL("pkg:maven/foo/bar@1.2.3"), /* internal */ false);
         final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(event);
         assertThat(mockProducer.completeNext()).isTrue();
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
             assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-            assertThat(record.key()).asString().isEqualTo("pkg:maven/foo/bar@1.2.3");
+            assertThat(record.key()).asString().isEqualTo("pkg:maven/foo/bar");
             assertThat(record.value()).isNotNull();
             assertThat(record.headers()).isEmpty();
         });

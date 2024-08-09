@@ -94,7 +94,7 @@ public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
             metaComponent.setPublishedAt(Date.from(publishedDate));
         }
         metaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(metaComponent);
+        qm.persist(metaComponent);
 
 
         new CelPolicyEngine().evaluateProject(project.getUuid());

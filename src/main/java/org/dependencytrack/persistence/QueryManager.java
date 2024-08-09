@@ -60,9 +60,7 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
-import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -100,7 +98,6 @@ import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
 import org.dependencytrack.resources.v1.vo.AffectedProject;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -160,8 +157,6 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
-    private IntegrityMetaQueryManager integrityMetaQueryManager;
-    private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
 
@@ -463,20 +458,6 @@ public class QueryManager extends AlpineQueryManager {
         return workflowStateQueryManager;
     }
 
-    private IntegrityMetaQueryManager getIntegrityMetaQueryManager() {
-        if (integrityMetaQueryManager == null) {
-            integrityMetaQueryManager = (request == null) ? new IntegrityMetaQueryManager(getPersistenceManager()) : new IntegrityMetaQueryManager(getPersistenceManager(), request);
-        }
-        return integrityMetaQueryManager;
-    }
-
-    private IntegrityAnalysisQueryManager getIntegrityAnalysisQueryManager() {
-        if (integrityAnalysisQueryManager == null) {
-            integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
-        }
-        return integrityAnalysisQueryManager;
-    }
-
     private void disableL2Cache() {
         pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
     }
@@ -709,10 +690,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getComponentByHash(String hash) {
         return getComponentQueryManager().getComponentByHash(hash);
-    }
-
-    public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
-        return getComponentQueryManager().getComponentByPurl(purl);
     }
 
     public PaginatedResult getComponents(ComponentIdentity identity) {
@@ -1928,40 +1905,8 @@ public class QueryManager extends AlpineQueryManager {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
 
-    public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        return getIntegrityMetaQueryManager().getIntegrityMetaComponent(purl);
-    }
-
-    public IntegrityMetaComponent updateIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getIntegrityMetaQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
-    }
-
-    public void synchronizeIntegrityMetaComponent() {
-        getIntegrityMetaQueryManager().synchronizeIntegrityMetaComponent();
-    }
-
-    public long getIntegrityMetaComponentCount() {
-        return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
-    }
-
-    public List<IntegrityMetaComponent> fetchNextPurlsPage(long offset) {
-        return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
-    }
-
-    public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
-        getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
-    }
-
-    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getIntegrityMetaQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
-    }
-
-    public void createIntegrityMetaHandlingConflict(IntegrityMetaComponent integrityMetaComponent) {
-        getIntegrityMetaQueryManager().createIntegrityMetaHandlingConflict(integrityMetaComponent);
-    }
-
-    public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {
-        return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
+    public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
+        return getWorkflowStateQueryManager().hasWorkflowStepWithStatus(token, step, status);
     }
 
     public ComponentMetaInformation getMetaInformation(UUID uuid) {

@@ -22,7 +22,6 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
-import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
@@ -38,15 +37,11 @@ import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
@@ -62,6 +57,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
@@ -89,6 +85,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.trim;
@@ -105,16 +102,13 @@ import static org.dependencytrack.common.MdcKeys.MDC_BOM_VERSION;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
-import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
-import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
-import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
-import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
@@ -229,6 +223,7 @@ public class BomUploadProcessingTask implements Subscriber {
             dispatchBomProcessedNotification(ctx);
         }
 
+        maybePerformIntegrityAnalysis(processedBom.components());
         final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
         final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
 
@@ -994,6 +989,24 @@ public class BomUploadProcessingTask implements Subscriber {
                 .subject(new BomProcessingFailed(ctx.token, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat, ctx.bomSpecVersion)));
     }
 
+    private static void maybePerformIntegrityAnalysis(final Collection<Component> components) {
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.INTEGRITY_CHECK_ENABLED)) {
+            LOGGER.debug("Not performing integrity check because %s is disabled"
+                    .formatted(ConfigKey.INTEGRITY_CHECK_ENABLED.getPropertyName()));
+            return;
+        }
+
+        final Set<UUID> newComponentUuids = components.stream()
+                .filter(Component::isNew)
+                .map(Component::getUuid)
+                .collect(Collectors.toSet());
+        final int createdAnalyses = inJdbiTransaction(handle -> handle.attach(ComponentMetaDao.class)
+                .createOrUpdateIntegrityAnalysesForComponents(newComponentUuids));
+        if (createdAnalyses > 0) {
+            LOGGER.debug("Created integrity analyses for %d component(s)".formatted(createdAnalyses));
+        }
+    }
+
     private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(
             final Context ctx,
             final Collection<Component> components
@@ -1009,70 +1022,12 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static List<ComponentRepositoryMetaAnalysisEvent> createRepoMetaAnalysisEvents(final Collection<Component> components) {
-        final var events = new ArrayList<ComponentRepositoryMetaAnalysisEvent>(components.size());
-        // TODO: This should be more efficient (https://github.com/DependencyTrack/hyades/issues/1306)
-
-        try (final var qm = new QueryManager()) {
-            qm.getPersistenceManager().setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
-            qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
-
-            for (final Component component : components) {
-                if (component.getPurl() == null) {
-                    continue;
-                }
-
-                if (!SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType())) {
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            /* componentUuid */ null,
-                            component.getPurlCoordinates().toString(),
-                            component.isInternal(),
-                            FETCH_META_LATEST_VERSION
-                    ));
-                    continue;
-                }
-
-                final boolean shouldFetchIntegrityData = qm.callInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
-                if (shouldFetchIntegrityData) {
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            component.getUuid(),
-                            component.getPurl().toString(),
-                            component.isInternal(),
-                            FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION
-                    ));
-                } else {
-                    // If integrity metadata was fetched recently, we don't want to fetch it again
-                    // as it's unlikely to change frequently. Fall back to fetching only the latest
-                    // version information.
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            /* componentUuid */ null,
-                            component.getPurlCoordinates().toString(),
-                            component.isInternal(),
-                            FETCH_META_LATEST_VERSION
-                    ));
-                }
-            }
-        }
-
-        return events;
-    }
-
-    private static boolean prepareIntegrityMetaComponent(final QueryManager qm, final Component component) {
-        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurlCoordinates().toString());
-        if (integrityMetaComponent == null) {
-            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurlCoordinates().toString()));
-            return true;
-        } else if (integrityMetaComponent.getStatus() == null
-                || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
-                && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
-            integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-            return true;
-        } else if (integrityMetaComponent.getStatus() == FetchStatus.PROCESSED || integrityMetaComponent.getStatus() == FetchStatus.NOT_AVAILABLE) {
-            qm.getPersistenceManager().makeTransient(integrityMetaComponent);
-            EventService.getInstance().publish(new IntegrityAnalysisEvent(component.getUuid(), integrityMetaComponent));
-            return false;
-        }
-        //don't send event because integrity metadata would be sent recently and don't want to send again
-        return false;
+        return components.stream()
+                .filter(component -> component.getPurl() != null)
+                .map(component -> Map.entry(component.getPurl(), component.isInternal()))
+                .distinct()
+                .map(entry -> new ComponentRepositoryMetaAnalysisEvent(/* purl */ entry.getKey(), /* internal */ entry.getValue()))
+                .toList();
     }
 
     private static WaitingLockConfiguration createLockConfiguration(final Context ctx) {
