@@ -32,7 +32,7 @@ ENV TZ=Etc/UTC \
     # Dependency-Track's default logging level
     LOGGING_LEVEL=INFO \
     # JVM Options that are passed at runtime by default
-    JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=90.0" \
+    JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=80.0" \
     # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS.
     # e.g. EXTRA_JAVA_OPTIONS="-Dlogback.configurationFile=logback-json.xml"
     EXTRA_JAVA_OPTIONS="" \
