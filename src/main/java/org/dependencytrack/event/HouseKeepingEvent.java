@@ -20,5 +20,8 @@ package org.dependencytrack.event;
 
 import alpine.event.framework.Event;
 
-public class WorkflowStateCleanupEvent implements Event {
+/**
+ * @since 5.6.0
+ */
+public class HouseKeepingEvent implements Event {
 }
