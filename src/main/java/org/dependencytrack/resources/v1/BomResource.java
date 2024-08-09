@@ -598,13 +598,13 @@ public class BomResource extends AlpineResource {
         }
     }
 
-    private static void dispatchBomValidationFailedNotification(Project project, String bomEncoded, List<String> errors, Bom.Format format) {
+    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors, Bom.Format format) {
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_VALIDATION_FAILED)
                 .level(NotificationLevel.ERROR)
                 .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
                 .content("An error occurred while validating a BOM")
-                .subject(new BomValidationFailed(project, /* bom */ "(Omitted)", errors, format)));
+                .subject(new BomValidationFailed(project, bom, errors, format)));
     }
 }
