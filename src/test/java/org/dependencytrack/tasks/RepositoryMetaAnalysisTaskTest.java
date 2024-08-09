@@ -93,21 +93,33 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectD
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectE
+                // NB: Components are dispatched in ascending order by PURL.
                 record -> {
+                    // componentProjectA
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 },
-                // componentProjectB must not have been submitted, because it does not have a PURL
-                // componentProjectC must not have been submitted, because it belongs to an inactive project
-                // componentProjectD has the same PURL coordinates as componentProjectA and is not submitted again
                 record -> {
+                    // componentProjectD
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                },
+                record -> {
+                    // componentProjectE
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?fizz=buzz");
                     assertThat(command.getComponent().getInternal()).isTrue();
                 }
+                // componentProjectB must not have been submitted, because it does not have a PURL
+                // componentProjectC must not have been submitted, because it belongs to an inactive project
         );
     }
 
@@ -160,26 +172,40 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                // NB: Components are dispatched in ascending order by PURL.
                 record -> {
+                    // componentA
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?foo=bar");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 },
                 record -> {
+                    // componentE
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
                     assertThat(command.getComponent().getInternal()).isTrue();
                 },
-                // componentB must not have been submitted, because it does not have a PURL
                 record -> {
+                    // componentD
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-a");
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-c@3.0.1");
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1?qux=quux");
+                    assertThat(command.getComponent().getInternal()).isFalse();
+                },
+                record -> {
+                    // componentC
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+                    assertThat(record.key()).asString().isEqualTo("pkg:maven/acme/acme-lib-c");
+                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-c@3.0.1?foo=bar");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 }
-                // componentD has the same PURL coordinates as componentA nad is not submitted again
+                // componentB must not have been submitted, because it does not have a PURL
         );
     }
 
