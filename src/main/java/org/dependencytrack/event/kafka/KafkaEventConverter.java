@@ -32,6 +32,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.dependencytrack.NotificationModelConverter;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.proto.notification.v1.Notification;
@@ -170,7 +171,7 @@ public final class KafkaEventConverter {
     private static Topic<String, Notification> extractDestinationTopic(final Notification notification) {
         return switch (notification.getGroup()) {
             case GROUP_ANALYZER -> KafkaTopics.NOTIFICATION_ANALYZER;
-            case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED, GROUP_BOM_PROCESSING_FAILED -> KafkaTopics.NOTIFICATION_BOM;
+            case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED, GROUP_BOM_PROCESSING_FAILED, GROUP_BOM_VALIDATION_FAILED -> KafkaTopics.NOTIFICATION_BOM;
             case GROUP_CONFIGURATION -> KafkaTopics.NOTIFICATION_CONFIGURATION;
             case GROUP_DATASOURCE_MIRRORING -> KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING;
             case GROUP_FILE_SYSTEM -> KafkaTopics.NOTIFICATION_FILE_SYSTEM;
@@ -202,6 +203,11 @@ public final class KafkaEventConverter {
             case GROUP_BOM_PROCESSING_FAILED -> {
                 requireSubjectOfTypeAnyOf(notification, List.of(BomProcessingFailedSubject.class));
                 final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
+                yield requireNonEmpty(subject.getProject().getUuid());
+            }
+            case GROUP_BOM_VALIDATION_FAILED -> {
+                requireSubjectOfTypeAnyOf(notification, List.of(BomValidationFailedSubject.class));
+                final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
                 yield requireNonEmpty(subject.getProject().getUuid());
             }
             case GROUP_NEW_VULNERABILITY -> {

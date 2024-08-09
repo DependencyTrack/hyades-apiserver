@@ -34,6 +34,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
+import org.dependencytrack.notification.vo.BomValidationFailed;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
@@ -41,6 +42,7 @@ import org.dependencytrack.notification.vo.VexConsumedOrProcessed;
 import org.dependencytrack.notification.vo.ViolationAnalysisDecisionChange;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
@@ -70,6 +72,7 @@ import static org.dependencytrack.proto.notification.v1.Group.GROUP_ANALYZER;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_CONFIGURATION;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
@@ -426,6 +429,35 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
         assertThat(subject.getBom().getSpecVersion()).isEqualTo("1.4");
         assertThat(subject.getCause()).isEqualTo("just because");
+    }
+
+    @Test
+    public void testConvertBomValidationFailedNotification() throws Exception {
+        final org.dependencytrack.model.Project project = createProject();
+        final var token = UUID.randomUUID();
+        final var alpineNotification = new alpine.notification.Notification();
+        alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
+        alpineNotification.setLevel(NotificationLevel.ERROR);
+        alpineNotification.setGroup(NotificationGroup.BOM_VALIDATION_FAILED.name());
+        alpineNotification.setTitle("Foo");
+        alpineNotification.setContent("Bar");
+        alpineNotification.setSubject(new BomValidationFailed(project, "bom", List.of("just because"), Bom.Format.CYCLONEDX));
+
+        final Notification notification = NotificationModelConverter.convert(alpineNotification);
+        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
+        assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        assertThat(notification.getTitle()).isEqualTo("Foo");
+        assertThat(notification.getContent()).isEqualTo("Bar");
+        assertThat(notification.getTimestamp().getSeconds()).isNotZero();
+        assertThat(notification.hasSubject()).isTrue();
+        assertThat(notification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
+
+        final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
+        assertProject(subject.getProject());
+        assertThat(subject.getBom().getContent()).isEqualTo("bom");
+        assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
+        assertThat(subject.getErrors(0)).isEqualTo("just because");
     }
 
     @Test

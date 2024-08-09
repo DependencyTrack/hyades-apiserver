@@ -33,6 +33,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
+import org.dependencytrack.notification.vo.BomValidationFailed;
 import org.dependencytrack.notification.vo.NewVulnerabilityIdentified;
 import org.dependencytrack.notification.vo.NewVulnerableDependency;
 import org.dependencytrack.notification.vo.PolicyViolationIdentified;
@@ -42,6 +43,7 @@ import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.proto.notification.v1.BackReference;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
 import org.dependencytrack.proto.notification.v1.Group;
 import org.dependencytrack.proto.notification.v1.Level;
@@ -73,6 +75,7 @@ import static org.dependencytrack.proto.notification.v1.Group.GROUP_ANALYZER;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_CONFIGURATION;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_DATASOURCE_MIRRORING;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_FILE_SYSTEM;
@@ -161,6 +164,7 @@ public final class NotificationModelConverter {
             case BOM_CONSUMED -> GROUP_BOM_CONSUMED;
             case BOM_PROCESSED -> GROUP_BOM_PROCESSED;
             case BOM_PROCESSING_FAILED -> GROUP_BOM_PROCESSING_FAILED;
+            case BOM_VALIDATION_FAILED -> GROUP_BOM_VALIDATION_FAILED;
             case VEX_CONSUMED -> GROUP_VEX_CONSUMED;
             case VEX_PROCESSED -> GROUP_VEX_PROCESSED;
             case POLICY_VIOLATION -> GROUP_POLICY_VIOLATION;
@@ -184,6 +188,8 @@ public final class NotificationModelConverter {
             return Optional.of(Any.pack(convert(bcop)));
         } else if (subject instanceof final BomProcessingFailed bpf) {
             return Optional.of(Any.pack(convert(bpf)));
+        } else if (subject instanceof final BomValidationFailed bvf) {
+            return Optional.of(Any.pack(convert(bvf)));
         } else if (subject instanceof final VexConsumedOrProcessed vcop) {
             return Optional.of(Any.pack(convert(vcop)));
         } else if (subject instanceof final PolicyViolationIdentified pvi) {
@@ -275,6 +281,20 @@ public final class NotificationModelConverter {
                 .setBom(bomBuilder.build());
 
         Optional.ofNullable(subject.getCause()).ifPresent(builder::setCause);
+        return builder.build();
+    }
+
+    private static BomValidationFailedSubject convert(final BomValidationFailed subject) {
+
+        org.dependencytrack.proto.notification.v1.Bom.Builder bomBuilder = org.dependencytrack.proto.notification.v1.Bom.newBuilder();
+        Optional.ofNullable(subject.getBom()).ifPresent(bomBuilder::setContent);
+        Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(bomBuilder::setFormat);
+
+        final BomValidationFailedSubject.Builder builder = BomValidationFailedSubject.newBuilder()
+                .setProject(convert(subject.getProject()))
+                .setBom(bomBuilder.build());
+
+        Optional.ofNullable(subject.getErrors()).ifPresent(builder::addAllErrors);
         return builder.build();
     }
 
