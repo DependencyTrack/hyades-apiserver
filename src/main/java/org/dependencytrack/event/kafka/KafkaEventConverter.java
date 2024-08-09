@@ -141,7 +141,7 @@ public final class KafkaEventConverter {
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
-                .setFetchMeta(event.fetchMeta())
+                // .setFetchMeta(event.fetchMeta())
                 .build();
 
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);

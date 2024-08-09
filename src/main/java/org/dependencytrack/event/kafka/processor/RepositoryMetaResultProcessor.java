@@ -21,160 +21,150 @@ package org.dependencytrack.event.kafka.processor;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.apache.commons.lang3.StringUtils;
+import com.google.protobuf.util.Timestamps;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.dependencytrack.event.kafka.processor.api.BatchProcessor;
 import org.dependencytrack.event.kafka.processor.api.Processor;
 import org.dependencytrack.event.kafka.processor.exception.ProcessingException;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetaComponentDao;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
-import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.util.PurlUtil;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.performIntegrityCheck;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 /**
  * A {@link Processor} responsible for processing result of component repository meta analyses.
  */
-public class RepositoryMetaResultProcessor implements Processor<String, AnalysisResult> {
+public class RepositoryMetaResultProcessor implements BatchProcessor<String, AnalysisResult> {
 
     static final String PROCESSOR_NAME = "repo.meta.analysis.result";
 
     private static final Logger LOGGER = Logger.getLogger(RepositoryMetaResultProcessor.class);
 
     @Override
-    public void process(final ConsumerRecord<String, AnalysisResult> record) throws ProcessingException {
-        if (!isRecordValid(record)) {
+    public void process(final List<ConsumerRecord<String, AnalysisResult>> records) throws ProcessingException {
+        final List<ConsumerRecord<String, AnalysisResult>> validRecords = records.stream()
+                .filter(RepositoryMetaResultProcessor::isRecordValid)
+                .toList();
+        if (validRecords.isEmpty()) {
             return;
         }
-        try (final var qm = new QueryManager()) {
-            synchronizeRepositoryMetadata(qm, record);
-            IntegrityMetaComponent integrityMetaComponent = synchronizeIntegrityMetadata(qm, record);
-            if (integrityMetaComponent != null) {
-                performIntegrityCheck(integrityMetaComponent, record.value(), qm);
+
+        final List<RepositoryMetaComponent> repoMetaComponents = createRepositoryMetaComponents(records);
+        final List<IntegrityMetaComponent> integrityMetaComponents = createIntegrityMetaComponents(records);
+
+        final Map<RepositoryMetaComponent.Identity, RepositoryMetaComponent> repositoryMetaComponentByIdentity = repoMetaComponents.stream()
+                .collect(Collectors.toMap(RepositoryMetaComponent.Identity::of, Function.identity()));
+        final Map<String, IntegrityMetaComponent> integrityMetaComponentByPurl = integrityMetaComponents.stream()
+                .collect(Collectors.toMap(IntegrityMetaComponent::getPurl, Function.identity()));
+
+        useJdbiHandle(handle -> {
+            final var dao = handle.attach(MetaComponentDao.class);
+
+            handle.useTransaction(ignored -> {
+                final List<RepositoryMetaComponent.Identity> identitiesCreated = dao.createAllRepositoryMetaComponents(repoMetaComponents);
+                identitiesCreated.forEach(repositoryMetaComponentByIdentity::remove);
+
+                final List<RepositoryMetaComponent.Identity> identitiesUpdated = dao.updateAllRepositoryMetaComponents(repoMetaComponents);
+                identitiesUpdated.forEach(repositoryMetaComponentByIdentity::remove);
+            });
+
+            handle.useTransaction(ignored -> {
+                final List<String> purlsCreated = dao.createAllIntegrityMetaComponents(integrityMetaComponents);
+                purlsCreated.forEach(integrityMetaComponentByPurl::remove);
+
+                final List<String> purlsUpdated = dao.updateAllIntegrityMetaComponents(integrityMetaComponents);
+                purlsUpdated.forEach(integrityMetaComponentByPurl::remove);
+            });
+        });
+
+        // TODO: Execute integrity check for created or modified IntegrityMetaComponents
+
+        if (LOGGER.isDebugEnabled()) {
+            if (!repoMetaComponents.isEmpty()) {
+                LOGGER.debug("%d repository meta components where not created or updated".formatted(repoMetaComponents.size()));
             }
-        } catch (Exception e) {
-            throw new ProcessingException(e);
-        }
-    }
-
-    private IntegrityMetaComponent synchronizeIntegrityMetadata(final QueryManager queryManager, final ConsumerRecord<String, AnalysisResult> record) throws MalformedPackageURLException {
-        final AnalysisResult result = record.value();
-        PackageURL purl = new PackageURL(result.getComponent().getPurl());
-        if (result.hasIntegrityMeta()) {
-            return synchronizeIntegrityMetaResult(record, queryManager, purl);
-        } else {
-            LOGGER.debug("Incoming result for component with purl %s  does not include component integrity info".formatted(purl));
-            return null;
-        }
-    }
-
-    private void synchronizeRepositoryMetadata(final QueryManager qm, final ConsumerRecord<String, AnalysisResult> record) throws Exception {
-        final PersistenceManager pm = qm.getPersistenceManager();
-        final AnalysisResult result = record.value();
-        final var purl = new PackageURL(result.getComponent().getPurl());
-
-        // It is possible that the same meta info is reported for multiple components in parallel,
-        // causing unique constraint violations when attempting to insert into the REPOSITORY_META_COMPONENT table.
-        // In such cases, we can get away with simply retrying to SELECT+UPDATE or INSERT again. We'll attempt
-        // up to 3 times before giving up.
-        qm.runInRetryableTransaction(() -> {
-            final RepositoryMetaComponent repositoryMetaComponentResult = createRepositoryMetaResult(record, pm, purl);
-            if (repositoryMetaComponentResult != null) {
-                pm.makePersistent(repositoryMetaComponentResult);
+            if (!integrityMetaComponents.isEmpty()) {
+                LOGGER.debug("%s integrity meta components were not created or updated".formatted(integrityMetaComponents.size()));
             }
-
-            return null;
-        }, PersistenceUtil::isUniqueConstraintViolation);
+        }
     }
 
-    private RepositoryMetaComponent createRepositoryMetaResult(ConsumerRecord<String, AnalysisResult> incomingAnalysisResultRecord, PersistenceManager pm, PackageURL purl) {
-        final AnalysisResult result = incomingAnalysisResultRecord.value();
-        if (!result.hasLatestVersion()) {
-            return null;
-        }
-
-        final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class);
-        query.setFilter("repositoryType == :repositoryType && namespace == :namespace && name == :name");
-        query.setParameters(
-                RepositoryType.resolve(purl),
-                purl.getNamespace(),
-                purl.getName()
-        );
-
-        RepositoryMetaComponent persistentRepoMetaComponent;
-        try {
-            persistentRepoMetaComponent = query.executeUnique();
-        } finally {
-            query.closeAll();
-        }
-
-        if (persistentRepoMetaComponent == null) {
-            persistentRepoMetaComponent = new RepositoryMetaComponent();
-        }
-
-        if (persistentRepoMetaComponent.getLastCheck() != null
-            && persistentRepoMetaComponent.getLastCheck().after(new Date(incomingAnalysisResultRecord.timestamp()))) {
-            LOGGER.warn("""
-                    Received repository meta information for %s that is older\s
-                    than what's already in the database; Discarding
-                    """.formatted(purl));
-            return null;
-        }
-
-        persistentRepoMetaComponent.setRepositoryType(RepositoryType.resolve(purl));
-        persistentRepoMetaComponent.setNamespace(purl.getNamespace());
-        persistentRepoMetaComponent.setName(purl.getName());
-        if (result.hasLatestVersion()) {
-            persistentRepoMetaComponent.setLatestVersion(result.getLatestVersion());
-        }
-        if (result.hasPublished()) {
-            persistentRepoMetaComponent.setPublished(new Date(result.getPublished().getSeconds() * 1000));
-        }
-        persistentRepoMetaComponent.setLastCheck(new Date(incomingAnalysisResultRecord.timestamp()));
-        return persistentRepoMetaComponent;
+    private List<RepositoryMetaComponent> createRepositoryMetaComponents(final List<ConsumerRecord<String, AnalysisResult>> records) {
+        final var identitiesSeen = new HashSet<RepositoryMetaComponent.Identity>();
+        return records.stream()
+                .map(RepositoryMetaResultProcessor::createRepositoryMetaComponent)
+                // Sort by lastFetch such that later timestamps appear first.
+                .sorted(Comparator.comparing(RepositoryMetaComponent::getLastCheck).reversed())
+                // Keep only one (the latest) meta component for each repoType-namespace-name triplet.
+                .filter(metaComponent -> identitiesSeen.add(RepositoryMetaComponent.Identity.of(metaComponent)))
+                .toList();
     }
 
-    private IntegrityMetaComponent synchronizeIntegrityMetaResult(final ConsumerRecord<String, AnalysisResult> incomingAnalysisResultRecord, QueryManager queryManager, PackageURL purl) {
-        final AnalysisResult result = incomingAnalysisResultRecord.value();
-        IntegrityMetaComponent persistentIntegrityMetaComponent = queryManager.getIntegrityMetaComponent(purl.toString());
-        if (persistentIntegrityMetaComponent != null && persistentIntegrityMetaComponent.getStatus() != null && persistentIntegrityMetaComponent.getStatus().equals(FetchStatus.PROCESSED)) {
-            LOGGER.warn("""
-                    Received hash information for %s that has already been processed; Discarding
-                    """.formatted(purl));
-            return persistentIntegrityMetaComponent;
-        }
-        if (persistentIntegrityMetaComponent == null) {
-            persistentIntegrityMetaComponent = new IntegrityMetaComponent();
-        }
+    private static RepositoryMetaComponent createRepositoryMetaComponent(final ConsumerRecord<String, AnalysisResult> record) {
+        final var checkTimestamp = new Date(record.timestamp());
+        final AnalysisResult result = record.value();
+        final var purl = PurlUtil.silentPurl(result.getComponent().getPurl());
 
-        if (result.getIntegrityMeta().hasMd5() || result.getIntegrityMeta().hasSha1() || result.getIntegrityMeta().hasSha256()
-                || result.getIntegrityMeta().hasSha512() || result.getIntegrityMeta().hasCurrentVersionLastModified()) {
-            Optional.of(result.getIntegrityMeta().getMd5()).filter(StringUtils::isNotBlank).ifPresent(persistentIntegrityMetaComponent::setMd5);
-            Optional.of(result.getIntegrityMeta().getSha1()).filter(StringUtils::isNotBlank).ifPresent(persistentIntegrityMetaComponent::setSha1);
-            Optional.of(result.getIntegrityMeta().getSha256()).filter(StringUtils::isNotBlank).ifPresent(persistentIntegrityMetaComponent::setSha256);
-            Optional.of(result.getIntegrityMeta().getSha512()).filter(StringUtils::isNotBlank).ifPresent(persistentIntegrityMetaComponent::setSha512);
-            persistentIntegrityMetaComponent.setPurl(result.getComponent().getPurl());
-            persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
-            persistentIntegrityMetaComponent.setPublishedAt(result.getIntegrityMeta().hasCurrentVersionLastModified() ? new Date(result.getIntegrityMeta().getCurrentVersionLastModified().getSeconds() * 1000) : null);
-            persistentIntegrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        final var metaComponent = new RepositoryMetaComponent();
+        metaComponent.setRepositoryType(RepositoryType.resolve(purl));
+        metaComponent.setNamespace(purl.getNamespace());
+        metaComponent.setName(purl.getName());
+        metaComponent.setLatestVersion(result.getLatestVersion());
+        metaComponent.setPublished(new Date(Timestamps.toMillis(result.getPublished())));
+        metaComponent.setLastCheck(checkTimestamp);
+        return metaComponent;
+    }
+
+    private static List<IntegrityMetaComponent> createIntegrityMetaComponents(final List<ConsumerRecord<String, AnalysisResult>> records) {
+        final var purlsSeen = new HashSet<String>();
+        return records.stream()
+                .filter(record -> record.value().hasIntegrityMeta())
+                .map(RepositoryMetaResultProcessor::createIntegrityMetaComponent)
+                // Sort by lastFetch such that later timestamps appear first.
+                .sorted(Comparator.comparing(IntegrityMetaComponent::getLastFetch).reversed())
+                // Only keep one (the latest) meta component for each PURL.
+                .filter(metaComponent -> purlsSeen.add(metaComponent.getPurl()))
+                .toList();
+    }
+
+    private static IntegrityMetaComponent createIntegrityMetaComponent(final ConsumerRecord<String, AnalysisResult> record) {
+        final var checkTimestamp = new Date(record.timestamp());
+        final AnalysisResult result = record.value();
+
+        final var metaComponent = new IntegrityMetaComponent();
+        metaComponent.setPurl(result.getComponent().getPurl());
+        metaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
+        metaComponent.setMd5(trimToNull(result.getIntegrityMeta().getMd5()));
+        metaComponent.setSha1(trimToNull(result.getIntegrityMeta().getSha1()));
+        metaComponent.setSha256(trimToNull(result.getIntegrityMeta().getSha256()));
+        metaComponent.setSha512(trimToNull(result.getIntegrityMeta().getSha512()));
+        if (result.getIntegrityMeta().hasCurrentVersionLastModified()) {
+            metaComponent.setPublishedAt(new Date(Timestamps.toMillis(result.getIntegrityMeta().getCurrentVersionLastModified())));
+        }
+        if (metaComponent.getMd5() != null
+            || metaComponent.getSha1() != null
+            || metaComponent.getSha256() != null
+            || metaComponent.getSha512() != null) {
+            metaComponent.setStatus(FetchStatus.PROCESSED);
         } else {
-            persistentIntegrityMetaComponent.setMd5(null);
-            persistentIntegrityMetaComponent.setSha256(null);
-            persistentIntegrityMetaComponent.setSha1(null);
-            persistentIntegrityMetaComponent.setSha512(null);
-            persistentIntegrityMetaComponent.setPurl(purl.toString());
-            persistentIntegrityMetaComponent.setRepositoryUrl(result.getIntegrityMeta().getMetaSourceUrl());
-            persistentIntegrityMetaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
+            metaComponent.setStatus(FetchStatus.NOT_AVAILABLE);
         }
-        return queryManager.updateIntegrityMetaComponent(persistentIntegrityMetaComponent);
+        metaComponent.setLastFetch(checkTimestamp);
+        return metaComponent;
     }
 
     private static boolean isRecordValid(final ConsumerRecord<String, AnalysisResult> record) {
@@ -196,6 +186,8 @@ public class RepositoryMetaResultProcessor implements Processor<String, Analysis
                     """, e);
             return false;
         }
+
         return true;
     }
+
 }
