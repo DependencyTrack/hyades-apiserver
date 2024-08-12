@@ -41,6 +41,7 @@ public interface ProjectDao {
             <#-- @ftlvariable name="nameFilter" type="Boolean" -->
             <#-- @ftlvariable name="classifierFilter" type="Boolean" -->
             <#-- @ftlvariable name="tagFilter" type="Boolean" -->
+            <#-- @ftlvariable name="teamFilter" type="Boolean" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
             <#-- @ftlvariable name="onlyRootFilter" type="Boolean" -->
             <#-- @ftlvariable name="parentUuidFilter" type="Boolean" -->
@@ -62,6 +63,11 @@ public interface ProjectDao {
                      INNER JOIN "PROJECTS_TAGS"
                         ON "PROJECTS_TAGS"."TAG_ID" = "TAG"."ID"
                      WHERE "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID") AS "tags"
+                 , (SELECT ARRAY_AGG("TEAM"."NAME")
+                      FROM "TEAM"
+                     INNER JOIN "PROJECT_ACCESS_TEAMS"
+                        ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                     WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID") AS "teams"
                  , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
                  , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
                  , (SELECT EXISTS(
@@ -111,6 +117,15 @@ public interface ProjectDao {
                      ON "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
                   WHERE "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
                     AND "TAG"."NAME" = :tagFilter)
+            </#if>
+            <#if teamFilter>
+               AND EXISTS(
+                 SELECT 1
+                   FROM "PROJECT_ACCESS_TEAMS"
+                  INNER JOIN "TEAM"
+                     ON "TEAM"."ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    AND "TEAM"."NAME" = :teamFilter)
             </#if>
             <#if activeFilter>
                AND "PROJECT"."ACTIVE" = :activeFilter
