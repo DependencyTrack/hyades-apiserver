@@ -108,7 +108,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_E
 public class BomResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
-    private static final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -599,6 +598,7 @@ public class BomResource extends AlpineResource {
     }
 
     private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors, Bom.Format format) {
+        final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_VALIDATION_FAILED)
