@@ -54,7 +54,6 @@ import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
@@ -587,7 +586,7 @@ public class BomResource extends AlpineResource {
 
             final var bomEncoded = Base64.getEncoder()
                     .encodeToString(bomBytes);
-            dispatchBomValidationFailedNotification(project, bomEncoded, problemDetails.getErrors(), Bom.Format.CYCLONEDX);
+            dispatchBomValidationFailedNotification(project, bomEncoded, problemDetails.getErrors());
 
             throw new WebApplicationException(response);
         } catch (RuntimeException e) {
@@ -597,7 +596,7 @@ public class BomResource extends AlpineResource {
         }
     }
 
-    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors, Bom.Format format) {
+    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors) {
         final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
@@ -605,6 +604,6 @@ public class BomResource extends AlpineResource {
                 .level(NotificationLevel.ERROR)
                 .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
                 .content("An error occurred while validating a BOM")
-                .subject(new BomValidationFailed(project, bom, errors, format)));
+                .subject(new BomValidationFailed(project, bom, errors)));
     }
 }

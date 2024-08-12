@@ -81,7 +81,6 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
@@ -95,7 +94,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
 import static org.apache.commons.io.IOUtils.resourceToString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
@@ -1191,7 +1189,7 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).hasSize(1);
         final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         AssertionsForClassTypes.assertThat(userNotification).isNotNull();
         AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
@@ -1245,7 +1243,7 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
+        assertThat(kafkaMockProducer.history()).hasSize(1);
         final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         AssertionsForClassTypes.assertThat(userNotification).isNotNull();
         AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);

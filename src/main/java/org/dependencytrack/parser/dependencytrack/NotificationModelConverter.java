@@ -288,7 +288,6 @@ public final class NotificationModelConverter {
 
         org.dependencytrack.proto.notification.v1.Bom.Builder bomBuilder = org.dependencytrack.proto.notification.v1.Bom.newBuilder();
         Optional.ofNullable(subject.getBom()).ifPresent(bomBuilder::setContent);
-        Optional.ofNullable(subject.getFormat()).map(Bom.Format::getFormatShortName).ifPresent(bomBuilder::setFormat);
 
         final BomValidationFailedSubject.Builder builder = BomValidationFailedSubject.newBuilder()
                 .setProject(convert(subject.getProject()))

@@ -434,14 +434,13 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
     @Test
     public void testConvertBomValidationFailedNotification() throws Exception {
         final org.dependencytrack.model.Project project = createProject();
-        final var token = UUID.randomUUID();
         final var alpineNotification = new alpine.notification.Notification();
         alpineNotification.setScope(NotificationScope.PORTFOLIO.name());
         alpineNotification.setLevel(NotificationLevel.ERROR);
         alpineNotification.setGroup(NotificationGroup.BOM_VALIDATION_FAILED.name());
         alpineNotification.setTitle("Foo");
         alpineNotification.setContent("Bar");
-        alpineNotification.setSubject(new BomValidationFailed(project, "bom", List.of("just because"), Bom.Format.CYCLONEDX));
+        alpineNotification.setSubject(new BomValidationFailed(project, "bom", List.of("just because")));
 
         final Notification notification = NotificationModelConverter.convert(alpineNotification);
         assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
