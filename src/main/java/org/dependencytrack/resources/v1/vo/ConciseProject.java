@@ -56,6 +56,7 @@ public record ConciseProject(
                 row.classifier() != null ? Classifier.valueOf(row.classifier()) : null,
                 row.active(),
                 convertTags(row.tags()),
+                convertTeams(row.teams()),
                 row.lastBomImport() != null ? Date.from(row.lastBomImport()) : null,
                 row.lastBomImportFormat(),
                 row.hasChildren(),
@@ -76,7 +77,7 @@ public record ConciseProject(
                 .toList();
     }
 
-    private static List<Team> convertTags(final Collection<String> teamNames) {
+    private static List<Team> convertTeams(final Collection<String> teamNames) {
         if (teamNames == null || teamNames.isEmpty()) {
             return Collections.emptyList();
         }
