@@ -20,6 +20,8 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
+import alpine.notification.Notification;
+import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,11 +53,16 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.vo.BomValidationFailed;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
@@ -538,7 +545,7 @@ public class BomResource extends AlpineResource {
     }
 
     private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes);
+        validate(bomBytes, project);
 
         // TODO: Store externally so other instances of the API server can pick it up.
         //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
@@ -554,7 +561,7 @@ public class BomResource extends AlpineResource {
         return tmpFile;
     }
 
-    static void validate(final byte[] bomBytes) {
+    static void validate(final byte[] bomBytes, final Project project) {
         try (final var qm = new QueryManager()) {
             if (!qm.isEnabled(BOM_VALIDATION_ENABLED)) {
                 return;
@@ -577,6 +584,10 @@ public class BomResource extends AlpineResource {
                     .entity(problemDetails)
                     .build();
 
+            final var bomEncoded = Base64.getEncoder()
+                    .encodeToString(bomBytes);
+            dispatchBomValidationFailedNotification(project, bomEncoded, problemDetails.getErrors());
+
             throw new WebApplicationException(response);
         } catch (RuntimeException e) {
             LOGGER.error("Failed to validate BOM", e);
@@ -585,4 +596,14 @@ public class BomResource extends AlpineResource {
         }
     }
 
+    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors) {
+        final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
+        eventDispatcher.dispatchNotification(new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(NotificationGroup.BOM_VALIDATION_FAILED)
+                .level(NotificationLevel.ERROR)
+                .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
+                .content("An error occurred while validating a BOM")
+                .subject(new BomValidationFailed(project, bom, errors)));
+    }
 }

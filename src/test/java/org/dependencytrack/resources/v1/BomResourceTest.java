@@ -34,9 +34,11 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -53,6 +55,7 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -97,6 +100,10 @@ import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 @RunWith(JUnitParamsRunner.class)
@@ -1211,7 +1218,7 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
-    public void uploadBomInvalidJsonTest() {
+    public void uploadBomInvalidJsonTest() throws InterruptedException {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1256,10 +1263,19 @@ public class BomResourceTest extends ResourceTest {
                   ]
                 }
                 """);
+
+        assertThat(kafkaMockProducer.history()).hasSize(1);
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
+        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
     }
 
     @Test
-    public void uploadBomInvalidXmlTest() {
+    public void uploadBomInvalidXmlTest() throws InterruptedException {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1301,6 +1317,15 @@ public class BomResourceTest extends ResourceTest {
                   ]
                 }
                 """);
+
+        assertThat(kafkaMockProducer.history()).hasSize(1);
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
+        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
     }
 
     @Test
