@@ -159,7 +159,7 @@ public class ProjectResource extends AlpineResource {
             @Parameter(description = "Classifier to filter on. Must be exact match.")
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
-            @QueryParam("tag") final String tagFilter,\
+            @QueryParam("tag") final String tagFilter,
             @Parameter(description = "Team to filter on. Must be exact match.")
             @QueryParam("team") final String teamFilter,
             @Parameter(description = "Whether to show only active, or only inactive projects.")
