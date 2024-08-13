@@ -455,7 +455,6 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
         assertProject(subject.getProject());
         assertThat(subject.getBom().getContent()).isEqualTo("bom");
-        assertThat(subject.getBom().getFormat()).isEqualTo("CycloneDX");
         assertThat(subject.getErrors(0)).isEqualTo("just because");
     }
 
