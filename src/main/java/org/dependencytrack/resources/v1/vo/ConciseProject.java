@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Tag;
+import alpine.model.Team;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 
 import java.util.Collection;
