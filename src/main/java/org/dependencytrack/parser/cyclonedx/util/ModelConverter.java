@@ -22,6 +22,10 @@ import alpine.common.logging.Logger;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
@@ -59,10 +63,6 @@ import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1192,4 +1192,18 @@ public class ModelConverter {
         }
     }
 
+    public static List<org.cyclonedx.model.vulnerability.Vulnerability> generateVulnerabilities(
+            final QueryManager qm,
+            final CycloneDXExporter.Variant variant,
+            final List<Finding> findings
+    ) {
+        if (findings == null) {
+            return Collections.emptyList();
+        }
+        final var vulnerabilitiesSeen = new HashSet<org.cyclonedx.model.vulnerability.Vulnerability>();
+        return findings.stream()
+                .map(finding -> convert(qm, variant, finding))
+                .filter(vulnerabilitiesSeen::add)
+                .toList();
+    }
 }

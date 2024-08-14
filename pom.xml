@@ -92,7 +92,7 @@
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>9.0.4</lib.cyclonedx-java.version>
+        <lib.cyclonedx-java.version>9.0.5</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.3</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
