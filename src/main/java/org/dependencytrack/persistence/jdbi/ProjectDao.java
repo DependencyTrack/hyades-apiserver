@@ -147,10 +147,12 @@ public interface ProjectDao {
             @AllowApiOrdering.Column(name = "name"),
             @AllowApiOrdering.Column(name = "version"),
             @AllowApiOrdering.Column(name = "classifier"),
+            @AllowApiOrdering.Column(name = "active"),
             @AllowApiOrdering.Column(name = "lastBomImport"),
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
             @AllowApiOrdering.Column(name = "metrics.components", queryName = "\"metrics\".\"COMPONENTS\""),
             @AllowApiOrdering.Column(name = "metrics.inheritedRiskScore", queryName = "\"metrics\".\"RISKSCORE\""),
+            @AllowApiOrdering.Column(name = "metrics.policyViolationsTotal", queryName = "\"metrics\".\"POLICYVIOLATIONS_TOTAL\""),
             @AllowApiOrdering.Column(name = "metrics.vulnerabilities", queryName = "\"metrics\".\"VULNERABILITIES\"")
     })
     List<ConciseProjectListRow> getPageConcise(

@@ -16,35 +16,33 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification;
+package org.dependencytrack.notification.vo;
 
-public enum NotificationGroup {
+import org.dependencytrack.model.Project;
 
-    // System Groups
-    CONFIGURATION,
-    DATASOURCE_MIRRORING,
-    REPOSITORY,
-    INTEGRATION,
-    FILE_SYSTEM,
-    ANALYZER,
+import java.util.List;
 
-    // Portfolio Groups
-    NEW_VULNERABILITY,
-    NEW_VULNERABLE_DEPENDENCY,
-    //NEW_OUTDATED_COMPONENT,
-    //FIXED_VULNERABILITY,
-    //FIXED_OUTDATED,
-    //GLOBAL_AUDIT_CHANGE,
-    PROJECT_AUDIT_CHANGE,
-    BOM_CONSUMED,
-    BOM_PROCESSED,
-    BOM_PROCESSING_FAILED,
-    BOM_VALIDATION_FAILED,
-    VEX_CONSUMED,
-    VEX_PROCESSED,
-    POLICY_VIOLATION,
-    PROJECT_CREATED,
-    PROJECT_VULN_ANALYSIS_COMPLETE,
-    USER_CREATED,
-    USER_DELETED
+public class BomValidationFailed {
+
+    private Project project;
+    private String bom;
+    private List<String> errors;
+
+    public BomValidationFailed(final Project project, final String bom, final List<String> errors) {
+        this.project = project;
+        this.bom = bom;
+        this.errors = errors;
+    }
+
+    public Project getProject() {
+        return project;
+    }
+
+    public String getBom() {
+        return bom;
+    }
+
+    public List<String> getErrors() {
+        return errors;
+    }
 }

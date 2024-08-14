@@ -34,9 +34,11 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -53,6 +55,7 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -97,6 +100,10 @@ import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 @RunWith(JUnitParamsRunner.class)
@@ -360,6 +367,81 @@ public class BomResourceTest extends ResourceTest {
         assertThat(componentWithoutVuln.getDirectDependencies()).isNotNull();
         assertThat(componentWithVuln.getDirectDependencies()).isNotNull();
         assertThat(componentWithVulnAndAnalysis.getDirectDependencies()).isNotNull();
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxLicenseTest() {
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Component c = new Component();
+        c.setProject(project);
+        c.setName("sample-component");
+        c.setVersion("1.0");
+        org.dependencytrack.model.License license = new org.dependencytrack.model.License();
+        license.setId(1234);
+        license.setName("CustomName");
+        license.setCustomLicense(true);
+        c.setResolvedLicense(license);
+        c.setDirectDependencies("[]");
+        Component component = qm.createComponent(c, false);
+        qm.persist(project);
+        Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
+        assertThatJson(jsonResponse)
+                .withMatcher("component", equalTo(component.getUuid().toString()))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(json("""
+                {
+                    "bomFormat": "CycloneDX",
+                    "specVersion": "1.5",
+                    "serialNumber": "${json-unit.ignore}",
+                    "version": 1,
+                    "metadata": {
+                        "timestamp": "${json-unit.any-string}",
+                        "tools": [
+                            {
+                                "vendor": "OWASP",
+                                "name": "Dependency-Track",
+                                "version": "${json-unit.any-string}"
+                            }
+                        ],
+                        "component": {
+                            "type": "library",
+                            "bom-ref": "${json-unit.matches:projectUuid}",
+                            "name": "Acme Example",
+                            "version": "1.0"
+                        }
+                    },
+                    "components": [
+                        {
+                            "type": "library",
+                            "bom-ref": "${json-unit.matches:component}",
+                            "name": "sample-component",
+                            "version": "1.0",
+                            "licenses": [
+                                {
+                                    "license": {
+                                        "name": "CustomName"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "dependencies": [
+                        {
+                            "ref": "${json-unit.matches:projectUuid}",
+                            "dependsOn": []
+                        },
+                        {
+                            "ref": "${json-unit.matches:component}",
+                            "dependsOn": []
+                        }
+                    ]
+                }
+                """));
     }
 
     @Test
@@ -1136,7 +1218,7 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
-    public void uploadBomInvalidJsonTest() {
+    public void uploadBomInvalidJsonTest() throws InterruptedException {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1181,10 +1263,19 @@ public class BomResourceTest extends ResourceTest {
                   ]
                 }
                 """);
+
+        assertThat(kafkaMockProducer.history()).hasSize(1);
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
+        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
     }
 
     @Test
-    public void uploadBomInvalidXmlTest() {
+    public void uploadBomInvalidXmlTest() throws InterruptedException {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1226,6 +1317,15 @@ public class BomResourceTest extends ResourceTest {
                   ]
                 }
                 """);
+
+        assertThat(kafkaMockProducer.history()).hasSize(1);
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
+        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
     }
 
     @Test
