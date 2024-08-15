@@ -319,7 +319,8 @@ public class ProjectResourceTest extends ResourceTest {
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "true",
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getAccessTeams()
         );
 
         final var projectA = new Project();
@@ -492,6 +493,53 @@ public class ProjectResourceTest extends ResourceTest {
                     "name": "acme-app-b",
                     "active": true,
                     "tags": [
+                      {
+                        "name": "foo"
+                      }
+                    ],
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseFilterByTeamTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        qm.bind(projectB, List.of(qm.createTag("foo")));
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("team", "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("team", "foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "taeam": [
                       {
                         "name": "foo"
                       }
