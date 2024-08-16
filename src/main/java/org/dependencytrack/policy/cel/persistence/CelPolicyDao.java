@@ -91,7 +91,7 @@ public interface CelPolicyDao {
               ) AS "tags" ON TRUE
             </#if>
             WHERE
-              "P"."UUID" = (:uuid)::TEXT
+              "P"."UUID" = (:uuid)::UUID
             """)
     @RegisterRowMapper(CelPolicyProjectRowMapper.class)
     Project getProject(@Define List<String> fetchColumns, @Define List<String> fetchPropertyColumns, UUID uuid);
@@ -122,7 +122,7 @@ public interface CelPolicyDao {
               ) AS "repoMeta" ON TRUE
             </#if>
             WHERE
-              "C"."UUID" = (:uuid)::TEXT
+              "C"."UUID" = (:uuid)::UUID
             """)
     @RegisterRowMapper(CelPolicyComponentRowMapper.class)
     Component getComponent(@Define List<String> fetchColumns, UUID uuid);
@@ -162,7 +162,7 @@ public interface CelPolicyDao {
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE"
             </#if>
             WHERE
-              "V"."UUID" = (:uuid)::TEXT
+              "V"."UUID" = (:uuid)::UUID
             """)
     @RegisterRowMapper(CelPolicyVulnerabilityRowMapper.class)
     Vulnerability getVulnerability(@Define List<String> fetchColumns, UUID uuid);

@@ -480,7 +480,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                         RETURNING "ID"
                         """, Statement.RETURN_GENERATED_KEYS)) {
                     for (final Map.Entry<Long, PolicyViolation> entry : violationsToCreate.entries()) {
-                        ps.setString(1, UUID.randomUUID().toString());
+                        ps.setObject(1, UUID.randomUUID());
                         ps.setTimestamp(2, new Timestamp(entry.getValue().getTimestamp().getTime()));
                         ps.setLong(3, entry.getKey());
                         ps.setLong(4, projectId);
