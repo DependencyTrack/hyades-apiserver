@@ -1951,7 +1951,7 @@ public class QueryManager extends AlpineQueryManager {
             connection = (Connection) pm.getDataStoreConnection();
 
             preparedStatement = connection.prepareStatement(queryString);
-            preparedStatement.setObject(1, uuid.toString());
+            preparedStatement.setObject(1, uuid);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 Date publishedDate = null;

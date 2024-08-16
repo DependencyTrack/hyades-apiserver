@@ -166,7 +166,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
             }
             preparedStatement.setLong(1, parentWorkflowState.getId());
-            preparedStatement.setObject(2, parentWorkflowState.getToken().toString());
+            preparedStatement.setObject(2, parentWorkflowState.getToken());
 
             preparedStatement.execute();
             rs = preparedStatement.getResultSet();
