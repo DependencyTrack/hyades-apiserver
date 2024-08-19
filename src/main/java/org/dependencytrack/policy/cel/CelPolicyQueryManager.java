@@ -655,7 +655,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                 AND "P"."DIRECT_DEPENDENCIES" LIKE :wildcard WHERE "C"."UUID"= :uuid;
                 """;
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
-        query.setNamedParameters(Map.of("uuid", component.getUuid(),
+        query.setNamedParameters(Map.of("uuid", UUID.fromString(component.getUuid()),
                 "wildcard", "%" + component.getUuid() + "%"));
         long result;
         try {
