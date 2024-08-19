@@ -151,10 +151,6 @@ public enum ConfigPropertyConstants {
         return description;
     }
 
-    public String getTeams() {
-        return teams;
-    }
-
     public ConfigPropertyAccessMode getAccessMode() {
         return accessMode;
     }
