@@ -1110,7 +1110,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProjectB.setName("acme-child-app-b");
         qm.persist(childProjectB);
 
-        projectB.addAccessTeam(team)
+        projectB.addAccessTeam(team);
 
         // Should not return results for partial matches.
         Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
