@@ -509,7 +509,7 @@ public class ProjectResourceTest extends ResourceTest {
             ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
             "true",
             ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-            ACCESS_MANAGEMENT_ACL_ENABLED.getDescription(),
+            ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
     );
         // Create project and give access to current principal's team.
         final Project accessProject = qm.createProject("acme-app-b", null, "1.0.0", null, null, null, true, false);
