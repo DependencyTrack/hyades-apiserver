@@ -513,7 +513,7 @@ public class ProjectResourceTest extends ResourceTest {
     );
         // Create project and give access to current principal's team.
         final Project accessProject = qm.createProject("acme-app-b", null, "1.0.0", null, null, null, true, false);
-        accessProject.addAccessTeams(team);
+        accessProject.addAccessTeam(team);
 
         // Should not return results for partial matches.
         Response response = jersey.target(V1_PROJECT + "/concise")
@@ -1110,7 +1110,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProjectB.setName("acme-child-app-b");
         qm.persist(childProjectB);
 
-        projectB.addAccessTeam(team);
+        childProjectB.addAccessTeam(team);
 
         // Should not return results for partial matches.
         Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
