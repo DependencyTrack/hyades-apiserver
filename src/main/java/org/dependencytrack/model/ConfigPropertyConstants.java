@@ -108,7 +108,6 @@ public enum ConfigPropertyConstants {
     private final String defaultPropertyValue;
     private final PropertyType propertyType;
     private final String description;
-    private final String
     private final ConfigPropertyAccessMode accessMode;
 
     ConfigPropertyConstants(final String groupName,
@@ -116,14 +115,12 @@ public enum ConfigPropertyConstants {
                             final String defaultPropertyValue,
                             final PropertyType propertyType,
                             final String description,
-                            final String teams,
                             final ConfigPropertyAccessMode accessMode) {
         this.groupName = groupName;
         this.propertyName = propertyName;
         this.defaultPropertyValue = defaultPropertyValue;
         this.propertyType = propertyType;
         this.description = description;
-        this.teams = teams;
         this.accessMode = accessMode;
     }
 

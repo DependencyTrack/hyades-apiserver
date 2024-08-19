@@ -319,8 +319,7 @@ public class ProjectResourceTest extends ResourceTest {
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "true",
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription(),
-                ACCESS_MANAGEMENT_ACL_ENABLED.getTeams()
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
         );
 
         final var projectA = new Project();
@@ -505,15 +504,16 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseFilterByTeamTest() {
-        final var projectA = new Project();
-        projectA.setName("acme-app-a");
-        qm.persist(projectA);
-
-        final var projectB = new Project();
-        projectB.setName("acme-app-b");
-        qm.persist(projectB);
-
-        qm.bind(projectB, List.of(qm.createTag("foo")));
+        qm.createConfigProperty(
+            ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+            ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+            "true",
+            ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+            ACCESS_MANAGEMENT_ACL_ENABLED.getDescription(),
+    );
+        // Create project and give access to current principal's team.
+        final Project accessProject = qm.createProject("acme-app-b", null, "1.0.0", null, null, null, true, false);
+        accessProject.addAccessTeams(team);
 
         // Should not return results for partial matches.
         Response response = jersey.target(V1_PROJECT + "/concise")
@@ -527,7 +527,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         // Should return results for exact matches.
         response = jersey.target(V1_PROJECT + "/concise")
-                .queryParam("team", "foo")
+                .queryParam("team", team.getName())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -541,13 +541,13 @@ public class ProjectResourceTest extends ResourceTest {
                     "active": true,
                     "taeam": [
                       {
-                        "name": "foo"
+                        "name": "%s"
                       }
                     ],
                     "hasChildren": false
                   }
                 ]
-                """);
+                """.formatted(team.getName()));
     }
 
     @Test
@@ -851,9 +851,7 @@ public class ProjectResourceTest extends ResourceTest {
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "true",
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription(),
-                ACCESS_MANAGEMENT_ACL_ENABLED.getTeams()
-
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
         );
 
         final var parentProject = new Project();
@@ -1112,7 +1110,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProjectB.setName("acme-child-app-b");
         qm.persist(childProjectB);
 
-        qm.bind(childProjectB, List.of(qm.createTeam("foo")));
+        projectB.addAccessTeam(team)
 
         // Should not return results for partial matches.
         Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
