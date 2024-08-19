@@ -32,6 +32,7 @@ username=dtrack
 password=dtrack
 EOF
 
-mvn liquibase:updateSQL -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
+mvn liquibase:update -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
+  docker exec "${CONTAINER_ID}" pg_dump -Udtrack --schema-only --no-owner --no-privileges dtrack | sed -e '/^--/d' | cat -s > "${ROOT_DIR}/schema.sql"; \
   docker stop "${CONTAINER_ID}"; \
   rm "${TMP_LIQUIBASE_CONFIG_FILE}"
