@@ -554,7 +554,7 @@ public interface NotificationSubjectDao extends SqlObject {
         }
 
         final var subject = ProjectVulnAnalysisCompleteSubject.newBuilder()
-                .setToken(vulnScan.getToken())
+                .setToken(String.valueOf(vulnScan.getToken()))
                 .setStatus(switch (vulnScan.getStatus()) {
                     case COMPLETED -> PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
                     case FAILED -> PROJECT_VULN_ANALYSIS_STATUS_FAILED;

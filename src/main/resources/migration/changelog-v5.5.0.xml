@@ -191,6 +191,7 @@
         <modifyDataType tableName="VULNERABILITY" columnName="UUID" newDataType="UUID"/>
         <modifyDataType tableName="VULNERABILITYALIAS" columnName="UUID" newDataType="UUID"/>
         <modifyDataType tableName="VULNERABILITYSCAN" columnName="TARGET_IDENTIFIER" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TOKEN" newDataType="UUID"/>
         <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
         <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
     </changeSet>

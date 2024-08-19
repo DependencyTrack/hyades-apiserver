@@ -1686,7 +1686,7 @@ public class QueryManager extends AlpineQueryManager {
         try {
             trx.begin();
             final var scan = new VulnerabilityScan();
-            scan.setToken(scanToken);
+            scan.setToken(UUID.fromString(scanToken));
             scan.setTargetType(targetType);
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
@@ -1783,7 +1783,7 @@ public class QueryManager extends AlpineQueryManager {
             final ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 final var vs = new VulnerabilityScan();
-                vs.setToken(scanToken);
+                vs.setToken(UUID.fromString(scanToken));
                 vs.setTargetType(VulnerabilityScan.TargetType.valueOf(rs.getString("TARGET_TYPE")));
                 vs.setTargetIdentifier(UUID.fromString(rs.getString("TARGET_IDENTIFIER")));
                 vs.setScanFailed(rs.getInt("SCAN_FAILED"));
