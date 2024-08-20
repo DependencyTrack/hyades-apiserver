@@ -348,7 +348,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "hasChildren": false
                   }
                 ]
-                """);
+                """.formatted(team.getName()));
     }
 
     @Test
@@ -900,7 +900,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "hasChildren": false
                   }
                 ]
-                """);
+                """.formatted(team.getName()));
 
         // Revoke access from acme-app.
         parentProject.setAccessTeams(null);
@@ -1141,7 +1141,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "active": true,
                     "teams": [
                       {
-                        "name": "foo"
+                        "name": "%s"
                       }
                     ],
                     "hasChildren": false
