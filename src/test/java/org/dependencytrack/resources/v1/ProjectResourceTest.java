@@ -345,6 +345,11 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
                     "hasChildren": false
                   }
                 ]
@@ -542,7 +547,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
-                    "taeam": [
+                    "team": [
                       {
                         "name": "%s"
                       }
@@ -897,6 +902,11 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-a",
                     "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
                     "hasChildren": false
                   }
                 ]
