@@ -547,7 +547,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
-                    "team": [
+                    "teams": [
                       {
                         "name": "%s"
                       }
