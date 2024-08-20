@@ -468,7 +468,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     @Override
     public Project updateProject(Project transientProject, boolean commitIndex) {
         final Project project = getObjectByUuid(Project.class, transientProject.getUuid());
-        project.setAuthor(transientProject.getAuthor());
+        project.setAuthors(transientProject.getAuthors());
         project.setPublisher(transientProject.getPublisher());
         project.setManufacturer(transientProject.getManufacturer());
         project.setSupplier(transientProject.getSupplier());
@@ -527,7 +527,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     .formatted(source, newVersion));
         }
         Project project = new Project();
-        project.setAuthor(source.getAuthor());
+        project.setAuthors(source.getAuthors());
         project.setManufacturer(source.getManufacturer());
         project.setSupplier(source.getSupplier());
         project.setPublisher(source.getPublisher());

@@ -28,6 +28,7 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -139,7 +140,11 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         project.setCpe("projectCpe");
         project.setPurl("projectPurl");
         project.setSwidTagId("projectSwidTagId");
-        project.setAuthor("projectAuthor");
+        List<OrganizationalContact> authors = new ArrayList<>();
+        authors.add(new OrganizationalContact() {{
+            setName("projectAuthor");
+        }});
+        project.setAuthors(authors);
         project.setDescription("projectDescription");
         project.setDirectDependencies("{7e5f6465-d2f2-424f-b1a4-68d186fa2b46}");
         project.setExternalReferences(List.of(new ExternalReference()));
@@ -163,7 +168,11 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         component.setUuid(UUID.fromString("7e5f6465-d2f2-424f-b1a4-68d186fa2b46"));
         component.setGroup("componentGroup");
         component.setName("componentName");
-        component.setAuthor("componentAuthor");
+        List<OrganizationalContact> componentAuthors = new ArrayList<>();
+        componentAuthors.add(new OrganizationalContact() {{
+            setName("componentAuthor");
+        }});
+        component.setAuthors(componentAuthors);
         component.setVersion("1.0");
         component.setDescription("componentDescription");
         component.setClassifier(Classifier.LIBRARY);

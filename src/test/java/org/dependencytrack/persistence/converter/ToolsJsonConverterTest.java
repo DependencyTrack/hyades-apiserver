@@ -22,6 +22,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DataClassification;
 import org.dependencytrack.model.ExternalReference;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
@@ -29,6 +30,7 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -57,7 +59,11 @@ public class ToolsJsonConverterTest {
         component.setProject(project);
         component.setId(123);
         component.setUuid(UUID.randomUUID());
-        component.setAuthor("componentAuthor");
+        List<OrganizationalContact> componentAuthors = new ArrayList<>();
+        componentAuthors.add(new OrganizationalContact() {{
+            setName("componentAuthor");
+        }});
+        component.setAuthors(componentAuthors);
         component.setPublisher("componentPublisher");
         component.setSupplier(componentSupplier);
         component.setGroup("componentGroup");
@@ -128,7 +134,7 @@ public class ToolsJsonConverterTest {
                         {
                           "components": [
                             {
-                               "author": "componentAuthor",
+                               "authors": "componentAuthor",
                                "blake2b_256": "componentBlake2b_256",
                                "blake2b_384": "componentBlake2b_384",
                                "blake2b_512": "componentBlake2b_512",
@@ -263,7 +269,7 @@ public class ToolsJsonConverterTest {
 
         assertThat(tools).isNotNull();
         assertThat(tools.components()).satisfiesExactly(component -> {
-             assertThat(component.getAuthor()).isEqualTo("componentAuthor");
+             assertThat(component.getAuthors().get(0).getName()).isEqualTo("componentAuthor");
              assertThat(component.getBlake2b_256()).isEqualTo("componentBlake2b_256");
              assertThat(component.getBlake2b_384()).isEqualTo("componentBlake2b_384");
              assertThat(component.getBlake2b_512()).isEqualTo("componentBlake2b_512");

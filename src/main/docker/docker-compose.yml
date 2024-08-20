@@ -12,7 +12,7 @@ volumes:
 services:
   dtrack-apiserver:
     image: dependencytrack/apiserver
-    # environment:
+    environment:
     # The Dependency-Track container can be configured using any of the
     # available configuration properties defined in:
     # https://docs.dependencytrack.org/getting-started/configuration/
@@ -90,7 +90,7 @@ services:
     # - SNYK_THREAD_BATCH_SIZE=10
     #
     # Optional environmental variables to provide more JVM arguments to the API Server JVM, i.e. "-XX:ActiveProcessorCount=8"
-    # - EXTRA_JAVA_OPTIONS=
+    - EXTRA_JAVA_OPTIONS=-Xmx4G
     deploy:
       resources:
         limits:
