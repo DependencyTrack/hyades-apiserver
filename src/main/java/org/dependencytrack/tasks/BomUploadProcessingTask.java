@@ -925,7 +925,7 @@ public class BomUploadProcessingTask implements Subscriber {
             qm.createVulnerabilityScan(
                     TargetType.PROJECT,
                     ctx.project.getUuid(),
-                    ctx.token.toString(),
+                    ctx.token,
                     events.size()
             );
 

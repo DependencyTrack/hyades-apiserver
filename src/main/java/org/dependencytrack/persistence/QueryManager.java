@@ -1679,14 +1679,14 @@ public class QueryManager extends AlpineQueryManager {
      * @return The created {@link VulnerabilityScan}
      */
     public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
-                                                     final UUID targetIdentifier, final String scanToken,
+                                                     final UUID targetIdentifier, final UUID scanToken,
                                                      final int expectedResults) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         try {
             trx.begin();
             final var scan = new VulnerabilityScan();
-            scan.setToken(UUID.fromString(scanToken));
+            scan.setToken(scanToken);
             scan.setTargetType(targetType);
             scan.setTargetIdentifier(targetIdentifier);
             scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
@@ -1711,7 +1711,7 @@ public class QueryManager extends AlpineQueryManager {
      * @param token The token that uniquely identifies the scan for clients
      * @return A {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
      */
-    public VulnerabilityScan getVulnerabilityScan(final String token) {
+    public VulnerabilityScan getVulnerabilityScan(final UUID token) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         trx.setRollbackOnly(); // We won't commit anything
