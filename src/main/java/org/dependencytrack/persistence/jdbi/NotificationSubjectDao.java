@@ -171,7 +171,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::UUID AND "V"."UUID" = ANY((:vulnUuids)::UUID[])
+              "C"."UUID" = :componentUuid AND "V"."UUID" = ANY(:vulnUuids)
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @RegisterRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
@@ -282,7 +282,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::UUID
+              "C"."UUID" = :componentUuid
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @UseRowReducer(NotificationSubjectNewVulnerableDependencyRowReducer.class)
@@ -396,7 +396,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::UUID AND "V"."UUID" = (:vulnUuid)::UUID
+              "C"."UUID" = :componentUuid AND "V"."UUID" = :vulnUuid
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
     Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid, AnalysisState analysisState, boolean isSuppressed);
@@ -442,7 +442,7 @@ public interface NotificationSubjectDao extends SqlObject {
                      WHERE "PT"."PROJECT_ID" = "P"."ID"
                    ) AS "projectTags"
               FROM "PROJECT" AS "P"
-             WHERE "P"."UUID" = (:projectUuid)::UUID
+             WHERE "P"."UUID" = :projectUuid
             """)
     Optional<Project> getProject(UUID projectUuid);
 

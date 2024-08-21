@@ -170,29 +170,4 @@
         <addDefaultValue tableName="VULNERABILITY_POLICY" columnName="OPERATION_MODE" defaultValue="APPLY"/>
         <addNotNullConstraint tableName="VULNERABILITY_POLICY" columnName="OPERATION_MODE"/>
     </changeSet>
-
-    <changeSet id="v5.5.0-15" author="sahibamittal">
-        <modifyDataType tableName="AFFECTEDVERSIONATTRIBUTION" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="BOM" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="COMPONENT" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="FINDINGATTRIBUTION" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="LICENSE" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="LICENSEGROUP" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="NOTIFICATIONPUBLISHER" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="NOTIFICATIONRULE" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="POLICY" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="POLICYCONDITION" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="POLICYVIOLATION" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="PROJECT" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="REPOSITORY" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="SERVICECOMPONENT" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="VEX" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="VULNERABILITY" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="VULNERABILITYALIAS" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TARGET_IDENTIFIER" newDataType="UUID"/>
-        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TOKEN" newDataType="UUID"/>
-        <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
-        <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
-    </changeSet>
 </databaseChangeLog>
