@@ -155,4 +155,3 @@ public enum ConfigPropertyConstants {
         return accessMode;
     }
 }
-

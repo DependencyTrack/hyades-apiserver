@@ -345,10 +345,15 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
                     "hasChildren": false
                   }
                 ]
-                """);
+                """.formatted(team.getName()));
     }
 
     @Test
@@ -500,6 +505,57 @@ public class ProjectResourceTest extends ResourceTest {
                   }
                 ]
                 """);
+    }
+
+    @Test
+    public void getProjectsConciseFilterByTeamTest() {
+        qm.createConfigProperty(
+            ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+            ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+            "true",
+            ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+            ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+    );
+        // Create project and give access to current principal's team.
+        final var projectB= new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        projectB.addAccessTeam(team);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("team", "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("team", team.getName())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
+                    "hasChildren": false
+                  }
+                ]
+                """.formatted(team.getName()));
     }
 
     @Test
@@ -846,10 +902,15 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-a",
                     "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
                     "hasChildren": false
                   }
                 ]
-                """);
+                """.formatted(team.getName()));
 
         // Revoke access from acme-app.
         parentProject.setAccessTeams(null);
@@ -1045,6 +1106,60 @@ public class ProjectResourceTest extends ResourceTest {
                 ]
                 """);
     }
+
+    @Test
+    public void getProjectChildrenConciseFilterByTeamTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProjectA = new Project();
+        childProjectA.setParent(parentProject);
+        childProjectA.setName("acme-child-app-a");
+        qm.persist(childProjectA);
+
+        final var childProjectB = new Project();
+        childProjectB.setParent(parentProject);
+        childProjectB.setName("acme-child-app-b");
+        qm.persist(childProjectB);
+
+        childProjectB.addAccessTeam(team);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("team", "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("team", team.getName())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-b",
+                    "active": true,
+                    "teams": [
+                      {
+                        "name": "%s"
+                      }
+                    ],
+                    "hasChildren": false
+                  }
+                ]
+                """.formatted(team.getName()));
+    }
+
 
     @Test
     public void getProjectChildrenConciseWithLatestMetricsTest() {

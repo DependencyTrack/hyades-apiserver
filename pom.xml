@@ -24,7 +24,7 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.0.1</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -88,7 +88,7 @@
         <lib.cel-tools.version>0.4.5</lib.cel-tools.version>
         <lib.checkstyle.version>10.17.0</lib.checkstyle.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.19.1</lib.cloud-sql-postgres-socket-factory.version>
-        <lib.commons-compress.version>1.27.0</lib.commons-compress.version>
+        <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -100,7 +100,7 @@
         <lib.kafka.version>3.8.0</lib.kafka.version>
         <lib.liquibase.version>4.29.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.11</lib.minio.version>
+        <lib.minio.version>8.5.12</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.9.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
@@ -116,7 +116,7 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.16</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>5.14.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>5.15.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <lib.jdbc-driver.postgresql.version>42.7.3</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
@@ -394,7 +394,7 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
-            <version>3.9.8</version>
+            <version>3.9.9</version>
         </dependency>
 
         <dependency>
@@ -551,6 +551,39 @@
                 <filtering>false</filtering>
             </testResource>
         </testResources>
+        <pluginManagement>
+            <plugins>
+                <!--
+                    Plugin invocation is inherited from alpine-parent.
+                    Because this is an application, there's no point in attaching sources.
+                 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!--
+                    Plugin invocation is inherited from alpine-parent.
+                    Because this is an application, there's no point in attaching javadocs.
+                 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

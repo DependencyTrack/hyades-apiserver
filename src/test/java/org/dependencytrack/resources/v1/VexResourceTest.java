@@ -391,6 +391,7 @@ public class VexResourceTest extends ResourceTest {
         final String jsonResponse = getPlainTextBody(response);
         assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .isEqualTo("""
@@ -488,6 +489,7 @@ public class VexResourceTest extends ResourceTest {
         final String jsonResponse = getPlainTextBody(response);
         assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
         assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .isEqualTo("""

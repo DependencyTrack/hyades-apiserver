@@ -161,6 +161,8 @@ public class ProjectResource extends AlpineResource {
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
             @QueryParam("tag") final String tagFilter,
+            @Parameter(description = "Team to filter on. Must be exact match.")
+            @QueryParam("team") final String teamFilter,
             @Parameter(description = "Whether to show only active, or only inactive projects.")
             @QueryParam("active") final Boolean activeFilter,
             @Parameter(description = "Whether to show only root projects, i.e. those without a parent.")
@@ -169,7 +171,7 @@ public class ProjectResource extends AlpineResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -203,13 +205,15 @@ public class ProjectResource extends AlpineResource {
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
             @QueryParam("tag") final String tagFilter,
+            @Parameter(description = "Team to filter on. Must be exact match.")
+            @QueryParam("team") final String teamFilter,
             @Parameter(description = "Whether to show only active, or only inactive projects. Omitting the filter will show both.")
             @QueryParam("active") final Boolean activeFilter,
             @Parameter(description = "Whether to include metrics in the response.")
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -233,7 +237,7 @@ public class ProjectResource extends AlpineResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    
+
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProject(
             @Parameter(description = "The UUID of the project to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
