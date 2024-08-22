@@ -73,6 +73,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -212,7 +213,7 @@ public class ProjectResource extends AlpineResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, parentUuid, includeMetrics));
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();

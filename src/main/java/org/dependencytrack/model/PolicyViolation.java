@@ -100,7 +100,7 @@ public class PolicyViolation implements Serializable {
      */
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "POLICYVIOLATION_UUID_IDX")
-    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 
