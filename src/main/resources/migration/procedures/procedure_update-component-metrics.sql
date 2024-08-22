@@ -1,5 +1,5 @@
 CREATE OR REPLACE PROCEDURE "UPDATE_COMPONENT_METRICS"(
-  "component_uuid" VARCHAR
+  "component_uuid" UUID
 )
   LANGUAGE "plpgsql"
 AS

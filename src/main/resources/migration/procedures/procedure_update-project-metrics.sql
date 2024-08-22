@@ -1,12 +1,12 @@
 CREATE OR REPLACE PROCEDURE "UPDATE_PROJECT_METRICS"(
-  "project_uuid" VARCHAR(36)
+  "project_uuid" UUID
 )
   LANGUAGE "plpgsql"
 AS
 $$
 DECLARE
   "v_project_id"                              BIGINT;
-  "v_component_uuid"                          TEXT;
+  "v_component_uuid"                          UUID;
   "v_components"                              INT; -- Total number of components in the project
   "v_vulnerable_components"                   INT; -- Number of vulnerable components in the project
   "v_vulnerabilities"                         INT; -- Total number of vulnerabilities

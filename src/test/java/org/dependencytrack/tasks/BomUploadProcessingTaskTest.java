@@ -247,7 +247,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
         assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
@@ -339,7 +339,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
         assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
@@ -400,7 +400,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
         assertThat(vulnerabilityScan).isNull();
     }
 
@@ -596,7 +596,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
 
         // A VulnerabilityScan should've been initiated properly.
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier().toString());
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
         assertThat(vulnerabilityScan).isNotNull();
         assertThat(vulnerabilityScan.getTargetType()).isEqualTo(VulnerabilityScan.TargetType.PROJECT);
         assertThat(vulnerabilityScan.getTargetIdentifier()).isEqualTo(project.getUuid());
