@@ -30,7 +30,6 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +50,9 @@ public class ToolsJsonConverterTest {
         externalReference.setType(org.cyclonedx.model.ExternalReference.Type.DOCUMENTATION);
         externalReference.setUrl("https://example.com");
 
+        final var componentAuthor = new OrganizationalContact();
+        componentAuthor.setName("componentAuthor");
+
         final var vuln = new Vulnerability();
         vuln.setVulnId("INT-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
@@ -59,11 +61,7 @@ public class ToolsJsonConverterTest {
         component.setProject(project);
         component.setId(123);
         component.setUuid(UUID.randomUUID());
-        List<OrganizationalContact> componentAuthors = new ArrayList<>();
-        componentAuthors.add(new OrganizationalContact() {{
-            setName("componentAuthor");
-        }});
-        component.setAuthors(componentAuthors);
+        component.setAuthors(List.of(componentAuthor));
         component.setPublisher("componentPublisher");
         component.setSupplier(componentSupplier);
         component.setGroup("componentGroup");
@@ -134,7 +132,11 @@ public class ToolsJsonConverterTest {
                         {
                           "components": [
                             {
-                               "authors": "componentAuthor",
+                               "authors": [
+                                 {
+                                   "name": "componentAuthor"
+                                 }
+                               ],
                                "blake2b_256": "componentBlake2b_256",
                                "blake2b_384": "componentBlake2b_384",
                                "blake2b_512": "componentBlake2b_512",
@@ -204,7 +206,11 @@ public class ToolsJsonConverterTest {
                 {
                   "components": [
                     {
-                       "author": "componentAuthor",
+                       "authors": [
+                         {
+                           "name": "componentAuthor"
+                         }
+                       ],
                        "blake2b_256": "componentBlake2b_256",
                        "blake2b_384": "componentBlake2b_384",
                        "blake2b_512": "componentBlake2b_512",

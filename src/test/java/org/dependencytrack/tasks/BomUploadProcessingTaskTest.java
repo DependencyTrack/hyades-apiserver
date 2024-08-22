@@ -19,6 +19,8 @@
 package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -52,6 +54,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -1406,6 +1409,34 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             assertThat(component.getResolvedLicense()).isNotNull();
             assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("GPL-1.0");
         });
+    }
+
+    @Test
+    public void informIssue3936Test() throws Exception{
+
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        qm.persist(project);
+        List<String> boms = new ArrayList<>(Arrays.asList("bom-issue3936-authors.json", "bom-issue3936-author.json", "bom-issue3936-both.json"));
+        int i=0;
+        for(String bom : boms){
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bom));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+            assertBomProcessedNotification();
+            qm.getPersistenceManager().evictAll();
+            assertThat(qm.getAllComponents(project)).isNotEmpty();
+            Component component = qm.getAllComponents().getFirst();
+            ObjectMapper mapper = new ObjectMapper();
+            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(component);
+            System.out.println(json);
+            assertThat(component.getAuthors().get(0).getName()).isEqualTo("Joane Doe et al.");
+            if (i == 2) {
+                assertThat(component.getAuthors().size()).isEqualTo(2);
+            } else {
+                assertThat(component.getAuthors().size()).isEqualTo(1);
+                i++;
+            }
+        }
     }
 
     private void assertBomProcessedNotification() throws Exception {

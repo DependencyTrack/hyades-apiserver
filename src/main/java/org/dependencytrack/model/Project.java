@@ -24,6 +24,7 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -146,6 +147,7 @@ public class Project implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Convert(OrganizationalContactsJsonConverter.class)
     @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
+    @JsonView(JsonViews.MetadataTools.class)
     private List<OrganizationalContact> authors;
 
     @Persistent

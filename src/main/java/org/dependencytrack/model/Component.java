@@ -104,6 +104,7 @@ public class Component implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Convert(OrganizationalContactsJsonConverter.class)
     @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
+    @JsonView(JsonViews.MetadataTools.class)
     private List<OrganizationalContact> authors;
 
     @Persistent
