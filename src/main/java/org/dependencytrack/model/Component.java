@@ -380,7 +380,7 @@ public class Component implements Serializable {
 
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "COMPONENT_UUID_IDX")
-    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
+    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
     @NotNull
     private UUID uuid;
 

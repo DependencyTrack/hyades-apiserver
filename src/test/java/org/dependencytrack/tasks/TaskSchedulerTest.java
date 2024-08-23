@@ -76,16 +76,17 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
     public void test() throws Exception {
 
         taskScheduler = TaskScheduler.getInstance();
-        final var scanA = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), UUID.randomUUID(), 5);
-        final var scanB = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), UUID.randomUUID(), 1);
+
+        qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-123", 5);
+        final var scanB = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-xyz", 1);
         qm.runInTransaction(() -> scanB.setUpdatedAt(Date.from(Instant.now().minus(25, ChronoUnit.HOURS))));
-        final var scanC = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), UUID.randomUUID(), 3);
+        final var scanC = qm.createVulnerabilityScan(VulnerabilityScan.TargetType.PROJECT, UUID.randomUUID(), "token-1y3", 3);
         qm.runInTransaction(() -> scanC.setUpdatedAt(Date.from(Instant.now().minus(13, ChronoUnit.HOURS))));
         //Sleeping for 500ms after initial delay so event would be sent
         Thread.sleep(1000);
 
-        assertThat(qm.getVulnerabilityScan(scanA.getToken())).isNotNull();
-        assertThat(qm.getVulnerabilityScan(scanB.getToken())).isNull();
-        assertThat(qm.getVulnerabilityScan(scanC.getToken())).isNotNull();
+        assertThat(qm.getVulnerabilityScan("token-123")).isNotNull();
+        assertThat(qm.getVulnerabilityScan("token-xyz")).isNull();
+        assertThat(qm.getVulnerabilityScan("token-1y3")).isNotNull();
     }
 }

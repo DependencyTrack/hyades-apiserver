@@ -58,7 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -417,7 +416,7 @@ public class CelCommonPolicyLibrary implements Library {
                         """);
                 return query
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
-                        .bind("projectUuid", UUID.fromString(project.getUuid()))
+                        .bind("projectUuid", project.getUuid())
                         .bindMap(compositeNodeFilter.sqlFilterParams())
                         .mapTo(Long.class)
                         .map(count -> count > 0)
@@ -440,7 +439,7 @@ public class CelCommonPolicyLibrary implements Library {
             return query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("projectUuid", UUID.fromString(project.getUuid()))
+                    .bind("projectUuid", project.getUuid())
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .stream()
@@ -534,7 +533,7 @@ public class CelCommonPolicyLibrary implements Library {
 
                 return query
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
-                        .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
+                        .bind("leafComponentUuid", leafComponent.getUuid())
                         .bindMap(compositeNodeFilter.sqlFilterParams())
                         .mapTo(Boolean.class)
                         .findOne()
@@ -620,7 +619,7 @@ public class CelCommonPolicyLibrary implements Library {
             return query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
+                    .bind("leafComponentUuid", leafComponent.getUuid())
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .stream()
@@ -735,7 +734,7 @@ public class CelCommonPolicyLibrary implements Library {
             final List<DependencyNode> nodes = query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
+                    .bind("leafComponentUuid", leafComponent.getUuid())
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .list();
@@ -973,7 +972,7 @@ public class CelCommonPolicyLibrary implements Library {
                 """);
 
         return query
-                .bind("leafComponentUuid", UUID.fromString(component.getUuid()))
+                .bind("leafComponentUuid", component.getUuid())
                 .mapTo(Boolean.class)
                 .findOne()
                 .orElse(false);

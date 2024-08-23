@@ -480,7 +480,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                         RETURNING "ID"
                         """, Statement.RETURN_GENERATED_KEYS)) {
                     for (final Map.Entry<Long, PolicyViolation> entry : violationsToCreate.entries()) {
-                        ps.setObject(1, UUID.randomUUID());
+                        ps.setString(1, UUID.randomUUID().toString());
                         ps.setTimestamp(2, new Timestamp(entry.getValue().getTimestamp().getTime()));
                         ps.setLong(3, entry.getKey());
                         ps.setLong(4, projectId);
@@ -655,7 +655,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                 AND "P"."DIRECT_DEPENDENCIES" LIKE :wildcard WHERE "C"."UUID"= :uuid;
                 """;
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
-        query.setNamedParameters(Map.of("uuid", UUID.fromString(component.getUuid()),
+        query.setNamedParameters(Map.of("uuid", component.getUuid(),
                 "wildcard", "%" + component.getUuid() + "%"));
         long result;
         try {

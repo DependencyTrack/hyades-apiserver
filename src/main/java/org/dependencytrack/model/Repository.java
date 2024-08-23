@@ -103,7 +103,8 @@ public class Repository implements Serializable {
 
     @Persistent(customValueStrategy = "uuid")
     @Index(name = "REPOSITORY_UUID_IDX") // Cannot be @Unique. Microsoft SQL Server throws an exception
-    @Column(name = "UUID", sqlType = "UUID", allowsNull = "true")
+    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "true")
+    // New column, must allow nulls on existing databases
     @NotNull
     private UUID uuid;
 
