@@ -20,7 +20,6 @@ package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -1426,9 +1425,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             qm.getPersistenceManager().evictAll();
             assertThat(qm.getAllComponents(project)).isNotEmpty();
             Component component = qm.getAllComponents().getFirst();
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(component);
-            System.out.println(json);
             assertThat(component.getAuthors().get(0).getName()).isEqualTo("Joane Doe et al.");
             if (i == 2) {
                 assertThat(component.getAuthors().size()).isEqualTo(2);
