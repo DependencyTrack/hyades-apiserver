@@ -479,7 +479,7 @@ public class ComponentResource extends AlpineResource {
                 LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
             }
             final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
+            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
             kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
             return Response.status(Response.Status.CREATED).entity(component).build();
         }
@@ -599,7 +599,7 @@ public class ComponentResource extends AlpineResource {
                     LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
                 }
                 final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
-                qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
+                qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token().toString(), 1);
                 kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                 return Response.ok(component).build();
             } else {

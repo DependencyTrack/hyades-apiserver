@@ -1679,7 +1679,7 @@ public class QueryManager extends AlpineQueryManager {
      * @return The created {@link VulnerabilityScan}
      */
     public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
-                                                     final UUID targetIdentifier, final UUID scanToken,
+                                                     final UUID targetIdentifier, final String scanToken,
                                                      final int expectedResults) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
@@ -1711,7 +1711,7 @@ public class QueryManager extends AlpineQueryManager {
      * @param token The token that uniquely identifies the scan for clients
      * @return A {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
      */
-    public VulnerabilityScan getVulnerabilityScan(final UUID token) {
+    public VulnerabilityScan getVulnerabilityScan(final String token) {
         final Transaction trx = pm.currentTransaction();
         trx.setOptimistic(true);
         trx.setRollbackOnly(); // We won't commit anything
@@ -1783,7 +1783,7 @@ public class QueryManager extends AlpineQueryManager {
             final ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 final var vs = new VulnerabilityScan();
-                vs.setToken(UUID.fromString(scanToken));
+                vs.setToken(scanToken);
                 vs.setTargetType(VulnerabilityScan.TargetType.valueOf(rs.getString("TARGET_TYPE")));
                 vs.setTargetIdentifier(UUID.fromString(rs.getString("TARGET_IDENTIFIER")));
                 vs.setScanFailed(rs.getInt("SCAN_FAILED"));
@@ -1951,7 +1951,7 @@ public class QueryManager extends AlpineQueryManager {
             connection = (Connection) pm.getDataStoreConnection();
 
             preparedStatement = connection.prepareStatement(queryString);
-            preparedStatement.setObject(1, uuid);
+            preparedStatement.setString(1, uuid.toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 Date publishedDate = null;

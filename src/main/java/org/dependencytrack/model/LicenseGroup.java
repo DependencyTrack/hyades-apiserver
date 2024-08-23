@@ -90,7 +90,7 @@ public class LicenseGroup implements Serializable {
      */
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "LICENSEGROUP_UUID_IDX")
-    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
+    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
     @NotNull
     private UUID uuid;
 

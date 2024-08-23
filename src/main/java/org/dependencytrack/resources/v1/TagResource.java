@@ -180,7 +180,7 @@ public class TagResource extends AlpineResource {
         }
 
         final List<TaggedProjectListResponseItem> tags = taggedProjectListRows.stream()
-                .map(row -> new TaggedProjectListResponseItem(row.uuid(), row.name(), row.version()))
+                .map(row -> new TaggedProjectListResponseItem(UUID.fromString(row.uuid()), row.name(), row.version()))
                 .toList();
         final long totalCount = taggedProjectListRows.isEmpty() ? 0 : taggedProjectListRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
@@ -309,7 +309,7 @@ public class TagResource extends AlpineResource {
         }
 
         final List<TaggedPolicyListResponseItem> tags = taggedPolicyListRows.stream()
-                .map(row -> new TaggedPolicyListResponseItem(row.uuid(), row.name()))
+                .map(row -> new TaggedPolicyListResponseItem(UUID.fromString(row.uuid()), row.name()))
                 .toList();
         final long totalCount = taggedPolicyListRows.isEmpty() ? 0 : taggedPolicyListRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
