@@ -171,7 +171,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = ANY((:vulnUuids)::TEXT[])
+              "C"."UUID" = :componentUuid AND "V"."UUID" = ANY(:vulnUuids)
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @RegisterRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
@@ -282,7 +282,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT
+              "C"."UUID" = :componentUuid
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @UseRowReducer(NotificationSubjectNewVulnerableDependencyRowReducer.class)
@@ -396,7 +396,7 @@ public interface NotificationSubjectDao extends SqlObject {
                   OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
             ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = (:vulnUuid)::TEXT
+              "C"."UUID" = :componentUuid AND "V"."UUID" = :vulnUuid
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
     Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid, AnalysisState analysisState, boolean isSuppressed);
@@ -427,7 +427,7 @@ public interface NotificationSubjectDao extends SqlObject {
              WHERE "VS"."TOKEN" = ANY(:workflowTokens)
             """)
     @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
-    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<String> workflowTokens);
+    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<UUID> workflowTokens);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
@@ -442,7 +442,7 @@ public interface NotificationSubjectDao extends SqlObject {
                      WHERE "PT"."PROJECT_ID" = "P"."ID"
                    ) AS "projectTags"
               FROM "PROJECT" AS "P"
-             WHERE "P"."UUID" = (:projectUuid)::TEXT
+             WHERE "P"."UUID" = :projectUuid
             """)
     Optional<Project> getProject(UUID projectUuid);
 
@@ -535,7 +535,7 @@ public interface NotificationSubjectDao extends SqlObject {
                         WHERE "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
                           AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
                         """)
-                .bind("projectUuid", optionalProject.get().getUuid())
+                .bind("projectUuid", UUID.fromString(optionalProject.get().getUuid()))
                 .registerRowMapper(Component.class, new NotificationComponentRowMapper())
                 .registerRowMapper(Vulnerability.class, new NotificationVulnerabilityRowMapper())
                 .map(JoinRowMapper.forTypes(Component.class, Vulnerability.class))
@@ -554,7 +554,7 @@ public interface NotificationSubjectDao extends SqlObject {
         }
 
         final var subject = ProjectVulnAnalysisCompleteSubject.newBuilder()
-                .setToken(vulnScan.getToken())
+                .setToken(String.valueOf(vulnScan.getToken()))
                 .setStatus(switch (vulnScan.getStatus()) {
                     case COMPLETED -> PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
                     case FAILED -> PROJECT_VULN_ANALYSIS_STATUS_FAILED;

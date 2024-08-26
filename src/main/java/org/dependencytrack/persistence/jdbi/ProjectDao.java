@@ -177,7 +177,7 @@ public interface ProjectDao {
             @Bind String teamFilter,
             @Bind Boolean activeFilter,
             @Bind Boolean onlyRootFilter,
-            @Bind String parentUuidFilter,
+            @Bind UUID parentUuidFilter,
             @Define boolean includeMetrics
     );
 

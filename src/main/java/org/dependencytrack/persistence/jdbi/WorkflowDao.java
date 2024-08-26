@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 public interface WorkflowDao {
 
@@ -47,12 +48,12 @@ public interface WorkflowDao {
     @GetGeneratedKeys("*")
     @RegisterBeanMapper(WorkflowState.class)
     List<WorkflowState> updateAllStates(@Bind WorkflowStep step,
-                                        @Bind("token") List<String> tokens,
+                                        @Bind("token") List<UUID> tokens,
                                         @Bind("status") List<WorkflowStatus> statuses,
                                         @Bind("failureReason") List<String> failureReasons);
 
     default Optional<WorkflowState> updateState(final WorkflowStep step,
-                                                final String token,
+                                                final UUID token,
                                                 final WorkflowStatus status,
                                                 final String failureReason) {
         final List<WorkflowState> updatedStates = updateAllStates(step, List.of(token), List.of(status), Collections.singletonList(failureReason));
@@ -70,9 +71,9 @@ public interface WorkflowDao {
                AND "STATUS" = :status
                AND "TOKEN" = ANY(:tokens)
             """)
-    Set<String> getTokensByStepAndStateAndTokenAnyOf(@Bind WorkflowStep step,
+    Set<UUID> getTokensByStepAndStateAndTokenAnyOf(@Bind WorkflowStep step,
                                                      @Bind WorkflowStatus status,
-                                                     @Bind Collection<String> tokens);
+                                                     @Bind Collection<UUID> tokens);
 
     @SqlBatch("""
             WITH RECURSIVE
@@ -97,6 +98,6 @@ public interface WorkflowDao {
                  , "UPDATED_AT" = NOW()
              WHERE "ID" IN (SELECT "ID" FROM "CTE_CHILDREN")
             """)
-    void cancelAllChildren(@Bind WorkflowStep step, @Bind("token") List<String> tokens);
+    void cancelAllChildren(@Bind WorkflowStep step, @Bind("token") List<UUID> tokens);
 
 }

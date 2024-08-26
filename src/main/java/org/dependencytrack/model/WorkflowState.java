@@ -49,7 +49,7 @@ public class WorkflowState implements Serializable {
     private WorkflowState parent;
 
     @Persistent
-    @Column(name = "TOKEN", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "TOKEN", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID token;
 
