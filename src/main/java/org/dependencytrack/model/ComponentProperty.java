@@ -110,7 +110,7 @@ public class ComponentProperty implements IConfigProperty, Serializable {
 
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "COMPONENT_PROPERTY_UUID_IDX")
-    @Column(name = "UUID", allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 

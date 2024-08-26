@@ -166,7 +166,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
             }
             preparedStatement.setLong(1, parentWorkflowState.getId());
-            preparedStatement.setString(2, parentWorkflowState.getToken().toString());
+            preparedStatement.setObject(2, parentWorkflowState.getToken());
 
             preparedStatement.execute();
             rs = preparedStatement.getResultSet();
@@ -210,7 +210,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             preparedStatement.setString(1, transientStatus.name());
             preparedStatement.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
             preparedStatement.setLong(3, parentWorkflowState.getId());
-            preparedStatement.setString(4, parentWorkflowState.getToken().toString());
+            preparedStatement.setObject(4, parentWorkflowState.getToken());
 
             return preparedStatement.executeUpdate();
         } catch (Exception ex) {

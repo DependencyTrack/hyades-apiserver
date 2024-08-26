@@ -69,7 +69,7 @@ public final class Metrics {
      */
     public static void updateProjectMetrics(final UUID projectUuid) {
         useJdbiHandle(handle -> handle
-                .createCall("CALL \"UPDATE_PROJECT_METRICS\"((:uuid)::VARCHAR)")
+                .createCall("CALL \"UPDATE_PROJECT_METRICS\"(:uuid)")
                 .bind("uuid", projectUuid)
                 .invoke());
     }
@@ -82,7 +82,7 @@ public final class Metrics {
      */
     public static void updateComponentMetrics(final UUID componentUuid) {
         useJdbiHandle(handle -> handle
-                .createCall("CALL \"UPDATE_COMPONENT_METRICS\"((:uuid)::VARCHAR)")
+                .createCall("CALL \"UPDATE_COMPONENT_METRICS\"(:uuid)")
                 .bind("uuid", componentUuid)
                 .invoke());
     }

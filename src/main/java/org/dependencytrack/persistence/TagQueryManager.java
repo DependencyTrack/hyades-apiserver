@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -138,10 +139,10 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
     /**
      * @since 4.12.0
      */
-    public record TaggedProjectRow(String uuid, String name, String version, long totalCount) {
+    public record TaggedProjectRow(UUID uuid, String name, String version, long totalCount) {
 
         @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedProjectRow(String uuid, String name, String version, int totalCount) {
+        public TaggedProjectRow(UUID uuid, String name, String version, int totalCount) {
             this(uuid, name, version, (long) totalCount);
         }
 
@@ -399,10 +400,10 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
     /**
      * @since 4.12.0
      */
-    public record TaggedPolicyRow(String uuid, String name, long totalCount) {
+    public record TaggedPolicyRow(UUID uuid, String name, long totalCount) {
 
         @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedPolicyRow(String uuid, String name, int totalCount) {
+        public TaggedPolicyRow(UUID uuid, String name, int totalCount) {
             this(uuid, name, (long) totalCount);
         }
 
