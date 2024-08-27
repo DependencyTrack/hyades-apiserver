@@ -195,8 +195,11 @@ public class CycloneDxValidator {
                         case NS_BOM_16 -> VERSION_16;
                         default -> null;
                     };
-                }
 
+                    if (schemaVersion != null) {
+                        break;
+                    }
+                }
                 if (schemaVersion == null) {
                     throw new InvalidBomException("Unable to determine schema version from XML namespaces %s"
                             .formatted(namespaceUrisSeen));

@@ -91,6 +91,7 @@ import java.util.stream.Stream;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
+import static org.apache.commons.io.IOUtils.resourceToByteArray;
 import static org.apache.commons.io.IOUtils.resourceToString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -1416,5 +1417,11 @@ public class BomResourceTest extends ResourceTest {
         assertThat(project.getTags())
                 .extracting(Tag::getName)
                 .containsExactlyInAnyOrder("tag1", "tag2");
+    }
+
+    @Test
+    public void validateCycloneDxBomWithMultipleNamespacesTest() throws Exception {
+        byte[] bom = resourceToByteArray("/unit/bom-issue4008.xml");
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(bom));
     }
 }
