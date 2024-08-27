@@ -22,6 +22,8 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import liquibase.Liquibase;
 import liquibase.Scope;
 import liquibase.UpdateSummaryOutputEnum;
@@ -36,8 +38,6 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.ui.LoggerUIService;
 import org.dependencytrack.common.ConfigKey;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Optional;
@@ -59,8 +59,14 @@ public class MigrationInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (!config.getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+            LOGGER.info("Not running migrations because %s is disabled"
+                    .formatted(ConfigKey.INIT_TASKS_ENABLED.getPropertyName()));
+            return;
+        }
         if (!config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS)) {
-            LOGGER.info("Migrations are disabled; Skipping");
+            LOGGER.info("Not running migrations because %s is disabled"
+                    .formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
             return;
         }
 

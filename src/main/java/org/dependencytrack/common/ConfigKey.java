@@ -99,6 +99,8 @@ public enum ConfigKey implements Config.Key {
     DATABASE_MIGRATION_PASSWORD("database.migration.password", null),
     DATABASE_RUN_MIGRATIONS("database.run.migrations", true),
     DATABASE_RUN_MIGRATIONS_ONLY("database.run.migrations.only", false),
+    INIT_TASKS_ENABLED("init.tasks.enabled", true),
+    INIT_AND_EXIT("init.and.exit", false),
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),

@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
@@ -52,15 +54,36 @@ public class DefaultObjectGenerator implements ServletContextListener {
      */
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Initializing default object generator");
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+            LOGGER.info("Not populating database with default objects because %s is disabled"
+                    .formatted(ConfigKey.INIT_TASKS_ENABLED.getPropertyName()));
+            return;
+        }
 
-        loadDefaultPermissions();
-        loadDefaultPersonas();
-        loadDefaultLicenses();
-        loadDefaultLicenseGroups();
-        loadDefaultRepositories();
-        loadDefaultConfigProperties();
-        loadDefaultNotificationPublishers();
+        try {
+            LOGGER.info("Initializing default object generator");
+            loadDefaultPermissions();
+            loadDefaultPersonas();
+            loadDefaultLicenses();
+            loadDefaultLicenseGroups();
+            loadDefaultRepositories();
+            loadDefaultConfigProperties();
+            loadDefaultNotificationPublishers();
+        } catch (RuntimeException e) {
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+                // Make absolutely sure that we exit with non-zero code so
+                // the container orchestrator knows to restart the container.
+                LOGGER.error("Failed to populate database with default objects", e);
+                System.exit(1);
+            }
+
+            throw new RuntimeException("Failed to populate database with default objects", e);
+        }
+
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
+            System.exit(0);
+        }
     }
 
     /**
