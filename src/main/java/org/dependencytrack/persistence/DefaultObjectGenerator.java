@@ -24,6 +24,8 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -32,12 +34,16 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.util.NotificationUtil;
+import org.dependencytrack.util.WaitingLockConfiguration;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
+import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 
 /**
  * Creates default objects on an empty database.
@@ -60,30 +66,51 @@ public class DefaultObjectGenerator implements ServletContextListener {
             return;
         }
 
+        // Ensure that this task is only executed by a single instance at once.
+        // Wait for lock acquisition rather than simply skipping execution,
+        // since application logic may depend on default objects being present.
+        final var lockConfig = new WaitingLockConfiguration(
+                /* createdAt */ Instant.now(),
+                /* name */ getClass().getName(),
+                /* lockAtMostFor */ Duration.ofMinutes(5),
+                /* lockAtLeastFor */ Duration.ZERO,
+                /* pollInterval */ Duration.ofSeconds(1),
+                /* waitTimeout */ Duration.ofMinutes(5)
+        );
+
         try {
-            LOGGER.info("Initializing default object generator");
-            loadDefaultPermissions();
-            loadDefaultPersonas();
-            loadDefaultLicenses();
-            loadDefaultLicenseGroups();
-            loadDefaultRepositories();
-            loadDefaultConfigProperties();
-            loadDefaultNotificationPublishers();
-        } catch (RuntimeException e) {
+            executeWithLockWaiting(lockConfig, this::executeLocked);
+        } catch (Throwable t) {
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
                 // Make absolutely sure that we exit with non-zero code so
                 // the container orchestrator knows to restart the container.
-                LOGGER.error("Failed to populate database with default objects", e);
+                LOGGER.error("Failed to populate database with default objects", t);
                 System.exit(1);
             }
 
-            throw new RuntimeException("Failed to populate database with default objects", e);
+            throw new RuntimeException("Failed to populate database with default objects", t);
         }
 
         if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
             LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
             System.exit(0);
         }
+    }
+
+    private void executeLocked() {
+        assertLocked();
+
+        // TODO: Can we add some checks that allow us to short-circuit, if the desired defaults
+        //  are already present in the database?
+
+        LOGGER.info("Initializing default object generator");
+        loadDefaultPermissions();
+        loadDefaultPersonas();
+        loadDefaultLicenses();
+        loadDefaultLicenseGroups();
+        loadDefaultRepositories();
+        loadDefaultConfigProperties();
+        loadDefaultNotificationPublishers();
     }
 
     /**
