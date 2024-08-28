@@ -20,6 +20,7 @@ package org.dependencytrack.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
+import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 
 /**
@@ -100,8 +102,15 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void executeLocked() {
         assertLocked();
 
-        // TODO: Can we add some checks that allow us to short-circuit, if the desired defaults
-        //  are already present in the database?
+        if (!shouldExecute()) {
+            LOGGER.info("Default objects already populated for build %s (timestamp: %s); Skipping".formatted(
+                    Config.getInstance().getApplicationBuildUuid(),
+                    Config.getInstance().getApplicationBuildTimestamp()
+            ));
+            return;
+        }
+
+        // TODO: Make population transactional with recordDefaultObjectsVersion().
 
         LOGGER.info("Initializing default object generator");
         loadDefaultPermissions();
@@ -111,6 +120,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
         loadDefaultRepositories();
         loadDefaultConfigProperties();
         loadDefaultNotificationPublishers();
+
+        recordDefaultObjectsVersion();
     }
 
     /**
@@ -119,6 +130,32 @@ public class DefaultObjectGenerator implements ServletContextListener {
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
         /* Intentionally blank to satisfy interface */
+    }
+
+    private boolean shouldExecute() {
+        try (final var qm = new QueryManager()) {
+            final ConfigProperty configProperty = qm.getConfigProperty(
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
+            );
+
+            return configProperty == null
+                    || configProperty.getPropertyValue() == null
+                    || !Config.getInstance().getApplicationBuildUuid().equals(configProperty.getPropertyValue());
+        }
+    }
+
+    private void recordDefaultObjectsVersion() {
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final ConfigProperty configProperty = qm.getConfigProperty(
+                        INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
+                        INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
+                );
+
+                configProperty.setPropertyValue(Config.getInstance().getApplicationBuildUuid());
+            });
+        }
     }
 
     /**
