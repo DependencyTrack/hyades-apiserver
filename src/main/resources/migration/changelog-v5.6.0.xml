@@ -33,4 +33,9 @@
         <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
         <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-2" author="rossmurphy974@gmail.com">
+        <renameColumn tableName="PROJECT" oldColumnName="AUTHOR" newColumnName="AUTHORS"/>
+        <renameColumn tableName="COMPONENT" oldColumnName="AUTHOR" newColumnName="AUTHORS"/>
+    </changeSet>
 </databaseChangeLog>

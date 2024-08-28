@@ -395,6 +395,7 @@ public class Component implements Serializable {
     private transient int usedBy;
     private transient Set<String> dependencyGraph;
     private transient boolean expandDependencyGraph;
+    private transient String author;
 
     public long getId() {
         return id;
@@ -865,6 +866,14 @@ public class Component implements Serializable {
 
     public void setExpandDependencyGraph(boolean expandDependencyGraph) {
         this.expandDependencyGraph = expandDependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public void setAuthor(String author){
+        this.author=author;
     }
 
     @Override

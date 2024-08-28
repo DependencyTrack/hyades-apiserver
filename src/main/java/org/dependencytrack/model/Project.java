@@ -312,6 +312,8 @@ public class Project implements Serializable {
 
     private transient List<Component> dependencyGraph;
 
+    private transient String author;
+
     public long getId() {
         return id;
     }
@@ -572,6 +574,14 @@ public class Project implements Serializable {
     @JsonIgnore
     public void setDependencyGraph(List<Component> dependencyGraph) {
         this.dependencyGraph = dependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public String setAuthor(String author){
+        return this.author=author;
     }
 
     @Override

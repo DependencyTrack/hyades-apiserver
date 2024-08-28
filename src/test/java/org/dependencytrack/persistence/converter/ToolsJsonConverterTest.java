@@ -206,6 +206,7 @@ public class ToolsJsonConverterTest {
                 {
                   "components": [
                     {
+                       "author": "componentAuthor",
                        "authors": [
                          {
                            "name": "componentAuthor"
@@ -276,6 +277,7 @@ public class ToolsJsonConverterTest {
         assertThat(tools).isNotNull();
         assertThat(tools.components()).satisfiesExactly(component -> {
              assertThat(component.getAuthors().get(0).getName()).isEqualTo("componentAuthor");
+             assertThat(component.getAuthors().size()==1);
              assertThat(component.getBlake2b_256()).isEqualTo("componentBlake2b_256");
              assertThat(component.getBlake2b_384()).isEqualTo("componentBlake2b_384");
              assertThat(component.getBlake2b_512()).isEqualTo("componentBlake2b_512");

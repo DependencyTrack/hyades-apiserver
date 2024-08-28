@@ -40,7 +40,7 @@
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="COMPONENT_PK"/>
             </column>
-            <column name="AUTHORS" type="TEXT"/>
+            <column name="AUTHOR" type="TEXT"/>
             <column name="BLAKE2B_256" type="VARCHAR(64)"/>
             <column name="BLAKE2B_384" type="VARCHAR(96)"/>
             <column name="BLAKE2B_512" type="VARCHAR(128)"/>
@@ -986,7 +986,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_PK"/>
             </column>
             <column name="ACTIVE" type="BOOLEAN"/>
-            <column name="AUTHORS" type="VARCHAR(255)"/>
+            <column name="AUTHOR" type="VARCHAR(255)"/>
             <column name="CLASSIFIER" type="VARCHAR(255)"/>
             <column name="CPE" type="VARCHAR(255)"/>
             <column name="DESCRIPTION" type="VARCHAR(255)"/>

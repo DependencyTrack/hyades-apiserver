@@ -178,6 +178,11 @@ public class BomResourceTest extends ResourceTest {
         project.setClassifier(Classifier.APPLICATION);
         project.setManufacturer(projectManufacturer);
         project.setSupplier(projectSupplier);
+        List<OrganizationalContact> authors = new ArrayList<>();
+        authors.add(new OrganizationalContact() {{
+            setName("SampleAuthor");
+        }});
+        project.setAuthors(authors);
         project = qm.createProject(project, null, false);
 
         final var projectProperty = new ProjectProperty();
@@ -285,6 +290,7 @@ public class BomResourceTest extends ResourceTest {
                                 "component": {
                                     "type": "application",
                                     "bom-ref": "${json-unit.matches:projectUuid}",
+                                    "author": "SampleAuthor",
                                     "supplier": {
                                       "name": "projectSupplier"
                                     },
