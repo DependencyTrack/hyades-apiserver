@@ -21,6 +21,7 @@ package org.dependencytrack.persistence;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.CryptographyMetrics;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
@@ -220,4 +221,27 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
         final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
         query.deletePersistentAll(component);
     }
+
+     /**
+     * Returns a paginated result containing cryptography metrics ordered by last occurrence date.
+      *
+      * @return a PaginatedResult containing CryptographyMetrics objects, ordered by last occurrence date.
+      */
+     public PaginatedResult getCryptographyMetrics() {
+         final Query<CryptographyMetrics> query = pm.newQuery(CryptographyMetrics.class);
+         query.setOrdering("lastOccurrence desc");
+         return execute(query);
+     }
+ 
+     /**
+      * Returns a list of cryptography metrics that have been updated since the specified date.
+      * @param since The date to compare against the last occurrence of each metric. Metrics with a last occurrence date greater than or equal to this date will be included in the result.
+      * @return A list of {@link CryptographyMetrics} objects that have been updated since the specified date.
+      */
+     @SuppressWarnings("unchecked")
+     public List<CryptographyMetrics> getCryptographyMetricsSince(Date since) {
+         final Query<CryptographyMetrics> query = pm.newQuery(CryptographyMetrics.class, "lastOccurrence >= :since");
+         query.setOrdering("lastOccurrence asc");
+         return (List<CryptographyMetrics>) query.execute(since);
+     }
 }

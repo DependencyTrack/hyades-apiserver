@@ -56,6 +56,7 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.CryptographyMetrics;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
@@ -147,6 +148,7 @@ public class QueryManager extends AlpineQueryManager {
     private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
+    private CryptoAssetQueryManager cryptoAssetQueryManager;
     private FindingsQueryManager findingsQueryManager;
     private FindingsSearchQueryManager findingsSearchQueryManager;
     private LicenseQueryManager licenseQueryManager;
@@ -477,6 +479,13 @@ public class QueryManager extends AlpineQueryManager {
         return integrityAnalysisQueryManager;
     }
 
+    private CryptoAssetQueryManager getCryptoAssetQueryManager() {
+        if (cryptoAssetQueryManager == null) {
+            cryptoAssetQueryManager = (request == null) ? new CryptoAssetQueryManager(getPersistenceManager()) : new CryptoAssetQueryManager(getPersistenceManager(), request);
+        }
+        return cryptoAssetQueryManager;
+    }
+
     private void disableL2Cache() {
         pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
     }
@@ -716,6 +725,18 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getComponents(ComponentIdentity identity, Project project, boolean includeMetrics) {
         return getComponentQueryManager().getComponents(identity, project, includeMetrics);
+    }
+
+    public List<Component> getAllCryptoAssets() {
+        return getCryptoAssetQueryManager().getAllCryptoAssets();
+    }
+
+    public List<Component> getAllCryptoAssets(Project project) {
+        return getCryptoAssetQueryManager().getAllCryptoAssets(project);
+    }
+
+    public PaginatedResult getCryptoAssets(ComponentIdentity identity) {
+        return getCryptoAssetQueryManager().getCryptoAssets(identity);
     }
 
     public Component createComponent(Component component, boolean commitIndex) {
@@ -1300,6 +1321,14 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getDependencyMetricsSince(component, since);
     }
 
+    public PaginatedResult getCryptographyMetrics() {
+        return getMetricsQueryManager().getCryptographyMetrics();
+    }
+
+    public List<CryptographyMetrics> getCryptographyMetricsSince(Date since) {
+        return getMetricsQueryManager().getCryptographyMetricsSince(since);
+    }
+    
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
     }

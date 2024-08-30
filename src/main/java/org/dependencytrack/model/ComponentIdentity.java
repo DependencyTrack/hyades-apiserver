@@ -20,6 +20,8 @@ package org.dependencytrack.model;
 
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+
+import org.cyclonedx.model.component.crypto.enums.AssetType;
 import org.dependencytrack.util.PurlUtil;
 import org.json.JSONObject;
 
@@ -47,6 +49,8 @@ public class ComponentIdentity {
     private String name;
     private String version;
     private UUID uuid;
+    private String oid;
+    private AssetType assetType;
 
     public ComponentIdentity(final PackageURL purl, final String cpe, final String swidTagId,
                              final String group, final String name, final String version) {
@@ -70,6 +74,8 @@ public class ComponentIdentity {
         this.version = component.getVersion();
         this.uuid = component.getUuid();
         this.objectType = ObjectType.COMPONENT;
+        this.assetType = component.getCryptoAssetProperties() != null ? component.getCryptoAssetProperties().getAssetType() : null;
+        this.oid = component.getCryptoAssetProperties() != null ? component.getCryptoAssetProperties().getOid() : null;
     }
 
     public ComponentIdentity(final org.cyclonedx.model.Component component) {
@@ -85,6 +91,8 @@ public class ComponentIdentity {
         this.name = component.getName();
         this.version = component.getVersion();
         this.objectType = ObjectType.COMPONENT;
+        this.assetType = component.getCryptoProperties() != null ? component.getCryptoProperties().getAssetType() : null;
+        this.oid = component.getCryptoProperties() != null ? component.getCryptoProperties().getOid() : null;
     }
 
     public ComponentIdentity(final ServiceComponent service) {
@@ -100,6 +108,12 @@ public class ComponentIdentity {
         this.name = service.getName();
         this.version = service.getVersion();
         this.objectType = ObjectType.SERVICE;
+    }
+
+    // search crypto assets by asset type
+    public ComponentIdentity(AssetType assetType) {
+        this.objectType = ObjectType.COMPONENT;
+        this.assetType = assetType;
     }
 
     public ObjectType getObjectType() {
@@ -138,17 +152,43 @@ public class ComponentIdentity {
         return uuid;
     }
 
-    @Override
+    public AssetType getAssetType() {
+        return assetType;
+    }
+
+    public void setAssetType(AssetType assetType) {
+        this.assetType = assetType;
+    }
+
+    public String getOid() {
+        return oid;
+    }
+
+    public void setOid(String oid) {
+        this.oid = oid;
+    }
+    
+     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         final ComponentIdentity that = (ComponentIdentity) o;
-        return objectType == that.objectType && Objects.equals(purl, that.purl) && Objects.equals(purlCoordinates, that.purlCoordinates) && Objects.equals(cpe, that.cpe) && Objects.equals(swidTagId, that.swidTagId) && Objects.equals(group, that.group) && Objects.equals(name, that.name) && Objects.equals(version, that.version) && Objects.equals(uuid, that.uuid);
+        return objectType == that.objectType &&
+            Objects.equals(purl, that.purl) &&
+            Objects.equals(purlCoordinates, that.purlCoordinates) &&
+            Objects.equals(cpe, that.cpe) &&
+            Objects.equals(swidTagId, that.swidTagId) &&
+            Objects.equals(group, that.group) &&
+            Objects.equals(name, that.name) &&
+            Objects.equals(version, that.version) &&
+            Objects.equals(uuid, that.uuid) &&
+            assetType == that.assetType &&
+            Objects.equals(oid, that.oid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(objectType, purl, purlCoordinates, cpe, swidTagId, group, name, version, uuid);
+        return Objects.hash(objectType, purl, purlCoordinates, cpe, swidTagId, group, name, version, uuid, assetType, oid);
     }
 
     public JSONObject toJSON() {
