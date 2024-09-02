@@ -85,7 +85,7 @@
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
         <lib.awaitility.version>4.2.1</lib.awaitility.version>
-        <lib.cel-tools.version>0.4.5</lib.cel-tools.version>
+        <lib.cel-tools.version>0.5.0</lib.cel-tools.version>
         <lib.checkstyle.version>10.17.0</lib.checkstyle.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.19.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
@@ -93,6 +93,13 @@
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>9.0.5</lib.cyclonedx-java.version>
+        <!--
+            Temporarily overwriting DataNucleus version to resolve https://github.com/DependencyTrack/dependency-track/issues/2061.
+            TODO: Remove these when upgrading to Alpine > 3.0.1.
+        -->
+        <lib.datanucleus-api-jdo.version>6.0.3</lib.datanucleus-api-jdo.version>
+        <lib.datanucleus.version>6.0.8</lib.datanucleus.version>
+        <lib.datanucleus-rdbms.version>6.0.8</lib.datanucleus-rdbms.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.3</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
@@ -106,7 +113,7 @@
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
-        <lib.protobuf-java.version>3.25.4</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.28.0</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.1</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.swagger-parser.version>2.1.22</lib.swagger-parser.version>
@@ -116,7 +123,7 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.16</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>5.15.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>5.15.1</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <lib.jdbc-driver.postgresql.version>42.7.3</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->

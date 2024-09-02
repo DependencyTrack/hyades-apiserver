@@ -28,6 +28,7 @@ import java.util.UUID;
 public enum ConfigPropertyConstants {
 
     INTERNAL_CLUSTER_ID("internal", "cluster.id", UUID.randomUUID().toString(), PropertyType.STRING, "Unique identifier of the cluster", ConfigPropertyAccessMode.READ_ONLY),
+    INTERNAL_DEFAULT_OBJECTS_VERSION("internal", "default.objects.version", null, PropertyType.STRING, "Version of the default objects in the database", ConfigPropertyAccessMode.READ_ONLY),
     GENERAL_BASE_URL("general", "base.url", null, PropertyType.URL, "URL used to construct links back to Dependency-Track from external systems", ConfigPropertyAccessMode.READ_WRITE),
     GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SVG badge support from metrics", ConfigPropertyAccessMode.READ_WRITE),
     EMAIL_SMTP_ENABLED("email", "smtp.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SMTP", ConfigPropertyAccessMode.READ_WRITE),
