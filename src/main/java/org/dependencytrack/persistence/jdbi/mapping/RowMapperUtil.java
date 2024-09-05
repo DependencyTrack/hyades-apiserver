@@ -126,6 +126,17 @@ public class RowMapperUtil {
         return Arrays.asList((String[]) array.getArray());
     }
 
+    public static List<Long> longArray(final ResultSet rs, final String columnName) throws SQLException {
+        final Array array = rs.getArray(columnName);
+        if (array == null) {
+            return Collections.emptyList();
+        }
+        if (array.getBaseType() != Types.BIGINT) {
+            throw new IllegalArgumentException("Expected array with base type BIGINT, but got %s".formatted(array.getBaseTypeName()));
+        }
+        return Arrays.asList((Long[]) array.getArray());
+    }
+
     public static <T> T deserializeJson(final ResultSet rs, final String columnName, final TypeReference<T> typeReference) throws SQLException {
         final String jsonString = rs.getString(columnName);
         if (isBlank(jsonString)) {

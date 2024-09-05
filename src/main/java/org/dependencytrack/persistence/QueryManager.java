@@ -142,7 +142,7 @@ import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_F
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class QueryManager extends AlpineQueryManager {
 
-    private AlpineRequest request;
+    protected AlpineRequest request;
 
     private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
