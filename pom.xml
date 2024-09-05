@@ -84,10 +84,10 @@
     <properties>
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
-        <lib.awaitility.version>4.2.1</lib.awaitility.version>
+        <lib.awaitility.version>4.2.2</lib.awaitility.version>
         <lib.cel-tools.version>0.5.0</lib.cel-tools.version>
         <lib.checkstyle.version>10.17.0</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.19.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.20.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -101,17 +101,17 @@
         <lib.datanucleus.version>6.0.8</lib.datanucleus.version>
         <lib.datanucleus-rdbms.version>6.0.8</lib.datanucleus-rdbms.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jdbi.version>3.45.3</lib.jdbi.version>
+        <lib.jdbi.version>3.45.4</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.8.0</lib.kafka.version>
-        <lib.liquibase.version>4.29.1</lib.liquibase.version>
+        <lib.liquibase.version>4.29.2</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.12</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.9.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
+        <lib.parallel-consumer.version>0.5.3.1</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>4.28.0</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.1</lib.testcontainers.version>
@@ -125,7 +125,7 @@
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>5.15.1</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.3</lib.jdbc-driver.postgresql.version>
+        <lib.jdbc-driver.postgresql.version>42.7.4</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
@@ -172,16 +172,6 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-jdk8</artifactId>
                 <version>${lib.kotlin-stdlib.version}</version>
-            </dependency>
-
-            <!--
-              Workaround for https://github.com/liquibase/liquibase/issues/6178.
-              Can be removed when upgrading Liquibase to >= 4.29.2.
-            -->
-            <dependency>
-              <groupId>org.apache.commons</groupId>
-              <artifactId>commons-lang3</artifactId>
-              <version>3.14.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
