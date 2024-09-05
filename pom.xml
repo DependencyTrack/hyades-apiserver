@@ -173,16 +173,6 @@
                 <artifactId>kotlin-stdlib-jdk8</artifactId>
                 <version>${lib.kotlin-stdlib.version}</version>
             </dependency>
-
-            <!--
-              Workaround for https://github.com/liquibase/liquibase/issues/6178.
-              Can be removed when upgrading Liquibase to >= 4.29.2.
-            -->
-            <dependency>
-              <groupId>org.apache.commons</groupId>
-              <artifactId>commons-lang3</artifactId>
-              <version>3.14.0</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
