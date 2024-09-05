@@ -101,7 +101,7 @@
         <lib.datanucleus.version>6.0.8</lib.datanucleus.version>
         <lib.datanucleus-rdbms.version>6.0.8</lib.datanucleus-rdbms.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jdbi.version>3.45.3</lib.jdbi.version>
+        <lib.jdbi.version>3.45.4</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.8.0</lib.kafka.version>
