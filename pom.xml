@@ -111,7 +111,7 @@
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.9.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
+        <lib.parallel-consumer.version>0.5.3.1</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>4.28.0</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.1</lib.testcontainers.version>
