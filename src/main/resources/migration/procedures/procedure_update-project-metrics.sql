@@ -112,10 +112,15 @@ BEGIN
 
   "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
+  WITH "CTE_LATEST_METRICS" AS (
+    SELECT *
+      FROM "PROJECTMETRICS"
+     WHERE "PROJECT_ID" = "v_project_id"
+     ORDER BY "LAST_OCCURRENCE" DESC
+     LIMIT 1)
   SELECT "ID"
-  FROM "PROJECTMETRICS"
-  WHERE "PROJECT_ID" = "v_project_id"
-    AND "COMPONENTS" = "v_components"
+  FROM "CTE_LATEST_METRICS"
+  WHERE "COMPONENTS" = "v_components"
     AND "VULNERABLECOMPONENTS" = "v_vulnerable_components"
     AND "VULNERABILITIES" = "v_vulnerabilities"
     AND "CRITICAL" = "v_critical"
@@ -143,7 +148,6 @@ BEGIN
     AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
     AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
     AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  ORDER BY "LAST_OCCURRENCE" DESC
   LIMIT 1
   INTO "v_existing_id";
 
