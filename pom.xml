@@ -24,7 +24,7 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>3.0.1</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -736,15 +736,10 @@
                 <version>${plugin.jetty.version}</version>
                 <configuration>
                     <webApp>
-                        <contextPath>/</contextPath>
+                        <!-- Disable classpath scanning. -->
+                        <containerIncludeJarPattern>^$</containerIncludeJarPattern>
+                        <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
                     </webApp>
-                    <systemProperties>
-                        <!--
-                            Disable Jetty warnings about JARs being scanned from multiple locations.
-                            https://stackoverflow.com/a/73964232
-                        -->
-                        <org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>ERROR</org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>
-                    </systemProperties>
                 </configuration>
             </plugin>
             <plugin>
@@ -838,6 +833,11 @@
                             <systemProperties>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
+                            <webApp>
+                                <!-- Disable classpath scanning. -->
+                                <containerIncludeJarPattern>^$</containerIncludeJarPattern>
+                                <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
+                            </webApp>
                         </configuration>
                     </plugin>
                 </plugins>
