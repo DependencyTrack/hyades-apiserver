@@ -33,4 +33,8 @@
         <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
         <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-2" author="nscuro">
+        <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
+    </changeSet>
 </databaseChangeLog>
