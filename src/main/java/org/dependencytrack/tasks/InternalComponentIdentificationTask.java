@@ -29,7 +29,6 @@ import org.apache.commons.lang3.time.DateFormatUtils;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.util.LockProvider;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.SqlStatements;
 
@@ -41,8 +40,9 @@ import java.util.Map;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.tasks.LockName.INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 /**
  * Subscriber task that identifies internal components throughout the entire portfolio.
@@ -58,7 +58,9 @@ public class InternalComponentIdentificationTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof InternalComponentIdentificationEvent) {
             try {
-                LockProvider.executeWithLock(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK, (LockingTaskExecutor.Task) this::analyze);
+                executeWithLock(
+                        getLockConfigForTask(InternalComponentIdentificationTask.class),
+                        (LockingTaskExecutor.Task) this::analyze);
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing internal component identification task", ex);
             }
@@ -68,7 +70,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
     private void analyze() {
         final Instant startTime = Instant.now();
         LOGGER.info("Starting internal component identification");
-        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK);
+        LockConfiguration lockConfiguration = getLockConfigForTask(InternalComponentIdentificationTask.class);
         final var internalComponentIdentifier = new InternalComponentIdentifier();
 
         if (!internalComponentIdentifier.hasPatterns() && !internalComponentsExist()) {
@@ -87,7 +89,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
             //It might finish execution before lock could be extended resulting in error
             LOGGER.debug("extending lock of internal component identification by 5 min");
             long cumulativeProcessingDuration = System.currentTimeMillis() - startTime.toEpochMilli();
-            if (isLockToBeExtended(cumulativeProcessingDuration, INTERNAL_COMPONENT_IDENTIFICATION_TASK_LOCK)) {
+            if (isTaskLockToBeExtended(cumulativeProcessingDuration, InternalComponentIdentificationTask.class)) {
                 LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
             }
 

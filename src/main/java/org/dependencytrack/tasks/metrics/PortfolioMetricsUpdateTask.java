@@ -32,7 +32,6 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -42,8 +41,9 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 
 /**
@@ -61,7 +61,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+                executeWithLock(
+                        getLockConfigForTask(PortfolioMetricsUpdateTask.class),
+                        (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
@@ -89,7 +91,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
-            LockConfiguration portfolioMetricsTaskConfig = LockProvider.getLockConfigurationByLockName(PORTFOLIO_METRICS_TASK_LOCK);
+            LockConfiguration portfolioMetricsTaskConfig = getLockConfigForTask(PortfolioMetricsUpdateTask.class);
             List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
             long processStartTime = System.currentTimeMillis();
             while (!activeProjects.isEmpty()) {
@@ -133,7 +135,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 //initial duration of portfolio metrics can be set to 20min.
                 //No thread calculating metrics would be executing for more than 15min.
                 //lock can only be extended if lock until is held for time after current db time
-                if(isLockToBeExtended(cumulativeDurationInMillis, PORTFOLIO_METRICS_TASK_LOCK)) {
+                if(isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
                     Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
                     LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
                     LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());

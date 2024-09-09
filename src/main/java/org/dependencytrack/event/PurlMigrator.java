@@ -20,15 +20,15 @@ package org.dependencytrack.event;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.LockProvider;
+import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-
-import static org.dependencytrack.tasks.LockName.INTEGRITY_META_INITIALIZER_LOCK;
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 public class PurlMigrator implements ServletContextListener {
 
@@ -48,7 +48,9 @@ public class PurlMigrator implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         if (integrityInitializerEnabled) {
             try {
-                LockProvider.executeWithLock(INTEGRITY_META_INITIALIZER_LOCK, (LockingTaskExecutor.Task) () -> process());
+                executeWithLock(
+                        getLockConfigForTask(IntegrityMetaInitializerTask.class),
+                        (LockingTaskExecutor.Task) this::process);
             } catch (Throwable e) {
                 throw new RuntimeException("An unexpected error occurred while running Initializer for integrity meta", e);
             }
