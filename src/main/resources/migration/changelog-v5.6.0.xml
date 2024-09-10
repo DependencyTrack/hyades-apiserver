@@ -34,7 +34,11 @@
         <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
     </changeSet>
 
-    <changeSet id="v5.6.0-2" author="rossmurphy974@gmail.com">
+    <changeSet id="v5.6.0-2" author="nscuro">
+        <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
+    </changeSet>
+  
+    <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
         <addColumn tableName="PROJECT">
             <column name="AUTHORS" type="TEXT"/>
         </addColumn>

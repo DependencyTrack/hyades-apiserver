@@ -397,6 +397,12 @@ public class Component implements Serializable {
     private transient boolean expandDependencyGraph;
     private transient String author;
 
+    public Component(){}
+
+    public Component(final long id) {
+        this.id = id;
+    }
+
     public long getId() {
         return id;
     }

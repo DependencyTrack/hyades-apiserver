@@ -46,13 +46,13 @@ import java.util.stream.Collectors;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED;
 
-public class OsvDownloadTask implements LoggableSubscriber {
+public class OsvMirrorTask implements LoggableSubscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(OsvDownloadTask.class);
+    private static final Logger LOGGER = Logger.getLogger(OsvMirrorTask.class);
     private String osvBaseUrl;
     private Set<String> ecosystems;
 
-    public OsvDownloadTask() {
+    public OsvMirrorTask() {
         try (final QueryManager qm = new QueryManager()) {
             final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getGroupName(), VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED.getPropertyName());
             if (enabled != null) {

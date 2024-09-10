@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4.1.7
 
       - name: Set up JDK
-        uses: actions/setup-java@v4.2.2
+        uses: actions/setup-java@v4.3.0
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -69,7 +69,7 @@ jobs:
           mvn -B --no-transfer-progress cyclonedx:makeBom -Dservices.bom.merge.skip=false org.codehaus.mojo:exec-maven-plugin:exec@merge-services-bom
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: assembled-wars
           path: |-

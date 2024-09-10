@@ -23,8 +23,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
@@ -33,28 +31,15 @@ import java.util.UUID;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
 
 abstract class AbstractMetricsUpdateTaskTest extends PersistenceCapableTest {
 
     @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
-    @Before
-    public void before() throws Exception {
-        super.before();
-
-        environmentVariables.set("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS", "2000");
-    }
-
-    @After
-    public void after() {
-        environmentVariables.clear("TASK_METRICS_PORTFOLIO_LOCKATLEASTFORINMILLIS");
-
-        super.after();
-    }
+    public EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("TASK_PORTFOLIO_METRICS_UPDATE_LOCK_MIN_DURATION", "PT2S");
 
     protected PolicyViolation createPolicyViolation(final Component component, final Policy.ViolationState violationState, final PolicyViolation.Type type) {
         final var policy = qm.createPolicy(UUID.randomUUID().toString(), Policy.Operator.ALL, violationState);

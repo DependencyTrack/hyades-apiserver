@@ -35,7 +35,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.tasks.OsvDownloadTask;
+import org.dependencytrack.tasks.OsvMirrorTask;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -65,8 +65,8 @@ public class IntegrationResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getAllEcosystems() {
-        OsvDownloadTask osvDownloadTask = new OsvDownloadTask();
-        final List<String> ecosystems = osvDownloadTask.getEcosystems();
+        OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
+        final List<String> ecosystems = osvMirrorTask.getEcosystems();
         return Response.ok(ecosystems).build();
     }
 
@@ -87,9 +87,9 @@ public class IntegrationResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getInactiveEcosystems() {
-        OsvDownloadTask osvDownloadTask = new OsvDownloadTask();
-        var selectedEcosystems = osvDownloadTask.getEnabledEcosystems();
-        final List<String> ecosystems = osvDownloadTask.getEcosystems().stream()
+        OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
+        var selectedEcosystems = osvMirrorTask.getEnabledEcosystems();
+        final List<String> ecosystems = osvMirrorTask.getEcosystems().stream()
                 .filter(element -> !selectedEcosystems.contains(element))
                 .collect(Collectors.toList());
         return Response.ok(ecosystems).build();

@@ -142,7 +142,7 @@ import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_F
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class QueryManager extends AlpineQueryManager {
 
-    private AlpineRequest request;
+    protected AlpineRequest request;
 
     private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
@@ -1897,10 +1897,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
-    }
-
-    public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
-        return getWorkflowStateQueryManager().hasWorkflowStepWithStatus(token, step, status);
     }
 
     public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {

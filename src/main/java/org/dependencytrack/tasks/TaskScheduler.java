@@ -18,14 +18,10 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
-import alpine.common.util.BooleanUtil;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
-import alpine.model.ConfigProperty;
-import com.asahaf.javacron.InvalidExpressionException;
+import alpine.server.tasks.LdapSyncTask;
 import com.asahaf.javacron.Schedule;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
@@ -40,33 +36,33 @@ import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
-import org.dependencytrack.event.VulnerabilityScanCleanupEvent;
-import org.dependencytrack.event.WorkflowStateCleanupEvent;
+import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
+import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
+import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
+import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
+import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
+import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
+import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
+import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_LDAP_SYNC_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_BUNDLE_FETCH_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK;
-import static org.dependencytrack.common.ConfigKey.CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
+import static org.dependencytrack.util.TaskUtil.getCronScheduleForTask;
 
 /**
  * @author Steve Springett
@@ -81,46 +77,45 @@ public final class TaskScheduler extends BaseTaskScheduler {
      * Private constructor.
      */
     private TaskScheduler() {
-        final Config configInstance = Config.getInstance();
-        try {
-            Map<Event, Schedule> configurableTasksMap = new HashMap<>();
-            Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
-                    Map.entry(new VulnerabilityPolicyFetchEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_POLICY_BUNDLE_FETCH_TASK))),
-                    Map.entry(new LdapSyncEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_LDAP_SYNC_TASK))),
-                    Map.entry(new NistMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_NIST_MIRRORING_TASK))),
-                    Map.entry(new OsvMirrorEvent(null), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_OSV_MIRRORING_TASK))),
-                    Map.entry(new GitHubAdvisoryMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_GITHUB_MIRRORING_TASK))),
-                    Map.entry(new EpssMirrorEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_EPSS_MIRRORING_TASK))),
-                    Map.entry(new PortfolioMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_PORTFOLIO_METRICS_TASK))),
-                    Map.entry(new VulnerabilityMetricsUpdateEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULNERABILITY_METRICS_TASK))),
-                    Map.entry(new InternalComponentIdentificationEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_COMPONENT_IDENTIFICATION_TASK))),
-                    Map.entry(new PortfolioVulnerabilityAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_ANALYSIS_TASK))),
-                    Map.entry(new VulnerabilityScanCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_VULN_SCAN_CLEANUP_TASK))),
-                    Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_REPO_META_ANALYSIS_TASK))),
-                    Map.entry(new WorkflowStateCleanupEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_WORKFLOW_STATE_CLEANUP_TASK))),
-                    Map.entry(new IntegrityMetaInitializerEvent(), Schedule.create(configInstance.getProperty(CRON_EXPRESSION_FOR_INTEGRITY_META_INITIALIZER_TASK)))
-            );
+        final Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
+                Map.entry(new VulnerabilityPolicyFetchEvent(), getCronScheduleForTask(VulnerabilityPolicyFetchTask.class)),
+                Map.entry(new LdapSyncEvent(), getCronScheduleForTask(LdapSyncTask.class)),
+                Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
+                Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
+                Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
+                Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
+                Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
+                Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
+                Map.entry(new InternalComponentIdentificationEvent(), getCronScheduleForTask(InternalComponentIdentificationTask.class)),
+                Map.entry(new PortfolioVulnerabilityAnalysisEvent(), getCronScheduleForTask(VulnerabilityAnalysisTask.class)),
+                Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), getCronScheduleForTask(RepositoryMetaAnalysisTask.class)),
+                Map.entry(new IntegrityMetaInitializerEvent(), getCronScheduleForTask(IntegrityMetaInitializerTask.class)),
+                Map.entry(new ComponentMetadataMaintenanceEvent(), getCronScheduleForTask(ComponentMetadataMaintenanceTask.class)),
+                Map.entry(new MetricsMaintenanceEvent(), getCronScheduleForTask(MetricsMaintenanceTask.class)),
+                Map.entry(new TagMaintenanceEvent(), getCronScheduleForTask(TagMaintenanceTask.class)),
+                Map.entry(new VulnerabilityDatabaseMaintenanceEvent(), getCronScheduleForTask(VulnerabilityDatabaseMaintenanceTask.class)),
+                Map.entry(new VulnerabilityScanMaintenanceEvent(), getCronScheduleForTask(VulnerabilityScanMaintenanceTask.class)),
+                Map.entry(new WorkflowMaintenanceEvent(), getCronScheduleForTask(WorkflowMaintenanceTask.class)));
 
-            if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
-                configurableTasksMap.put(new FortifySscUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_FORTIFY_SSC_SYNC)));
-            }
-            if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
-                configurableTasksMap.put(new DefectDojoUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_DEFECT_DOJO_SYNC)));
-            }
-            if (isTaskEnabled(KENNA_ENABLED)) {
-                configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), Schedule.create(configInstance.getProperty(ConfigKey.CRON_EXPRESSION_FOR_KENNA_SYNC)));
-            }
-
-            Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(eventScheduleMap.entrySet().stream(), configurableTasksMap.entrySet().stream())
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue));
-
-            scheduleTask(mergedEventScheduleMap);
-
-        } catch (InvalidExpressionException invalidExpressionException) {
-            throw new RuntimeException("Cron expression cannot be parsed to schedule tasks", invalidExpressionException);
+        Map<Event, Schedule> configurableTasksMap = new HashMap<>();
+        if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
+            configurableTasksMap.put(new FortifySscUploadEventAbstract(), getCronScheduleForTask(FortifySscUploadTask.class));
         }
+        if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
+            configurableTasksMap.put(new DefectDojoUploadEventAbstract(), getCronScheduleForTask(DefectDojoUploadTask.class));
+        }
+        if (isTaskEnabled(KENNA_ENABLED)) {
+            configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), getCronScheduleForTask(KennaSecurityUploadTask.class));
+        }
+
+        final Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(
+                        eventScheduleMap.entrySet().stream(),
+                        configurableTasksMap.entrySet().stream())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue));
+
+        scheduleTask(mergedEventScheduleMap);
     }
 
     /**
@@ -133,18 +128,8 @@ public final class TaskScheduler extends BaseTaskScheduler {
     }
 
     private boolean isTaskEnabled(final ConfigPropertyConstants enabledConstraint) {
-        try (QueryManager qm = new QueryManager()) {
-            final ConfigProperty enabledProperty = qm.getConfigProperty(
-                    enabledConstraint.getGroupName(), enabledConstraint.getPropertyName());
-            if (enabledProperty != null && enabledProperty.getPropertyValue() != null) {
-                final boolean isEnabled = BooleanUtil.valueOf(enabledProperty.getPropertyValue());
-                if (!isEnabled) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-            return true;
+        try (final var qm = new QueryManager()) {
+            return qm.isEnabled(enabledConstraint);
         }
     }
 }

@@ -32,7 +32,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
-import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -41,8 +40,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import static org.dependencytrack.tasks.LockName.PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 /**
  * A {@link Subscriber} to {@link ProjectRepositoryMetaAnalysisEvent} and {@link PortfolioRepositoryMetaAnalysisEvent}
@@ -53,9 +53,9 @@ import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
  * components are submitted by distinct PURL coordinates. As such, there is no 1:1 correlation between total number
  * of components in the portfolio or project, and records submitted for analysis.
  */
-public class RepositoryMetaAnalyzerTask implements Subscriber {
+public class RepositoryMetaAnalysisTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(RepositoryMetaAnalyzerTask.class);
+    private static final Logger LOGGER = Logger.getLogger(RepositoryMetaAnalysisTask.class);
 
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
@@ -74,7 +74,9 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             }
         } else if (e instanceof PortfolioRepositoryMetaAnalysisEvent) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK, (LockingTaskExecutor.Task) () -> processPortfolio());
+                executeWithLock(
+                        getLockConfigForTask(RepositoryMetaAnalysisTask.class),
+                        (LockingTaskExecutor.Task) this::processPortfolio);
             } catch (Throwable ex) {
                 LOGGER.error("An unexpected error occurred while submitting components for repository meta analysis", ex);
             }
@@ -110,7 +112,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
     private void processPortfolio() throws Exception {
         LOGGER.info("Submitting all components in portfolio for repository meta analysis");
 
-        LockConfiguration lockConfiguration = LockProvider.getLockConfigurationByLockName(PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK);
+        LockConfiguration lockConfiguration = getLockConfigForTask(RepositoryMetaAnalysisTask.class);
 
         try (final QueryManager qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
@@ -120,7 +122,7 @@ public class RepositoryMetaAnalyzerTask implements Subscriber {
             List<ComponentProjection> components = fetchNextComponentsPage(pm, null, offset);
             while (!components.isEmpty()) {
                 long cumulativeProcessingTime = System.currentTimeMillis() - startTime;
-                if (isLockToBeExtended(cumulativeProcessingTime, PORTFOLIO_REPO_META_ANALYSIS_TASK_LOCK)) {
+                if (isTaskLockToBeExtended(cumulativeProcessingTime, RepositoryMetaAnalysisTask.class)) {
                     LockExtender.extendActiveLock(Duration.ofMinutes(5).plus(lockConfiguration.getLockAtLeastFor()), lockConfiguration.getLockAtLeastFor());
                 }
                 //latest version information does not need to be fetched for project as triggered for portfolio means it is a scheduled event happening

@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
-public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
+public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testPortfolioRepositoryMetaAnalysis() {
@@ -85,7 +85,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentProjectE.setInternal(true);
         qm.persist(componentProjectE);
 
-        new RepositoryMetaAnalyzerTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
+        new RepositoryMetaAnalysisTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectA
@@ -156,7 +156,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentE.setInternal(true);
         qm.persist(componentE);
 
-        new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
+        new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
@@ -192,7 +192,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
         componentA.setVersion("1.0.1");
         qm.persist(componentA);
 
-        new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
+        new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name())
@@ -203,7 +203,7 @@ public class RepositoryMetaAnalyzerTaskTest extends PersistenceCapableTest {
     @Test
     public void testProjectRepositoryMetaAnalysisWithNonExistentProject() {
         assertThatNoException()
-                .isThrownBy(() -> new RepositoryMetaAnalyzerTask().inform(new ProjectRepositoryMetaAnalysisEvent(UUID.randomUUID())));
+                .isThrownBy(() -> new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(UUID.randomUUID())));
     }
 
 }

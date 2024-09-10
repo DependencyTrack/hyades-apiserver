@@ -29,8 +29,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.jdo.JDOHelper;
@@ -39,9 +37,6 @@ import java.sql.Statement;
 import java.util.Properties;
 
 public abstract class PersistenceCapableTest {
-
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     protected static PostgresTestContainer postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
@@ -62,7 +57,6 @@ public abstract class PersistenceCapableTest {
 
         qm = new QueryManager();
 
-        environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
     }
 
@@ -102,6 +96,7 @@ public abstract class PersistenceCapableTest {
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, postgresContainer.getDriverClassName());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
+        dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
         PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);

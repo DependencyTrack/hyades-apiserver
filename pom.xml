@@ -24,7 +24,7 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>3.0.1</version>
+        <version>3.1.0</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -84,29 +84,29 @@
     <properties>
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
-        <lib.awaitility.version>4.2.1</lib.awaitility.version>
-        <lib.cel-tools.version>0.4.5</lib.cel-tools.version>
+        <lib.awaitility.version>4.2.2</lib.awaitility.version>
+        <lib.cel-tools.version>0.5.0</lib.cel-tools.version>
         <lib.checkstyle.version>10.17.0</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.19.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.20.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>9.0.5</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jdbi.version>3.45.3</lib.jdbi.version>
+        <lib.jdbi.version>3.45.4</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.8.0</lib.kafka.version>
-        <lib.liquibase.version>4.29.1</lib.liquibase.version>
+        <lib.liquibase.version>4.29.2</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.12</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.9.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.parallel-consumer.version>0.5.3.0</lib.parallel-consumer.version>
+        <lib.parallel-consumer.version>0.5.3.1</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
-        <lib.protobuf-java.version>3.25.4</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.28.0</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.1</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.swagger-parser.version>2.1.22</lib.swagger-parser.version>
@@ -116,17 +116,17 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.16</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>5.15.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>5.16.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.3</lib.jdbc-driver.postgresql.version>
+        <lib.jdbc-driver.postgresql.version>42.7.4</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
         <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
         <!-- Maven Plugin Versions -->
-        <plugin.checkstyle.version>3.4.0</plugin.checkstyle.version>
+        <plugin.checkstyle.version>3.5.0</plugin.checkstyle.version>
         <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
-        <plugin.jetty.version>12.0.12</plugin.jetty.version>
+        <plugin.jetty.version>12.0.13</plugin.jetty.version>
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
@@ -729,15 +729,10 @@
                 <version>${plugin.jetty.version}</version>
                 <configuration>
                     <webApp>
-                        <contextPath>/</contextPath>
+                        <!-- Disable classpath scanning. -->
+                        <containerIncludeJarPattern>^$</containerIncludeJarPattern>
+                        <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
                     </webApp>
-                    <systemProperties>
-                        <!--
-                            Disable Jetty warnings about JARs being scanned from multiple locations.
-                            https://stackoverflow.com/a/73964232
-                        -->
-                        <org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>ERROR</org.slf4j.simpleLogger.log.org.eclipse.jetty.annotations.AnnotationParser>
-                    </systemProperties>
                 </configuration>
             </plugin>
             <plugin>
@@ -831,6 +826,11 @@
                             <systemProperties>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
+                            <webApp>
+                                <!-- Disable classpath scanning. -->
+                                <containerIncludeJarPattern>^$</containerIncludeJarPattern>
+                                <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
+                            </webApp>
                         </configuration>
                     </plugin>
                 </plugins>

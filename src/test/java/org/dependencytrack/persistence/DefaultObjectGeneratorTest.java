@@ -20,17 +20,25 @@ package org.dependencytrack.persistence;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.Repository;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
+
+    @Rule
+    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Test
     public void testContextInitialized() throws Exception {
@@ -40,6 +48,37 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
         testLoadDefaultRepositories();
         testLoadDefaultConfigProperties();
         testLoadDefaultNotificationPublishers();
+    }
+
+    @Test
+    public void testWithInitTasksDisabled() {
+        environmentVariables.set(ConfigKey.INIT_TASKS_ENABLED.name(), "false");
+
+        new DefaultObjectGenerator().contextInitialized(null);
+
+        assertThat(qm.getPermissions()).isEmpty();
+        assertThat(qm.getManagedUsers()).isEmpty();
+        assertThat(qm.getLicenses().getList(License.class)).isEmpty();
+        assertThat(qm.getRepositories().getList(Repository.class)).isEmpty();
+        assertThat(qm.getConfigProperties()).isEmpty();
+        assertThat(qm.getAllNotificationPublishers()).isEmpty();
+    }
+
+    @Test
+    public void testWithDefaultObjectsAlreadyPopulated() {
+        new DefaultObjectGenerator().contextInitialized(null);
+
+        List<License> licenses = qm.getLicenses().getList(License.class);
+        assertThat(licenses).isNotEmpty();
+
+        qm.delete(licenses);
+
+        new DefaultObjectGenerator().contextInitialized(null);
+
+        // Default objects must not have been populated again, since their
+        // version is already current for this application build.
+        licenses = qm.getLicenses().getList(License.class);
+        assertThat(licenses).isEmpty();
     }
 
     @Test
