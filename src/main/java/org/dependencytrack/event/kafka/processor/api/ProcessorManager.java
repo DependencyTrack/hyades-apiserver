@@ -39,6 +39,7 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
+import org.dependencytrack.util.ConfigUtil;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 
 import java.time.Duration;
@@ -93,12 +94,8 @@ public class ProcessorManager implements AutoCloseable {
     private AdminClient adminClient;
 
     public ProcessorManager() {
-        this(UUID.randomUUID(), Config.getInstance());
-    }
-
-    public ProcessorManager(final UUID instanceId, final Config config) {
-        this.instanceId = instanceId;
-        this.config = config;
+        this.instanceId = UUID.randomUUID();
+        this.config = Config.getInstance();
     }
 
     /**
@@ -379,7 +376,7 @@ public class ProcessorManager implements AutoCloseable {
         final String fullPrefix = "kafka.processor.%s".formatted(prefix);
         final Pattern fullPrefixPattern = Pattern.compile(Pattern.quote("%s.".formatted(fullPrefix)));
 
-        final Map<String, String> properties = config.getPassThroughProperties(fullPrefix);
+        final Map<String, String> properties = ConfigUtil.getPassThroughProperties(config, fullPrefix);
         if (properties.isEmpty()) {
             return properties;
         }
