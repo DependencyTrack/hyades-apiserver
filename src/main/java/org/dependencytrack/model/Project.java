@@ -24,6 +24,7 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -36,6 +37,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
@@ -74,7 +77,7 @@ import java.util.UUID;
 @FetchGroups({
         @FetchGroup(name = "ALL", members = {
                 @Persistent(name = "name"),
-                @Persistent(name = "author"),
+                @Persistent(name = "authors"),
                 @Persistent(name = "publisher"),
                 @Persistent(name = "group"),
                 @Persistent(name = "name"),
@@ -141,12 +144,11 @@ public class Project implements Serializable {
     @JsonIgnore
     private long id;
 
-    @Persistent
-    @Column(name = "AUTHOR", jdbcType = "VARCHAR")
-    @Size(max = 255)
-    @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The author may only contain printable characters")
-    private String author;
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalContactsJsonConverter.class)
+    @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
+    @JsonView(JsonViews.MetadataTools.class)
+    private List<OrganizationalContact> authors;
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
@@ -310,6 +312,8 @@ public class Project implements Serializable {
 
     private transient List<Component> dependencyGraph;
 
+    private transient String author;
+
     public long getId() {
         return id;
     }
@@ -318,12 +322,12 @@ public class Project implements Serializable {
         this.id = id;
     }
 
-    public String getAuthor() {
-        return author;
+    public List<OrganizationalContact> getAuthors() {
+        return authors;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setAuthors(List<OrganizationalContact> authors) {
+        this.authors = authors;
     }
 
     public String getPublisher() {
@@ -570,6 +574,14 @@ public class Project implements Serializable {
     @JsonIgnore
     public void setDependencyGraph(List<Component> dependencyGraph) {
         this.dependencyGraph = dependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public String setAuthor(String author){
+        return this.author=author;
     }
 
     @Override

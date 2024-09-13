@@ -25,8 +25,10 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.OrganizationalContact;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 public class ComponentProjection {
@@ -35,7 +37,7 @@ public class ComponentProjection {
 
     public String uuid;
 
-    public String author;
+    public List<OrganizationalContact> authors;
 
     public String group;
 
@@ -125,7 +127,7 @@ public class ComponentProjection {
 
     public Boolean projectActive;
 
-    public String projectAuthor;
+    public List<OrganizationalContact> projectAuthors;
 
     public String projectCpe;
 
@@ -162,7 +164,7 @@ public class ComponentProjection {
 
     public static Component mapToComponent(ComponentProjection result) {
         Component componentPersistent = new Component();
-        componentPersistent.setAuthor(result.author);
+        componentPersistent.setAuthors(result.authors);
         componentPersistent.setBlake2b_256(result.blake2b_256);
         componentPersistent.setBlake2b_384(result.blake2b_384);
         componentPersistent.setBlake2b_512(result.blake2b_512);
@@ -209,7 +211,7 @@ public class ComponentProjection {
         if (result.projectId != null) {
             project.setId(result.projectId);
         }
-        project.setAuthor(result.projectAuthor);
+        project.setAuthors(result.projectAuthors);
         if (result.projectActive != null) {
             project.setActive(result.projectActive);
         }

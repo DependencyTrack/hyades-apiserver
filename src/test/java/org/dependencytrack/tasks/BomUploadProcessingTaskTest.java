@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
+
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -52,6 +53,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -162,7 +164,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(components).hasSize(1);
 
         final Component component = components.get(0);
-        assertThat(component.getAuthor()).isEqualTo("Sometimes this field is long because it is composed of a list of authors......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
+        assertThat(component.getAuthors().get(0).getName()).isEqualTo("Sometimes this field is long because it is composed of a list of authors......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
         assertThat(component.getPublisher()).isEqualTo("Example Incorporated");
         assertThat(component.getSupplier().getName()).isEqualTo("Foo Incorporated");
         assertThat(component.getGroup()).isEqualTo("com.example");
@@ -286,7 +288,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(components).hasSize(1);
 
         final Component component = components.get(0);
-        assertThat(component.getAuthor()).isEqualTo("Sometimes this field is long because it is composed of a list of authors......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
+        assertThat(component.getAuthors().get(0).getName()).isEqualTo("Sometimes this field is long because it is composed of a list of authors......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
         assertThat(component.getPublisher()).isEqualTo("Example Incorporated");
         assertThat(component.getGroup()).isEqualTo("com.example");
         assertThat(component.getName()).isEqualTo("xmlutil");
@@ -1406,6 +1408,31 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             assertThat(component.getResolvedLicense()).isNotNull();
             assertThat(component.getResolvedLicense().getLicenseId()).isEqualTo("GPL-1.0");
         });
+    }
+
+    @Test
+    public void informIssue3936Test() throws Exception{
+
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        qm.persist(project);
+        List<String> boms = new ArrayList<>(Arrays.asList("bom-issue3936-authors.json", "bom-issue3936-author.json", "bom-issue3936-both.json"));
+        int i=0;
+        for(String bom : boms){
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bom));
+            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+            new BomUploadProcessingTask().inform(bomUploadEvent);
+            assertBomProcessedNotification();
+            qm.getPersistenceManager().evictAll();
+            assertThat(qm.getAllComponents(project)).isNotEmpty();
+            Component component = qm.getAllComponents().getFirst();
+            assertThat(component.getAuthors().get(0).getName()).isEqualTo("Joane Doe et al.");
+            if (i == 2) {
+                assertThat(component.getAuthors().size()).isEqualTo(2);
+            } else {
+                assertThat(component.getAuthors().size()).isEqualTo(1);
+                i++;
+            }
+        }
     }
 
     private void assertBomProcessedNotification() throws Exception {

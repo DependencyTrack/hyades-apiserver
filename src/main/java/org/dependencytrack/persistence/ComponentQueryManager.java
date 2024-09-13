@@ -165,7 +165,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         String queryString = """
                         SELECT "A0"."ID" AS "id",
                         "A0"."NAME" AS "name",
-                        "A0"."AUTHOR" AS "author",
+                        "A0"."AUTHORS" AS "authors",
                         "A0"."BLAKE2B_256" AS "blake2b_256",
                         "A0"."BLAKE2B_384" AS "blake2b_384",
                         "A0"."BLAKE2B_512" AS "blake2b_512",
@@ -200,7 +200,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."UUID" AS "uuid",
                         "A0"."VERSION" AS "version",
                         "B0"."ACTIVE" AS "projectActive",
-                        "B0"."AUTHOR" AS "projectAuthor",
+                        "B0"."AUTHORS" AS "projectAuthors",
                         "B0"."CLASSIFIER" AS "projectClassifier",
                         "B0"."CPE" AS "projectCpe",
                         "B0"."DESCRIPTION" AS "projectDescription",
@@ -549,7 +549,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setLicenseExpression(sourceComponent.getLicenseExpression());
         component.setLicenseUrl(sourceComponent.getLicenseUrl());
         component.setResolvedLicense(sourceComponent.getResolvedLicense());
-        component.setAuthor(sourceComponent.getAuthor());
+        component.setAuthors(sourceComponent.getAuthors());
         component.setSupplier(sourceComponent.getSupplier());
         // TODO Add support for parent component and children components
         component.setProject(destinationProject);
@@ -586,7 +586,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setPurl(transientComponent.getPurl());
         component.setPurlCoordinates(component.getPurl());
         component.setInternal(transientComponent.isInternal());
-        component.setAuthor(transientComponent.getAuthor());
+        component.setAuthors(transientComponent.getAuthors());
         component.setSupplier(transientComponent.getSupplier());
         component.setExternalReferences(transientComponent.getExternalReferences());
         final Component result = persist(component);

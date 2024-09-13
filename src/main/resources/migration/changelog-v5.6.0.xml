@@ -37,4 +37,31 @@
     <changeSet id="v5.6.0-2" author="nscuro">
         <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
     </changeSet>
+  
+    <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
+        <addColumn tableName="PROJECT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        <addColumn tableName="COMPONENT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        
+        <sql>
+            UPDATE "PROJECT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+        <sql>
+            UPDATE "COMPONENT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+        <dropColumn tableName="COMPONENT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -138,7 +138,6 @@ public class ModelConverter {
     public static Project convertToProject(final org.cyclonedx.model.Component cdxComponent) {
         final var project = new Project();
         project.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
-        project.setAuthor(trimToNull(cdxComponent.getAuthor()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
         project.setSupplier(convert(cdxComponent.getSupplier()));
         project.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.APPLICATION));
@@ -147,6 +146,17 @@ public class ModelConverter {
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
+
+        List<OrganizationalContact> contacts = new ArrayList<>();
+        if(cdxComponent.getAuthor()!=null){
+            contacts.add(new OrganizationalContact() {{
+                setName(cdxComponent.getAuthor());
+            }});
+        }
+        if(cdxComponent.getAuthors()!=null){
+            contacts.addAll(convertCdxContacts(cdxComponent.getAuthors()));
+        }
+        project.setAuthors(contacts);
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -175,7 +185,6 @@ public class ModelConverter {
     public static Component convertComponent(final org.cyclonedx.model.Component cdxComponent) {
         final var component = new Component();
         component.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
-        component.setAuthor(trimToNull(cdxComponent.getAuthor()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
         component.setSupplier(convert(cdxComponent.getSupplier()));
         component.setBomRef(trimToNull(cdxComponent.getBomRef()));
@@ -188,6 +197,17 @@ public class ModelConverter {
         component.setCpe(trimToNull(cdxComponent.getCpe()));
         component.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
         component.setProperties(convertToComponentProperties(cdxComponent.getProperties()));
+
+        List<OrganizationalContact> contacts = new ArrayList<>();
+        if(cdxComponent.getAuthor()!=null){
+            contacts.add(new OrganizationalContact() {{
+                setName(cdxComponent.getAuthor());
+            }});
+        }
+        if(cdxComponent.getAuthors()!=null){
+            contacts.addAll(convertCdxContacts(cdxComponent.getAuthors()));
+        }
+        component.setAuthors(contacts);
 
         if (cdxComponent.getPurl() != null) {
             try {
@@ -589,7 +609,7 @@ public class ModelConverter {
         cycloneComponent.setDescription(StringUtils.trimToNull(component.getDescription()));
         cycloneComponent.setCopyright(StringUtils.trimToNull(component.getCopyright()));
         cycloneComponent.setCpe(StringUtils.trimToNull(component.getCpe()));
-        cycloneComponent.setAuthor(StringUtils.trimToNull(component.getAuthor()));
+        cycloneComponent.setAuthor(StringUtils.trimToNull(convertContactsToString(component.getAuthors())));
         cycloneComponent.setSupplier(convert(component.getSupplier()));
         cycloneComponent.setProperties(convert(component.getProperties()));
 
@@ -691,6 +711,23 @@ public class ModelConverter {
         return cycloneComponent;
     }
 
+    public static String convertContactsToString(List<OrganizationalContact> authors) {
+        if (authors == null || authors.isEmpty()) {
+            return "";
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (OrganizationalContact author : authors) {
+            if (author != null && author.getName() != null) {
+                stringBuilder.append(author.getName()).append(", ");
+            }
+        }
+        //remove trailing comma and space
+        if (stringBuilder.length() > 0) {
+            stringBuilder.setLength(stringBuilder.length() - 2);
+        }
+        return stringBuilder.toString();
+    }
+
     private static <T extends IConfigProperty> List<org.cyclonedx.model.Property> convert(final Collection<T> dtProperties) {
         if (dtProperties == null || dtProperties.isEmpty()) {
             return Collections.emptyList();
@@ -728,7 +765,7 @@ public class ModelConverter {
             metadata.setManufacture(convert(project.getManufacturer()));
             final org.cyclonedx.model.Component cycloneComponent = new org.cyclonedx.model.Component();
             cycloneComponent.setBomRef(project.getUuid().toString());
-            cycloneComponent.setAuthor(StringUtils.trimToNull(project.getAuthor()));
+            cycloneComponent.setAuthor(StringUtils.trimToNull(convertContactsToString(project.getAuthors())));
             cycloneComponent.setPublisher(StringUtils.trimToNull(project.getPublisher()));
             cycloneComponent.setGroup(StringUtils.trimToNull(project.getGroup()));
             cycloneComponent.setName(StringUtils.trimToNull(project.getName()));

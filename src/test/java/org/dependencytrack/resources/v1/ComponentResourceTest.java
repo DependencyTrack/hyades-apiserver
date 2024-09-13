@@ -24,6 +24,7 @@ import alpine.server.filters.AuthenticationFilter;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.apache.http.HttpStatus;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -626,6 +627,11 @@ public class ComponentResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("My Component");
         component.setVersion("1.0");
+        List<OrganizationalContact> authors = new ArrayList<>();
+        authors.add(new OrganizationalContact(){{
+            setName("SampleAuthor");
+        }});
+        component.setAuthors(authors);
         component.setPurl("pkg:maven/org.acme/abc");
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -635,6 +641,7 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
+        Assert.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),

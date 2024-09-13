@@ -31,6 +31,7 @@ import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
@@ -100,11 +101,11 @@ public class Component implements Serializable {
     @JsonIgnore
     private long id;
 
-    @Persistent
-    @Column(name = "AUTHOR", jdbcType = "CLOB")
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The author may only contain printable characters")
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalContactsJsonConverter.class)
+    @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
     @JsonView(JsonViews.MetadataTools.class)
-    private String author;
+    private List<OrganizationalContact> authors;
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
@@ -394,6 +395,7 @@ public class Component implements Serializable {
     private transient int usedBy;
     private transient Set<String> dependencyGraph;
     private transient boolean expandDependencyGraph;
+    private transient String author;
 
     public Component(){}
 
@@ -409,12 +411,12 @@ public class Component implements Serializable {
         this.id = id;
     }
 
-    public String getAuthor() {
-        return author;
+    public List<OrganizationalContact> getAuthors() {
+        return authors;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setAuthors(List<OrganizationalContact> authors) {
+        this.authors = authors;
     }
 
     public String getPublisher() {
@@ -870,6 +872,14 @@ public class Component implements Serializable {
 
     public void setExpandDependencyGraph(boolean expandDependencyGraph) {
         this.expandDependencyGraph = expandDependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public void setAuthor(String author){
+        this.author=author;
     }
 
     @Override
