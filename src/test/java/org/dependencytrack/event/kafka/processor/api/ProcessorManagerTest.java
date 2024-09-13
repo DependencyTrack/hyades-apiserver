@@ -33,8 +33,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.testcontainers.redpanda.RedpandaContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
 import java.util.List;
@@ -60,8 +59,7 @@ import static org.mockito.Mockito.when;
 public class ProcessorManagerTest {
 
     @Rule
-    public RedpandaContainer kafkaContainer = new RedpandaContainer(DockerImageName
-            .parse("docker.redpanda.com/vectorized/redpanda:v24.2.4"));
+    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
 
     private AdminClient adminClient;
     private Producer<String, String> producer;

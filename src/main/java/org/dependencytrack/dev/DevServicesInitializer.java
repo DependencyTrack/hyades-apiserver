@@ -93,9 +93,9 @@ public class DevServicesInitializer implements ServletContextListener {
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
 
-            // TODO: Detect when Apache Kafka is requested vs. when Redpanda is requested,
+            // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
             //   and pick the corresponding Testcontainers class accordingly.
-            final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.redpanda.RedpandaContainer");
+            final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.kafka.KafkaContainer");
             final Constructor<?> kafkaContainerConstructor = kafkaContainerClass.getDeclaredConstructor(String.class);
             kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_KAFKA));
 

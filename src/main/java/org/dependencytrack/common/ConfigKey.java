@@ -62,7 +62,7 @@ public enum ConfigKey implements Config.Key {
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
-    DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "docker.redpanda.com/vectorized/redpanda:v24.2.4"),
+    DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.8.0"),
     DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:16");
 
     private final String propertyName;
