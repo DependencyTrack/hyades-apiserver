@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.event.kafka.processor.api;
 
-import alpine.Config;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -26,19 +25,18 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
@@ -51,19 +49,19 @@ import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class ProcessorManagerTest {
 
     @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    @Rule
     public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
 
     private AdminClient adminClient;
     private Producer<String, String> producer;
-    private Config configMock;
 
     @Before
     public void setUp() {
@@ -74,9 +72,7 @@ public class ProcessorManagerTest {
                 Map.entry(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
         ));
 
-        configMock = mock(Config.class);
-        when(configMock.getProperty(eq(ConfigKey.KAFKA_BOOTSTRAP_SERVERS)))
-                .thenReturn(kafkaContainer.getBootstrapServers());
+        environmentVariables.set("KAFKA_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
     }
 
     @After
@@ -96,17 +92,14 @@ public class ProcessorManagerTest {
 
         final var recordsProcessed = new AtomicInteger(0);
 
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo.consumer")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.processing.order", "key",
-                        "kafka.processor.foo.max.concurrency", "5",
-                        "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
-                ));
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "key");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_CONCURRENCY", "5");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final Processor<String, String> processor =
                 record -> recordsProcessed.incrementAndGet();
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             for (int i = 0; i < 100; i++) {
@@ -140,18 +133,12 @@ public class ProcessorManagerTest {
             var ignored = objectSpy.toString();
         };
 
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.retry.initial.delay.ms", "5",
-                        "kafka.processor.foo.retry.multiplier", "1",
-                        "kafka.processor.foo.retry.max.delay.ms", "10"
-                ));
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo.consumer")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
-                ));
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_INITIAL_DELAY_MS", "5");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_MULTIPLIER", "1");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_MAX_DELAY_MS", "10");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             producer.send(new ProducerRecord<>("input", "foo", "bar"));
@@ -172,22 +159,16 @@ public class ProcessorManagerTest {
         final var recordsProcessed = new AtomicInteger(0);
         final var actualBatchSizes = new ConcurrentLinkedQueue<>();
 
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.processing.order", "key",
-                        "kafka.processor.foo.max.batch.size", "100"
-                ));
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo.consumer")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
-                ));
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "key");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_BATCH_SIZE", "100");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final BatchProcessor<String, String> recordProcessor = records -> {
             recordsProcessed.addAndGet(records.size());
             actualBatchSizes.add(records.size());
         };
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerBatchProcessor("foo", inputTopic, recordProcessor);
 
             for (int i = 0; i < 1_000; i++) {
@@ -209,22 +190,16 @@ public class ProcessorManagerTest {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 12, (short) 1))).all().get();
 
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.processing.order", "partition",
-                        "kafka.processor.foo.max.concurrency", "-1"
-                ));
-        when(configMock.getPassThroughProperties(eq("kafka.processor.foo.consumer")))
-                .thenReturn(Map.of(
-                        "kafka.processor.foo.consumer.auto.offset.reset", "earliest"
-                ));
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "partition");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_CONCURRENCY", "-1");
+        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final var threadNames = new ArrayBlockingQueue<String>(100);
         final Processor<String, String> processor = record -> {
             threadNames.add(Thread.currentThread().getName());
         };
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             for (int i = 0; i < 100; i++) {
@@ -250,7 +225,7 @@ public class ProcessorManagerTest {
         final Processor<String, String> processor = record -> {
         };
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("a", inputTopicA, processor);
             processorManager.registerProcessor("b", inputTopicB, processor);
 
@@ -271,7 +246,7 @@ public class ProcessorManagerTest {
         final Processor<String, String> processor = record -> {
         };
 
-        try (final var processorManager = new ProcessorManager(UUID.randomUUID(), configMock)) {
+        try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             {
