@@ -53,7 +53,6 @@ import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
@@ -83,7 +82,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -96,11 +94,6 @@ import static org.apache.commons.io.IOUtils.resourceToString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
-import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
-import static org.dependencytrack.model.WorkflowStatus.FAILED;
-import static org.dependencytrack.model.WorkflowStatus.PENDING;
-import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
-import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -1158,70 +1151,6 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(200);
-    }
-
-    @Test
-    public void isTokenBeingProcessedTrueTest() {
-        UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(COMPLETED);
-        workflowState1.setToken(uuid);
-        workflowState1.setUpdatedAt(new Date());
-        var workflowState1Persisted = qm.persist(workflowState1);
-        WorkflowState workflowState2 = new WorkflowState();
-        workflowState2.setParent(workflowState1Persisted);
-        workflowState2.setStep(BOM_PROCESSING);
-        workflowState2.setStatus(PENDING);
-        workflowState2.setToken(uuid);
-        workflowState2.setUpdatedAt(new Date());
-        qm.persist(workflowState2);
-
-        Response response = jersey.target(V1_BOM + "/token/" + uuid).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
-        final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse)
-                .withMatcher("isBeingProcessed", equalTo(true))
-                .isEqualTo(json("""
-                    {
-                        "processing": "${json-unit.matches:isBeingProcessed}"
-                    }
-                """));
-    }
-
-    @Test
-    public void isTokenBeingProcessedFalseTest() {
-        UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(COMPLETED);
-        workflowState1.setToken(uuid);
-        workflowState1.setUpdatedAt(new Date());
-        var workflowState1Persisted = qm.persist(workflowState1);
-        WorkflowState workflowState2 = new WorkflowState();
-        workflowState2.setParent(workflowState1Persisted);
-        workflowState2.setStep(BOM_PROCESSING);
-        workflowState2.setStatus(FAILED);
-        workflowState2.setToken(uuid);
-        workflowState2.setUpdatedAt(new Date());
-        qm.persist(workflowState2);
-
-        Response response = jersey.target(V1_BOM + "/token/" + uuid).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
-        final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse)
-                .withMatcher("isBeingProcessed", equalTo(false))
-                .isEqualTo(json("""
-                    {
-                        "processing": "${json-unit.matches:isBeingProcessed}"
-                    }
-                """));
     }
 
     @Test

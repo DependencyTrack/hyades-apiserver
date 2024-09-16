@@ -46,7 +46,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -309,98 +308,6 @@ public class PolicyResource extends AlpineResource {
             final List<Project> projects = policy.getProjects();
             if (projects != null && projects.contains(project)) {
                 policy.getProjects().remove(project);
-                qm.persist(policy);
-                return Response.ok(policy).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
-        }
-    }
-
-    @POST
-    @Path("/{policyUuid}/tag/{tagName}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Adds a tag to a policy",
-            description = """
-                    <p><strong>Deprecated</strong>. Use <code>POST /api/v1/tag/{name}/policy</code> instead.</p>
-                    <p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>
-                    """
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "The updated policy",
-                    content = @Content(schema = @Schema(implementation = Policy.class))
-            ),
-            @ApiResponse(responseCode = "304", description = "The policy already has the specified tag assigned"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The policy or tag could not be found")
-    })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
-    @Deprecated(forRemoval = true)
-    public Response addTagToPolicy(
-            @Parameter(description = "The UUID of the policy to add a project to", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("policyUuid") @ValidUuid String policyUuid,
-            @Parameter(description = "The name of the tag to add to the rule", required = true)
-            @PathParam("tagName") String tagName) {
-        try (QueryManager qm = new QueryManager()) {
-            final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
-            if (policy == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
-            }
-
-            final Tag tag = qm.getTagByName(tagName);
-            if (tag == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The tag could not be found.").build();
-            }
-            if (qm.bind(policy, List.of(tag))) {
-                return Response.ok(policy).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
-        }
-    }
-
-    @DELETE
-    @Path("/{policyUuid}/tag/{tagName}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Removes a tag from a policy",
-            description = """
-                    <p><strong>Deprecated</strong>. Use <code>DELETE /api/v1/tag/{name}/policy</code> instead.</p>
-                    <p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>
-                    """
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "The updated policy",
-                    content = @Content(schema = @Schema(implementation = Policy.class))
-            ),
-            @ApiResponse(responseCode = "304", description = "The policy does not have the specified tag assigned"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The policy or tag could not be found")
-    })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
-    @Deprecated(forRemoval = true)
-    public Response removeTagFromPolicy(
-            @Parameter(description = "The UUID of the policy to remove the tag from", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("policyUuid") @ValidUuid String policyUuid,
-            @Parameter(description = "The name of the tag to remove from the policy", required = true)
-            @PathParam("tagName") String tagName) {
-        try (QueryManager qm = new QueryManager()) {
-            final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
-            if (policy == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
-            }
-            final Tag tag = qm.getTagByName(tagName);
-            if (tag == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The tag could not be found.").build();
-            }
-            final List<Tag> tags = policy.getTags();
-            if (tags != null && tags.contains(tag)) {
-                policy.getTags().remove(tag);
                 qm.persist(policy);
                 return Response.ok(policy).build();
             }
