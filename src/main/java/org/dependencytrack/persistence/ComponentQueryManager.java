@@ -263,7 +263,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (onlyDirect) {
             queryString +=
                     """
-                       AND "B0"."DIRECT_DEPENDENCIES" LIKE (('%' || "A0"."UUID") || '%') ESCAPE E'\\\\'
+                       AND "B0"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "A0"."UUID"))
                     """;
         }
         if (orderBy == null) {
@@ -931,9 +931,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     private void getParentDependenciesOfComponent(Project project, Component childComponent, Map<String, Component> dependencyGraph) {
-        String queryUuid = ".*" + childComponent.getUuid().toString() + ".*";
-        final Query<Component> query = pm.newQuery(Component.class, "directDependencies.matches(:queryUuid) && project == :project");
-        List<Component> parentComponents = (List<Component>) query.executeWithArray(queryUuid, project);
+        final Query<Component> query = pm.newQuery(Component.class, "directDependencies.jsonbContains(:child) && project == :project");
+        List<Component> parentComponents = (List<Component>) query.executeWithArray("[{\"uuid\":\"%s\"}]".formatted(childComponent.getUuid()), project);
         for (Component parentComponent : parentComponents) {
             parentComponent.setExpandDependencyGraph(true);
             if(parentComponent.getDependencyGraph() == null) {

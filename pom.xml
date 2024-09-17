@@ -93,6 +93,7 @@
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>9.0.5</lib.cyclonedx-java.version>
+        <lib.datanucleus-postgresql.version>0.2.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.4</lib.jdbi.version>
         <lib.json-unit.version>3.4.1</lib.json-unit.version>
@@ -263,6 +264,13 @@
             <artifactId>cyclonedx-core-java</artifactId>
             <version>${lib.cyclonedx-java.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.github.nscuro</groupId>
+            <artifactId>datanucleus-postgresql</artifactId>
+            <version>${lib.datanucleus-postgresql.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>jakarta.activation</groupId>
             <artifactId>jakarta.activation-api</artifactId>
