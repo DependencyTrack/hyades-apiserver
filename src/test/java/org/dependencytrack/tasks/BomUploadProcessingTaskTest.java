@@ -1504,6 +1504,46 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
+    @Test
+    public void informWithEmptyComponentAndServiceNameTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": ""
+                    }
+                  ],
+                  "services": [
+                    {
+                      "name": ""
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getName()).isEqualTo("-");
+        });
+        assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service -> {
+            assertThat(service.getName()).isEqualTo("-");
+        });
+    }
+
     private void assertBomProcessedNotification() throws Exception {
         try {
             assertThat(kafkaMockProducer.history()).anySatisfy(record -> {
