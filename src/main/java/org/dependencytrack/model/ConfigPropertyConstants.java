@@ -107,7 +107,9 @@ public enum ConfigPropertyConstants {
     CUSTOM_RISK_SCORE_HIGH("risk-score", "weight.high", "5", PropertyType.INTEGER, "High severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_MEDIUM("risk-score", "weight.medium", "3", PropertyType.INTEGER, "Medium severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_LOW("risk-score", "weight.low", "1", PropertyType.INTEGER, "Low severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
-    CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE);
+    CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    WELCOME_MESSAGE("general", "welcome.message.html", "%20%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
+    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says wheter to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true);
 
     private final String groupName;
     private final String propertyName;
@@ -115,6 +117,7 @@ public enum ConfigPropertyConstants {
     private final PropertyType propertyType;
     private final String description;
     private final ConfigPropertyAccessMode accessMode;
+    private final Boolean isPublic;
 
     ConfigPropertyConstants(final String groupName,
                             final String propertyName,
@@ -128,11 +131,29 @@ public enum ConfigPropertyConstants {
         this.propertyType = propertyType;
         this.description = description;
         this.accessMode = accessMode;
+        this.isPublic = false;
+    }
+
+    ConfigPropertyConstants(final String groupName,
+                            final String propertyName,
+                            final String defaultPropertyValue,
+                            final PropertyType propertyType,
+                            final String description,
+                            final ConfigPropertyAccessMode accessMode,
+                            final Boolean isPublic) {
+        this.groupName = groupName;
+        this.propertyName = propertyName;
+        this.defaultPropertyValue = defaultPropertyValue;
+        this.propertyType = propertyType;
+        this.description = description;
+        this.accessMode = accessMode;
+        this.isPublic = isPublic;
     }
 
     public static ConfigPropertyConstants ofProperty(final IConfigProperty property) {
         return Arrays.stream(values())
-                .filter(value -> value.groupName.equals(property.getGroupName()) && value.propertyName.equals(property.getPropertyName()))
+                .filter(value -> value.groupName.equals(property.getGroupName())
+                        && value.propertyName.equals(property.getPropertyName()))
                 .findFirst()
                 .orElse(null);
     }
@@ -159,5 +180,9 @@ public enum ConfigPropertyConstants {
 
     public ConfigPropertyAccessMode getAccessMode() {
         return accessMode;
+    }
+
+    public Boolean getIsPublic() {
+        return isPublic;
     }
 }
