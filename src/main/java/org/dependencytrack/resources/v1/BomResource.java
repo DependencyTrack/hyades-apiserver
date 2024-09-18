@@ -56,8 +56,6 @@ import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
@@ -71,7 +69,6 @@ import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -86,8 +83,6 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
@@ -429,51 +424,6 @@ public class BomResource extends AlpineResource {
                 return process(qm, project, artifactParts);
             }
         }
-    }
-
-    @GET
-    @Path("/token/{uuid}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Determines if there are any tasks associated with the token that are being processed, or in the queue to be processed.",
-            description = """
-                    <p>
-                      This endpoint is intended to be used in conjunction with uploading a supported BOM document.
-                      Upon upload, a token will be returned. The token can then be queried using this endpoint to
-                      determine if any tasks (such as vulnerability analysis) is being performed on the BOM:
-                      <ul>
-                        <li>A value of <code>true</code> indicates processing is occurring.</li>
-                        <li>A value of <code>false</code> indicates that no processing is occurring for the specified token.</li>
-                      </ul>
-                      However, a value of <code>false</code> also does not confirm the token is valid,
-                      only that no processing is associated with the specified token.
-                    </p>
-                    <p>Requires permission <strong>BOM_UPLOAD</strong></p>
-                    <p><strong>Deprecated</strong>. Use <code>/v1/event/token/{uuid}</code> instead.</p>""")
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "The processing status of the provided token",
-                    content = @Content(schema = @Schema(implementation = IsTokenBeingProcessedResponse.class))
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    @Deprecated(since = "4.11.0")
-    public Response isTokenBeingProcessed(
-            @Parameter(description = "The UUID of the token to query", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("uuid") @ValidUuid String uuid) {
-        // Check workflow states for the token.
-        List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
-        }
-        AtomicBoolean hasTerminalStatus = new AtomicBoolean(true);
-        IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-        workflowStates.stream().forEach(workflowState -> hasTerminalStatus.set(hasTerminalStatus.get() && (workflowState.getStatus() != WorkflowStatus.PENDING
-                                                                                                           && workflowState.getStatus() != WorkflowStatus.TIMED_OUT)));
-        response.setProcessing(!hasTerminalStatus.get());
-        return Response.ok(response).build();
     }
 
     /**
