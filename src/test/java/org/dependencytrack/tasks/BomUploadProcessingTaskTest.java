@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
-
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
@@ -44,6 +43,7 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.jdo.JDOObjectNotFoundException;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -69,6 +69,7 @@ import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
@@ -1433,6 +1434,114 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 i++;
             }
         }
+    }
+
+    @Test
+    public void informWithExistingDuplicateComponentPropertiesAndBomWithDuplicateComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final var componentPropertyA = new ComponentProperty();
+        componentPropertyA.setComponent(component);
+        componentPropertyA.setPropertyName("foo");
+        componentPropertyA.setPropertyValue("bar");
+        componentPropertyA.setPropertyType(PropertyType.STRING);
+        qm.persist(componentPropertyA);
+
+        final var componentPropertyB = new ComponentProperty();
+        componentPropertyB.setComponent(component);
+        componentPropertyB.setPropertyName("foo");
+        componentPropertyB.setPropertyValue("bar");
+        componentPropertyB.setPropertyType(PropertyType.STRING);
+        qm.persist(componentPropertyB);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "properties": [
+                        {
+                          "name": "foo",
+                          "value": "bar"
+                        },
+                        {
+                          "name": "foo",
+                          "value": "bar"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThatNoException()
+                .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyA));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyB));
+        assertThat(component.getProperties()).satisfiesExactly(property -> {
+            assertThat(property.getGroupName()).isNull();
+            assertThat(property.getPropertyName()).isEqualTo("foo");
+            assertThat(property.getPropertyValue()).isEqualTo("bar");
+            assertThat(property.getUuid()).isEqualTo(componentPropertyA.getUuid());
+        });
+    }
+
+    @Test
+    public void informWithEmptyComponentAndServiceNameTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b80",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": ""
+                    }
+                  ],
+                  "services": [
+                    {
+                      "name": ""
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getName()).isEqualTo("-");
+        });
+        assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service -> {
+            assertThat(service.getName()).isEqualTo("-");
+        });
     }
 
     private void assertBomProcessedNotification() throws Exception {

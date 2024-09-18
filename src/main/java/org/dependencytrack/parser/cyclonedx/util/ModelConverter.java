@@ -77,6 +77,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNullElse;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -190,7 +191,7 @@ public class ModelConverter {
         component.setBomRef(trimToNull(cdxComponent.getBomRef()));
         component.setClassifier(convertClassifier(cdxComponent.getType()).orElse(Classifier.LIBRARY));
         component.setGroup(trimToNull(cdxComponent.getGroup()));
-        component.setName(trimToNull(cdxComponent.getName()));
+        component.setName(requireNonNullElse(trimToNull(cdxComponent.getName()), "-"));
         component.setVersion(trimToNull(cdxComponent.getVersion()));
         component.setDescription(trimToNull(cdxComponent.getDescription()));
         component.setCopyright(trimToNull(cdxComponent.getCopyright()));
@@ -464,7 +465,7 @@ public class ModelConverter {
         service.setBomRef(useOrGenerateRandomBomRef(cdxService.getBomRef()));
         service.setProvider(convert(cdxService.getProvider()));
         service.setGroup(trimToNull(cdxService.getGroup()));
-        service.setName(trimToNull(cdxService.getName()));
+        service.setName(requireNonNullElse(trimToNull(cdxService.getName()), "-"));
         service.setVersion(trimToNull(cdxService.getVersion()));
         service.setDescription(trimToNull(cdxService.getDescription()));
         service.setAuthenticated(cdxService.getAuthenticated());

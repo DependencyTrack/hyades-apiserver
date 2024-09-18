@@ -19,8 +19,10 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.model.ConfigProperty;
+import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,10 +36,12 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
 import java.util.ArrayList;
@@ -155,5 +159,30 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
         return Response.ok(returnList).build();
     }
 
-
+    @GET
+    @Path("/public/{groupName}/{propertyName}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Returns a public ConfigProperty", description = "<p></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Public ConfigProperty returned", content = @Content(schema = @Schema(implementation = ConfigProperty.class))),
+            @ApiResponse(responseCode = "403", description = "This is not a public visible ConfigProperty")
+    })
+    @AuthenticationNotRequired
+    public Response getPublicConfigProperty(
+            @Parameter(description = "The group name of the value to retrieve", required = true)
+            @PathParam("groupName") String groupName,
+            @Parameter(description = "The property name of the value to retrieve", required = true)
+            @PathParam("propertyName") String propertyName) {
+        ConfigProperty configProperty = new ConfigProperty();
+        configProperty.setGroupName(groupName);
+        configProperty.setPropertyName(propertyName);
+        ConfigPropertyConstants publicConfigProperty = ConfigPropertyConstants.ofProperty(configProperty);
+        if (!publicConfigProperty.getIsPublic()) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            ConfigProperty property = qm.getConfigProperty(groupName, propertyName);
+            return Response.ok(property).build();
+        }
+    }
 }
