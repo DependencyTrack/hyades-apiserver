@@ -64,4 +64,16 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
+    
+    <changeSet id="v5.6.0-4" author="nscuro">
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
+        <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <modifyDataType tableName="PROJECT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <sql splitStatements="true">
+            CREATE
+             INDEX "COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX"
+                ON "COMPONENT"
+             USING GIN("DIRECT_DEPENDENCIES" JSONB_PATH_OPS);
+        </sql>
+    </changeSet>
 </databaseChangeLog>

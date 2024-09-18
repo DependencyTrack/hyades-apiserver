@@ -510,7 +510,7 @@ public class CelCommonPolicyLibrary implements Library {
                             -- Short-circuit the recursive query if we don't have any matches at all.
                             EXISTS(SELECT 1 FROM "CTE_MATCHES")
                             -- Otherwise, find components of which the given leaf component is a direct dependency.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                            AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                           UNION ALL
                           SELECT
                             "C"."UUID"                                       AS "UUID",
@@ -527,7 +527,7 @@ public class CelCommonPolicyLibrary implements Library {
                             -- Also, ensure we haven't seen this component before, to prevent cycles.
                             AND NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                             -- Otherwise, the previous component must appear in the current direct dependencies.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                            AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                         )
                         SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
                         """);
@@ -586,7 +586,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
                       SELECT
                         "C"."UUID"                                       AS "UUID",
@@ -612,7 +612,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Ensure we haven't seen this component before, to prevent cycles.
                         NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                         -- Otherwise, the previous component must appear in the current direct dependencies.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                     )
                     SELECT ${selectColumnNames?join(", ")} FROM "CTE_DEPENDENCIES" WHERE "FOUND";
                     """);
@@ -700,7 +700,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
                       SELECT
                         "C"."ID"                                         AS "ID",
@@ -727,7 +727,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Ensure we haven't seen this component before, to prevent cycles.
                         NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                         -- Otherwise, the previous component must appear in the current direct dependencies.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                     )
                     SELECT "ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH" FROM "CTE_DEPENDENCIES";
                      """);
@@ -969,7 +969,7 @@ public class CelCommonPolicyLibrary implements Library {
                   "PROJECT" AS "P" ON "P"."ID" = "C"."PROJECT_ID"
                 WHERE
                   "C"."UUID" = :leafComponentUuid
-                  AND "P"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                  AND "P"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                 """);
 
         return query
