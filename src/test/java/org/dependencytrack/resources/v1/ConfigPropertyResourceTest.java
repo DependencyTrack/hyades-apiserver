@@ -22,6 +22,11 @@ import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -30,19 +35,14 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH;
-import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
+import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
 
 public class ConfigPropertyResourceTest extends ResourceTest {
@@ -378,4 +378,132 @@ public class ConfigPropertyResourceTest extends ResourceTest {
         Assert.assertEquals("A Task scheduler cadence ("+prop4.getPropertyName()+") cannot be inferior to one hour.A value of -2 was provided.", body);
     }
 
+    @Test
+    public void updateConfigPropertyBomValidationModeTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.BOM_VALIDATION_MODE.getGroupName(),
+                ConfigPropertyConstants.BOM_VALIDATION_MODE.getPropertyName(),
+                ConfigPropertyConstants.BOM_VALIDATION_MODE.getDefaultPropertyValue(),
+                ConfigPropertyConstants.BOM_VALIDATION_MODE.getPropertyType(),
+                ConfigPropertyConstants.BOM_VALIDATION_MODE.getDescription()
+        );
+
+        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.mode",
+                          "propertyValue": "ENABLED_FOR_TAGS"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "groupName": "artifact",
+                  "propertyName": "bom.validation.mode",
+                  "propertyValue": "ENABLED_FOR_TAGS",
+                  "propertyType": "STRING",
+                  "description": "${json-unit.any-string}"
+                }
+                """);
+
+        response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.mode",
+                          "propertyValue": "foo"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Value must be any of: ENABLED, DISABLED, ENABLED_FOR_TAGS, DISABLED_FOR_TAGS");
+    }
+
+    @Test
+    public void updateConfigPropertyBomValidationTagsExclusiveTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getGroupName(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyName(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getDefaultPropertyValue(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyType(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getDescription()
+        );
+
+        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.tags.exclusive",
+                          "propertyValue": "[\\"foo\\"]"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "groupName": "artifact",
+                  "propertyName": "bom.validation.tags.exclusive",
+                  "propertyValue": "[\\"foo\\"]",
+                  "propertyType": "STRING",
+                  "description": "${json-unit.any-string}"
+                }
+                """);
+
+        response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.tags.exclusive",
+                          "propertyValue": "foo"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Value must be a valid JSON array of strings");
+    }
+
+    @Test
+    public void updateConfigPropertyBomValidationTagsInclusiveTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getGroupName(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyName(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getDefaultPropertyValue(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyType(),
+                ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getDescription()
+        );
+
+        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.tags.inclusive",
+                          "propertyValue": "[\\"foo\\"]"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "groupName": "artifact",
+                  "propertyName": "bom.validation.tags.inclusive",
+                  "propertyValue": "[\\"foo\\"]",
+                  "propertyType": "STRING",
+                  "description": "${json-unit.any-string}"
+                }
+                """);
+
+        response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "groupName": "artifact",
+                          "propertyName": "bom.validation.tags.inclusive",
+                          "propertyValue": "foo"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Value must be a valid JSON array of strings");
+    }
 }

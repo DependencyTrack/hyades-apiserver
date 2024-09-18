@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
+import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
@@ -33,6 +34,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -54,7 +59,9 @@ import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.NotificationConstants;
@@ -76,6 +83,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -83,9 +91,12 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 
 import static java.util.function.Predicate.not;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -512,10 +523,8 @@ public class BomResource extends AlpineResource {
     }
 
     static void validate(final byte[] bomBytes, final Project project) {
-        try (final var qm = new QueryManager()) {
-            if (!qm.isEnabled(BOM_VALIDATION_ENABLED)) {
-                return;
-            }
+        if (!shouldValidate(project)) {
+            return;
         }
 
         try {
@@ -555,5 +564,61 @@ public class BomResource extends AlpineResource {
                 .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
                 .content("An error occurred while validating a BOM")
                 .subject(new BomValidationFailed(project, bom, errors)));
+    }
+
+    private static boolean shouldValidate(final Project project) {
+        try (final var qm = new QueryManager()) {
+            final ConfigProperty validationModeProperty = qm.getConfigProperty(
+                    BOM_VALIDATION_MODE.getGroupName(),
+                    BOM_VALIDATION_MODE.getPropertyName()
+            );
+
+            var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
+            try {
+                validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
+            } catch (RuntimeException e) {
+                LOGGER.warn("""
+                        No BOM validation mode configured, or configured value is invalid; \
+                        Assuming default mode %s""".formatted(validationMode), e);
+            }
+
+            if (validationMode == BomValidationMode.ENABLED) {
+                LOGGER.debug("Validating BOM because validation is enabled globally");
+                return true;
+            } else if (validationMode == BomValidationMode.DISABLED) {
+                LOGGER.debug("Not validating BOM because validation is disabled globally");
+                return false;
+            }
+
+            // Other modes depend on tags. Does the project even have tags?
+            if (project.getTags() == null || project.getTags().isEmpty()) {
+                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+            }
+
+            final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
+                    ? BOM_VALIDATION_TAGS_INCLUSIVE
+                    : BOM_VALIDATION_TAGS_EXCLUSIVE;
+            final ConfigProperty tagsProperty = qm.getConfigProperty(
+                    tagsPropertyConstant.getGroupName(),
+                    tagsPropertyConstant.getPropertyName()
+            );
+
+            final Set<String> validationModeTags;
+            try {
+                final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
+                final JsonArray jsonArray = jsonParser.readArray();
+                validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
+            } catch (RuntimeException e) {
+                LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
+                        .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
+                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+            }
+
+            final boolean doTagsMatch = project.getTags().stream()
+                    .map(org.dependencytrack.model.Tag::getName)
+                    .anyMatch(validationModeTags::contains);
+            return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
+                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+        }
     }
 }
