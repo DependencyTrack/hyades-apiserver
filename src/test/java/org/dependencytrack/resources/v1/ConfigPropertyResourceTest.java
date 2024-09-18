@@ -508,6 +508,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEqualTo("Value must be a valid JSON array of strings");
     }
 
+    @Test
     public void getPublicAllPropertiesTest() {
         for (ConfigPropertyConstants configProperty : ConfigPropertyConstants.values()) {
             String groupName = configProperty.getGroupName();
