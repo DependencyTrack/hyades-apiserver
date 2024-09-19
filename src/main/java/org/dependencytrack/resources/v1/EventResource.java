@@ -36,9 +36,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing Events
@@ -82,9 +85,18 @@ public class EventResource extends AlpineResource {
     public Response isTokenBeingProcessed(
             @Parameter(description = "The UUID of the token to query", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        final boolean value = Event.isEventBeingProcessed(UUID.fromString(uuid));
-        IsTokenBeingProcessedResponse response = new IsTokenBeingProcessedResponse();
-        response.setProcessing(value);
+        final UUID token = UUID.fromString(uuid);
+
+        final boolean isProcessing;
+        if (Event.isEventBeingProcessed(token)) {
+            isProcessing = true;
+        } else {
+            isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+        }
+
+        final var response = new IsTokenBeingProcessedResponse();
+        response.setProcessing(isProcessing);
         return Response.ok(response).build();
     }
 }
