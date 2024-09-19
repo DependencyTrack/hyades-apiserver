@@ -64,4 +64,11 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
+    <changeSet id="v5.6.0-4" author="sahibamittal">
+        <sql>
+            DELETE FROM "CONFIGPROPERTY"
+            WHERE "GROUPNAME" = 'artifact'
+            AND "PROPERTYNAME" = 'bom.validation.enabled';
+        </sql>
+    </changeSet>
 </databaseChangeLog>
