@@ -20,12 +20,12 @@ package org.dependencytrack.dev;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.event.kafka.KafkaTopics;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -92,6 +92,7 @@ public class DevServicesInitializer implements ServletContextListener {
             final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
+            postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
 
             // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
             //   and pick the corresponding Testcontainers class accordingly.
