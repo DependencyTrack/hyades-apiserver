@@ -146,7 +146,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         }});
         project.setAuthors(authors);
         project.setDescription("projectDescription");
-        project.setDirectDependencies("{7e5f6465-d2f2-424f-b1a4-68d186fa2b46}");
+        project.setDirectDependencies("[{\"uuid\":\"7e5f6465-d2f2-424f-b1a4-68d186fa2b46\"}]");
         project.setExternalReferences(List.of(new ExternalReference()));
         project.setLastBomImport(new java.util.Date());
         project.setLastBomImportFormat("projectBomFormat");
@@ -181,7 +181,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         component.setPurl("pkg:maven/a/b@1.0");
         component.setPublisher("componentPublisher");
         component.setPurlCoordinates("componentPurlCoordinates");
-        component.setDirectDependencies("componentDirectDependencies");
+        component.setDirectDependencies("[]");
         component.setExtension("componentExtension");
         component.setExternalReferences(List.of(new ExternalReference()));
         component.setFilename("componentFilename");
