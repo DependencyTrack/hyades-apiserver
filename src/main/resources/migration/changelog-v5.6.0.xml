@@ -2,11 +2,8 @@
 <databaseChangeLog
         objectQuotingStrategy="QUOTE_ALL_OBJECTS"
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
-            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
-            http://www.liquibase.org/xml/ns/dbchangelog
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="v5.6.0-1" author="sahibamittal">
@@ -74,6 +71,14 @@
              INDEX "COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX"
                 ON "COMPONENT"
              USING GIN("DIRECT_DEPENDENCIES" JSONB_PATH_OPS);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-5" author="sahibamittal">
+        <sql>
+            DELETE FROM "CONFIGPROPERTY"
+            WHERE "GROUPNAME" = 'artifact'
+            AND "PROPERTYNAME" = 'bom.validation.enabled';
         </sql>
     </changeSet>
 </databaseChangeLog>

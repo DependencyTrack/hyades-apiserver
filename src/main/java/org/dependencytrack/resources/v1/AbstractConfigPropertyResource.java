@@ -24,15 +24,23 @@ import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import alpine.server.resources.AlpineResource;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 abstract class AbstractConfigPropertyResource extends AlpineResource {
 
@@ -134,6 +142,32 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
                     LOGGER.error("An error occurred while encrypting config property value", e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while encrypting property value. Check log for details.").build();
                 }
+            }
+        } else if (ConfigPropertyConstants.BOM_VALIDATION_MODE.getPropertyName().equals(json.getPropertyName())) {
+            try {
+                BomValidationMode.valueOf(json.getPropertyValue());
+                property.setPropertyValue(json.getPropertyValue());
+            } catch (IllegalArgumentException e) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Value must be any of: %s".formatted(Arrays.stream(BomValidationMode.values()).map(Enum::name).collect(Collectors.joining(", "))))
+                        .build();
+            }
+        } else if (ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyName().equals(json.getPropertyName())
+                || ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyName().equals(json.getPropertyName())) {
+            try {
+                final JsonReader jsonReader = Json.createReader(new StringReader(json.getPropertyValue()));
+                final JsonArray jsonArray = jsonReader.readArray();
+                jsonArray.getValuesAs(JsonString::getString);
+
+                // NB: Storing the string representation of the parsed array instead of the original value,
+                // since this removes any unnecessary whitespace.
+                property.setPropertyValue(jsonArray.toString());
+            } catch (RuntimeException e) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Value must be a valid JSON array of strings")
+                        .build();
             }
         } else {
             property.setPropertyValue(json.getPropertyValue());
