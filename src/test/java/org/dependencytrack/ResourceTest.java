@@ -55,6 +55,7 @@ public abstract class ResourceTest {
     protected final String V1_CONFIG_PROPERTY = "/v1/configProperty";
     protected final String V1_CWE = "/v1/cwe";
     protected final String V1_DEPENDENCY = "/v1/dependency";
+    protected final String V1_EVENT = "/v1/event";
     protected final String V1_FINDING = "/v1/finding";
     protected final String V1_LDAP = "/v1/ldap";
     protected final String V1_LICENSE = "/v1/license";

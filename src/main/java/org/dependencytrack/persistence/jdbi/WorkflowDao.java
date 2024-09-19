@@ -185,4 +185,16 @@ public interface WorkflowDao extends SqlObject {
             """)
     int deleteAllForRetention(@Bind Duration retentionDuration);
 
+    /**
+     * @since 5.6.0
+     */
+    @SqlQuery("""
+            SELECT EXISTS(
+              SELECT 1
+                FROM "WORKFLOW_STATE"
+               WHERE "TOKEN" = :token
+                 AND "STATUS" IN ('PENDING', 'TIMED_OUT'))
+            """)
+    boolean existsWithNonTerminalStatus(@Bind UUID token);
+
 }
