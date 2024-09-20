@@ -27,6 +27,7 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -115,6 +116,7 @@ public abstract class ResourceTest {
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
+        PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         team = qm.createTeam("Test Users", true);
         this.apiKey = team.getApiKeys().get(0).getKey();
@@ -122,6 +124,8 @@ public abstract class ResourceTest {
 
     @After
     public void after() {
+        PluginManagerTestUtil.unloadPlugins();
+
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
         // code base can leave such a broken state behind if they run into unexpected
