@@ -59,7 +59,7 @@ public interface BomDao {
     @SqlUpdate("""
             DELETE
               FROM "BOM_UPLOAD"
-             WHERE "UPLOADED_AT" < (NOW() - :duration)
+             WHERE NOW() - "UPLOADED_AT" > :duration
             """)
     int deleteAllUploadsForRetentionDuration(@Bind Duration duration);
 

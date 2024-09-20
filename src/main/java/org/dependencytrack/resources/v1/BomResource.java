@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
@@ -90,6 +91,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
@@ -502,7 +504,7 @@ public class BomResource extends AlpineResource {
     }
 
     private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes, project);
+        validate(qm, bomBytes, project);
 
         final int compressionLevel = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL);
         try (final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
@@ -510,8 +512,8 @@ public class BomResource extends AlpineResource {
         }
     }
 
-    static void validate(final byte[] bomBytes, final Project project) {
-        if (!shouldValidate(project)) {
+    static void validate(final QueryManager qm, final byte[] bomBytes, final Project project) {
+        if (!shouldValidate(qm, project)) {
             return;
         }
 
@@ -554,59 +556,57 @@ public class BomResource extends AlpineResource {
                 .subject(new BomValidationFailed(project, bom, errors)));
     }
 
-    private static boolean shouldValidate(final Project project) {
-        try (final var qm = new QueryManager()) {
-            final ConfigProperty validationModeProperty = qm.getConfigProperty(
-                    BOM_VALIDATION_MODE.getGroupName(),
-                    BOM_VALIDATION_MODE.getPropertyName()
-            );
+    private static boolean shouldValidate(final QueryManager qm, final Project project) {
+        final ConfigProperty validationModeProperty = qm.getConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName()
+        );
 
-            var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
-            try {
-                validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
-            } catch (RuntimeException e) {
-                LOGGER.warn("""
-                        No BOM validation mode configured, or configured value is invalid; \
-                        Assuming default mode %s""".formatted(validationMode), e);
-            }
-
-            if (validationMode == BomValidationMode.ENABLED) {
-                LOGGER.debug("Validating BOM because validation is enabled globally");
-                return true;
-            } else if (validationMode == BomValidationMode.DISABLED) {
-                LOGGER.debug("Not validating BOM because validation is disabled globally");
-                return false;
-            }
-
-            // Other modes depend on tags. Does the project even have tags?
-            if (project.getTags() == null || project.getTags().isEmpty()) {
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
-                    ? BOM_VALIDATION_TAGS_INCLUSIVE
-                    : BOM_VALIDATION_TAGS_EXCLUSIVE;
-            final ConfigProperty tagsProperty = qm.getConfigProperty(
-                    tagsPropertyConstant.getGroupName(),
-                    tagsPropertyConstant.getPropertyName()
-            );
-
-            final Set<String> validationModeTags;
-            try {
-                final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
-                final JsonArray jsonArray = jsonParser.readArray();
-                validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
-            } catch (RuntimeException e) {
-                LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
-                        .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final boolean doTagsMatch = project.getTags().stream()
-                    .map(org.dependencytrack.model.Tag::getName)
-                    .anyMatch(validationModeTags::contains);
-            return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+        var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
+        try {
+            validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
+        } catch (RuntimeException e) {
+            LOGGER.warn("""
+                    No BOM validation mode configured, or configured value is invalid; \
+                    Assuming default mode %s""".formatted(validationMode), e);
         }
+
+        if (validationMode == BomValidationMode.ENABLED) {
+            LOGGER.debug("Validating BOM because validation is enabled globally");
+            return true;
+        } else if (validationMode == BomValidationMode.DISABLED) {
+            LOGGER.debug("Not validating BOM because validation is disabled globally");
+            return false;
+        }
+
+        // Other modes depend on tags. Does the project even have tags?
+        if (project.getTags() == null || project.getTags().isEmpty()) {
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
+                ? BOM_VALIDATION_TAGS_INCLUSIVE
+                : BOM_VALIDATION_TAGS_EXCLUSIVE;
+        final ConfigProperty tagsProperty = qm.getConfigProperty(
+                tagsPropertyConstant.getGroupName(),
+                tagsPropertyConstant.getPropertyName()
+        );
+
+        final Set<String> validationModeTags;
+        try {
+            final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
+            final JsonArray jsonArray = jsonParser.readArray();
+            validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
+                    .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final boolean doTagsMatch = project.getTags().stream()
+                .map(org.dependencytrack.model.Tag::getName)
+                .anyMatch(validationModeTags::contains);
+        return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
+               || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
     }
 }

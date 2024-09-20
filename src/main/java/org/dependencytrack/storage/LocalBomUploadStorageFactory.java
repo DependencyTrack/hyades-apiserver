@@ -64,16 +64,15 @@ public class LocalBomUploadStorageFactory implements ExtensionFactory<BomUploadS
     public void init(final ConfigRegistry configRegistry) {
         directoryPath = configRegistry.getOptionalValue(CONFIG_DIRECTORY)
                 .map(Paths::get)
-                .orElseGet(() -> {
-                    final Path path = Config.getInstance().getDataDirectorty().toPath().resolve("bom-uploads");
-                    try {
-                        return Files.createDirectories(path);
-                    } catch (IOException e) {
-                        throw new IllegalStateException("""
-                                Failed to create directory for BOM upload storage at %s\
-                                """.formatted(path), e);
-                    }
-                });
+                .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("bom-uploads"));
+
+        try {
+            Files.createDirectories(directoryPath);
+        } catch (IOException e) {
+            throw new IllegalStateException("""
+                    Failed to create directory for BOM upload storage at %s\
+                    """.formatted(directoryPath), e);
+        }
 
         final boolean canRead = directoryPath.toFile().canRead();
         final boolean canWrite = directoryPath.toFile().canWrite();

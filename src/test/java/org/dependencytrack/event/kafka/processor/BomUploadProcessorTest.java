@@ -1450,15 +1450,15 @@ public class BomUploadProcessorTest extends AbstractProcessorTest {
 
     @Test
     public void informIssue3936Test() throws Exception{
-
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
         qm.persist(project);
         List<String> boms = new ArrayList<>(Arrays.asList("bom-issue3936-authors.json", "bom-issue3936-author.json", "bom-issue3936-both.json"));
         int i=0;
         for(String bom : boms){
-            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bom));
-            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-            new BomUploadProcessingTask().inform(bomUploadEvent);
+            final var token = UUID.randomUUID();
+            final BomUploadedEvent bomUploadedEvent = createEvent(token, project, bom);
+            qm.createWorkflowSteps(token);
+            new BomUploadProcessor().process(aConsumerRecord(project.getUuid(), bomUploadedEvent).build());
             assertBomProcessedNotification();
             qm.getPersistenceManager().evictAll();
             assertThat(qm.getAllComponents(project)).isNotEmpty();
@@ -1523,9 +1523,10 @@ public class BomUploadProcessorTest extends AbstractProcessorTest {
                   ]
                 }
                 """.getBytes(StandardCharsets.UTF_8);
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
-        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-        new BomUploadProcessingTask().inform(bomUploadEvent);
+        final var token = UUID.randomUUID();
+        final BomUploadedEvent bomUploadedEvent = createEvent(token, project, bomBytes);
+        qm.createWorkflowSteps(token);
+        new BomUploadProcessor().process(aConsumerRecord(project.getUuid(), bomUploadedEvent).build());
         assertBomProcessedNotification();
 
         qm.getPersistenceManager().evictAll();
@@ -1567,9 +1568,10 @@ public class BomUploadProcessorTest extends AbstractProcessorTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
-        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-        new BomUploadProcessingTask().inform(bomUploadEvent);
+        final var token = UUID.randomUUID();
+        final BomUploadedEvent bomUploadedEvent = createEvent(token, project, bomBytes);
+        qm.createWorkflowSteps(token);
+        new BomUploadProcessor().process(aConsumerRecord(project.getUuid(), bomUploadedEvent).build());
         assertBomProcessedNotification();
 
         qm.getPersistenceManager().evictAll();
