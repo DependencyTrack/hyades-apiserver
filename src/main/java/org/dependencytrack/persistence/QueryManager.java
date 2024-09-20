@@ -613,6 +613,10 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().createTag(name);
     }
 
+    public List<Tag> createTags(final List<String> names) {
+        return getTagQueryManager().createTags(names);
+    }
+
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, boolean active, boolean commitIndex) {
         return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, active, commitIndex);
     }
@@ -1418,6 +1422,10 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().bind(policy, tags);
     }
 
+    public boolean bind(final NotificationRule notificationRule, final Collection<Tag> tags) {
+        return getNotificationQueryManager().bind(notificationRule, tags);
+    }
+
     public boolean hasAccessManagementPermission(final Object principal) {
         if (principal instanceof final UserPrincipal userPrincipal) {
             return hasAccessManagementPermission(userPrincipal);
@@ -1470,6 +1478,18 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getTagsForPolicy(String policyUuid) {
         return getTagQueryManager().getTagsForPolicy(policyUuid);
+    }
+
+    public List<TagQueryManager.TaggedNotificationRuleRow> getTaggedNotificationRules(final String tagName) {
+        return getTagQueryManager().getTaggedNotificationRules(tagName);
+    }
+
+    public void tagNotificationRules(final String tagName, final Collection<String> notificationRuleUuids) {
+        getTagQueryManager().tagNotificationRules(tagName, notificationRuleUuids);
+    }
+
+    public void untagNotificationRules(final String tagName, final Collection<String> notificationRuleUuids) {
+        getTagQueryManager().untagNotificationRules(tagName, notificationRuleUuids);
     }
 
     /**

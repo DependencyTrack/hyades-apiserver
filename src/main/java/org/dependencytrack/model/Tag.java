@@ -85,6 +85,11 @@ public class Tag implements Serializable {
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "vulnId ASC"))
     private List<Vulnerability> vulnerabilities;
 
+    @Persistent
+    @JsonIgnore
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    private List<NotificationRule> notificationRules;
+
     public long getId() {
         return id;
     }
@@ -123,6 +128,14 @@ public class Tag implements Serializable {
 
     public void setVulnerabilities(List<Vulnerability> vulnerabilities) {
         this.vulnerabilities = vulnerabilities;
+    }
+
+    public List<NotificationRule> getNotificationRules() {
+        return notificationRules;
+    }
+
+    public void setNotificationRules(final List<NotificationRule> notificationRules) {
+        this.notificationRules = notificationRules;
     }
 
     @Override
