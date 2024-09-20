@@ -34,6 +34,11 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         withPassword("dtrack");
         withDatabaseName("dtrack");
         withLabel("owner", "hyades-apiserver");
+        withUrlParam("reWriteBatchedInserts", "true");
+
+        // Uncomment this to see queries executed by Postgres:
+        //   withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger(PostgresTestContainer.class)));
+        //   withCommand("-c log_statement=all");
 
         // NB: Container reuse won't be active unless either:
         //  - The environment variable TESTCONTAINERS_REUSE_ENABLE=true is set
