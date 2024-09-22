@@ -29,17 +29,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
@@ -53,8 +42,17 @@ import org.dependencytrack.resources.v1.vo.CelExpressionError;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
-import javax.jdo.FetchPlan;
-import javax.jdo.PersistenceManager;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -105,7 +103,12 @@ public class PolicyConditionResource extends AlpineResource {
                 final PolicyCondition pc = qm.createPolicyCondition(policy, jsonPolicyCondition.getSubject(),
                         jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()),
                         jsonPolicyCondition.getViolationType());
-                return Response.status(Response.Status.CREATED).entity(detachConditions(qm, pc)).build();
+
+                // Prevent infinite recursion during JSON serialization.
+                qm.makeTransient(pc);
+                pc.setPolicy(null);
+
+                return Response.status(Response.Status.CREATED).entity(pc).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
             }
@@ -140,7 +143,12 @@ public class PolicyConditionResource extends AlpineResource {
             if (pc != null) {
                 maybeValidateExpression(jsonPolicyCondition);
                 pc = qm.updatePolicyCondition(jsonPolicyCondition);
-                return Response.status(Response.Status.CREATED).entity(pc).build();
+
+                // Prevent infinite recursion during JSON serialization.
+                qm.makeTransient(pc);
+                pc.setPolicy(null);
+
+                return Response.status(Response.Status.OK).entity(pc).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy condition could not be found.").build();
             }
@@ -196,10 +204,4 @@ public class PolicyConditionResource extends AlpineResource {
         }
     }
 
-    private PolicyCondition detachConditions(final QueryManager qm, final PolicyCondition policyCondition) {
-        final PersistenceManager pm = qm.getPersistenceManager();
-        pm.getFetchPlan().setMaxFetchDepth(1); // Ensure policyCondition from policy is not included
-        pm.getFetchPlan().setDetachmentOptions(FetchPlan.DETACH_LOAD_FIELDS);
-        return qm.getPersistenceManager().detachCopy(policyCondition);
-    }
 }
