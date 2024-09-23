@@ -1,0 +1,66 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="csaf-1" author="FhG">
+        <createTable tableName="CSAFSOURCEENTITY">
+            <column name="ID" autoIncrement="true" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CSAFSOURCEENTITY_PK" />
+            </column>
+            <column name="NAME" type="VARCHAR(255)" />
+            <column name="URL" type="VARCHAR(255)" />
+            <column name="ENABLED" type="BOOLEAN" />
+            <column name="AGGREGATOR" type="BOOLEAN" />
+            <column name="DISCOVERY" type="BOOLEAN" />
+            <column name="SEEN" type="BOOLEAN" />
+            <column name="LASTFETCHED" type="TIMESTAMP WITH TIME ZONE" />
+            <column name="CONTENT" type="TEXT" />
+        </createTable>
+
+        <createTable tableName="CSAFDOCUMENTENTITY">
+            <column name="ID" autoIncrement="true" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CSAFDOCUMENTENTITY_PK" />
+            </column>
+            <column name="NAME" type="VARCHAR(2048)"><!-- highest encountered len so far: 1257 -->
+                <constraints nullable="false" />
+            </column>
+            <column name="URL" type="VARCHAR(1024)">
+                <constraints nullable="false" />
+            </column>
+            <column name="SEEN" type="BOOLEAN" />
+            <column name="LASTFETCHED" type="TIMESTAMP WITH TIME ZONE" />
+            <column name="CONTENT" type="TEXT" />
+            <column name="PUBLISHERNAMESPACE" type="VARCHAR(1024)">
+                <constraints nullable="false" />
+            </column>
+            <column name="TRACKINGID" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="TRACKINGVERSION" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="csaf-2" author="FhG">
+        <sql>
+            ALTER TABLE "CSAFDOCUMENTENTITY"
+            ADD COLUMN searchvector tsvector
+            GENERATED ALWAYS AS (to_tsvector('english', coalesce("NAME", '') || ' ' || coalesce("URL", '') || ' ' || coalesce("CONTENT", ''))) STORED;
+        </sql>
+        <sql>
+            CREATE INDEX searchvector_idx ON "CSAFDOCUMENTENTITY" USING GIN (searchvector);
+        </sql>
+    </changeSet>
+    <changeSet id="csaf-3" author="FhG">
+        <addColumn tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID" type="VARCHAR(255)"/>
+        </addColumn>
+        <createIndex indexName="VULNERABILITYALIAS_CSAF_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

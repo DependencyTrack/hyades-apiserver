@@ -120,6 +120,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         loadDefaultRepositories();
         loadDefaultConfigProperties();
         loadDefaultNotificationPublishers();
+        loadDefaultCsafAggregators();
 
         recordDefaultObjectsVersion();
     }
@@ -345,6 +346,18 @@ public class DefaultObjectGenerator implements ServletContextListener {
             } catch (IOException e) {
                 LOGGER.error("An error occurred while synchronizing a default notification publisher", e);
             }
+        }
+    }
+
+    /**
+     * Load default CSAF aggregators
+     */
+    public void loadDefaultCsafAggregators() {
+        try(QueryManager qm = new QueryManager()) {
+            LOGGER.info("Synchronizing default CSAF aggregators to datastore");
+            qm.createCsafSource("BSI WID", "https://wid.cert-bund.de/.well-known/csaf-aggregator/aggregator.json", false, true);
+
+
         }
     }
 }

@@ -19,11 +19,10 @@
 package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
-
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 
 public class ProcessorInitializer implements ServletContextListener {
 
@@ -41,6 +40,8 @@ public class ProcessorInitializer implements ServletContextListener {
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
         PROCESSOR_MANAGER.registerBatchProcessor(EpssMirrorProcessor.PROCESSOR_NAME,
                 KafkaTopics.NEW_EPSS, new EpssMirrorProcessor());
+        PROCESSOR_MANAGER.registerBatchProcessor(CsafMirrorProcessor.PROCESSOR_NAME,
+                KafkaTopics.NEW_CSAF_DOCUMENT, new CsafMirrorProcessor());
         PROCESSOR_MANAGER.registerProcessor(VulnerabilityScanResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.VULN_ANALYSIS_RESULT, new VulnerabilityScanResultProcessor());
         PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,

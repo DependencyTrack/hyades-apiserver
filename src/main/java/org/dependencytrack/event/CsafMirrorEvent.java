@@ -16,19 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.model;
+package org.dependencytrack.event;
+
+import alpine.event.framework.Event;
 
 /**
- * Specifies identities of all supported analyzers.
+ * Defines an event used to start a mirror of configured CSAF vulnerability sources.
  *
- * @since 4.0.0
+ * @author Lawrence Dean
+ * TODO: -at-since 3.0.0 introduce API version
  */
-public enum AnalyzerIdentity {
-    INTERNAL_ANALYZER,
-    OSSINDEX_ANALYZER,
-    NPM_AUDIT_ANALYZER,
-    VULNDB_ANALYZER,
-    SNYK_ANALYZER,
-    CSAF_ANALYZER,
-    NONE
+public class CsafMirrorEvent implements Event {
 }

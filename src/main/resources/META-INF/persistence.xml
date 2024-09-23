@@ -29,6 +29,8 @@
     <class>org.dependencytrack.model.ComponentOccurrence</class>
     <class>org.dependencytrack.model.ComponentProperty</class>
     <class>org.dependencytrack.model.IntegrityMetaComponent</class>
+    <class>org.dependencytrack.model.CsafSourceEntity</class>
+    <class>org.dependencytrack.model.CsafDocumentEntity</class>
     <class>org.dependencytrack.model.DependencyMetrics</class>
     <class>org.dependencytrack.model.Epss</class>
     <class>org.dependencytrack.model.FindingAttribution</class>

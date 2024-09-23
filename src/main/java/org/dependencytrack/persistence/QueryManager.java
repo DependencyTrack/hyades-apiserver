@@ -56,6 +56,8 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.CsafDocumentEntity;
+import org.dependencytrack.model.CsafSourceEntity;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
@@ -162,6 +164,7 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private CsafQueryManager csafQueryManager;
 
     /**
      * Default constructor.
@@ -428,6 +431,17 @@ public class QueryManager extends AlpineQueryManager {
             metricsQueryManager = (request == null) ? new MetricsQueryManager(getPersistenceManager()) : new MetricsQueryManager(getPersistenceManager(), request);
         }
         return metricsQueryManager;
+    }
+
+    /**
+     * Lazy instantiation of CsafQueryManager.
+     * @return a CsafQueryManager object
+     */
+    private CsafQueryManager getCsafQueryManager() {
+        if(csafQueryManager == null) {
+            csafQueryManager = (request == null) ? new CsafQueryManager(getPersistenceManager()) : new CsafQueryManager(getPersistenceManager(), request);
+        }
+        return csafQueryManager;
     }
 
     /**
@@ -1165,6 +1179,46 @@ public class QueryManager extends AlpineQueryManager {
 
     void deleteMetrics(Component component) {
         getMetricsQueryManager().deleteMetrics(component);
+    }
+
+    public PaginatedResult getCsafSources(boolean isAggregator, boolean isDiscovery) {
+        return getCsafQueryManager().getCsafSources(isAggregator, isDiscovery);
+    }
+
+    public CsafSourceEntity createCsafSource(String name, String url, boolean enabled, boolean aggregator) {
+        return getCsafQueryManager().createCsafSource(name, url, enabled, aggregator);
+    }
+
+    public CsafSourceEntity createCsafSourceFromFile(String name, String contents, boolean enabled, boolean aggregator) {
+        return getCsafQueryManager().createCsafSourceFromFile(name, contents, enabled, aggregator);
+    }
+
+    public CsafSourceEntity updateCsafSource(CsafSourceEntity source) {
+        return getCsafQueryManager().updateCsafSource(source);
+    }
+
+    public PaginatedResult getCsafDocuments() {
+        return getCsafQueryManager().getCsafDocuments();
+    }
+
+    public PaginatedResult searchCsafDocuments(String searchText, int pageSize, int pageNumber, String sortName, String sortOrder) {
+        return getCsafQueryManager().searchCsafDocuments(searchText, pageSize, pageNumber, sortName, sortOrder);
+    }
+
+    public void synchronizeAllCsafDocuments(List<CsafDocumentEntity> list) {
+        getCsafQueryManager().synchronizeAllCsafDocuments(list);
+    }
+
+    public CsafDocumentEntity synchronizeCsafDocument(CsafDocumentEntity csaf){
+        return getCsafQueryManager().synchronizeCsafDocument(csaf);
+    }
+
+    public CsafDocumentEntity updateCsafDocument(CsafDocumentEntity csaf) {
+        return getCsafQueryManager().updateCsafDocument(csaf);
+    }
+
+    public boolean toggleCsafDocumentSeen(CsafDocumentEntity csafDocument) {
+        return getCsafQueryManager().toggleCsafDocumentSeen(csafDocument);
     }
 
     public PaginatedResult getRepositories() {

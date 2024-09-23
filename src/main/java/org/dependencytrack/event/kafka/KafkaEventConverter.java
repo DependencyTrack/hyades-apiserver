@@ -23,6 +23,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.CsafMirrorEvent;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
@@ -73,6 +74,7 @@ public final class KafkaEventConverter {
             case GitHubAdvisoryMirrorEvent e -> convert(e);
             case NistMirrorEvent e -> convert(e);
             case OsvMirrorEvent e -> convert(e);
+            case CsafMirrorEvent e -> convert(e);
             case EpssMirrorEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
         };
@@ -162,6 +164,11 @@ public final class KafkaEventConverter {
         final String key = Vulnerability.Source.OSV.name();
         final String value = event.ecosystem();
         return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, value);
+    }
+
+    static KafkaEvent<String, String> convert(final CsafMirrorEvent event) {
+        final String key = Vulnerability.Source.CSAF.name();
+        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
     }
 
     static KafkaEvent<String, String> convert(final EpssMirrorEvent ignored) {

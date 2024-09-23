@@ -37,17 +37,11 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
-import static alpine.Config.AlpineKey.DATABASE_URL;
-import static alpine.Config.AlpineKey.DATABASE_USERNAME;
+import static alpine.Config.AlpineKey.*;
 import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_COMPACT;
 import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_CONFIG;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_ENABLED;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
-import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
+import static org.dependencytrack.common.ConfigKey.*;
 
 /**
  * @since 5.5.0
@@ -156,6 +150,7 @@ public class DevServicesInitializer implements ServletContextListener {
 
         final var topicsToCreate = new ArrayList<>(List.of(
                 new NewTopic(KafkaTopics.NEW_EPSS.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
+                new NewTopic(KafkaTopics.NEW_CSAF_DOCUMENT.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NEW_VULNERABILITY.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NOTIFICATION_ANALYZER.name(), 1, (short) 1),
                 new NewTopic(KafkaTopics.NOTIFICATION_BOM.name(), 1, (short) 1),

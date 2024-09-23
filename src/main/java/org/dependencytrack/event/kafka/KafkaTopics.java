@@ -24,6 +24,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
+import org.dependencytrack.proto.mirror.v1.CsafDocumentItem;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
@@ -58,6 +59,7 @@ public final class KafkaTopics {
 
     public static final Topic<String, Notification> NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
     public static final Topic<String, EpssItem> NEW_EPSS;
+    public static final Topic<String, CsafDocumentItem> NEW_CSAF_DOCUMENT;
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
@@ -83,6 +85,7 @@ public final class KafkaTopics {
         VULN_ANALYSIS_RESULT_PROCESSED = new Topic<>("dtrack.vuln-analysis.result.processed", Serdes.String(), new KafkaProtobufSerde<>(ScanResult.parser()));
         NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE = new Topic<>("dtrack.notification.project-vuln-analysis-complete", Serdes.String(), NOTIFICATION_SERDE);
         NEW_EPSS = new Topic<>("dtrack.epss", Serdes.String(), new KafkaProtobufSerde<>(EpssItem.parser()));
+        NEW_CSAF_DOCUMENT = new Topic<>("dtrack.csaf.document", Serdes.String(), new KafkaProtobufSerde<>(CsafDocumentItem.parser()));
         NOTIFICATION_USER = new Topic<>("dtrack.notification.user", Serdes.String(), NOTIFICATION_SERDE);
     }
 
