@@ -25,7 +25,6 @@ import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
@@ -36,6 +35,8 @@ import org.dependencytrack.persistence.QueryManager;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -44,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
-
 
 /**
  * A {@link Subscriber} task that updates portfolio metrics.
@@ -87,7 +87,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     }
 
     private static void refreshProjectMetrics() throws Exception {
-        try (final var qm = new QueryManager().withL2CacheDisabled()) {
+        try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
@@ -100,7 +100,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
                 // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
-                final List<List<ProjectProjection>> partitions = ListUtils.partition(activeProjects, MAX_CONCURRENCY);
+                final List<List<ProjectProjection>> partitions = partition(activeProjects, MAX_CONCURRENCY);
                 final var countDownLatch = new CountDownLatch(partitions.size());
 
                 for (final List<ProjectProjection> partition : partitions) {
@@ -145,6 +145,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
         }
     }
 
+    public record ProjectProjection(long id, UUID uuid) {
+    }
+
     private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
         try (final Query<Project> query = pm.newQuery(Project.class)) {
             if (lastId == null) {
@@ -160,7 +163,24 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
         }
     }
 
-    public record ProjectProjection(long id, UUID uuid) {
+    static <T> List<List<T>> partition(final List<T> list, int numPartitions) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final int listSize = list.size();
+        final var partitions = new ArrayList<List<T>>(numPartitions);
+        int partitionSize = (int) Math.ceil((double) listSize / numPartitions);
+
+        int i = 0, elementsLeft = listSize;
+        while (i < listSize && numPartitions != 0) {
+            partitions.add(list.subList(i, i + partitionSize));
+            i = i + partitionSize;
+            elementsLeft = elementsLeft - partitionSize;
+            partitionSize = (int) Math.ceil((double) elementsLeft / --numPartitions);
+        }
+
+        return partitions;
     }
 
 }
