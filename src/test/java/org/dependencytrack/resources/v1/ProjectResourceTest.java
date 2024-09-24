@@ -23,6 +23,14 @@ import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -60,18 +68,13 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -1261,19 +1264,63 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByUuidTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        parentProject.setVersion("1.0.0");
+        qm.persist(parentProject);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setParent(parentProject);
+        qm.persist(project);
+
+        final var childProject = new Project();
+        childProject.setName("acme-app-child");
+        childProject.setVersion("1.0.0");
+        childProject.setParent(project);
+        qm.persist(childProject);
+
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("versions").size());
-        Assert.assertEquals(project.getUuid().toString(), json.getJsonArray("versions").getJsonObject(0).getJsonString("uuid").getString());
-        Assert.assertEquals("1.0", json.getJsonArray("versions").getJsonObject(0).getJsonString("version").getString());
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .withMatcher("parentUuid", equalTo(parentProject.getUuid().toString()))
+                .withMatcher("childUuid", equalTo(childProject.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "name": "acme-app",
+                          "version": "1.0.0",
+                          "uuid": "${json-unit.matches:projectUuid}",
+                          "parent": {
+                            "name": "acme-app-parent",
+                            "version": "1.0.0",
+                            "uuid": "${json-unit.matches:parentUuid}"
+                          },
+                          "children": [
+                            {
+                              "name": "acme-app-child",
+                              "version": "1.0.0",
+                              "uuid": "${json-unit.matches:childUuid}",
+                              "active": true
+                            }
+                          ],
+                          "properties": [],
+                          "tags": [],
+                          "active": true,
+                          "versions": [
+                            {
+                              "uuid": "${json-unit.matches:projectUuid}",
+                              "version": "1.0.0",
+                              "active":true
+                            }
+                          ]
+                        }
+                        """);
     }
 
     @Test
@@ -2181,5 +2228,170 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(2).getJsonString("uuid").getString());
         Assert.assertEquals("3.0", json.getJsonArray("versions").getJsonObject(2).getJsonString("version").getString());
         Assert.assertTrue(json.getJsonArray("versions").getJsonObject(2).getBoolean("active"));
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/4048
+    public void issue4048RegressionTest() {
+        final int projectsPerLevel = 10;
+        final int maxDepth = 5;
+
+        final Map<Integer, List<UUID>> projectUuidsByLevel = new HashMap<>();
+
+        // Create multiple parent-child hierarchies of projects.
+        for (int i = 0; i < maxDepth; i++) {
+            final List<UUID> parentUuids = projectUuidsByLevel.get(i - 1);
+
+            for (int j = 0; j < projectsPerLevel; j++) {
+                final UUID parentUuid = i > 0 ? parentUuids.get(j) : null;
+
+                final JsonObjectBuilder requestBodyBuilder = Json.createObjectBuilder()
+                        .add("name", "project-%d-%d".formatted(i, j))
+                        .add("version", "%d.%d".formatted(i, j));
+                if (parentUuid != null) {
+                    requestBodyBuilder.add("parent", Json.createObjectBuilder()
+                            .add("uuid", parentUuid.toString()));
+                }
+
+                final Response response = jersey.target(V1_PROJECT)
+                        .request()
+                        .header(X_API_KEY, apiKey)
+                        .put(Entity.json(requestBodyBuilder.build().toString()));
+                assertThat(response.getStatus()).isEqualTo(201);
+                final JsonObject jsonResponse = parseJsonObject(response);
+
+                projectUuidsByLevel.compute(i, (ignored, uuids) -> {
+                    final UUID uuid = UUID.fromString(jsonResponse.getString("uuid"));
+                    if (uuids == null) {
+                        return new ArrayList<>(List.of(uuid));
+                    }
+
+                    uuids.add(uuid);
+                    return uuids;
+                });
+            }
+        }
+
+        // Pick out the UUIDs of projects that should have a parent (i.e. level 1 or above).
+        final List<UUID> childUuids = projectUuidsByLevel.entrySet().stream()
+                .filter(entry -> entry.getKey() > 0)
+                .map(Map.Entry::getValue)
+                .flatMap(List::stream)
+                .toList();
+
+        // Create a [uuid -> level] mapping for better assertion failure reporting.
+        final Map<UUID, Integer> levelByChildUuid = projectUuidsByLevel.entrySet().stream()
+                .filter(entry -> entry.getKey() > 0)
+                .flatMap(entry -> {
+                    final Integer level = entry.getKey();
+                    return entry.getValue().stream().map(uuid -> Map.entry(uuid, level));
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        // Request all child projects individually.
+        // Ensure that the parent field is populated for all of them.
+        for (final UUID uuid : childUuids) {
+            final Response response = jersey.target(V1_PROJECT + "/" + uuid)
+                    .request()
+                    .header(X_API_KEY, apiKey)
+                    .get();
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonObject json = parseJsonObject(response);
+            assertThat(json.getJsonObject("parent"))
+                    .withFailMessage("Parent missing on level: " + levelByChildUuid.get(uuid))
+                    .isNotEmpty();
+        }
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/3883
+    public void issue3883RegressionTest() {
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json("""
+                        {
+                          "name": "acme-app-parent",
+                          "version": "1.0.0"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String parentProjectUuid = parseJsonObject(response).getString("uuid");
+
+        response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json("""
+                        {
+                          "name": "acme-app",
+                          "version": "1.0.0",
+                          "parent": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(parentProjectUuid)));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String childProjectUuid = parseJsonObject(response).getString("uuid");
+
+        response = jersey.target(V1_PROJECT + "/" + parentProjectUuid)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "name": "acme-app-parent",
+                  "version": "1.0.0",
+                  "classifier": "APPLICATION",
+                  "uuid": "${json-unit.any-string}",
+                  "children": [
+                    {
+                      "name": "acme-app",
+                      "version": "1.0.0",
+                      "classifier": "APPLICATION",
+                      "uuid": "${json-unit.any-string}",
+                      "active": true
+                    }
+                  ],
+                  "properties": [],
+                  "tags": [],
+                  "active": true,
+                  "versions": [
+                    {
+                      "uuid": "${json-unit.any-string}",
+                      "version": "1.0.0",
+                      "active": true
+                    }
+                  ]
+                }
+                """);
+
+        response = jersey.target(V1_PROJECT + "/" + childProjectUuid)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "name": "acme-app",
+                  "version": "1.0.0",
+                  "classifier": "APPLICATION",
+                  "uuid": "${json-unit.any-string}",
+                  "parent": {
+                    "name": "acme-app-parent",
+                    "version": "1.0.0",
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "children": [],
+                  "properties": [],
+                  "tags": [],
+                  "active": true,
+                  "versions": [
+                    {
+                      "uuid": "${json-unit.any-string}",
+                      "version": "1.0.0",
+                      "active": true
+                    }
+                  ]
+                }
+                """);
     }
 }
