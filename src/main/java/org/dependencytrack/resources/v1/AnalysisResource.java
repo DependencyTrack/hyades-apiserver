@@ -20,9 +20,8 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
+import alpine.model.ApiKey;
+import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -57,6 +56,9 @@ import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
 import org.dependencytrack.util.AnalysisCommentUtil;
 import org.dependencytrack.util.NotificationUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
 
@@ -169,8 +171,13 @@ public class AnalysisResource extends AlpineResource {
             }
 
             String commenter = null;
-            if (getPrincipal() instanceof LdapUser || getPrincipal() instanceof ManagedUser || getPrincipal() instanceof OidcUser) {
-                commenter = ((UserPrincipal) getPrincipal()).getUsername();
+            if (getPrincipal() instanceof UserPrincipal principal) {
+                commenter = principal.getUsername();
+            } else if (getPrincipal() instanceof ApiKey apiKey) {
+                List<Team> teams = apiKey.getTeams();
+                List<String> teamNames = new ArrayList<>();
+                teams.forEach(team -> teamNames.add(team.getName()));
+                commenter = String.join(", ", teamNames);
             }
 
             boolean analysisStateChange = false;
