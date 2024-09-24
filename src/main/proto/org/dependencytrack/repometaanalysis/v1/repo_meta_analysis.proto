@@ -11,15 +11,8 @@ option java_package = "org.dependencytrack.proto.repometaanalysis.v1";
 message AnalysisCommand {
   // The component that shall be analyzed.
   Component component = 1;
-  FetchMeta fetch_meta = 2;
 
-}
-
-enum FetchMeta{
-  FETCH_META_UNSPECIFIED = 0;
-  FETCH_META_INTEGRITY_DATA = 1;
-  FETCH_META_LATEST_VERSION = 2;
-  FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION = 3;
+  reserved 2; // fetch_meta; removed in 5.6.0
 }
 
 message AnalysisResult {
@@ -34,17 +27,34 @@ message AnalysisResult {
 
   // When the latest version was published.
   optional google.protobuf.Timestamp published = 4;
+
   optional IntegrityMeta integrity_meta = 5;
+
+  // When the latest version information was fetched from the repository.
+  optional google.protobuf.Timestamp fetched_at = 6;
 }
 
 message IntegrityMeta {
+  // The MD5 hash of the component.
   optional string md5 = 1;
+
+  // The SHA1 hash of the component.
   optional string sha1 = 2;
+
+  // The SHA256 hash of the component.
   optional string sha256 = 3;
+
+  // The SHA512 hash of the component.
   optional string sha512 = 4;
-  // When the component current version last modified.
+
+  // When the component was published.
   optional google.protobuf.Timestamp current_version_last_modified = 5;
+
+  // URL from where the information was sourced.
   string meta_source_url = 6;
+
+  // When the integrity metadata was fetched.
+  google.protobuf.Timestamp fetched_at = 7;
 }
 
 message Component {
