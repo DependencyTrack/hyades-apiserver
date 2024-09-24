@@ -16,18 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.event.maintenance;
 
-import org.dependencytrack.model.Project;
-import org.junit.Assert;
-import org.junit.Test;
+import alpine.event.framework.Event;
 
-public class BomUploadEventTest {
-
-    @Test
-    public void testFileConstructor() {
-        Project project = new Project();
-        BomUploadEvent event = new BomUploadEvent(project);
-        Assert.assertEquals(project, event.getProject());
-    }
+/**
+ * @since 5.6.0
+ */
+public class BomUploadStorageMaintenanceEvent implements Event {
 }

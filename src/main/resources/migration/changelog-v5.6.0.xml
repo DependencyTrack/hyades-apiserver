@@ -34,7 +34,7 @@
     <changeSet id="v5.6.0-2" author="nscuro">
         <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
     </changeSet>
-  
+
     <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
         <addColumn tableName="PROJECT">
             <column name="AUTHORS" type="TEXT"/>
@@ -42,7 +42,7 @@
         <addColumn tableName="COMPONENT">
             <column name="AUTHORS" type="TEXT"/>
         </addColumn>
-        
+
         <sql>
             UPDATE "PROJECT"
             SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
@@ -61,7 +61,7 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
-    
+
     <changeSet id="v5.6.0-4" author="nscuro">
         <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
         <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
@@ -80,5 +80,19 @@
             WHERE "GROUPNAME" = 'artifact'
             AND "PROPERTYNAME" = 'bom.validation.enabled';
         </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-6" author="nscuro">
+        <createTable tableName="BOM_UPLOAD">
+            <column name="TOKEN" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="BOM_UPLOAD_PK"/>
+            </column>
+            <column name="UPLOADED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="BOM" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
     </changeSet>
 </databaseChangeLog>

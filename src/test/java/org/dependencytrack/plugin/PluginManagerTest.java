@@ -23,6 +23,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.storage.BuiltinBomUploadStoragePlugin;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -45,7 +46,10 @@ public class PluginManagerTest extends PersistenceCapableTest {
     @Test
     public void testGetLoadedPlugins() {
         final List<Plugin> loadedPlugins = PluginManager.getInstance().getLoadedPlugins();
-        assertThat(loadedPlugins).satisfiesExactly(plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class));
+        assertThat(loadedPlugins).satisfiesExactly(
+                plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
+                plugin -> assertThat(plugin).isOfAnyClassIn(BuiltinBomUploadStoragePlugin.class)
+        );
         assertThat(loadedPlugins).isUnmodifiable();
     }
 

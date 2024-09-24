@@ -26,13 +26,13 @@ import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.maintenance.BomUploadStorageMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
@@ -51,6 +51,7 @@ import org.dependencytrack.tasks.RepositoryMetaAnalysisTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
+import org.dependencytrack.tasks.maintenance.BomUploadStorageMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
@@ -90,7 +91,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing asynchronous event subsystem");
 
-        EVENT_SERVICE.subscribe(BomUploadEvent.class, BomUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(VexUploadEvent.class, VexUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
@@ -118,6 +118,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
+        EVENT_SERVICE_ST.subscribe(BomUploadStorageMaintenanceEvent.class, BomUploadStorageMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(ComponentMetadataMaintenanceEvent.class, ComponentMetadataMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(MetricsMaintenanceEvent.class, MetricsMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(TagMaintenanceEvent.class, TagMaintenanceTask.class);
@@ -136,7 +137,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Shutting down asynchronous event subsystem");
         TaskScheduler.getInstance().shutdown();
 
-        EVENT_SERVICE.unsubscribe(BomUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
@@ -160,6 +160,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
         EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
 
+        EVENT_SERVICE_ST.unsubscribe(BomUploadStorageMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(ComponentMetadataMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(MetricsMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(TagMaintenanceTask.class);

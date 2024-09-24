@@ -22,7 +22,6 @@ import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -47,19 +46,11 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,7 +58,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
@@ -1936,41 +1926,6 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(project)).satisfiesExactly(violation ->
                 assertThat(violation.getPolicyCondition().getPolicy().getName()).isEqualTo("Policy A"));
-    }
-
-    @Test
-    @Ignore  // Un-ignore for manual profiling purposes.
-    public void testWithBloatedBom() throws Exception {
-        // Import all default objects (includes licenses and license groups).
-        new DefaultObjectGenerator().contextInitialized(null);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        project.setVersion("1.2.3");
-        qm.persist(project);
-
-        // Create a policy that will be violated by the vast majority (>8000) components.
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.resolved_license.groups.exists(lg, lg.name == "Permissive")
-                        """);
-        policyConditionA.setViolationType(PolicyViolation.Type.OPERATIONAL);
-        qm.persist(policyConditionA);
-
-        // Import the bloated BOM.
-        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json")));
-
-        // Evaluate policies on the project.
-        new CelPolicyEngine().evaluateProject(project.getUuid());
-    }
-
-    private static File createTempBomFile(final String testFileName) throws Exception {
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        return bomFilePath.toFile();
     }
 
 }

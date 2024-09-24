@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
@@ -72,28 +72,29 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.storage.BomUploadStorage;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static java.util.function.Predicate.not;
+import static org.dependencytrack.common.ConfigKey.BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
@@ -446,21 +447,21 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
 
-            final File bomFile;
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()));
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+                validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes, project);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-            Event.dispatch(bomUploadEvent);
+            new KafkaEventDispatcher().dispatchEvent(bomUploadEvent)/* .join() */;
 
-            BomUploadResponse bomUploadResponse = new BomUploadResponse();
+            final var bomUploadResponse = new BomUploadResponse();
             bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
             return Response.ok(bomUploadResponse).build();
         } else {
@@ -479,21 +480,18 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
 
-                final File bomFile;
+                final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()));
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    final byte[] bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+                    validateAndStoreBom(qm, bomUploadEvent.getChainIdentifier(), bomBytes, project);
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
-                // todo: make option to combine all the bom data so components are reconciled in a single pass.
-                // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-
                 qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-                Event.dispatch(bomUploadEvent);
+                new KafkaEventDispatcher().dispatchEvent(bomUploadEvent)/* .join() */;
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
                 bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
@@ -505,25 +503,17 @@ public class BomResource extends AlpineResource {
         return Response.ok().build();
     }
 
-    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes, project);
+    private void validateAndStoreBom(final QueryManager qm, final UUID token, final byte[] bomBytes, final Project project) throws IOException {
+        validate(qm, bomBytes, project);
 
-        // TODO: Store externally so other instances of the API server can pick it up.
-        //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
-        final java.nio.file.Path tmpPath = Files.createTempFile("dtrack-bom-%s".formatted(project.getUuid()), null);
-        final File tmpFile = tmpPath.toFile();
-        tmpFile.deleteOnExit();
-
-        LOGGER.debug("Writing BOM for project %s to %s".formatted(project.getUuid(), tmpPath));
-        try (final var tmpOutputStream = Files.newOutputStream(tmpPath, StandardOpenOption.WRITE)) {
-            tmpOutputStream.write(bomBytes);
+        final int compressionLevel = Config.getInstance().getPropertyAsInt(BOM_UPLOAD_STORAGE_COMPRESSION_LEVEL);
+        try (final BomUploadStorage storageProvider = PluginManager.getInstance().getExtension(BomUploadStorage.class)) {
+            storageProvider.storeBomCompressed(token, bomBytes, compressionLevel);
         }
-
-        return tmpFile;
     }
 
-    static void validate(final byte[] bomBytes, final Project project) {
-        if (!shouldValidate(project)) {
+    static void validate(final QueryManager qm, final byte[] bomBytes, final Project project) {
+        if (!shouldValidate(qm, project)) {
             return;
         }
 
@@ -566,59 +556,57 @@ public class BomResource extends AlpineResource {
                 .subject(new BomValidationFailed(project, bom, errors)));
     }
 
-    private static boolean shouldValidate(final Project project) {
-        try (final var qm = new QueryManager()) {
-            final ConfigProperty validationModeProperty = qm.getConfigProperty(
-                    BOM_VALIDATION_MODE.getGroupName(),
-                    BOM_VALIDATION_MODE.getPropertyName()
-            );
+    private static boolean shouldValidate(final QueryManager qm, final Project project) {
+        final ConfigProperty validationModeProperty = qm.getConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName()
+        );
 
-            var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
-            try {
-                validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
-            } catch (RuntimeException e) {
-                LOGGER.warn("""
-                        No BOM validation mode configured, or configured value is invalid; \
-                        Assuming default mode %s""".formatted(validationMode), e);
-            }
-
-            if (validationMode == BomValidationMode.ENABLED) {
-                LOGGER.debug("Validating BOM because validation is enabled globally");
-                return true;
-            } else if (validationMode == BomValidationMode.DISABLED) {
-                LOGGER.debug("Not validating BOM because validation is disabled globally");
-                return false;
-            }
-
-            // Other modes depend on tags. Does the project even have tags?
-            if (project.getTags() == null || project.getTags().isEmpty()) {
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
-                    ? BOM_VALIDATION_TAGS_INCLUSIVE
-                    : BOM_VALIDATION_TAGS_EXCLUSIVE;
-            final ConfigProperty tagsProperty = qm.getConfigProperty(
-                    tagsPropertyConstant.getGroupName(),
-                    tagsPropertyConstant.getPropertyName()
-            );
-
-            final Set<String> validationModeTags;
-            try {
-                final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
-                final JsonArray jsonArray = jsonParser.readArray();
-                validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
-            } catch (RuntimeException e) {
-                LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
-                        .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final boolean doTagsMatch = project.getTags().stream()
-                    .map(org.dependencytrack.model.Tag::getName)
-                    .anyMatch(validationModeTags::contains);
-            return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+        var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
+        try {
+            validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
+        } catch (RuntimeException e) {
+            LOGGER.warn("""
+                    No BOM validation mode configured, or configured value is invalid; \
+                    Assuming default mode %s""".formatted(validationMode), e);
         }
+
+        if (validationMode == BomValidationMode.ENABLED) {
+            LOGGER.debug("Validating BOM because validation is enabled globally");
+            return true;
+        } else if (validationMode == BomValidationMode.DISABLED) {
+            LOGGER.debug("Not validating BOM because validation is disabled globally");
+            return false;
+        }
+
+        // Other modes depend on tags. Does the project even have tags?
+        if (project.getTags() == null || project.getTags().isEmpty()) {
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
+                ? BOM_VALIDATION_TAGS_INCLUSIVE
+                : BOM_VALIDATION_TAGS_EXCLUSIVE;
+        final ConfigProperty tagsProperty = qm.getConfigProperty(
+                tagsPropertyConstant.getGroupName(),
+                tagsPropertyConstant.getPropertyName()
+        );
+
+        final Set<String> validationModeTags;
+        try {
+            final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
+            final JsonArray jsonArray = jsonParser.readArray();
+            validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
+                    .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final boolean doTagsMatch = project.getTags().stream()
+                .map(org.dependencytrack.model.Tag::getName)
+                .anyMatch(validationModeTags::contains);
+        return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
+               || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
     }
 }

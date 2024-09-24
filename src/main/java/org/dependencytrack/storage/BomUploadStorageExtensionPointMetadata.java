@@ -16,18 +16,30 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.storage;
 
-import org.dependencytrack.model.Project;
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionPointMetadata;
 
-public class BomUploadEventTest {
+/**
+ * @since 5.6.0
+ */
+public class BomUploadStorageExtensionPointMetadata implements ExtensionPointMetadata<BomUploadStorage> {
 
-    @Test
-    public void testFileConstructor() {
-        Project project = new Project();
-        BomUploadEvent event = new BomUploadEvent(project);
-        Assert.assertEquals(project, event.getProject());
+    static final String EXTENSION_POINT_NAME = "bom.upload.storage";
+
+    @Override
+    public String name() {
+        return EXTENSION_POINT_NAME;
     }
+
+    @Override
+    public boolean required() {
+        return true;
+    }
+
+    @Override
+    public Class<BomUploadStorage> extensionPointClass() {
+        return BomUploadStorage.class;
+    }
+
 }

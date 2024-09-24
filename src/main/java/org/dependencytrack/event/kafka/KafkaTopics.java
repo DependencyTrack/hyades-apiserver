@@ -24,6 +24,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
+import org.dependencytrack.proto.event.v1alpha1.BomUploadedEvent;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
@@ -32,8 +33,11 @@ import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 
+import java.util.UUID;
+
 public final class KafkaTopics {
 
+    public static final Topic<UUID, BomUploadedEvent> EVENT_BOM_UPLOADED;
     public static final Topic<String, Notification> NOTIFICATION_ANALYZER;
     public static final Topic<String, Notification> NOTIFICATION_BOM;
     public static final Topic<String, Notification> NOTIFICATION_CONFIGURATION;
@@ -61,6 +65,7 @@ public final class KafkaTopics {
     private static final Serde<Notification> NOTIFICATION_SERDE = new KafkaProtobufSerde<>(Notification.parser());
 
     static {
+        EVENT_BOM_UPLOADED = new Topic<>("dtrack.event.bom-uploaded", Serdes.UUID(), new KafkaProtobufSerde<>(BomUploadedEvent.parser()));
         NOTIFICATION_ANALYZER = new Topic<>("dtrack.notification.analyzer", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_BOM = new Topic<>("dtrack.notification.bom", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_CONFIGURATION = new Topic<>("dtrack.notification.configuration", Serdes.String(), NOTIFICATION_SERDE);
