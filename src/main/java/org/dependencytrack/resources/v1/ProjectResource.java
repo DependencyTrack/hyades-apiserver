@@ -36,6 +36,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -46,6 +47,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
@@ -400,29 +402,41 @@ public class ProjectResource extends AlpineResource {
         if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
-        try (QueryManager qm = new QueryManager()) {
-            if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
-                Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
-                jsonProject.setParent(parent);
-            }
-            final Project project;
-            try {
-                project = qm.createProject(jsonProject, jsonProject.getTags(), true);
-            } catch (IllegalArgumentException e) {
-                LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
-                return Response.status(Response.Status.CONFLICT).entity("An inactive Parent cannot be selected as parent").build();
-            } catch (RuntimeException e) {
-                if (isUniqueConstraintViolation(e)) {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name already exists.").build();
+        try (final var qm = new QueryManager()) {
+            final Project createdProject = qm.callInTransaction(() -> {
+                if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
+                    Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
+                    jsonProject.setParent(parent);
                 }
 
-                LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
-            Principal principal = getPrincipal();
-            qm.updateNewProjectACL(project, principal);
-            LOGGER.info("Project " + project.toString() + " created by " + super.getPrincipal().getName());
-            return Response.status(Response.Status.CREATED).entity(project).build();
+                final Project project;
+                try {
+                    project = qm.createProject(jsonProject, jsonProject.getTags(), true);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity("An inactive Parent cannot be selected as parent")
+                            .build());
+                } catch (RuntimeException e) {
+                    if (isUniqueConstraintViolation(e)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name already exists.")
+                                .build());
+                    }
+
+                    LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+
+                Principal principal = getPrincipal();
+                qm.updateNewProjectACL(project, principal);
+                return project;
+            });
+
+            LOGGER.info("Project " + createdProject + " created by " + super.getPrincipal().getName());
+            return Response.status(Response.Status.CREATED).entity(createdProject).build();
         }
     }
 
@@ -467,35 +481,51 @@ public class ProjectResource extends AlpineResource {
         if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, jsonProject.getUuid());
-            if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            final Project updatedProject = qm.callInTransaction(() -> {
+                Project project = qm.getObjectByUuid(Project.class, jsonProject.getUuid());
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+
                 final String name = StringUtils.trimToNull(jsonProject.getName());
                 // Name cannot be empty or null - prevent it
                 if (name == null) {
                     jsonProject.setName(project.getName());
                 }
+
                 try {
-                    project = qm.updateProject(jsonProject, true);
+                    return qm.updateProject(jsonProject, true);
                 } catch (IllegalArgumentException e) {
                     LOGGER.debug("Failed to update project %s".formatted(jsonProject.getUuid()), e);
-                    return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity(e.getMessage())
+                            .build());
                 } catch (RuntimeException e) {
                     if (isUniqueConstraintViolation(e)) {
-                        return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name and version already exists.")
+                                .build());
                     }
 
                     LOGGER.error("Failed to update project %s".formatted(jsonProject.getUuid()), e);
-                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
-                LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
-                return Response.ok(project).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
+            });
+
+            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            return Response.ok(updatedProject).build();
         }
     }
 
@@ -542,12 +572,22 @@ public class ProjectResource extends AlpineResource {
                 validator.validateProperty(jsonProject, "swidTagId")
         );
 
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            final Project updatedProject = qm.callInTransaction(() -> {
+                Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+
                 var modified = false;
                 project = qm.detachWithGroups(project, List.of(FetchGroup.DEFAULT, Project.FetchGroup.PARENT.name()));
                 modified |= setIfDifferent(jsonProject, project, Project::getName, Project::setName);
@@ -566,10 +606,16 @@ public class ProjectResource extends AlpineResource {
                 if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                     final Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                     if (parent == null) {
-                        return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the parent project could not be found.").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The UUID of the parent project could not be found.")
+                                .build());
                     }
                     if (!qm.hasAccess(getPrincipal(), parent)) {
-                        return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.FORBIDDEN)
+                                .entity("Access to the specified parent project is forbidden")
+                                .build());
                     }
                     modified |= project.getParent() == null || !parent.getUuid().equals(project.getParent().getUuid());
                     project.setParent(parent);
@@ -582,28 +628,38 @@ public class ProjectResource extends AlpineResource {
                     modified = true;
                     project.setExternalReferences(jsonProject.getExternalReferences());
                 }
-                if (modified) {
-                    try {
-                        project = qm.updateProject(project, true);
-                    } catch (IllegalArgumentException e) {
-                        LOGGER.debug("Failed to patch project %s".formatted(uuid));
-                        return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
-                    } catch (RuntimeException e) {
-                        if (isUniqueConstraintViolation(e)) {
-                            return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
-                        }
 
-                        LOGGER.error("Failed to patch project %s".formatted(uuid), e);
-                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-                    }
-                    LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
-                    return Response.ok(project).build();
-                } else {
-                    return Response.notModified().build();
+                if (!modified) {
+                    return null;
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
+
+                try {
+                    return qm.updateProject(project, true);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.debug("Failed to patch project %s".formatted(uuid));
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity(e.getMessage())
+                            .build());
+                } catch (RuntimeException e) {
+                    if (isUniqueConstraintViolation(e)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name and version already exists.")
+                                .build());
+                    }
+
+                    LOGGER.error("Failed to patch project %s".formatted(uuid), e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+            });
+
+            if (updatedProject == null) {
+                return Response.notModified().build();
             }
+
+            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            return Response.ok(updatedProject).build();
         }
     }
 
@@ -658,22 +714,33 @@ public class ProjectResource extends AlpineResource {
     public Response deleteProject(
             @Parameter(description = "The UUID of the project to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
-            if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
-                    qm.recursivelyDelete(project, true);
-                    return Response.status(Response.Status.NO_CONTENT).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Unable to delete components of the project").build();
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+
+                LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
+                try {
+                    qm.recursivelyDelete(project, true);
+                } catch (RuntimeException e) {
+                    LOGGER.error("Failed to delete project", e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+            });
         }
+
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
     @PUT
@@ -700,45 +767,55 @@ public class ProjectResource extends AlpineResource {
                 validator.validateProperty(jsonRequest, "project"),
                 validator.validateProperty(jsonRequest, "version")
         );
-        try (QueryManager qm = new QueryManager()) {
-            final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
-            if (sourceProject != null) {
+        try (final var qm = new QueryManager()) {
+            final CloneProjectEvent cloneEvent = qm.callInTransaction(() -> {
+                final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
+                if (sourceProject == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
+                }
                 if (!qm.hasAccess(super.getPrincipal(), sourceProject)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
                 }
                 if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity("A project with the specified name and version already exists.")
+                            .build());
                 }
-                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
-                CloneProjectEvent event = new CloneProjectEvent(jsonRequest);
-                final Response response = qm.callInTransaction(() -> {
-                    WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
-                    if (workflowState != null) {
-                        if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
-                            return Response
-                                    .status(Response.Status.CONFLICT)
-                                    .entity(Map.of("message", "Project cloning is already in progress"))
-                                    .build();
-                        }
-                        workflowState.setStatus(WorkflowStatus.PENDING);
-                        workflowState.setStartedAt(null);
-                        workflowState.setUpdatedAt(new Date());
-                    } else {
-                        workflowState = new WorkflowState();
-                        workflowState.setStep(WorkflowStep.PROJECT_CLONE);
-                        workflowState.setStatus(WorkflowStatus.PENDING);
-                        workflowState.setToken(event.getChainIdentifier());
-                        workflowState.setUpdatedAt(new Date());
-                        qm.getPersistenceManager().makePersistent(workflowState);
-                    }
 
-                    return Response.accepted(Map.of("token", event.getChainIdentifier())).build();
-                });
-                Event.dispatch(event);
-                return response;
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
+                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
+                final var event = new CloneProjectEvent(jsonRequest);
+                WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
+                if (workflowState != null) {
+                    if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity(Map.of("message", "Project cloning is already in progress"))
+                                .build());
+                    }
+                    workflowState.setStatus(WorkflowStatus.PENDING);
+                    workflowState.setStartedAt(null);
+                    workflowState.setUpdatedAt(new Date());
+                } else {
+                    workflowState = new WorkflowState();
+                    workflowState.setStep(WorkflowStep.PROJECT_CLONE);
+                    workflowState.setStatus(WorkflowStatus.PENDING);
+                    workflowState.setToken(event.getChainIdentifier());
+                    workflowState.setUpdatedAt(new Date());
+                    qm.persist(workflowState);
+                }
+
+                return new CloneProjectEvent(jsonRequest);
+            });
+
+            Event.dispatch(cloneEvent);
+            return Response.accepted(Map.of("token", cloneEvent.getChainIdentifier())).build();
         }
     }
 

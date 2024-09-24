@@ -246,6 +246,48 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getProjectLookupNotFoundTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.2.3");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT + "/lookup")
+                .queryParam("name", "acme-app")
+                .queryParam("version", "3.2.1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(getPlainTextBody(response)).isEqualTo("The project could not be found.");
+    }
+
+    @Test
+    public void getProjectLookupNotPermittedTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.2.3");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT + "/lookup")
+                .queryParam("name", "acme-app")
+                .queryParam("version", "1.2.3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+    }
+
+    @Test
     public void getProjectsAscOrderedRequestTest() {
         qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         qm.createProject("DEF", null, "1.0", null, null, null, true, false);
@@ -1327,6 +1369,28 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getProjectByUuidNotPermittedTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+    }
+
+    @Test
     public void getProjectByInvalidUuidTest() {
         qm.createProject("ABC", null, "1.0", null, null, null, true, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
@@ -1441,6 +1505,30 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createProjectInactiveParentTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        parentProject.setVersion("1.0.0");
+        parentProject.setActive(false);
+        qm.persist(parentProject);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json("""
+                        {
+                          "parent": {
+                            "uuid": "%s"
+                          },
+                          "name": "acme-app",
+                          "version": "1.2.3"
+                        }
+                        """.formatted(parentProject.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(getPlainTextBody(response)).isEqualTo("An inactive Parent cannot be selected as parent");
+    }
+
+    @Test
     public void createProjectDuplicateRaceConditionTest() throws Exception {
         final ExecutorService executor = Executors.newFixedThreadPool(10);
         final var countDownLatch = new CountDownLatch(1);
@@ -1501,6 +1589,49 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("ABC", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test project", json.getString("description"));
+    }
+
+    @Test
+    public void updateProjectNotFoundTest() {
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json("""
+                        {
+                          "uuid": "317fe231-01a4-4435-92ad-abd01017bb1a",
+                          "name": "acme-app",
+                          "version": "1.2.3"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(getPlainTextBody(response)).isEqualTo("The UUID of the project could not be found.");
+    }
+
+    @Test
+    public void updateProjectNotPermittedTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json("""
+                        {
+                          "uuid": "%s",
+                          "name": "acme-app-foo"
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
     }
 
     @Test
@@ -1646,6 +1777,33 @@ public class ProjectResourceTest extends ResourceTest {
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(new Project()));
         Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    public void patchProjectNotPermittedTest() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method("PATCH", Entity.json("""
+                        {
+                          "name": "acme-app-foo"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
     }
 
     @Test
