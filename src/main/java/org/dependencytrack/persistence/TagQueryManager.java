@@ -81,17 +81,6 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             long notificationRuleCount,
             long totalCount
     ) {
-        @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TagListRow(
-                final String name,
-                final int projectCount,
-                final int policyCount,
-                final int notificationRuleCount,
-                final int totalCount
-        ) {
-            this(name, (long) projectCount, (long) policyCount, (long) notificationRuleCount, (long) totalCount);
-        }
-
     }
 
     /**
@@ -157,12 +146,6 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
      * @since 4.12.0
      */
     public record TaggedProjectRow(UUID uuid, String name, String version, long totalCount) {
-
-        @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedProjectRow(UUID uuid, String name, String version, int totalCount) {
-            this(uuid, name, version, (long) totalCount);
-        }
-
     }
 
     /**
@@ -175,18 +158,6 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             long policyCount,
             long notificationRuleCount
     ) {
-
-        @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TagDeletionCandidateRow(
-                final String name,
-                final int projectCount,
-                final int accessibleProjectCount,
-                final int policyCount,
-                final int notificationRuleCount
-        ) {
-            this(name, (long) projectCount, (long) accessibleProjectCount, (long) policyCount, (long) notificationRuleCount);
-        }
-
     }
 
     /**
@@ -435,12 +406,6 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
      * @since 4.12.0
      */
     public record TaggedPolicyRow(UUID uuid, String name, long totalCount) {
-
-        @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedPolicyRow(UUID uuid, String name, int totalCount) {
-            this(uuid, name, (long) totalCount);
-        }
-
     }
 
     /**
@@ -654,12 +619,6 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
      * @since 4.12.0
      */
     public record TaggedNotificationRuleRow(UUID uuid, String name, long totalCount) {
-
-        @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedNotificationRuleRow(final UUID uuid, final String name, final int totalCount) {
-            this(uuid, name, (long) totalCount);
-        }
-
     }
 
     /**
