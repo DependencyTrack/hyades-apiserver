@@ -653,10 +653,10 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
     /**
      * @since 4.12.0
      */
-    public record TaggedNotificationRuleRow(String uuid, String name, long totalCount) {
+    public record TaggedNotificationRuleRow(UUID uuid, String name, long totalCount) {
 
         @SuppressWarnings("unused") // DataNucleus will use this for MSSQL.
-        public TaggedNotificationRuleRow(final String uuid, final String name, final int totalCount) {
+        public TaggedNotificationRuleRow(final UUID uuid, final String name, final int totalCount) {
             this(uuid, name, (long) totalCount);
         }
 

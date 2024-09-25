@@ -59,7 +59,6 @@ import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.UUID;
 
 @Path("/v1/tag")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "tag")
@@ -471,7 +470,7 @@ public class TagResource extends AlpineResource {
         }
 
         final List<TaggedNotificationRuleListResponseItem> tags = taggedNotificationRuleRows.stream()
-                .map(row -> new TaggedNotificationRuleListResponseItem(UUID.fromString(row.uuid()), row.name()))
+                .map(row -> new TaggedNotificationRuleListResponseItem(row.uuid(), row.name()))
                 .toList();
         final long totalCount = taggedNotificationRuleRows.isEmpty() ? 0 : taggedNotificationRuleRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
