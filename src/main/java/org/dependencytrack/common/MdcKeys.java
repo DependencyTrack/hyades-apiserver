@@ -29,6 +29,7 @@ public final class MdcKeys {
     public static final String MDC_BOM_UPLOAD_TOKEN = "bomUploadToken";
     public static final String MDC_BOM_VERSION = "bomVersion";
     public static final String MDC_COMPONENT_UUID = "componentUuid";
+    public static final String MDC_EVENT_TOKEN = "eventToken";
     public static final String MDC_EXTENSION = "extension";
     public static final String MDC_EXTENSION_NAME = "extensionName";
     public static final String MDC_EXTENSION_POINT = "extensionPoint";

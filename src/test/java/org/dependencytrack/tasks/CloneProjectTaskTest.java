@@ -67,7 +67,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getStatus()).isEqualTo(FAILED);
                     assertThat(state.getStartedAt()).isNotNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
-                    assertThat(state.getFailureReason()).contains("Project with UUID " + uuid + " was supposed to be cloned, but it does not exist anymore");
+                    assertThat(state.getFailureReason()).contains("Project was supposed to be cloned, but it does not exist anymore");
                 });
     }
 
@@ -84,7 +84,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getStatus()).isEqualTo(FAILED);
                     assertThat(state.getStartedAt()).isNotNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
-                    assertThat(state.getFailureReason()).contains("Project Acme Example : 1.0 was supposed to be cloned to version 1.0, but that version already exists");
+                    assertThat(state.getFailureReason()).contains("Project was supposed to be cloned to version 1.0, but that version already exists");
                 });
     }
 }
