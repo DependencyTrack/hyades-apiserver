@@ -81,4 +81,30 @@
             AND "PROPERTYNAME" = 'bom.validation.enabled';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-6" author="sahibamittal">
+        <createTable tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TAG_ID" type="BIGINT"/>
+        </createTable>
+
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_TAG_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+    </changeSet>
 </databaseChangeLog>
