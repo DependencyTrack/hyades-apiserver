@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
+import alpine.notification.Notification;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,9 +45,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
@@ -265,6 +270,41 @@ public class NotificationPublisherResource extends AlpineResource {
         } catch (IOException ioException) {
             LOGGER.error(ioException.getMessage(), ioException);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while restoring default notification publisher templates.").build();
+        }
+    }
+
+    @POST
+    @Path("/test/{uuid}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Dispatches a rule notification test",
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Test notification dispatched successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    public Response testSlackPublisherConfig(
+            @Parameter(description = "The UUID of the rule to test", schema = @Schema(type = "string", format = "uuid"), required = true)
+            @PathParam("uuid") @ValidUuid String ruleUuid) {
+        try (QueryManager qm = new QueryManager()) {
+            NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+            final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
+            for(NotificationGroup group : rule.getNotifyOn()){
+                eventDispatcher.dispatchNotification(new Notification()
+                        .scope(rule.getScope())
+                        .group(group.toString())
+                        .level(rule.getNotificationLevel())
+                        .title(NotificationConstants.Title.NOTIFICATION_TEST)
+                        .subject(NotificationUtil.generateSubjectForTestRuleNotification(group))
+                        .content("Rule configuration test"));
+            }
+            return Response.ok().build();
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while sending the notification.").build();
         }
     }
 }
