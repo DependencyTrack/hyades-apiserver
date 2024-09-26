@@ -22,11 +22,17 @@ import alpine.common.util.UuidUtil;
 import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
@@ -36,13 +42,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
 
 public class NotificationPublisherResourceTest extends ResourceTest {
@@ -315,5 +319,29 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertFalse(qm.isEnabled(ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED));
         slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
         Assert.assertEquals(DefaultNotificationPublishers.SLACK.getPublisherName(), slackPublisher.getName());
+    }
+
+    @Test
+    public void testNotificationRuleTest() {
+        NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
+        slackPublisher.setName(slackPublisher.getName()+" Test Rule");
+        qm.persist(slackPublisher);
+        qm.detach(NotificationPublisher.class, slackPublisher.getId());
+
+        NotificationRule rule = qm.createNotificationRule("Example Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, slackPublisher);
+
+        Set<NotificationGroup> groups = new HashSet<>(Set.of(NotificationGroup.BOM_CONSUMED, NotificationGroup.BOM_PROCESSED, NotificationGroup.BOM_PROCESSING_FAILED,
+                NotificationGroup.BOM_VALIDATION_FAILED, NotificationGroup.NEW_VULNERABILITY, NotificationGroup.NEW_VULNERABLE_DEPENDENCY,
+                NotificationGroup.POLICY_VIOLATION, NotificationGroup.PROJECT_CREATED, NotificationGroup.PROJECT_AUDIT_CHANGE,
+                NotificationGroup.VEX_CONSUMED, NotificationGroup.VEX_PROCESSED));
+        rule.setNotifyOn(groups);
+        rule.setPublisherConfig("{\"destination\":\"https://example.com/webhook\"}");
+
+        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/test/" + rule.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity("", MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+
+        Assert.assertEquals(200, response.getStatus());
+        assertThat(kafkaMockProducer.history().size()).isEqualTo(11);
     }
 }
