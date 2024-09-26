@@ -26,6 +26,7 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -42,7 +43,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourcePostgresTest extends ResourceTest {
 
@@ -65,6 +68,37 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
         final JsonArray json = parseJsonArray(response);
         assertThat(json).hasSize(100); // Default page size is 100
+        assertThatJson(json.getFirst().toString())
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "authors": [
+                            {
+                              "name": "author-0"
+                            }
+                          ],
+                          "group": "component-group",
+                          "name": "component-name-0",
+                          "version": "0.0",
+                          "purl": "pkg:maven/component-group/component-name-0@0.0",
+                          "project": {
+                            "name": "Acme Application",
+                            "directDependencies": "${json-unit.any-string}",
+                            "uuid": "${json-unit.matches:projectUuid}",
+                            "active": true
+                          },
+                          "uuid": "${json-unit.any-string}",
+                          "repositoryMeta": {
+                            "repositoryType": "MAVEN",
+                            "namespace": "component-group",
+                            "name": "component-name-0",
+                            "latestVersion": "0.0",
+                            "lastCheck": "${json-unit.any-number}"
+                          },
+                          "expandDependencyGraph": false,
+                          "isInternal": false
+                        }
+                        """);
     }
 
     @Test
@@ -188,8 +222,12 @@ public class ComponentResourcePostgresTest extends ResourceTest {
         final List<String> directDepencencies = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
+            final var author = new OrganizationalContact();
+            author.setName("author-" + i);
+
             Component component = new Component();
             component.setProject(project);
+            component.setAuthors(List.of(author));
             component.setGroup("component-group");
             component.setName("component-name-" + i);
             component.setVersion(String.valueOf(i) + ".0");

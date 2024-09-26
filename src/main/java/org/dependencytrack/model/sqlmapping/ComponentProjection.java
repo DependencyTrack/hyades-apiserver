@@ -24,8 +24,9 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.OrganizationalContact;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 
 import java.util.Date;
 import java.util.List;
@@ -37,7 +38,7 @@ public class ComponentProjection {
 
     public String uuid;
 
-    public List<OrganizationalContact> authors;
+    public String authors;
 
     public String group;
 
@@ -164,7 +165,10 @@ public class ComponentProjection {
 
     public static Component mapToComponent(ComponentProjection result) {
         Component componentPersistent = new Component();
-        componentPersistent.setAuthors(result.authors);
+        if (result.authors != null) {
+            final var converter = new OrganizationalContactsJsonConverter();
+            componentPersistent.setAuthors(converter.convertToAttribute(result.authors));
+        }
         componentPersistent.setBlake2b_256(result.blake2b_256);
         componentPersistent.setBlake2b_384(result.blake2b_384);
         componentPersistent.setBlake2b_512(result.blake2b_512);
@@ -230,6 +234,7 @@ public class ComponentProjection {
         project.setDirectDependencies(result.projectDirectDependencies);
         project.setLastBomImport(result.lastBomImport);
         project.setLastBomImportFormat(result.lastBomImportFormat);
+        project.setGroup(result.projectGroup);
         project.setName(result.projectName);
         if (result.projectUuid != null) {
             project.setUuid(UUID.fromString(result.projectUuid));
@@ -254,10 +259,16 @@ public class ComponentProjection {
             componentPersistent.setResolvedLicense(license);
         }
 
-        var componentMetaInformation = new ComponentMetaInformation(result.publishedAt,
-                result.integrityCheckStatus != null ? IntegrityMatchStatus.valueOf(result.integrityCheckStatus) : null,
-                result.lastFetch, result.integrityRepoUrl);
-        componentPersistent.setComponentMetaInformation(componentMetaInformation);
+        if (result.publishedAt != null
+            || result.integrityCheckStatus != null
+            || result.lastFetch != null
+            || result.integrityRepoUrl != null) {
+            componentPersistent.setComponentMetaInformation(new ComponentMetaInformation(
+                    result.publishedAt,
+                    result.integrityCheckStatus != null ? IntegrityMatchStatus.valueOf(result.integrityCheckStatus) : null,
+                    result.lastFetch,
+                    result.integrityRepoUrl));
+        }
 
         return componentPersistent;
     }
