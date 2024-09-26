@@ -127,19 +127,14 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             sqlQuery += " ORDER BY \"%s\" %s, \"ID\" ASC".formatted(orderBy,
                     orderDirection == OrderDirection.DESCENDING ? "DESC" : "ASC");
         } else {
-            // TODO: Throw NotSortableException once Alpine opens up its constructor.
-            throw new IllegalArgumentException("Cannot sort by " + orderBy);
+            throw new NotSortableException("Tag", orderBy, "Field does not exist or is not sortable");
         }
 
         sqlQuery += " " + getOffsetLimitSqlClause();
 
         final Query<?> query = pm.newQuery(Query.SQL, sqlQuery);
         query.setNamedParameters(params);
-        try {
-            return new ArrayList<>(query.executeResultList(TagListRow.class));
-        } finally {
-            query.closeAll();
-        }
+        return executeAndCloseResultList(query, TagListRow.class);
     }
 
     /**
@@ -207,12 +202,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                      WHERE %s
                     """.formatted(projectAclCondition, String.join(" OR ", tagNameFilters)));
             candidateQuery.setNamedParameters(params);
-            final List<TagDeletionCandidateRow> candidateRows;
-            try {
-                candidateRows = List.copyOf(candidateQuery.executeResultList(TagDeletionCandidateRow.class));
-            } finally {
-                candidateQuery.closeAll();
-            }
+            final List<TagDeletionCandidateRow> candidateRows =
+                    executeAndCloseResultList(candidateQuery, TagDeletionCandidateRow.class);
 
             final var errorByTagName = new HashMap<String, String>();
 
@@ -229,30 +220,37 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 throw TagOperationFailedException.forDeletion(errorByTagName);
             }
 
-            boolean hasPortfolioManagementPermission = false;
-            boolean hasPolicyManagementPermission = false;
-            boolean hasSystemConfigurationPermission = false;
+            boolean hasPortfolioManagementUpdatePermission = false;
+            boolean hasPolicyManagementUpdatePermission = false;
+            boolean hasSystemConfigurationUpdatePermission = false;
             if (principal == null) {
-                hasPortfolioManagementPermission = true;
-                hasPolicyManagementPermission = true;
-                hasSystemConfigurationPermission = true;
+                hasPortfolioManagementUpdatePermission = true;
+                hasPolicyManagementUpdatePermission = true;
+                hasSystemConfigurationUpdatePermission = true;
             } else {
                 if (principal instanceof final ApiKey apiKey) {
-                    hasPortfolioManagementPermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT);
-                    hasPolicyManagementPermission = hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT);
-                    hasSystemConfigurationPermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION);
+                    hasPortfolioManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT)
+                                                             || hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE);
+                    hasPolicyManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT)
+                                                          || hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT_UPDATE);
+                    hasSystemConfigurationUpdatePermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION)
+                                                             || hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE);
                 } else if (principal instanceof final UserPrincipal user) {
-                    hasPortfolioManagementPermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true);
-                    hasPolicyManagementPermission = hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT, /* includeTeams */ true);
-                    hasSystemConfigurationPermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true);
+                    hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true)
+                                                             || hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE, /* includeTeams */ true);
+                    hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT, /* includeTeams */ true)
+                                                          || hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT_UPDATE, /* includeTeams */ true);
+                    hasSystemConfigurationUpdatePermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true)
+                                                             || hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE, /* includeTeams */ true);
                 }
             }
 
             for (final TagDeletionCandidateRow row : candidateRows) {
-                if (row.projectCount() > 0 && !hasPortfolioManagementPermission) {
+                if (row.projectCount() > 0 && !hasPortfolioManagementUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d project(s), but the authenticated principal \
-                            is missing the %s permission.""".formatted(row.projectCount(), Permissions.PORTFOLIO_MANAGEMENT));
+                            is missing the %s or %s permission.""".formatted(row.projectCount(),
+                            Permissions.PORTFOLIO_MANAGEMENT, Permissions.PORTFOLIO_MANAGEMENT_UPDATE));
                     continue;
                 }
 
@@ -265,16 +263,18 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                     continue;
                 }
 
-                if (row.policyCount() > 0 && !hasPolicyManagementPermission) {
+                if (row.policyCount() > 0 && !hasPolicyManagementUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d policies, but the authenticated principal \
-                            is missing the %s permission.""".formatted(row.policyCount(), Permissions.POLICY_MANAGEMENT));
+                            is missing the %s or %s permission.""".formatted(row.policyCount(),
+                            Permissions.POLICY_MANAGEMENT, Permissions.POLICY_MANAGEMENT_UPDATE));
                 }
 
-                if (row.notificationRuleCount() > 0 && !hasSystemConfigurationPermission) {
+                if (row.notificationRuleCount() > 0 && !hasSystemConfigurationUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d notification rules, but the authenticated principal \
-                            is missing the %s permission.""".formatted(row.notificationRuleCount(), Permissions.SYSTEM_CONFIGURATION));
+                            is missing the %s or %s permission.""".formatted(row.notificationRuleCount(),
+                            Permissions.SYSTEM_CONFIGURATION, Permissions.SYSTEM_CONFIGURATION_UPDATE));
                 }
             }
 
@@ -330,19 +330,14 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             sqlQuery += " ORDER BY \"%s\" %s, \"ID\" ASC".formatted(orderBy,
                     orderDirection == OrderDirection.DESCENDING ? "DESC" : "ASC");
         } else {
-            // TODO: Throw NotSortableException once Alpine opens up its constructor.
-            throw new IllegalArgumentException("Cannot sort by " + orderBy);
+            throw new NotSortableException("TaggedProject", orderBy, "Field does not exist or is not sortable");
         }
 
         sqlQuery += " " + getOffsetLimitSqlClause();
 
         final Query<?> query = pm.newQuery(Query.SQL, sqlQuery);
         query.setNamedParameters(params);
-        try {
-            return new ArrayList<>(query.executeResultList(TaggedProjectRow.class));
-        } finally {
-            query.closeAll();
-        }
+        return executeAndCloseResultList(query, TaggedProjectRow.class);
     }
 
     /**
@@ -440,19 +435,14 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             sqlQuery += " ORDER BY \"%s\" %s".formatted(orderBy,
                     orderDirection == OrderDirection.DESCENDING ? "DESC" : "ASC");
         } else {
-            // TODO: Throw NotSortableException once Alpine opens up its constructor.
-            throw new IllegalArgumentException("Cannot sort by " + orderBy);
+            throw new NotSortableException("TaggedPolicy", orderBy, "Field does not exist or is not sortable");
         }
 
         sqlQuery += " " + getOffsetLimitSqlClause();
 
         final Query<?> query = pm.newQuery(Query.SQL, sqlQuery);
         query.setNamedParameters(params);
-        try {
-            return new ArrayList<>(query.executeResultList(TaggedPolicyRow.class));
-        } finally {
-            query.closeAll();
-        }
+        return executeAndCloseResultList(query, TaggedPolicyRow.class);
     }
 
     /**
@@ -660,11 +650,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
 
         final Query<?> query = pm.newQuery(Query.SQL, sqlQuery);
         query.setNamedParameters(params);
-        try {
-            return new ArrayList<>(query.executeResultList(TaggedNotificationRuleRow.class));
-        } finally {
-            query.closeAll();
-        }
+        return executeAndCloseResultList(query, TaggedNotificationRuleRow.class);
     }
 
     /**
