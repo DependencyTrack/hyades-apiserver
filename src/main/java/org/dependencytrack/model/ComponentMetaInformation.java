@@ -18,9 +18,14 @@
  */
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.Date;
 
-public record ComponentMetaInformation(Date publishedDate, IntegrityMatchStatus integrityMatchStatus,
-                                       Date lastFetched,
-                                       String integrityRepoUrl) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ComponentMetaInformation(
+        Date publishedDate,
+        IntegrityMatchStatus integrityMatchStatus,
+        Date lastFetched,
+        String integrityRepoUrl) {
 }
