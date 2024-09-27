@@ -24,12 +24,10 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 public class ComponentProjection {
@@ -128,7 +126,7 @@ public class ComponentProjection {
 
     public Boolean projectActive;
 
-    public List<OrganizationalContact> projectAuthors;
+    public String projectAuthors;
 
     public String projectCpe;
 
@@ -215,7 +213,10 @@ public class ComponentProjection {
         if (result.projectId != null) {
             project.setId(result.projectId);
         }
-        project.setAuthors(result.projectAuthors);
+        if (result.projectAuthors != null) {
+            final var converter = new OrganizationalContactsJsonConverter();
+            project.setAuthors(converter.convertToAttribute(result.projectAuthors));
+        }
         if (result.projectActive != null) {
             project.setActive(result.projectActive);
         }
