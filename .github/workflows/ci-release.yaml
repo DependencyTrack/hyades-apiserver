@@ -36,7 +36,7 @@ jobs:
       release-branch: ${{ steps.variables.outputs.release-branch }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
 
       - name: Setup Environment
         id: variables
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
 
       - name: Set up JDK
         uses: actions/setup-java@v4.3.0
@@ -133,7 +133,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
         with:
           ref: ${{ needs.prepare-release.outputs.release-branch }}
 
