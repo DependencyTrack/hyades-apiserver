@@ -16,7 +16,7 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 FROM eclipse-temurin:21.0.3_9-jre-jammy@sha256:a56ee1f79cf57b2b31152cd471a4c85b6deb3057e4a1fbe8e50b57e7d2a1d7c9 AS jre-build
 
-FROM debian:stable-slim@sha256:64bc71feaa7ec2ac758a6a3a37c0f0d6ebccf0a45e3f5af1f1d3b5d4cb316b29
+FROM debian:stable-slim@sha256:939e69ef5aa4dc178893a718ea567f1ca390df60793fd08c0bc7008362f72a57
 
 # Arguments that can be passed at build time
 # Directory names must end with / to avoid errors when ADDing and COPYing
