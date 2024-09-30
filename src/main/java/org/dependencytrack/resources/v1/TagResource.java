@@ -43,7 +43,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.exception.TagOperationFailedException;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -57,7 +56,6 @@ import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 @Path("/v1/tag")
@@ -139,16 +137,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.deleteTags(tagNames);
-        } catch (TagOperationFailedException tofException) {
-            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
-            final var problemDetails = new TagOperationProblemDetails(tofException);
-            return Response
-                    .status(problemDetails.getStatus())
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(problemDetails)
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -223,15 +211,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.tagProjects(tagName, projectUuids);
-        } catch (NoSuchElementException nseException) {
-            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -269,15 +248,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.untagProjects(tagName, projectUuids);
-        } catch (NoSuchElementException nseException) {
-            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -288,7 +258,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all policies assigned to the given tag.",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -299,7 +269,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
     public Response getTaggedPolicies(
             @Parameter(description = "Name of the tag to get policies for.", required = true)
             @PathParam("name") final String tagName
@@ -326,7 +296,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Tags one or more policies.",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -339,7 +309,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response tagPolicies(
             @Parameter(description = "Name of the tag to assign", required = true)
             @PathParam("name") final String tagName,
@@ -352,15 +322,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.tagPolicies(tagName, policyUuids);
-        } catch (NoSuchElementException nseException) {
-            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -372,7 +333,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Untags one or more policies.",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -385,7 +346,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired(Permissions.Constants.POLICY_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
     public Response untagPolicies(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
@@ -398,15 +359,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.untagPolicies(tagName, policyUuids);
-        } catch (NoSuchElementException nseException) {
-            // TODO: Move this to an ExceptionMapper once https://github.com/stevespringett/Alpine/pull/588 is available.
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -444,7 +396,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all notification rules assigned to the given tag.",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -455,7 +407,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getTaggedNotificationRules(
             @Parameter(description = "Name of the tag to get notification rules for", required = true)
             @PathParam("name") final String tagName
@@ -482,7 +434,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Tags one or more notification rules.",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -495,7 +447,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response tagNotificationRules(
             @Parameter(description = "Name of the tag to assign", required = true)
             @PathParam("name") final String tagName,
@@ -508,14 +460,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.tagNotificationRules(tagName, notificationRuleUuids);
-        } catch (NoSuchElementException nseException) {
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();
@@ -527,7 +471,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Untags one or more notification rules.",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -540,7 +484,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
     public Response untagNotificationRules(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
@@ -553,14 +497,6 @@ public class TagResource extends AlpineResource {
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.untagNotificationRules(tagName, policyUuids);
-        } catch (NoSuchElementException nseException) {
-            return Response
-                    .status(404)
-                    .header("Content-Type", ProblemDetails.MEDIA_TYPE_JSON)
-                    .entity(new ProblemDetails(404, "Resource does not exist", nseException.getMessage()))
-                    .build();
-        } catch (RuntimeException e) {
-            throw e;
         }
 
         return Response.noContent().build();

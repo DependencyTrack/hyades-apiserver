@@ -18,24 +18,26 @@
  */
 package org.dependencytrack.resources.v1.exception;
 
-import alpine.persistence.NotSortableException;
+import org.dependencytrack.exception.TagOperationFailedException;
+import org.dependencytrack.resources.v1.problems.TagOperationProblemDetails;
+
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
 
 /**
  * @since 4.12.0
  */
 @Provider
-public class NotSortableExceptionMapper implements ExceptionMapper<NotSortableException> {
+public class TagOperationFailedExceptionMapper implements ExceptionMapper<TagOperationFailedException> {
 
     @Override
-    public Response toResponse(final NotSortableException exception) {
-        final var problemDetails = new ProblemDetails();
+    public Response toResponse(final TagOperationFailedException exception) {
+        final var problemDetails = new TagOperationProblemDetails();
         problemDetails.setStatus(400);
-        problemDetails.setTitle("Field not sortable");
+        problemDetails.setTitle("Tag operation failed");
         problemDetails.setDetail(exception.getMessage());
+        problemDetails.setErrors(exception.getErrorByTagName());
         return problemDetails.toResponse();
     }
 

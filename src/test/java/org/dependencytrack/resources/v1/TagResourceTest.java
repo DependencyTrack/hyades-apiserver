@@ -34,6 +34,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.resources.v1.exception.ConstraintViolationExceptionMapper;
+import org.dependencytrack.resources.v1.exception.NoSuchElementExceptionMapper;
+import org.dependencytrack.resources.v1.exception.TagOperationFailedExceptionMapper;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -58,7 +60,9 @@ public class TagResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
                     .register(AuthorizationFilter.class)
-                    .register(ConstraintViolationExceptionMapper.class));
+                    .register(ConstraintViolationExceptionMapper.class)
+                    .register(NoSuchElementExceptionMapper.class)
+                    .register(TagOperationFailedExceptionMapper.class));
 
     @Test
     public void getTagsTest() {
@@ -360,7 +364,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT permission."
+                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT or PORTFOLIO_MANAGEMENT_UPDATE permission."
                   }
                 }
                 """);
@@ -475,7 +479,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT permission."
+                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT or POLICY_MANAGEMENT_UPDATE permission."
                   }
                 }
                 """);
@@ -909,7 +913,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
         final Tag tagFoo = qm.createTag("foo");
         final Tag tagBar = qm.createTag("bar");
 
@@ -948,7 +952,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -1009,7 +1013,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/policy")
                 .request()
@@ -1022,7 +1026,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
         final Response response = jersey.target(V1_TAG + "/Foo/policy")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1361,7 +1365,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 notification rules, but the authenticated principal is missing the SYSTEM_CONFIGURATION permission."
+                    "bar": "The tag is assigned to 1 notification rules, but the authenticated principal is missing the SYSTEM_CONFIGURATION or SYSTEM_CONFIGURATION_UPDATE permission."
                   }
                 }
                 """);
