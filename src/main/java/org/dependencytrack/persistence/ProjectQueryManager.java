@@ -56,7 +56,6 @@ import org.dependencytrack.notification.NotificationScope;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import javax.jdo.metadata.MemberMetadata;
 import javax.jdo.metadata.TypeMetadata;
 import java.io.IOException;
@@ -741,20 +740,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Deletes a Project and all objects dependant on the project.
+     * Deletes a Project and all objects dependent on the project.
      *
      * @param project     the Project to delete
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     @Override
     public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        final Transaction trx = pm.currentTransaction();
-        final boolean isJoiningExistingTrx = trx.isActive();
-        try {
-            if (!isJoiningExistingTrx) {
-                trx.begin();
-            }
-
+        runInTransaction(() -> {
             for (final Project child : project.getChildren()) {
                 // Note: This could be refactored such that each project is deleted
                 //   in its own transaction. That would break semantics when it comes
@@ -791,16 +784,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             } finally {
                 projectQuery.closeAll();
             }
-
-            if (!isJoiningExistingTrx) {
-                trx.commit();
-            }
-
-        } finally {
-            if (!isJoiningExistingTrx && trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        });
     }
 
     /**
