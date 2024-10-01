@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.model.Hash;
@@ -392,9 +393,9 @@ public class ModelExporter {
 
     public static org.cyclonedx.model.vulnerability.Vulnerability convert(final QueryManager qm, final CycloneDXExporter.Variant variant,
                                                                           final Finding finding) {
-        final Component component = qm.getObjectByUuid(Component.class, (String) finding.getComponent().get("uuid"));
+        final Component component = qm.getObjectByUuid(Component.class, (UUID) finding.getComponent().get("uuid"));
         final Project project = component.getProject();
-        final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (String) finding.getVulnerability().get("uuid"));
+        final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (UUID) finding.getVulnerability().get("uuid"));
 
         final org.cyclonedx.model.vulnerability.Vulnerability cdxVulnerability = new org.cyclonedx.model.vulnerability.Vulnerability();
         cdxVulnerability.setBomRef(vulnerability.getUuid().toString());

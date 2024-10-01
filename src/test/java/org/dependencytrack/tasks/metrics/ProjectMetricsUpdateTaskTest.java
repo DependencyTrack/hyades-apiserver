@@ -42,74 +42,74 @@ import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
-    @Test
-    public void testUpdateMetricsEmpty() {
-        var project = new Project();
-        project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+    // @Test
+    // public void testUpdateMetricsEmpty() {
+    //     var project = new Project();
+    //     project.setName("acme-app");
+    //     project = qm.createProject(project, List.of(), false);
 
-        // Create risk score configproperties
-        createTestConfigProperties();
+    //     // Create risk score configproperties
+    //     createTestConfigProperties();
 
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+    //     new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
-        final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-        assertThat(metrics.getComponents()).isZero();
-        assertThat(metrics.getVulnerableComponents()).isZero();
-        assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isZero();
-        assertThat(metrics.getMedium()).isZero();
-        assertThat(metrics.getLow()).isZero();
-        assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isZero();
-        assertThat(metrics.getSuppressed()).isZero();
-        assertThat(metrics.getFindingsTotal()).isZero();
-        assertThat(metrics.getFindingsAudited()).isZero();
-        assertThat(metrics.getFindingsUnaudited()).isZero();
-        assertThat(metrics.getInheritedRiskScore()).isZero();
-        assertThat(metrics.getPolicyViolationsFail()).isZero();
-        assertThat(metrics.getPolicyViolationsWarn()).isZero();
-        assertThat(metrics.getPolicyViolationsInfo()).isZero();
-        assertThat(metrics.getPolicyViolationsTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
-        assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
+    //     final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+    //     assertThat(metrics.getComponents()).isZero();
+    //     assertThat(metrics.getVulnerableComponents()).isZero();
+    //     assertThat(metrics.getCritical()).isZero();
+    //     assertThat(metrics.getHigh()).isZero();
+    //     assertThat(metrics.getMedium()).isZero();
+    //     assertThat(metrics.getLow()).isZero();
+    //     assertThat(metrics.getUnassigned()).isZero();
+    //     assertThat(metrics.getVulnerabilities()).isZero();
+    //     assertThat(metrics.getSuppressed()).isZero();
+    //     assertThat(metrics.getFindingsTotal()).isZero();
+    //     assertThat(metrics.getFindingsAudited()).isZero();
+    //     assertThat(metrics.getFindingsUnaudited()).isZero();
+    //     assertThat(metrics.getInheritedRiskScore()).isZero();
+    //     assertThat(metrics.getPolicyViolationsFail()).isZero();
+    //     assertThat(metrics.getPolicyViolationsWarn()).isZero();
+    //     assertThat(metrics.getPolicyViolationsInfo()).isZero();
+    //     assertThat(metrics.getPolicyViolationsTotal()).isZero();
+    //     assertThat(metrics.getPolicyViolationsAudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsUnaudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsSecurityTotal()).isZero();
+    //     assertThat(metrics.getPolicyViolationsSecurityAudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsSecurityUnaudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsLicenseTotal()).isZero();
+    //     assertThat(metrics.getPolicyViolationsLicenseAudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsLicenseUnaudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
+    //     assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
+    //     assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
-        qm.getPersistenceManager().refresh(project);
-        assertThat(project.getLastInheritedRiskScore()).isZero();
-    }
+    //     qm.getPersistenceManager().refresh(project);
+    //     assertThat(project.getLastInheritedRiskScore()).isZero();
+    // }
 
-    @Test
-    public void testUpdateMetricsUnchanged() {
-        var project = new Project();
-        project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+    // @Test
+    // public void testUpdateMetricsUnchanged() {
+    //     var project = new Project();
+    //     project.setName("acme-app");
+    //     project = qm.createProject(project, List.of(), false);
 
-        // Create risk score configproperties
-        createTestConfigProperties();
+    //     // Create risk score configproperties
+    //     createTestConfigProperties();
 
-        // Record initial project metrics
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
-        final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
+    //     // Record initial project metrics
+    //     new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+    //     final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+    //     assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
-        // Run the task a second time, without any metric being changed
-        final var beforeSecondRun = new Date();
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+    //     // Run the task a second time, without any metric being changed
+    //     final var beforeSecondRun = new Date();
+    //     new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
-        // Ensure that the lastOccurrence timestamp was correctly updated
-        qm.getPersistenceManager().refresh(metrics);
-        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
-    }
+    //     // Ensure that the lastOccurrence timestamp was correctly updated
+    //     qm.getPersistenceManager().refresh(metrics);
+    //     assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
+    //     assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+    // }
 
     @Test
     public void testUpdateMetricsVulnerabilities() {

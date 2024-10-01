@@ -153,7 +153,7 @@ public class VexResourceTest extends ResourceTest {
                 .isEqualTo("""
                         {
                           "bomFormat": "CycloneDX",
-                          "specVersion": "1.5",
+                          "specVersion": "1.6",
                           "serialNumber": "${json-unit.any-string}",
                           "version": 1,
                           "metadata": {
@@ -394,7 +394,7 @@ public class VexResourceTest extends ResourceTest {
                 .isEqualTo("""
                         {
                           "bomFormat": "CycloneDX",
-                          "specVersion": "1.5",
+                          "specVersion": "1.6",
                           "serialNumber": "${json-unit.any-string}",
                           "version": 1,
                           "metadata": {
@@ -492,7 +492,7 @@ public class VexResourceTest extends ResourceTest {
                 .isEqualTo("""
                         {
                           "bomFormat": "CycloneDX",
-                          "specVersion": "1.5",
+                          "specVersion": "1.6",
                           "serialNumber": "${json-unit.any-string}",
                           "version": 1,
                           "metadata": {

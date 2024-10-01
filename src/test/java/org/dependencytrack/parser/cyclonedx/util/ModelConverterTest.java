@@ -24,9 +24,7 @@ import java.util.UUID;
 import org.cyclonedx.model.Dependency;
 import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Property;
-import org.cyclonedx.model.component.crypto.AlgorithmProperties;
-import org.cyclonedx.model.component.crypto.CertificateProperties;
-import org.cyclonedx.model.component.crypto.CryptoProperties;
+import org.cyclonedx.model.component.crypto.enums.AssetType;
 import org.cyclonedx.model.component.crypto.enums.CryptoFunction;
 import org.cyclonedx.model.component.crypto.enums.Padding;
 import org.dependencytrack.PersistenceCapableTest;
@@ -58,7 +56,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
     public void testConvertCycloneDX1() throws MalformedPackageURLException {
         org.cyclonedx.model.Component component = new org.cyclonedx.model.Component();
         component.setName("testComponent");
-        component.setType(org.cyclonedx.model.Component.Type.LIBRARY);
+        component.setType(org.cyclonedx.model.Component.Type.CRYPTOGRAPHIC_ASSET);
 
         PackageURL purl = PackageURLBuilder.aPackageURL()
                 .withType("maven").withNamespace("acme").withName("product").withVersion("1.0").build();
@@ -74,34 +72,32 @@ public class ModelConverterTest extends PersistenceCapableTest {
         component2.setType(org.cyclonedx.model.Component.Type.LIBRARY);
         component.setComponents(List.of(component2));
 
-        CryptoProperties cryptoProperties = new CryptoProperties();
+        org.cyclonedx.model.component.crypto.CryptoProperties cryptoProperties = new org.cyclonedx.model.component.crypto.CryptoProperties();
         cryptoProperties.setOid("oid:2.16.840.1.101.3.4.1.6");
+        cryptoProperties.setAssetType(AssetType.ALGORITHM);
 
-        AlgorithmProperties algorithmProperties = new AlgorithmProperties();
+        org.cyclonedx.model.component.crypto.AlgorithmProperties algorithmProperties = new org.cyclonedx.model.component.crypto.AlgorithmProperties();
         algorithmProperties.setPadding(Padding.PKCS7);
         algorithmProperties.setCryptoFunctions(List.of(CryptoFunction.DECRYPT));
         cryptoProperties.setAlgorithmProperties(algorithmProperties);
-
-        CertificateProperties certificateProperties = new CertificateProperties();
-        certificateProperties.setNotValidAfter("2020-01-01T18:00:00.000Z");
-        cryptoProperties.setCertificateProperties(certificateProperties);
 
         component.setCryptoProperties(cryptoProperties);
 
         Component newComponent = ModelConverter.convertComponent(component);
 
         Assert.assertEquals("testComponent", newComponent.getName());
-        Assert.assertEquals(Classifier.LIBRARY, newComponent.getClassifier());
+        Assert.assertEquals(Classifier.CRYPTOGRAPHIC_ASSET, newComponent.getClassifier());
 
         Assert.assertEquals(purl, newComponent.getPurl());
         Assert.assertEquals(purl, newComponent.getPurlCoordinates());
 
-        // Assert.assertEquals("testName", newComponent.getProperties().get(0).getName());
-        // Assert.assertEquals("testValue", newComponent.getProperties().get(0).getValue());
+        Assert.assertEquals("testName", newComponent.getProperties().get(0).getPropertyName());
+        Assert.assertEquals("testValue", newComponent.getProperties().get(0).getPropertyValue());
 
         Assert.assertEquals(1, newComponent.getChildren().size());
 
         Assert.assertEquals("oid:2.16.840.1.101.3.4.1.6", newComponent.getCryptoAssetProperties().getOid());
+        Assert.assertEquals(AssetType.ALGORITHM, newComponent.getCryptoAssetProperties().getAssetType());
         Assert.assertEquals(Padding.PKCS7, newComponent.getCryptoAssetProperties().getAlgorithmProperties().getPadding());
         Assert.assertEquals(List.of(CryptoFunction.DECRYPT), newComponent.getCryptoAssetProperties().getAlgorithmProperties().getCryptoFunctions());
     }
@@ -200,7 +196,14 @@ public class ModelConverterTest extends PersistenceCapableTest {
         bom.setDependencies(List.of(d1));
 
         List<Component> components = ModelConverter.convertComponents(bom.getComponents());
+        components.forEach(c -> c.setProject(acmeProject));
         this.qm.persist(components);
+        
+        components.get(0).setDirectDependencies("""
+                [
+                    {"uuid": "%s"}
+                ]
+                """.formatted(components.get(1).getUuid()));
         List<Dependency> dependencies = DependencyUtil.generateDependencies(acmeProject, components);
         Assert.assertEquals(dependencies.size(), bom.getDependencies().size());
     }
