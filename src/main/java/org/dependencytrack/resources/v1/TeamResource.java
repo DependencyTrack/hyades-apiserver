@@ -22,6 +22,7 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,8 +51,11 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
+import org.dependencytrack.resources.v1.vo.VisibleTeams;
 import org.owasp.security.logging.SecurityMarkers;
 
+import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.datanucleus.PropertyNames.PROPERTY_RETAIN_VALUES;
@@ -217,6 +221,37 @@ public class TeamResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
+        }
+    }
+
+    @GET
+    @Path("/visible")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Returns a list of Teams that are visible", description = "<p></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The Visible Teams", content = @Content(array = @ArraySchema(schema = @Schema(implementation = VisibleTeams.class)))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public Response availableTeams() {
+        try (QueryManager qm = new QueryManager()) {
+            Principal user = getPrincipal();
+            boolean isAllTeams = qm.hasAccessManagementPermission(user);
+            List<Team> teams = new ArrayList<>();
+            if (isAllTeams) {
+                teams = qm.getTeams();
+            } else {
+                if (user instanceof final UserPrincipal userPrincipal) {
+                    teams = userPrincipal.getTeams();
+                } else if (user instanceof final ApiKey apiKey) {
+                    teams = apiKey.getTeams();
+                }
+            }
+
+            List<VisibleTeams> response = new ArrayList<>();
+            for (Team team : teams) {
+                response.add(new VisibleTeams(team.getName(), team.getUuid()));
+            }
+            return Response.ok(response).build();
         }
     }
 
