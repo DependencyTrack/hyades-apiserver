@@ -186,8 +186,7 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(91)); // Retained b/c project is inactive.
 
         assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactlyInAnyOrder(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90));
+                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
 }
