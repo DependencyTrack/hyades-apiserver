@@ -60,12 +60,12 @@ public class MigrationInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         if (!config.getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
-            LOGGER.info("Not running migrations because %s is disabled"
+            LOGGER.debug("Not running migrations because %s is disabled"
                     .formatted(ConfigKey.INIT_TASKS_ENABLED.getPropertyName()));
             return;
         }
         if (!config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS)) {
-            LOGGER.info("Not running migrations because %s is disabled"
+            LOGGER.debug("Not running migrations because %s is disabled"
                     .formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
             return;
         }
