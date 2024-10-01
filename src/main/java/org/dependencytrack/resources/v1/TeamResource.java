@@ -232,7 +232,6 @@ public class TeamResource extends AlpineResource {
             @ApiResponse(responseCode = "200", description = "The Visible Teams", content = @Content(array = @ArraySchema(schema = @Schema(implementation = VisibleTeams.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response availableTeams() {
         try (QueryManager qm = new QueryManager()) {
             Principal user = getPrincipal();
