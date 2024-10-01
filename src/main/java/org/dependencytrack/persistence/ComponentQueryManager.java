@@ -864,7 +864,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             filterParts.add("(cryptoAssetProperties != null && cryptoAssetProperties.oid == :oid)");
             params.put("oid", cid.getOid());
         } else {
-            filterParts.add("cryptoAssetProperties != null && cryptoAssetProperties.oid == null");
+            filterParts.add("cryptoAssetProperties == null || (cryptoAssetProperties != null && cryptoAssetProperties.oid == null)");
         }
 
         final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";

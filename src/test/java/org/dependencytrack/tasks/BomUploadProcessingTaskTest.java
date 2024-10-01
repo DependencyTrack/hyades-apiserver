@@ -28,7 +28,7 @@ import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
-//import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -43,7 +43,7 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
-//import javax.jdo.JDOObjectNotFoundException;
+import javax.jdo.JDOObjectNotFoundException;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -69,7 +69,7 @@ import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.fail;
-//import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
@@ -1329,81 +1329,81 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(exceptions).isEmpty();
     }
 
-    // @Test
-    // public void informWithExistingComponentPropertiesAndBomWithoutComponentProperties() throws Exception {
-    //     final var project = new Project();
-    //     project.setName("acme-app");
-    //     qm.persist(project);
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithoutComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
 
-    //     var component = new Component();
-    //     component.setProject(project);
-    //     component.setName("acme-lib");
-    //     component.setVersion("1.0.0");
-    //     component.setClassifier(Classifier.LIBRARY);
-    //     qm.persist(component);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setVersion("1.0.0");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
 
-    //     final var componentProperty = new ComponentProperty();
-    //     componentProperty.setComponent(component);
-    //     componentProperty.setPropertyName("foo");
-    //     componentProperty.setPropertyValue("bar");
-    //     componentProperty.setPropertyType(PropertyType.STRING);
-    //     qm.persist(componentProperty);
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
 
-    //     final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("""
-    //             {
-    //               "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
-    //               "bomFormat": "CycloneDX",
-    //               "specVersion": "1.4",
-    //               "version": 1,
-    //               "components": [
-    //                 {
-    //                   "type": "library",
-    //                   "name": "acme-lib",
-    //                   "version": "1.0.0"
-    //                 }
-    //               ]
-    //             }
-    //             """.getBytes()));
-    //     qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-    //     new BomUploadProcessingTask().inform(bomUploadEvent);
-    //     assertBomProcessedNotification();
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("""
+                {
+                  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes()));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
 
-    //     qm.getPersistenceManager().refresh(component);
-    //     assertThat(component.getProperties()).isEmpty();
-    // }
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).isEmpty();
+    }
 
-    // @Test
-    // public void informWithExistingComponentPropertiesAndBomWithComponentProperties() throws Exception {
-    //     final var project = new Project();
-    //     project.setName("acme-app");
-    //     qm.persist(project);
+    @Test
+    public void informWithExistingComponentPropertiesAndBomWithComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
 
-    //     final var component = new Component();
-    //     component.setProject(project);
-    //     component.setName("acme-lib");
-    //     component.setClassifier(Classifier.LIBRARY);
-    //     qm.persist(component);
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
 
-    //     final var componentProperty = new ComponentProperty();
-    //     componentProperty.setComponent(component);
-    //     componentProperty.setPropertyName("foo");
-    //     componentProperty.setPropertyValue("bar");
-    //     componentProperty.setPropertyType(PropertyType.STRING);
-    //     qm.persist(componentProperty);
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(component);
+        componentProperty.setPropertyName("foo");
+        componentProperty.setPropertyValue("bar");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
 
-    //     final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-component-property.json"));
-    //     qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-    //     new BomUploadProcessingTask().inform(bomUploadEvent);
-    //     assertBomProcessedNotification();
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-component-property.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
 
-    //     qm.getPersistenceManager().refresh(component);
-    //     assertThat(component.getProperties()).satisfiesExactly(property -> {
-    //         assertThat(property.getGroupName()).isNull();
-    //         assertThat(property.getPropertyName()).isEqualTo("foo");
-    //         assertThat(property.getPropertyValue()).isEqualTo("baz");
-    //         assertThat(property.getUuid()).isNotEqualTo(componentProperty.getUuid());
-    //     });
-    // }
+        qm.getPersistenceManager().refresh(component);
+        assertThat(component.getProperties()).satisfiesExactly(property -> {
+            assertThat(property.getGroupName()).isNull();
+            assertThat(property.getPropertyName()).isEqualTo("foo");
+            assertThat(property.getPropertyValue()).isEqualTo("baz");
+            assertThat(property.getUuid()).isNotEqualTo(componentProperty.getUuid());
+        });
+    }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/3957
     public void informIssue3957Test() throws Exception {
@@ -1558,73 +1558,73 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         }
     }
 
-    // @Test
-    // public void informWithExistingDuplicateComponentPropertiesAndBomWithDuplicateComponentProperties() throws Exception {
-    //     final var project = new Project();
-    //     project.setName("acme-app");
-    //     qm.persist(project);
+    @Test
+    public void informWithExistingDuplicateComponentPropertiesAndBomWithDuplicateComponentProperties() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
 
-    //     final var component = new Component();
-    //     component.setProject(project);
-    //     component.setName("acme-lib");
-    //     component.setClassifier(Classifier.LIBRARY);
-    //     qm.persist(component);
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
 
-    //     final var componentPropertyA = new ComponentProperty();
-    //     componentPropertyA.setComponent(component);
-    //     componentPropertyA.setPropertyName("foo");
-    //     componentPropertyA.setPropertyValue("bar");
-    //     componentPropertyA.setPropertyType(PropertyType.STRING);
-    //     qm.persist(componentPropertyA);
+        final var componentPropertyA = new ComponentProperty();
+        componentPropertyA.setComponent(component);
+        componentPropertyA.setPropertyName("foo");
+        componentPropertyA.setPropertyValue("bar");
+        componentPropertyA.setPropertyType(PropertyType.STRING);
+        qm.persist(componentPropertyA);
 
-    //     final var componentPropertyB = new ComponentProperty();
-    //     componentPropertyB.setComponent(component);
-    //     componentPropertyB.setPropertyName("foo");
-    //     componentPropertyB.setPropertyValue("bar");
-    //     componentPropertyB.setPropertyType(PropertyType.STRING);
-    //     qm.persist(componentPropertyB);
+        final var componentPropertyB = new ComponentProperty();
+        componentPropertyB.setComponent(component);
+        componentPropertyB.setPropertyName("foo");
+        componentPropertyB.setPropertyValue("bar");
+        componentPropertyB.setPropertyType(PropertyType.STRING);
+        qm.persist(componentPropertyB);
 
-    //     final byte[] bomBytes = """
-    //             {
-    //               "bomFormat": "CycloneDX",
-    //               "specVersion": "1.4",
-    //               "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
-    //               "version": 1,
-    //               "components": [
-    //                 {
-    //                   "type": "library",
-    //                   "name": "acme-lib",
-    //                   "properties": [
-    //                     {
-    //                       "name": "foo",
-    //                       "value": "bar"
-    //                     },
-    //                     {
-    //                       "name": "foo",
-    //                       "value": "bar"
-    //                     }
-    //                   ]
-    //                 }
-    //               ]
-    //             }
-    //             """.getBytes(StandardCharsets.UTF_8);
-    //     final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
-    //     qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-    //     new BomUploadProcessingTask().inform(bomUploadEvent);
-    //     assertBomProcessedNotification();
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "properties": [
+                        {
+                          "name": "foo",
+                          "value": "bar"
+                        },
+                        {
+                          "name": "foo",
+                          "value": "bar"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
 
-    //     qm.getPersistenceManager().evictAll();
-    //     assertThatNoException()
-    //             .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyA));
-    //     assertThatExceptionOfType(JDOObjectNotFoundException.class)
-    //             .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyB));
-    //     assertThat(component.getProperties()).satisfiesExactly(property -> {
-    //         assertThat(property.getGroupName()).isNull();
-    //         assertThat(property.getPropertyName()).isEqualTo("foo");
-    //         assertThat(property.getPropertyValue()).isEqualTo("bar");
-    //         assertThat(property.getUuid()).isEqualTo(componentPropertyA.getUuid());
-    //     });
-    // }
+        qm.getPersistenceManager().evictAll();
+        assertThatNoException()
+                .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyA));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getPersistenceManager().refresh(componentPropertyB));
+        assertThat(component.getProperties()).satisfiesExactly(property -> {
+            assertThat(property.getGroupName()).isNull();
+            assertThat(property.getPropertyName()).isEqualTo("foo");
+            assertThat(property.getPropertyValue()).isEqualTo("bar");
+            assertThat(property.getUuid()).isEqualTo(componentPropertyA.getUuid());
+        });
+    }
 
     @Test
     public void informWithEmptyComponentAndServiceNameTest() throws Exception {

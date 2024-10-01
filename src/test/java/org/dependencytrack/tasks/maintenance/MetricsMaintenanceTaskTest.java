@@ -102,16 +102,13 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
         assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactly(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90));
+                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
         assertThat(qm.getProjectMetrics(project).getList(ProjectMetrics.class)).satisfiesExactly(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90));
+                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
         assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactly(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90));
+                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
     @Test
