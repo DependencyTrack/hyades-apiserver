@@ -21,49 +21,50 @@ package org.dependencytrack.auth;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT;
+import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_CREATE;
+import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_READ;
+import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.BOM_UPLOAD;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_CREATE;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_READ;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_UPDATE;
+import static org.dependencytrack.auth.Permissions.Constants.POLICY_VIOLATION_ANALYSIS;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE;
+import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.PROJECT_CREATION_UPLOAD;
+import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION;
+import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_CREATE;
+import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_READ;
+import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
+import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
+import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_VULNERABILITY;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_ANALYSIS;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_ANALYSIS_READ;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_CREATE;
+import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_VIOLATION_ANALYSIS;
-import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT;
-import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_CREATE;
-import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_READ;
-import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION;
-import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_CREATE;
-import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_READ;
-import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.PROJECT_CREATION_UPLOAD;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_CREATE;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_READ;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
-import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 
 public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assert.assertEquals(37, Permissions.values().length);
+        Assert.assertEquals(38, Permissions.values().length);
         Assert.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assert.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.PORTFOLIO_MANAGEMENT.name());
@@ -101,6 +102,7 @@ public class PermissionsTest {
         Assert.assertEquals("POLICY_MANAGEMENT_DELETE", Permissions.POLICY_MANAGEMENT_DELETE.name());
         Assert.assertEquals("TAG_MANAGEMENT", Permissions.TAG_MANAGEMENT.name());
         Assert.assertEquals("TAG_MANAGEMENT_DELETE", Permissions.TAG_MANAGEMENT_DELETE.name());
+        Assert.assertEquals("VIEW_BADGES", Permissions.VIEW_BADGES.name());
     }
 
     @Test
@@ -142,5 +144,6 @@ public class PermissionsTest {
         Assert.assertEquals("POLICY_MANAGEMENT_DELETE", POLICY_MANAGEMENT_DELETE);
         Assert.assertEquals("TAG_MANAGEMENT", TAG_MANAGEMENT);
         Assert.assertEquals("TAG_MANAGEMENT_DELETE", TAG_MANAGEMENT_DELETE);
+        Assert.assertEquals("VIEW_BADGES", VIEW_BADGES);
     }
 }
