@@ -88,14 +88,14 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalysisTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectA
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectB
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectD
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectE
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()), // projectA
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()), // projectB
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()), // projectC
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()), // projectD
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()), // projectE
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 },
@@ -103,8 +103,8 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
                 // componentProjectC must not have been submitted, because it belongs to an inactive project
                 // componentProjectD has the same PURL coordinates as componentProjectA and is not submitted again
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
                     assertThat(command.getComponent().getInternal()).isTrue();
                 }
@@ -159,23 +159,23 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-a@1.0.1");
                     assertThat(command.getComponent().getInternal()).isTrue();
                 },
                 // componentB must not have been submitted, because it does not have a PURL
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/acme/acme-lib-c@3.0.1");
                     assertThat(command.getComponent().getInternal()).isFalse();
                 }
@@ -195,7 +195,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name())
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name())
                 // Component of inactive project must not have been submitted for analysis
         );
     }
