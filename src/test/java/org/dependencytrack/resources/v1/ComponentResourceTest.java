@@ -644,15 +644,15 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
                 }
         );
@@ -725,15 +725,15 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("Test component", json.getString("description"));
         Assert.assertEquals(1, json.getJsonArray("externalReferences").size());
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
                 },
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND.name());
+                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
                 }
         );

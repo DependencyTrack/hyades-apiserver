@@ -123,7 +123,7 @@ public final class KafkaEventConverter {
                 .build();
 
         return new KafkaEvent<>(
-                KafkaTopics.VULN_ANALYSIS_COMMAND,
+                KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND,
                 scanKey, scanCommand,
                 Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, event.level().name(),
                         KafkaEventHeaders.IS_NEW_COMPONENT, String.valueOf(event.isNewComponent()))
@@ -145,46 +145,46 @@ public final class KafkaEventConverter {
                 .setFetchMeta(event.fetchMeta())
                 .build();
 
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
+        return new KafkaEvent<>(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
     }
 
     static KafkaEvent<String, String> convert(final GitHubAdvisoryMirrorEvent ignored) {
         final String key = Vulnerability.Source.GITHUB.name();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
+        return new KafkaEvent<>(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND, key, null);
     }
 
     static KafkaEvent<String, String> convert(final NistMirrorEvent ignored) {
         final String key = Vulnerability.Source.NVD.name();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
+        return new KafkaEvent<>(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND, key, null);
     }
 
     static KafkaEvent<String, String> convert(final OsvMirrorEvent event) {
         final String key = Vulnerability.Source.OSV.name();
         final String value = event.ecosystem();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, value);
+        return new KafkaEvent<>(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND, key, value);
     }
 
     static KafkaEvent<String, String> convert(final EpssMirrorEvent ignored) {
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, "EPSS", null);
+        return new KafkaEvent<>(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND, "EPSS", null);
     }
 
     private static Topic<String, Notification> extractDestinationTopic(final Notification notification) {
         return switch (notification.getGroup()) {
-            case GROUP_ANALYZER -> KafkaTopics.NOTIFICATION_ANALYZER;
-            case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED, GROUP_BOM_PROCESSING_FAILED, GROUP_BOM_VALIDATION_FAILED -> KafkaTopics.NOTIFICATION_BOM;
-            case GROUP_CONFIGURATION -> KafkaTopics.NOTIFICATION_CONFIGURATION;
-            case GROUP_DATASOURCE_MIRRORING -> KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING;
-            case GROUP_FILE_SYSTEM -> KafkaTopics.NOTIFICATION_FILE_SYSTEM;
-            case GROUP_INTEGRATION -> KafkaTopics.NOTIFICATION_INTEGRATION;
-            case GROUP_NEW_VULNERABILITY -> KafkaTopics.NOTIFICATION_NEW_VULNERABILITY;
-            case GROUP_NEW_VULNERABLE_DEPENDENCY -> KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY;
-            case GROUP_POLICY_VIOLATION -> KafkaTopics.NOTIFICATION_POLICY_VIOLATION;
-            case GROUP_PROJECT_AUDIT_CHANGE -> KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE;
-            case GROUP_PROJECT_CREATED -> KafkaTopics.NOTIFICATION_PROJECT_CREATED;
-            case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
-            case GROUP_REPOSITORY -> KafkaTopics.NOTIFICATION_REPOSITORY;
-            case GROUP_VEX_CONSUMED, GROUP_VEX_PROCESSED -> KafkaTopics.NOTIFICATION_VEX;
-            case GROUP_USER_CREATED, GROUP_USER_DELETED -> KafkaTopics.NOTIFICATION_USER;
+            case GROUP_ANALYZER -> KafkaTopics.TOPIC_NOTIFICATION_ANALYZER;
+            case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED, GROUP_BOM_PROCESSING_FAILED, GROUP_BOM_VALIDATION_FAILED -> KafkaTopics.TOPIC_NOTIFICATION_BOM;
+            case GROUP_CONFIGURATION -> KafkaTopics.TOPIC_NOTIFICATION_CONFIGURATION;
+            case GROUP_DATASOURCE_MIRRORING -> KafkaTopics.TOPIC_NOTIFICATION_DATASOURCE_MIRRORING;
+            case GROUP_FILE_SYSTEM -> KafkaTopics.TOPIC_NOTIFICATION_FILE_SYSTEM;
+            case GROUP_INTEGRATION -> KafkaTopics.TOPIC_NOTIFICATION_INTEGRATION;
+            case GROUP_NEW_VULNERABILITY -> KafkaTopics.TOPIC_NOTIFICATION_NEW_VULNERABILITY;
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> KafkaTopics.TOPIC_NOTIFICATION_NEW_VULNERABLE_DEPENDENCY;
+            case GROUP_POLICY_VIOLATION -> KafkaTopics.TOPIC_NOTIFICATION_POLICY_VIOLATION;
+            case GROUP_PROJECT_AUDIT_CHANGE -> KafkaTopics.TOPIC_NOTIFICATION_PROJECT_AUDIT_CHANGE;
+            case GROUP_PROJECT_CREATED -> KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED;
+            case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> KafkaTopics.TOPIC_NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE;
+            case GROUP_REPOSITORY -> KafkaTopics.TOPIC_NOTIFICATION_REPOSITORY;
+            case GROUP_VEX_CONSUMED, GROUP_VEX_PROCESSED -> KafkaTopics.TOPIC_NOTIFICATION_VEX;
+            case GROUP_USER_CREATED, GROUP_USER_DELETED -> KafkaTopics.TOPIC_NOTIFICATION_USER;
             case GROUP_UNSPECIFIED, UNRECOGNIZED -> throw new IllegalArgumentException("""
                     Unable to determine destination topic because the notification does not \
                     specify a notification group: %s""".formatted(notification.getGroup()));

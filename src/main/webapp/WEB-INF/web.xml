@@ -36,6 +36,9 @@
         <listener-class>org.dependencytrack.persistence.migration.MigrationInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.event.kafka.KafkaTopicInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
     </listener>
     <listener>

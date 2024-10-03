@@ -72,7 +72,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
             assertThat(record.key()).asString().isEqualTo("pkg:maven/foo/bar@1.2.3");
             assertThat(record.value()).isNotNull();
             assertThat(record.headers()).isEmpty();
@@ -89,7 +89,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULN_ANALYSIS_COMMAND.name());
             assertThat(record.key()).isNotNull();
             assertThat(record.value()).isNotNull();
             assertThat(record.headers()).satisfiesExactlyInAnyOrder(
@@ -112,7 +112,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND.name());
             assertThat(record.key()).asString().isEqualTo("GITHUB");
             assertThat(record.value()).isNull();
             assertThat(record.headers()).isEmpty();
@@ -126,7 +126,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND.name());
             assertThat(record.key()).asString().isEqualTo("NVD");
             assertThat(record.value()).isNull();
             assertThat(record.headers()).isEmpty();
@@ -140,7 +140,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_VULNERABILITY_MIRROR_COMMAND.name());
             assertThat(record.key()).asString().isEqualTo("OSV");
             assertThat(record.value()).asString().isEqualTo("Maven");
             assertThat(record.headers()).isEmpty();
@@ -179,7 +179,7 @@ public class KafkaEventDispatcherTest {
         assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
 
         assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_ANALYZER.name());
+            assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_NOTIFICATION_ANALYZER.name());
             assertThat(record.key()).isNull();
             assertThat(record.value()).isNotNull();
             assertThat(record.headers()).isEmpty();

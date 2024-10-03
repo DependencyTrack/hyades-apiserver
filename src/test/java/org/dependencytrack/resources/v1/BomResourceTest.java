@@ -1196,7 +1196,7 @@ public class BomResourceTest extends ResourceTest {
                 """);
 
         assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         AssertionsForClassTypes.assertThat(userNotification).isNotNull();
         AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
         AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
@@ -1250,7 +1250,7 @@ public class BomResourceTest extends ResourceTest {
                 """);
 
         assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         AssertionsForClassTypes.assertThat(userNotification).isNotNull();
         AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
         AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);

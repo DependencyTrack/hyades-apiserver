@@ -87,7 +87,7 @@ public class ProcessorManagerTest {
 
     @Test
     public void testSingleRecordProcessor() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
+        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final var recordsProcessed = new AtomicInteger(0);
@@ -116,7 +116,7 @@ public class ProcessorManagerTest {
 
     @Test
     public void testSingleRecordProcessorRetry() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
+        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final var attemptsCounter = new AtomicInteger(0);
@@ -153,7 +153,7 @@ public class ProcessorManagerTest {
 
     @Test
     public void testBatchProcessor() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
+        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final var recordsProcessed = new AtomicInteger(0);
@@ -187,7 +187,7 @@ public class ProcessorManagerTest {
 
     @Test
     public void testWithMaxConcurrencyMatchingPartitionCount() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
+        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 12, (short) 1))).all().get();
 
         environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "partition");
@@ -218,8 +218,8 @@ public class ProcessorManagerTest {
 
     @Test
     public void testStartAllWithMissingTopics() throws Exception {
-        final var inputTopicA = new Topic<>("input-a", Serdes.String(), Serdes.String());
-        final var inputTopicB = new Topic<>("input-b", Serdes.String(), Serdes.String());
+        final var inputTopicA = new Topic<>("input-a", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
+        final var inputTopicB = new Topic<>("input-b", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopicA.name(), 3, (short) 1))).all().get();
 
         final Processor<String, String> processor = record -> {
@@ -240,7 +240,7 @@ public class ProcessorManagerTest {
 
     @Test
     public void testProbeHealth() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
+        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String(), /* defaultConfig */ null);
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final Processor<String, String> processor = record -> {
