@@ -334,6 +334,7 @@ public class ProjectResourceTest extends ResourceTest {
                             "version": "1.0.0",
                             "classifier": "APPLICATION",
                             "active": true,
+                            "isLatest": false,
                             "tags": [
                               {
                                 "name": "foo"
@@ -372,6 +373,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "isLatest": false,
                     "teams": [
                       {
                         "name": "%s"
@@ -416,12 +418,14 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-1",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-2",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -441,6 +445,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-3",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -481,6 +486,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -523,6 +529,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "tags": [
                       {
                         "name": "foo"
@@ -568,6 +575,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "teams": [
                       {
                         "name": "%s"
@@ -603,12 +611,14 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": true
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -628,12 +638,14 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": true
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -653,6 +665,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": true
                   }
                 ]
@@ -683,12 +696,14 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": false,
+                    "isLatest": false,
                     "hasChildren": false
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -708,6 +723,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -727,6 +743,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
                     "active": false,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -784,6 +801,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -803,6 +821,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false,
                     "metrics": {
                       "components": 1,
@@ -862,6 +881,7 @@ public class ProjectResourceTest extends ResourceTest {
                             "version": "2.0.0",
                             "classifier": "APPLICATION",
                             "active": true,
+                            "isLatest": false,
                             "tags": [
                               {
                                 "name": "foo"
@@ -917,6 +937,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-a",
                     "active": true,
+                    "isLatest": false,
                     "teams": [
                       {
                         "name": "%s"
@@ -992,12 +1013,14 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-1",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-2",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -1017,6 +1040,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-3",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -1063,6 +1087,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -1111,6 +1136,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
                     "active": true,
+                    "isLatest": false,
                     "tags": [
                       {
                         "name": "foo"
@@ -1164,6 +1190,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
                     "active": true,
+                    "isLatest": false,
                     "teams": [
                       {
                         "name": "%s"
@@ -1232,6 +1259,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]
@@ -1251,6 +1279,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app",
                     "active": true,
+                    "isLatest": false,
                     "hasChildren": false,
                     "metrics": {
                       "components": 1,
