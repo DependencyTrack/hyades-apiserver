@@ -52,6 +52,7 @@ public abstract class ResourceTest {
     protected final String V1_BOM = "/v1/bom";
     protected final String V1_CALCULATOR = "/v1/calculator";
     protected final String V1_COMPONENT = "/v1/component";
+    protected final String V1_CRYPTO = "/v1/crypto";
     protected final String V1_DEPENDENCY_GRAPH = "/v1/dependencyGraph";
     protected final String V1_CONFIG_PROPERTY = "/v1/configProperty";
     protected final String V1_CWE = "/v1/cwe";

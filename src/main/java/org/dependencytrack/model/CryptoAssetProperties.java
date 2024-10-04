@@ -77,10 +77,6 @@ public class CryptoAssetProperties implements Serializable {
     @Pattern(regexp = "^([0-2])((\\.0)|(\\.[1-9][0-9]*))*$", message = "The OID must be a valid")
     private String oid;
 
-    public long getId() {
-        return id;
-    }
-
     public AssetType getAssetType() {
         return assetType;
     }

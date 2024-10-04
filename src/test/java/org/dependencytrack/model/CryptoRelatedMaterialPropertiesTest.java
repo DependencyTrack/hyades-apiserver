@@ -55,6 +55,8 @@ public class CryptoRelatedMaterialPropertiesTest {
         rel.setSecuredByMechanism(Mechanism.SOFTWARE);
 
         Assert.assertEquals(RelatedCryptoMaterialType.DIGEST, rel.getType());
+        Assert.assertEquals(identifier, rel.getIdentifier());
+        Assert.assertEquals(State.ACTIVE, rel.getState());
         Assert.assertEquals(algorithmRef, rel.getAlgorithmRef());
         Assert.assertEquals(DateUtil.fromISO8601(creationDate), rel.getCreationDate());
         Assert.assertEquals(DateUtil.fromISO8601(activationDate), rel.getActivationDate());

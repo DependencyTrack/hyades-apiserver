@@ -34,6 +34,7 @@ import org.dependencytrack.model.Project;
 
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
+import jakarta.validation.constraints.NotNull;
 
 public class CryptoAssetQueryManager extends QueryManager implements IQueryManager {
 
@@ -54,18 +55,13 @@ public class CryptoAssetQueryManager extends QueryManager implements IQueryManag
         super(pm, request);
     }
 
-    private static final String globalFilter = setGlobalFilter();
-    private static String setGlobalFilter() {
-        return "bomReference == null";
-    }
-
     /**
      * Returns a complete list of all CryptoAssets
      * @return a List of CryptoAssets
      */
     @SuppressWarnings("unchecked")
     public List<Component> getAllCryptoAssets() {
-        final Query<Component> query = pm.newQuery(Component.class, globalFilter + " && (classifier == :asset)");
+        final Query<Component> query = pm.newQuery(Component.class, "(classifier == :asset)");
         query.getFetchPlan().setMaxFetchDepth(3);
         return (List<Component>) query.execute(Classifier.CRYPTOGRAPHIC_ASSET);
     }
@@ -78,7 +74,7 @@ public class CryptoAssetQueryManager extends QueryManager implements IQueryManag
      */
     @SuppressWarnings("unchecked")
     public List<Component> getAllCryptoAssets(Project project) {
-        final Query<Component> query = pm.newQuery(Component.class, globalFilter + " && (project == :project) && (classifier == :asset)");
+        final Query<Component> query = pm.newQuery(Component.class, "(project == :project) && (classifier == :asset)");
         query.getFetchPlan().setMaxFetchDepth(3);
         query.setOrdering("name asc");
         return (List<Component>)query.execute(project, Classifier.CRYPTOGRAPHIC_ASSET);
@@ -89,17 +85,14 @@ public class CryptoAssetQueryManager extends QueryManager implements IQueryManag
      * @param identity the asset identity to query against
      * @return a list of components
      */
-    public PaginatedResult getCryptoAssets(ComponentIdentity identity) {
-        if (identity == null) {
-            return null;
-        }
+    public PaginatedResult getCryptoAssets(@NotNull ComponentIdentity identity) {
         Pair<ArrayList<String>, HashMap<String, Object>> queryProp = buildIdentityQuery(identity);
         String filter = String.join(" && ", queryProp.getKey());
         return loadComponents(filter, queryProp.getValue());
     }
 
     private PaginatedResult loadComponents(String queryFilter, Map<String, Object> params) {
-        var query = pm.newQuery(Component.class, globalFilter);
+        var query = pm.newQuery(Component.class);
         query.getFetchPlan().setMaxFetchDepth(3);
         if (orderBy == null) {
             query.setOrdering("id asc");
@@ -108,11 +101,7 @@ public class CryptoAssetQueryManager extends QueryManager implements IQueryManag
         return execute(query, params);
     }
 
-    private Pair<ArrayList<String>, HashMap<String, Object>> buildIdentityQuery(ComponentIdentity identity) {
-        if (identity == null) {
-            return null;
-        }
-
+    private Pair<ArrayList<String>, HashMap<String, Object>> buildIdentityQuery(@NotNull ComponentIdentity identity) {
         final var queryFilterElements = new ArrayList<String>();
         final var queryParams = new HashMap<String, Object>();
 

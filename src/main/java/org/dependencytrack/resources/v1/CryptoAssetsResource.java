@@ -23,6 +23,8 @@ import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -67,6 +69,10 @@ import java.util.List;
 
 @Path("/v1/crypto")
 @Tag(name = "crypto")
+@SecurityRequirements({
+        @SecurityRequirement(name = "ApiKeyAuth"),
+        @SecurityRequirement(name = "BearerAuth")
+})
 public class CryptoAssetsResource extends AlpineResource {
 
     @GET
@@ -85,7 +91,7 @@ public class CryptoAssetsResource extends AlpineResource {
         ),
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "403", description = "Access to the specified crypto asset is forbidden"),
-        @ApiResponse(responseCode = "404", description = "The rypto asset could not be found")
+        @ApiResponse(responseCode = "404", description = "The crypto asset could not be found.")
     })
     public Response getAllCryptoAssetsOfAProject(@PathParam("uuid") String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -118,7 +124,6 @@ public class CryptoAssetsResource extends AlpineResource {
         @ApiResponse(
             responseCode = "200",
             description = "A crypto asset",
-            headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of crypto assets", schema = @Schema(format = "integer")),
             content = @Content(schema = @Schema(implementation = Component.class))
         ),
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -134,13 +139,14 @@ public class CryptoAssetsResource extends AlpineResource {
             if (component != null && component.getClassifier() == Classifier.CRYPTOGRAPHIC_ASSET) {
                 final Project project = component.getProject();
                 if (qm.hasAccess(super.getPrincipal(), project)) {
+                    qm.getPersistenceManager().getFetchPlan().setMaxFetchDepth(3);
                     final Component asset = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
                     return Response.ok(asset).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified crypto asset is forbidden").build();
                 }
             } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The crypto asset could not be found").build();
+                return Response.status(Response.Status.NOT_FOUND).entity("The crypto asset could not be found.").build();
             }
         }
     }
@@ -289,6 +295,7 @@ public class CryptoAssetsResource extends AlpineResource {
                 description = "The updated component",
                 content = @Content(schema = @Schema(implementation = Component.class))
         ),
+        @ApiResponse(responseCode = "400", description = "No data for crypto asset properties provided"),
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
         @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found"),

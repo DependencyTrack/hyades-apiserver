@@ -35,9 +35,11 @@ public class CryptoAlgorithmPropertiesTest {
 
     @Test
     public void testCryptoAlgorithmProperties() {
+        String curve = "Curve25519";
         CryptoAlgorithmProperties cap = new CryptoAlgorithmProperties();
         cap.setPrimitive(Primitive.AE);
         cap.setParameterSetIdentifier("128");
+        cap.setCurve(curve);
         cap.setExecutionEnvironment(ExecutionEnvironment.SOFTWARE_PLAIN_RAM);
         cap.setImplementationPlatform(ImplementationPlatform.X86_64);
         cap.setCertificationLevel(CertificationLevel.NONE);
@@ -50,6 +52,7 @@ public class CryptoAlgorithmPropertiesTest {
 
         Assert.assertEquals(Primitive.AE, cap.getPrimitive());
         Assert.assertEquals("128", cap.getParameterSetIdentifier());
+        Assert.assertEquals(curve, cap.getCurve());
         Assert.assertEquals(ExecutionEnvironment.SOFTWARE_PLAIN_RAM, cap.getExecutionEnvironment());
         Assert.assertEquals(ImplementationPlatform.X86_64, cap.getImplementationPlatform());
         Assert.assertEquals(CertificationLevel.NONE, cap.getCertificationLevel());
