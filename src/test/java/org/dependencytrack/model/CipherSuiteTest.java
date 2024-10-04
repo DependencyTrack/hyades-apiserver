@@ -37,9 +37,6 @@ public class CipherSuiteTest {
             "crypto/algorithm/sha-384@2.16.840.1.101.3.4.2.9"
         );
         List<String> identifiers = List.of("a", "b", "c", "d");
-        String location = "httpclient/src/main/java/org/apache/http/impl/auth/NTLMEngineImpl.java";
-        String addittionalContext = "javax.crypto.spec.SecretKeySpec#<init>([BLjava/lang/String;)V";
-        String bomRef = "471d7b60-0e38-4373-9e66-799d9fbea5de";
         cs.setAlgorithms(algorithms);
         cs.setName(name);
         cs.setIdentifiers(identifiers);

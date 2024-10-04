@@ -62,7 +62,7 @@ public class ModelConverterTest extends PersistenceCapableTest {
                 .withType("maven").withNamespace("acme").withName("product").withVersion("1.0").build();
         component.setPurl(purl);
 
-        org.cyclonedx.model.Property property = new Property();
+        Property property = new Property();
         property.setName("testName");
         property.setValue("testValue");
         component.setProperties(List.of(property));

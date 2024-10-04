@@ -62,7 +62,7 @@ public class CryptoAssetQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void TestGetAllCryptoAssets() {
+    public void testGetAllCryptoAssets() {
         Component component = persistCryptoAsset();
         List<Component> components = qm.getAllCryptoAssets();
         assertThat(components).isNotNull();
@@ -74,7 +74,7 @@ public class CryptoAssetQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void TestGetAllCryptoAssetsPerProject() {
+    public void testGetAllCryptoAssetsPerProject() {
         Component component = persistCryptoAsset();
         List<Component> components = qm.getAllCryptoAssets(component.getProject());
         assertThat(components).isNotNull();
@@ -86,7 +86,7 @@ public class CryptoAssetQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void TestGetAllCryptoAssetByIdentity() {
+    public void testGetAllCryptoAssetByIdentity() {
         Component component = persistCryptoAsset();
         List<Component> components = qm.getCryptoAssets(new ComponentIdentity(AssetType.ALGORITHM)).getList(Component.class);
         assertThat(components).isNotNull();
