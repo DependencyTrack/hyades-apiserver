@@ -73,7 +73,8 @@ public class CloneProjectTask implements Subscriber {
                             request.includeServices(),
                             request.includeAuditHistory(),
                             request.includeACL(),
-                            request.includePolicyViolations()
+                            request.includePolicyViolations(),
+                            request.makeCloneLatest()
                     );
 
                     qm.updateWorkflowStateToComplete(workflowState);

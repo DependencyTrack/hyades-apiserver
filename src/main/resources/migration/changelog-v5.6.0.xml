@@ -107,4 +107,16 @@
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TAG" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-7" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="IS_LATEST" type="BOOLEAN"/>
+        </addColumn>
+        <addColumn tableName="POLICY">
+            <column name="ONLY_LATEST_PROJECT_VERSION" type="BOOLEAN"/>
+        </addColumn>
+        <createIndex indexName="PROJECT_IS_LATEST_IDX" tableName="PROJECT">
+            <column name="IS_LATEST"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
