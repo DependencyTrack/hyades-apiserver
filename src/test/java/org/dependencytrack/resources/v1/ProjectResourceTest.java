@@ -21,6 +21,10 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.model.ManagedUser;
+import alpine.model.Permission;
+import alpine.model.Team;
+import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import jakarta.json.Json;
@@ -44,6 +48,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
@@ -57,6 +62,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -102,6 +108,9 @@ import static org.hamcrest.Matchers.not;
 
 public class ProjectResourceTest extends ResourceTest {
 
+    private ManagedUser testUser;
+    private String jwt;
+
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(ProjectResource.class)
@@ -113,6 +122,38 @@ public class ProjectResourceTest extends ResourceTest {
     public void after() {
         EventService.getInstance().unsubscribe(CloneProjectTask.class);
         super.after();
+    }
+
+    public JsonObjectBuilder setUpEnvironment(boolean isAdmin, boolean isRequired, String name, Team team1) {
+        testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        jwt = new JsonWebToken().createToken(testUser);
+        qm.addUserToTeam(testUser, team);
+        final var generator = new DefaultObjectGenerator();
+        generator.loadDefaultPermissions();
+        List<Permission> permissionsList = new ArrayList<>();
+        final Permission permission = qm.getPermission("PORTFOLIO_MANAGEMENT");
+        permissionsList.add(permission);
+        testUser.setPermissions(permissionsList);
+        if (isAdmin) {
+            final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
+            permissionsList.add(adminPermission);
+            testUser.setPermissions(permissionsList);
+        }
+        if (isRequired) {
+            qm.createConfigProperty(
+                    ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                    ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                    "true",
+                    ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                    null);
+        }
+        final JsonObjectBuilder jsonProject = Json.createObjectBuilder()
+                .add("name", name).add("classifier", "CONTAINER").addNull("parent").add("active", true).add("tags", Json.createArrayBuilder());
+        if (team1 != null) {
+            final JsonObject jsonTeam = Json.createObjectBuilder().add("uuid", team1.getUuid().toString()).build();
+            jsonProject.add("accessTeams", Json.createArrayBuilder().add(jsonTeam).build());
+        }
+        return jsonProject;
     }
 
     @Test
@@ -2581,5 +2622,89 @@ public class ProjectResourceTest extends ResourceTest {
                   ]
                 }
                 """);
+    }
+
+    @Test
+    public void createProjectWithExistingTeamRequiredTest() {
+        Team AllowedTeam = qm.createTeam("AllowedTeam", false);
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithExistingTeamRequired", AllowedTeam);
+        qm.addUserToTeam(testUser, AllowedTeam);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(201, response.getStatus());
+        JsonObject returnedProject = parseJsonObject(response);
+    }
+
+    @Test
+    public void createProjectWithoutExistingTeamRequiredTest() {
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithoutExistingTeamRequired", null);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(422, response.getStatus(), 0);
+    }
+
+    @Test
+    public void createProjectWithNotAllowedExistingTeamTest() {
+        Team notAllowedTeam = qm.createTeam("NotAllowedTeam", false);
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithNotAllowedExistingTeam", notAllowedTeam);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(403, response.getStatus());
+    }
+
+    @Test
+    public void createProjectWithNotAllowedExistingTeamAdminTest() {
+        Team AllowedTeam = qm.createTeam("NotAllowedTeam", false);
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithNotAllowedExistingTeam", AllowedTeam);
+        qm.addUserToTeam(testUser, AllowedTeam);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(201, response.getStatus());
+        JsonObject returnedProject = parseJsonObject(response);
+    }
+
+    @Test
+    public void createProjectWithNotExistingTeamNoAdminTest() {
+        Team notAllowedTeam = new Team();
+        notAllowedTeam.setUuid(new UUID(1, 1));
+        notAllowedTeam.setName("NotAllowedTeam");
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithNotAllowedExistingTeam", notAllowedTeam);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(403, response.getStatus());
+    }
+
+    @Test
+    public void createProjectWithNotExistingTeamTest() {
+        Team notAllowedTeam = new Team();
+        notAllowedTeam.setUuid(new UUID(1, 1));
+        notAllowedTeam.setName("NotAllowedTeam");
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(true, true, "ProjectWithNotAllowedExistingTeam", notAllowedTeam);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(404, response.getStatus());
+    }
+
+    @Test
+    public void createProjectWithApiKeyTest() {
+        final JsonObjectBuilder requestBodyBuilder = setUpEnvironment(false, true, "ProjectWithNotAllowedExistingTeam", team);
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(requestBodyBuilder.build().toString()));
+        Assert.assertEquals(201, response.getStatus());
+        JsonObject returnedProject = parseJsonObject(response);
     }
 }
