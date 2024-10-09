@@ -64,4 +64,69 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
+
+    <changeSet id="v5.6.0-4" author="nscuro">
+        <createTable tableName="VULNERABILITY_MATCHING_CRITERIA">
+            <column name="ID" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="VULNERABILITY_MATCHING_CRITERIA_PK"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints foreignKeyName="VULNERABILITY_MATCHING_CRITERIA_VULNERABILITY_FK"
+                             referencedTableName="VULNERABILITY"
+                             referencedColumnNames="ID"
+                             deleteCascade="true"/>
+            </column>
+            <column name="SOURCE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CPE" type="TEXT"/>
+            <column name="CPE_PART_LOWER" type="TEXT"/>
+            <column name="CPE_VENDOR_LOWER" type="TEXT"/>
+            <column name="CPE_PRODUCT_LOWER" type="TEXT"/>
+            <column name="PURL_TYPE" type="TEXT"/>
+            <column name="PURL_NAMESPACE" type="TEXT"/>
+            <column name="PURL_NAME" type="TEXT"/>
+            <column name="AFFECTED_VERSIONS" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ADDITIONAL_CRITERIA" type="BYTEA"/>
+            <column name="ADDITIONAL_CRITERIA_TYPE" type="TEXT"/>
+            <column name="CREATED" type="TIMESTAMPTZ" defaultValueDate="NOW()"/>
+            <column name="UPDATED" type="TIMESTAMPTZ" defaultValueDate="NOW()"/>
+        </createTable>
+
+        <sql splitStatements="true">
+             CREATE
+              INDEX "VULNERABILITY_MATCHING_CRITERIA_CPE_IDX"
+                 ON "VULNERABILITY_MATCHING_CRITERIA"(
+                      "CPE_PART_LOWER"
+                    , "CPE_VENDOR_LOWER"
+                    , "CPE_PRODUCT_LOWER")
+            INCLUDE ("ID", "VULNERABILITY_ID", "CPE", "AFFECTED_VERSIONS")
+              WHERE "CPE_PART_LOWER" IS NOT NULL
+                AND "CPE_VENDOR_LOWER" IS NOT NULL
+                AND "CPE_PRODUCT_LOWER" IS NOT NULL;
+
+             CREATE
+              INDEX "VULNERABILITY_MATCHING_CRITERIA_PURL_IDX"
+                 ON "VULNERABILITY_MATCHING_CRITERIA"(
+                      "PURL_TYPE"
+                    , "PURL_NAMESPACE"
+                    , "PURL_NAME")
+            INCLUDE ("ID", "VULNERABILITY_ID", "AFFECTED_VERSIONS")
+              WHERE "PURL_TYPE" IS NOT NULL
+                AND "PURL_NAME" IS NOT NULL;
+
+            ALTER TABLE "VULNERABILITY_MATCHING_CRITERIA"
+              ADD CONSTRAINT "VULNERABILITY_MATCHING_CRITERIA_CPE_LOWERCASE_CHECK"
+            CHECK ("CPE_PART_LOWER" = LOWER("CPE_PART_LOWER")
+                   AND "CPE_VENDOR_LOWER" = LOWER("CPE_VENDOR_LOWER")
+                   AND "CPE_PRODUCT_LOWER" = LOWER("CPE_PRODUCT_LOWER"));
+
+            ALTER TABLE "VULNERABILITY_MATCHING_CRITERIA"
+              ADD CONSTRAINT "VULNERABILITY_MATCHING_CRITERIA_PURL_URL_DECODED_CHECK"
+            CHECK ("PURL_NAMESPACE" NOT LIKE '%\%%' ESCAPE '\'
+                   AND "PURL_NAME" NOT LIKE '%\%%' ESCAPE '\');
+        </sql>
+    </changeSet>
 </databaseChangeLog>
