@@ -20,7 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
+import alpine.model.ApiKey;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -72,6 +74,7 @@ import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,7 +83,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
+import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
@@ -369,6 +374,13 @@ public class ProjectResource extends AlpineResource {
             summary = "Creates a new project",
             description = """
                     <p>If a parent project exists, <code>parent.uuid</code> is required</p>
+                    <p>
+                      When portfolio access control is enabled, one or more teams to grant access
+                      to can be provided via <code>accessTeams</code>. Either <code>uuid</code> or
+                      <code>name</code> of a team must be specified. Only teams which the authenticated
+                      principal is a member of can be assigned. Principals with <strong>ACCESS_MANAGEMENT</strong>
+                      permission can assign <em>any</em> team.
+                    </p>
                     <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"""
     )
     @ApiResponses(value = {
@@ -377,15 +389,16 @@ public class ProjectResource extends AlpineResource {
                     description = "The created project",
                     content = @Content(schema = @Schema(implementation = Project.class))
             ),
+            @ApiResponse(responseCode = "400", description = "Bad Request"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = """
                     <ul>
                       <li>An inactive Parent cannot be selected as parent, or</li>
                       <li>A project with the specified name already exists</li>
-                    </ul>"""),
+                    </ul>""")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
-    public Response createProject(Project jsonProject) {
+    public Response createProject(final Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
                 validator.validateProperty(jsonProject, "authors"),
@@ -397,7 +410,8 @@ public class ProjectResource extends AlpineResource {
                 validator.validateProperty(jsonProject, "classifier"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
-                validator.validateProperty(jsonProject, "swidTagId")
+                validator.validateProperty(jsonProject, "swidTagId"),
+                validator.validateProperty(jsonProject, "accessTeams")
         );
         if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
@@ -407,6 +421,67 @@ public class ProjectResource extends AlpineResource {
                 if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                     Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                     jsonProject.setParent(parent);
+                }
+
+                Principal principal = getPrincipal();
+
+                final List<Team> chosenTeams = requireNonNullElseGet(
+                        jsonProject.getAccessTeams(), Collections::emptyList);
+                jsonProject.setAccessTeams(null);
+
+                for (final Team chosenTeam : chosenTeams) {
+                    if (chosenTeam.getUuid() == null && chosenTeam.getName() == null) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("""
+                                        accessTeams must either specify a UUID or a name,\
+                                        but the team at index %d has neither.\
+                                        """.formatted(chosenTeams.indexOf(chosenTeam)))
+                                .build());
+                    }
+                }
+
+                if (!chosenTeams.isEmpty()) {
+                    List<Team> userTeams;
+                    if (principal instanceof final UserPrincipal userPrincipal) {
+                        userTeams = userPrincipal.getTeams();
+                    } else if (principal instanceof final ApiKey apiKey) {
+                        userTeams = apiKey.getTeams();
+                    } else {
+                        userTeams = Collections.emptyList();
+                    }
+
+                    boolean isAdmin = qm.hasAccessManagementPermission(principal);
+                    List<Team> visibleTeams = isAdmin ? qm.getTeams() : userTeams;
+                    final var visibleTeamByUuid = new HashMap<UUID, Team>(visibleTeams.size());
+                    final var visibleTeamByName = new HashMap<String, Team>(visibleTeams.size());
+                    for (final Team visibleTeam : visibleTeams) {
+                        visibleTeamByUuid.put(visibleTeam.getUuid(), visibleTeam);
+                        visibleTeamByName.put(visibleTeam.getName(), visibleTeam);
+                    }
+
+                    for (Team chosenTeam : chosenTeams) {
+                        Team visibleTeam = visibleTeamByUuid.getOrDefault(
+                                chosenTeam.getUuid(),
+                                visibleTeamByName.get(chosenTeam.getName()));
+                        if (visibleTeam == null) {
+                            throw new ClientErrorException(Response
+                                    .status(Response.Status.BAD_REQUEST)
+                                    .entity("""
+                                        The team with %s can not be assigned because it does not exist, \
+                                        or is not accessible to the authenticated principal.\
+                                        """.formatted(chosenTeam.getUuid() != null
+                                            ? "UUID " + chosenTeam.getUuid()
+                                            : "name " + chosenTeam.getName()))
+                                    .build());
+                        }
+                        if (!isPersistent(visibleTeam)) {
+                            // Teams sourced from the principal will not be in persistent state
+                            // and need to be attached to the persistence context.
+                            visibleTeam = qm.getObjectById(Team.class, visibleTeam.getId());
+                        }
+                        jsonProject.addAccessTeam(visibleTeam);
+                    }
                 }
 
                 final Project project;
@@ -429,8 +504,6 @@ public class ProjectResource extends AlpineResource {
                     LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
-
-                Principal principal = getPrincipal();
                 qm.updateNewProjectACL(project, principal);
                 return project;
             });

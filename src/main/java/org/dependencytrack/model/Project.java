@@ -24,6 +24,7 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -37,7 +38,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
@@ -297,7 +297,6 @@ public class Project implements Serializable {
     @Join(column = "PROJECT_ID")
     @Element(column = "TEAM_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    @JsonIgnore
     private List<Team> accessTeams;
 
     @Persistent(defaultFetchGroup = "true")
@@ -548,10 +547,12 @@ public class Project implements Serializable {
         this.versions = versions;
     }
 
+    @JsonIgnore
     public List<Team> getAccessTeams() {
         return accessTeams;
     }
 
+    @JsonSetter
     public void setAccessTeams(List<Team> accessTeams) {
         this.accessTeams = accessTeams;
     }

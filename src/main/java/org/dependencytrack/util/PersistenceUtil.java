@@ -159,7 +159,7 @@ public final class PersistenceUtil {
         }
     }
 
-    private static boolean isPersistent(final Object object) {
+    public static boolean isPersistent(final Object object) {
         final ObjectState objectState = JDOHelper.getObjectState(object);
         return objectState == PERSISTENT_CLEAN
                 || objectState == PERSISTENT_DIRTY
