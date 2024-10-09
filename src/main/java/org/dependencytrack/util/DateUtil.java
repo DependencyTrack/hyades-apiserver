@@ -83,6 +83,9 @@ public final class DateUtil {
      * @since 3.4.0
      */
     public static String toISO8601(final Date date) {
+        if (date == null) {
+            return null;
+        }
         final TimeZone tz = TimeZone.getTimeZone("UTC");
         final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
         df.setTimeZone(tz);

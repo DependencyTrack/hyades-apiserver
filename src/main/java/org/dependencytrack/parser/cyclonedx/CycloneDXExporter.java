@@ -26,7 +26,8 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
+import org.dependencytrack.parser.cyclonedx.util.DependencyUtil;
+import org.dependencytrack.parser.cyclonedx.util.ModelExporter;
 import org.dependencytrack.persistence.QueryManager;
 
 import java.util.ArrayList;
@@ -78,17 +79,17 @@ public class CycloneDXExporter {
                     .filter(component -> !component.getVulnerabilities().isEmpty())
                     .toList();
         }
-        final List<org.cyclonedx.model.Component> cycloneComponents = (Variant.VEX != variant && components != null) ? components.stream().map(component -> ModelConverter.convert(qm, component)).collect(Collectors.toList()) : null;
-        final List<org.cyclonedx.model.Service> cycloneServices = (Variant.VEX != variant && services != null) ? services.stream().map(service -> ModelConverter.convert(qm, service)).collect(Collectors.toList()) : null;
+        final List<org.cyclonedx.model.Component> cycloneComponents = (Variant.VEX != variant && components != null) ? components.stream().map(component -> ModelExporter.convert(qm, component)).collect(Collectors.toList()) : null;
+        final List<org.cyclonedx.model.Service> cycloneServices = (Variant.VEX != variant && services != null) ? services.stream().map(service -> ModelExporter.convert(qm, service)).collect(Collectors.toList()) : null;
         final Bom bom = new Bom();
         bom.setSerialNumber("urn:uuid:" + UUID.randomUUID());
         bom.setVersion(1);
-        bom.setMetadata(ModelConverter.createMetadata(project));
+        bom.setMetadata(ModelExporter.createMetadata(project));
         bom.setComponents(cycloneComponents);
         bom.setServices(cycloneServices);
-        bom.setVulnerabilities(ModelConverter.generateVulnerabilities(qm, variant, findings));
+        bom.setVulnerabilities(ModelExporter.generateVulnerabilities(qm, variant, findings));
         if (cycloneComponents != null) {
-            bom.setDependencies(ModelConverter.generateDependencies(project, components));
+            bom.setDependencies(DependencyUtil.generateDependencies(project, components));
         }
         return bom;
     }
@@ -97,10 +98,9 @@ public class CycloneDXExporter {
         // TODO: The output version should be user-controllable.
 
         if (Format.JSON == format) {
-            return BomGeneratorFactory.createJson(Version.VERSION_15, bom).toJsonString();
+            return BomGeneratorFactory.createJson(Version.VERSION_16, bom).toJsonString();
         } else {
-            return BomGeneratorFactory.createXml(Version.VERSION_15, bom).toXmlString();
+            return BomGeneratorFactory.createXml(Version.VERSION_16, bom).toXmlString();
         }
     }
-
 }

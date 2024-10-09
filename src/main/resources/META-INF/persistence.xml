@@ -25,8 +25,16 @@
     <class>org.dependencytrack.model.Analysis</class>
     <class>org.dependencytrack.model.AnalysisComment</class>
     <class>org.dependencytrack.model.Bom</class>
+    <class>org.dependencytrack.model.CipherSuite</class>
     <class>org.dependencytrack.model.Component</class>
     <class>org.dependencytrack.model.ComponentProperty</class>
+    <class>org.dependencytrack.model.CryptoAssetProperties</class>
+    <class>org.dependencytrack.model.CryptoAlgorithmProperties</class>
+    <class>org.dependencytrack.model.CryptoCertificateProperties</class>
+    <class>org.dependencytrack.model.CryptoRelatedMaterialProperties</class>
+    <class>org.dependencytrack.model.CryptoProtocolProperties</class>
+    <class>org.dependencytrack.model.CryptographyMetrics</class>
+    <class>org.dependencytrack.model.Ikev2Type</class>
     <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.DependencyMetrics</class>
     <class>org.dependencytrack.model.Epss</class>
@@ -35,6 +43,7 @@
     <class>org.dependencytrack.model.LicenseGroup</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
     <class>org.dependencytrack.model.NotificationRule</class>
+    <class>org.dependencytrack.model.Occurrence</class>
     <class>org.dependencytrack.model.Policy</class>
     <class>org.dependencytrack.model.PolicyCondition</class>
     <class>org.dependencytrack.model.PolicyViolation</class>

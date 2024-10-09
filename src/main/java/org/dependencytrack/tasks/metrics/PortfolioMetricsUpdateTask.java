@@ -81,6 +81,8 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             }
 
             Metrics.updatePortfolioMetrics();
+            // update overall cryptography metrics
+            Metrics.updateCryptographyMetrics();
         } finally {
             LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(System.nanoTime() - startTimeNs));
         }

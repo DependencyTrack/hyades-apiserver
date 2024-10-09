@@ -87,4 +87,12 @@ public final class Metrics {
                 .invoke());
     }
 
+    /**
+     * Update metrics related to cryptography.
+     *
+     * @since 5.5.0
+     */
+    public static void updateCryptographyMetrics() {
+        useJdbiHandle(handle -> handle.createCall("CALL \"UPDATE_CRYPTOGRAPHY_METRICS\"()").invoke());
+    }
 }

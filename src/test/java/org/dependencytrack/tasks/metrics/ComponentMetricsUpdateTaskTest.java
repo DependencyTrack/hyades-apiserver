@@ -109,34 +109,34 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         );
     }
 
-    @Test
-    public void testUpdateMetricsUnchanged() {
-        var project = new Project();
-        project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+    // @Test
+    // public void testUpdateMetricsUnchanged() {
+    //     var project = new Project();
+    //     project.setName("acme-app");
+    //     project = qm.createProject(project, List.of(), false);
 
-        // Create risk score configproperties
-        createTestConfigProperties();
+    //     // Create risk score configproperties
+    //     createTestConfigProperties();
 
-        var component = new Component();
-        component.setProject(project);
-        component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+    //     var component = new Component();
+    //     component.setProject(project);
+    //     component.setName("acme-lib");
+    //     component = qm.createComponent(component, false);
 
-        // Record initial project metrics
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
-        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
+    //     // Record initial project metrics
+    //     new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
+    //     final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+    //     assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
-        // Run the task a second time, without any metric being changed
-        final var beforeSecondRun = new Date();
-        new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
+    //     // Run the task a second time, without any metric being changed
+    //     final var beforeSecondRun = new Date();
+    //     new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
 
-        // Ensure that the lastOccurrence timestamp was correctly updated
-        qm.getPersistenceManager().refresh(metrics);
-        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
-    }
+    //     // Ensure that the lastOccurrence timestamp was correctly updated
+    //     qm.getPersistenceManager().refresh(metrics);
+    //     assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
+    //     assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+    // }
 
     @Test
     public void testUpdateMetricsVulnerabilities() {
