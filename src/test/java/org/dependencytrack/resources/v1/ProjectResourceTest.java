@@ -21,6 +21,9 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.model.ManagedUser;
+import alpine.model.Team;
+import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import jakarta.json.Json;
@@ -34,6 +37,7 @@ import jakarta.ws.rs.core.Response;
 import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Analysis;
@@ -44,6 +48,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
@@ -2933,5 +2938,324 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(403, response.getStatus(), 0);
+    }
+
+    public void createProjectAsUserWithAclEnabledAndExistingTeamByUuidTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "%s"
+                            }
+                          ]
+                        }
+                        """.formatted(team.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "acme-app",
+                          "classifier": "APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
+
+        assertThat(qm.getAllProjects()).satisfiesExactly(project ->
+                assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly(team.getName()));
+    }
+
+    @Test
+    public void createProjectAsUserWithAclEnabledAndExistingTeamByNameTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "name": "%s"
+                            }
+                          ]
+                        }
+                        """.formatted(team.getName())));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "acme-app",
+                          "classifier": "APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
+
+        assertThat(qm.getAllProjects()).satisfiesExactly(project ->
+                assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly(team.getName()));
+    }
+
+    @Test
+    public void createProjectAsUserWithAclEnabledAndWithoutTeamTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "acme-app",
+                          "classifier": "APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
+
+        assertThat(qm.getAllProjects()).satisfiesExactly(project ->
+                assertThat(project.getAccessTeams()).isEmpty());
+    }
+
+    @Test
+    public void createProjectAsUserWithNotAllowedExistingTeamTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "%s"
+                            }
+                          ]
+                        }
+                        """.formatted(team.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("""
+                The team with UUID %s can not be assigned because it does not exist, \
+                or is not accessible to the authenticated principal.""", team.getUuid());
+    }
+
+    @Test
+    public void createProjectAsUserWithAclEnabledAndNotMemberOfTeamAdminTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Team otherTeam = qm.createTeam("otherTeam", false);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "%s"
+                            }
+                          ]
+                        }
+                        """.formatted(otherTeam.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "acme-app",
+                          "classifier": "APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
+
+        assertThat(qm.getAllProjects()).satisfiesExactly(project ->
+                assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly("otherTeam"));
+    }
+
+    @Test
+    public void createProjectAsUserWithAclEnabledAndTeamNotExistingNoAdminTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "419c32eb-5a30-47d5-8a9a-fc0cda651314"
+                            }
+                          ]
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("""
+                The team with UUID 419c32eb-5a30-47d5-8a9a-fc0cda651314 \
+                can not be assigned because it does not exist, or is not \
+                accessible to the authenticated principal.""");
+    }
+
+    @Test
+    public void createProjectAsUserWithAclEnabledAndTeamNotExistingAdminTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
+
+        final String userJwt = new JsonWebToken().createToken(testUser);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header("Authorization", "Bearer " + userJwt)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "419c32eb-5a30-47d5-8a9a-fc0cda651314"
+                            }
+                          ]
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("""
+                The team with UUID 419c32eb-5a30-47d5-8a9a-fc0cda651314 \
+                can not be assigned because it does not exist, or is not \
+                accessible to the authenticated principal.""");
+    }
+
+    @Test
+    public void createProjectAsApiKeyWithAclEnabledAndWithExistentTeamTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-app",
+                          "accessTeams": [
+                            {
+                              "uuid": "%s"
+                            }
+                          ]
+                        }
+                        """.formatted(team.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "acme-app",
+                          "classifier": "APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "active": true
+                        }
+                        """);
+
+        assertThat(qm.getAllProjects()).satisfiesExactly(project ->
+                assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly(team.getName()));
     }
 }

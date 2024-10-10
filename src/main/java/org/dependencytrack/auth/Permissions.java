@@ -62,7 +62,8 @@ public enum Permissions {
     POLICY_MANAGEMENT_UPDATE("Allows the modification of a policy"),
     POLICY_MANAGEMENT_DELETE("Allows the deletion of a policy"),
     TAG_MANAGEMENT("Allows the modification and deletion of tags"),
-    TAG_MANAGEMENT_DELETE("Allows the deletion of a tag");
+    TAG_MANAGEMENT_DELETE("Allows the deletion of a tag"),
+    VIEW_BADGES("Provides the ability to view badges");
 
     private final String description;
 
@@ -112,6 +113,7 @@ public enum Permissions {
         public static final String POLICY_MANAGEMENT_DELETE = "POLICY_MANAGEMENT_DELETE";
         public static final String TAG_MANAGEMENT = "TAG_MANAGEMENT";
         public static final String TAG_MANAGEMENT_DELETE = "TAG_MANAGEMENT_DELETE";
+        public static final String VIEW_BADGES = "VIEW_BADGES";
     }
 
 }
