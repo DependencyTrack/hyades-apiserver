@@ -110,10 +110,14 @@
 
     <changeSet id="v5.6.0-7" author="sahibamittal">
         <addColumn tableName="PROJECT">
-            <column name="IS_LATEST" type="BOOLEAN"/>
+            <column name="IS_LATEST" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
         </addColumn>
         <addColumn tableName="POLICY">
-            <column name="ONLY_LATEST_PROJECT_VERSION" type="BOOLEAN"/>
+            <column name="ONLY_LATEST_PROJECT_VERSION" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
         </addColumn>
         <createIndex indexName="PROJECT_IS_LATEST_IDX" tableName="PROJECT">
             <column name="IS_LATEST"/>
