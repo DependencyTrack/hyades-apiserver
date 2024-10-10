@@ -3021,7 +3021,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true
+                          "active": true,
+                          "isLatest":false
                         }
                         """);
 
@@ -3061,7 +3062,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true
+                          "active": true,
+                          "isLatest":false
                         }
                         """);
 
@@ -3142,7 +3144,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true
+                          "active": true,
+                          "isLatest":false
                         }
                         """);
 
@@ -3251,7 +3254,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true
+                          "active": true,
+                          "isLatest":false
                         }
                         """);
 
