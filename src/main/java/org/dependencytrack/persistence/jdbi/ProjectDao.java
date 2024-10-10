@@ -58,6 +58,7 @@ public interface ProjectDao {
                  , "VERSION" AS "version"
                  , "PROJECT"."CLASSIFIER" AS "classifier"
                  , "PROJECT"."ACTIVE" AS "active"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
                  , (SELECT ARRAY_AGG("TAG"."NAME")
                       FROM "TAG"
                      INNER JOIN "PROJECTS_TAGS"
@@ -163,6 +164,7 @@ public interface ProjectDao {
             @AllowApiOrdering.Column(name = "version"),
             @AllowApiOrdering.Column(name = "classifier"),
             @AllowApiOrdering.Column(name = "active"),
+            @AllowApiOrdering.Column(name = "isLatest"),
             @AllowApiOrdering.Column(name = "lastBomImport"),
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
             @AllowApiOrdering.Column(name = "metrics.components", queryName = "\"metrics\".\"COMPONENTS\""),
@@ -188,6 +190,7 @@ public interface ProjectDao {
             String version,
             String classifier,
             boolean active,
+            boolean isLatest,
             List<String> tags,
             List<String> teams,
             @Nullable Instant lastBomImport,
