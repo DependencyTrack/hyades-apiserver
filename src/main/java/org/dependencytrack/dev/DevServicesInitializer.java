@@ -20,33 +20,26 @@ package org.dependencytrack.dev;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.dependencytrack.event.kafka.KafkaTopics;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
 import static alpine.Config.AlpineKey.DATABASE_URL;
 import static alpine.Config.AlpineKey.DATABASE_USERNAME;
-import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
-import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_COMPACT;
-import static org.apache.kafka.common.config.TopicConfig.CLEANUP_POLICY_CONFIG;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_ENABLED;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
+import static org.dependencytrack.common.ConfigKey.INIT_TASKS_ENABLED;
+import static org.dependencytrack.common.ConfigKey.INIT_TASKS_KAFKA_TOPICS_ENABLED;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
 /**
@@ -138,6 +131,8 @@ public class DevServicesInitializer implements ServletContextListener {
         configOverrides.put(DATABASE_USERNAME.getPropertyName(), postgresUsername);
         configOverrides.put(DATABASE_PASSWORD.getPropertyName(), postgresPassword);
         configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), kafkaBootstrapServers);
+        configOverrides.put(INIT_TASKS_ENABLED.getPropertyName(), "true");
+        configOverrides.put(INIT_TASKS_KAFKA_TOPICS_ENABLED.getPropertyName(), "true");
 
         try {
             LOGGER.info("Applying config overrides: %s".formatted(configOverrides));
@@ -148,37 +143,6 @@ public class DevServicesInitializer implements ServletContextListener {
             properties.putAll(configOverrides);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update configuration", e);
-        }
-
-        final var topicsToCreate = new ArrayList<>(List.of(
-                new NewTopic(KafkaTopics.NEW_EPSS.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
-                new NewTopic(KafkaTopics.NEW_VULNERABILITY.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
-                new NewTopic(KafkaTopics.NOTIFICATION_ANALYZER.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_BOM.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_CONFIGURATION.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_DATASOURCE_MIRRORING.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_FILE_SYSTEM.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_INTEGRATION.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_NEW_VULNERABILITY.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_NEW_VULNERABLE_DEPENDENCY.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_POLICY_VIOLATION.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_PROJECT_VULN_ANALYSIS_COMPLETE.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_REPOSITORY.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.NOTIFICATION_VEX.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.VULN_ANALYSIS_COMMAND.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED.name(), 1, (short) 1)
-        ));
-
-        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers))) {
-            LOGGER.info("Creating topics: %s".formatted(topicsToCreate));
-            adminClient.createTopics(topicsToCreate).all().get();
-        } catch (ExecutionException | InterruptedException e) {
-            throw new RuntimeException("Failed to create topics", e);
         }
 
         LOGGER.info("PostgreSQL is listening at localhost:%d".formatted(postgresPort));

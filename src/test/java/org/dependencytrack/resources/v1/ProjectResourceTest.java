@@ -1482,7 +1482,7 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();
         assertThat(projectNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
         assertThat(projectNotification.getGroup()).isEqualTo(GROUP_PROJECT_CREATED);
