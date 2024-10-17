@@ -135,7 +135,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     @SuppressWarnings("unchecked")
     public List<Component> getAllComponents(Project project) {
         final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        query.getFetchPlan().setMaxFetchDepth(2);
+        query.getFetchPlan().setMaxFetchDepth(3);
         query.setOrdering("name asc");
         return (List<Component>) query.execute(project);
     }
@@ -553,6 +553,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setSupplier(sourceComponent.getSupplier());
         component.setDirectDependencies(sourceComponent.getDirectDependencies());
         // TODO Add support for parent component and children components
+        component.setCryptoAssetProperties(sourceComponent.getCryptoAssetProperties());
         component.setProject(destinationProject);
         return createComponent(component, commitIndex);
     }
@@ -590,9 +591,14 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setAuthors(transientComponent.getAuthors());
         component.setSupplier(transientComponent.getSupplier());
         component.setExternalReferences(transientComponent.getExternalReferences());
+        component.setClassifier(transientComponent.getClassifier());
+        component.setCryptoAssetProperties(transientComponent.getCryptoAssetProperties());
         final Component result = persist(component);
         return result;
     }
+
+    
+
 
     /**
      * Deletes all components for the specified Project.
@@ -764,6 +770,14 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             filterParts.add("swidTagId == :swidTagId");
             params.put("swidTagId", cid.getSwidTagId());
         }
+        if (cid.getAssetType() != null) {
+            filterParts.add("(cryptoAssetProperties != null && cryptoAssetProperties.assetType == :assetType)");
+            params.put("assetType", cid.getAssetType());
+        }
+        if (cid.getOid() != null) {
+            filterParts.add("(cryptoAssetProperties != null && cryptoAssetProperties.oid == :oid)");
+            params.put("oid", cid.getOid());
+        }
 
         final var coordinatesFilterParts = new ArrayList<String>();
         if (cid.getGroup() != null) {
@@ -838,6 +852,20 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
         coordinatesFilter += ")";
         filterParts.add(coordinatesFilter);
+
+        if (cid.getAssetType() != null) {
+            filterParts.add("(cryptoAssetProperties != null && cryptoAssetProperties.assetType == :assetType)");
+            params.put("assetType", cid.getAssetType());
+        } else {
+            filterParts.add("cryptoAssetProperties == null");
+        }
+
+        if (cid.getOid() != null) {
+            filterParts.add("(cryptoAssetProperties != null && cryptoAssetProperties.oid == :oid)");
+            params.put("oid", cid.getOid());
+        } else {
+            filterParts.add("cryptoAssetProperties == null || (cryptoAssetProperties != null && cryptoAssetProperties.oid == null)");
+        }
 
         final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
         params.put("project", project);

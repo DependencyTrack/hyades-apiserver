@@ -107,4 +107,202 @@
                                  onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TAG" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-7" author="n1ckl0sk0rtge">
+        <sql splitStatements="true">
+            ALTER TABLE "COMPONENT" DROP CONSTRAINT IF EXISTS "COMPONENT_CLASSIFIER_check";
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DEVICE', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'OPERATING_SYSTEM', 'CRYPTOGRAPHIC_ASSET']));
+
+            ALTER TABLE "PROJECT" DROP CONSTRAINT IF EXISTS "PROJECT_CLASSIFIER_check";
+            ALTER TABLE "PROJECT" ADD CONSTRAINT "PROJECT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DEVICE', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'OPERATING_SYSTEM', 'CRYPTOGRAPHIC_ASSET']));
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-8" author="san-zrl">
+        <addColumn tableName="COMPONENT">
+            <column name="CRYPTO_PROPERTIES_ID" type="BIGINT"/>
+        </addColumn>
+
+        <createTable tableName="CRYPTO_PROPERTIES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTO_PROPERTIES_PK"/>
+            </column>
+            <column name="ASSET_TYPE" type="VARCHAR(32)"/>
+            <column name="ALGORITHM_PROPERTIES_ID" type="BIGINT"/>
+            <column name="CERTIFICATE_PROPERTIES_ID" type="BIGINT"/>
+            <column name="RELATED_MATERIAL_PROPERTIES_ID" type="BIGINT"/>
+            <column name="PROTOCOL_PROPERTIES_ID" type="BIGINT"/>
+            <column name="OID" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createTable tableName="ALGORITHM_PROPERTIES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ALGORITHM_PROPERTIES_PK"/>
+            </column>
+            <column name="PRIMITIVE" type="VARCHAR(32)"/>
+            <column name="PARAMETER_SET_ID" type="VARCHAR(32)"/>
+            <column name="CURVE" type="VARCHAR(32)"/>
+            <column name="EXECUTION_ENV" type="VARCHAR(32)"/>
+            <column name="IMPLEMENTATION_PLATFORM" type="VARCHAR(32)"/>
+            <column name="CERTIFICATION_LEVEL" type="VARCHAR(32)"/>
+            <column name="MODE" type="VARCHAR(16)"/>
+            <column name="PADDING" type="VARCHAR(16)"/>
+            <column name="CLASSICAL_SECURITY_LEVEL" type="INT"/>
+            <column name="NIST_QUANTUM_SECURITY_LEVEL" type="INT"/>
+        </createTable>
+
+        <createTable tableName="CERTIFICATE_PROPERTIES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CERTIFICATE_PROPERTIES_PK"/>
+            </column>
+            <column name="SUBJECT_NAME" type="VARCHAR(255)"/>
+            <column name="ISSUER_NAME" type="VARCHAR(255)"/>
+            <column name="NOT_VALID_BEFORE" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="NOT_VALID_AFTER" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="SIGNATURE_ALGORITHM_REF" type="VARCHAR(64)"/>
+            <column name="SUBJECT_PUBLIC_KEY_REF" type="VARCHAR(64)"/>
+            <column name="CERTIFICATE_FORMAT" type="VARCHAR(32)"/>
+            <column name="CERTIFICATE_EXTENSION" type="VARCHAR(32)"/>
+        </createTable>
+
+        <createTable tableName="RELATED_CRYPTO_MATERIAL_PROPERTIES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="RELATED_CRYPTO_MATERIAL_PROPERTIES_PK"/>
+            </column>
+            <column name="TYPE" type="VARCHAR(32)"/>
+            <column name="IDENTIFIER" type="VARCHAR(64)"/>
+            <column name="STATE" type="VARCHAR(16)"/>
+            <column name="ALGORITHM_REF" type="VARCHAR(64)"/>
+            <column name="CREATION_DATE" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="ACTIVATION_DATE" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="UPDATE_DATE" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="EXPIRATION_DATE" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="VALUE" type="VARCHAR(32)"/>
+            <column name="SIZE" type="INT"/>
+            <column name="FORMAT" type="VARCHAR(8)"/>
+            <column name="SECURED_BY_MECHANISM" type="VARCHAR(16)"/>
+            <column name="SECURED_BY_ALGORITHM_REF" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="PROTOCOL_PROPERTIES">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROTOCOL_PROPERTIES_PK"/>
+            </column>
+            <column name="TYPE" type="VARCHAR(16)"/>
+            <column name="VERSION" type="VARCHAR(16)"/>
+        </createTable>
+
+        <createTable tableName="CRYPTO_FUNCTIONS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTO_FUNCTIONS_PK"/>
+            </column>
+            <column name="ALGORITHM_PROPERTY_ID" type="BIGINT"/>
+            <column name="CRYPTO_FUNCTION" type="VARCHAR(32)"/>
+        </createTable>
+
+        <createTable tableName="PROTOCOL_CIPHER_SUITES">
+            <column name="PROTOCOL_PROPERTY_ID" type="BIGINT"/>
+            <column name="CIPHER_SUITE_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="CIPHER_SUITE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CIPHER_SUITE_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="CIPHER_SUITE_ALGORITHM">
+            <column name="CIPHER_SUITE_ID" type="BIGINT"/>
+            <column name="ALGORITHM" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="CIPHER_SUITE_IDENTIFIER">
+            <column name="CIPHER_SUITE_ID" type="BIGINT"/>
+            <column name="IDENTIFIER" type="VARCHAR(8)"/>
+        </createTable>
+
+        <createTable tableName="PROTOCOL_IKEV2_TYPES">
+            <column name="PROTOCOL_PROPERTY_ID" type="BIGINT"/>
+            <column name="IKEV2_TYPE_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="IKEV2_TYPE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="IKEV2_TYPE_PK"/>
+            </column>
+            <column name="TYPE" type="VARCHAR(16)"/>
+        </createTable>
+
+        <createTable tableName="IKEV2_REF">
+            <column name="IKEV2_TYPE_ID" type="BIGINT"/>
+            <column name="REF" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="CRYPTO_REFS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTO_REF_PK"/>
+            </column>
+            <column name="PROTOCOL_PROPERTY_ID" type="BIGINT"/>
+            <column name="CRYPTO_REF" type="VARCHAR(64)"/>
+        </createTable>
+
+        <createTable tableName="COMPONENT_OCCURRENCES">
+            <column name="COMPONENT_ID" type="BIGINT"/>
+            <column name="OCCURRENCE_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="OCCURRENCE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="OCCURRENCES_PK"/>
+            </column>
+            <column name="BOM_REF" type="VARCHAR(64)"/>
+            <column name="LOCATION" type="VARCHAR(255)"/>
+            <column name="LINE" type="INT"/>
+            <column name="OFFSET" type="INT"/>
+            <column name="SYMBOL" type="INT"/>
+            <column name="ADDITIONAL_CONTEXT" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="COMPONENT" baseColumnNames="CRYPTO_PROPERTIES_ID"
+                                 constraintName="COMPONENT_CRYPTO_PROPERTIES_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="CRYPTO_PROPERTIES" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <addForeignKeyConstraint baseTableName="CRYPTO_PROPERTIES" baseColumnNames="ALGORITHM_PROPERTIES_ID"
+                                 constraintName="CRYPTO_PROPERTIES_ALGORITHM_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="ALGORITHM_PROPERTIES" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <addForeignKeyConstraint baseTableName="CRYPTO_PROPERTIES" baseColumnNames="CERTIFICATE_PROPERTIES_ID"
+                                 constraintName="CRYPTO_PROPERTIES_CERTIFICATE_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="CERTIFICATE_PROPERTIES" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <addForeignKeyConstraint baseTableName="CRYPTO_PROPERTIES" baseColumnNames="RELATED_MATERIAL_PROPERTIES_ID"
+                                 constraintName="CRYPTO_PROPERTIES_RELATED_MATERIAL_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="RELATED_CRYPTO_MATERIAL_PROPERTIES" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+        <addForeignKeyConstraint baseTableName="CRYPTO_PROPERTIES" baseColumnNames="PROTOCOL_PROPERTIES_ID"
+                                 constraintName="CRYPTO_PROPERTIES_PROTOCOL_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="PROTOCOL_PROPERTIES" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-9" author="n1ckl0sk0rtge">
+        <createTable tableName="CRYPTOGRAPHYMETRICS">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTOGRAPHYMETRICS_PK"/>
+            </column>
+            <column name="NUMBER_OF_CRYPTOGRAPHIC_ASSETS" type="INTEGER"/>
+            <column name="MOST_USED_ALGORITHM_NAME" type="VARCHAR(255)"/>
+            <column name="MOST_USED_ALGORITHM_PERCENTAGE" type="DOUBLE"/>
+            <column name="NUMBER_OF_KEYS" type="INTEGER"/>
+            <column name="FIRST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_OCCURRENCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

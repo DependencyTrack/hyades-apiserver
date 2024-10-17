@@ -132,7 +132,7 @@ public class ComponentResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentByUuidTest() {
+    public void getCryptoAssetByUuidTest() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
         Component component = new Component();
         component.setProject(project);
@@ -148,7 +148,7 @@ public class ComponentResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentByInvalidUuidTest() {
+    public void getCryptoAssetByInvalidUuidTest() {
         Response response = jersey.target(V1_COMPONENT + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -387,7 +387,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentA.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
         componentB = qm.createComponent(componentB, false);
 
-        final Response response = jersey.target(V1_COMPONENT + "/identity")
+        final Response response = jersey.target(V1_COMPONENT + "/identity").property(FILTER, projectB)
                 .queryParam("group", "groupB")
                 .queryParam("name", "nameB")
                 .queryParam("version", "versionB")

@@ -43,6 +43,7 @@ import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.CryptographyMetrics;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
@@ -493,4 +494,30 @@ public class MetricsResource extends AlpineResource {
         }
     }
 
+    @GET
+    @Path("/cryptography/{days}/days")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+        summary = "Returns X days of historical cryptography metrics for the entire portfolio",
+        description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "X days of historical cryptography metrics for the entire portfolio",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = CryptographyMetrics.class)))
+        ),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getCryptographyMetricsXDays(
+            @Parameter(description = "The number of days back to retrieve metrics for", required = true)
+            @PathParam("days") int days) {
+
+        final Date since = DateUtils.addDays(new Date(), -days);
+        try (QueryManager qm = new QueryManager()) {
+            final List<CryptographyMetrics> metrics = qm.getCryptographyMetricsSince(since);
+            return Response.ok(metrics).build();
+        }
+    }
 }

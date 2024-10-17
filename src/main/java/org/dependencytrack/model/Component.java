@@ -78,6 +78,7 @@ import java.util.UUID;
                 @Persistent(name = "children"),
                 @Persistent(name = "properties"),
                 @Persistent(name = "vulnerabilities"),
+                @Persistent(name = "cryptoAssetProperties")
         }),
         @FetchGroup(name = "IDENTITY", members = {
                 @Persistent(name = "id"),
@@ -389,6 +390,17 @@ public class Component implements Serializable {
     @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
+
+    @Persistent(defaultFetchGroup = "true", dependent = "true")
+    @Index(name = "COMPONENT_CRYPTO_PROPERTIES_ID_IDX")
+    @Column(name = "CRYPTO_PROPERTIES_ID", allowsNull = "true")
+    private CryptoAssetProperties cryptoAssetProperties;
+
+    @Persistent(table = "COMPONENT_OCCURRENCES")
+    @Join(column = "COMPONENT_ID")
+    @Element(column = "OCCURRENCE_ID", dependent = "true")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    private List<Occurrence> occurrences;
 
     private transient String bomRef;
     private transient List<org.cyclonedx.model.License> licenseCandidates;
@@ -885,6 +897,21 @@ public class Component implements Serializable {
 
     public void setAuthor(String author){
         this.author=author;
+    }
+    public CryptoAssetProperties getCryptoAssetProperties() {
+        return cryptoAssetProperties;
+    }
+
+    public void setCryptoAssetProperties(CryptoAssetProperties cryptoAssetProperties) {
+        this.cryptoAssetProperties = cryptoAssetProperties;
+    }
+
+    public List<Occurrence> getOccurrences() {
+        return occurrences;
+    }
+
+    public void setOccurrences(List<Occurrence> occurrences) {
+        this.occurrences = occurrences;
     }
 
     @Override
