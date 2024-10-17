@@ -24,6 +24,7 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -94,7 +95,8 @@ import java.util.UUID;
                 @Persistent(name = "properties"),
                 @Persistent(name = "tags"),
                 @Persistent(name = "accessTeams"),
-                @Persistent(name = "metadata")
+                @Persistent(name = "metadata"),
+                @Persistent(name = "isLatest")
         }),
         @FetchGroup(name = "METADATA", members = {
                 @Persistent(name = "metadata")
@@ -307,6 +309,11 @@ public class Project implements Serializable {
     @Persistent(mappedBy = "project")
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private ProjectMetadata metadata;
+
+    @Persistent
+    @Index(name = "PROJECT_IS_LATEST_IDX")
+    @Column(name = "IS_LATEST", defaultValue = "false")
+    private boolean isLatest = false;
 
     private transient String bomRef;
 
@@ -588,6 +595,15 @@ public class Project implements Serializable {
 
     public String setAuthor(String author){
         return this.author=author;
+    }
+
+    @JsonProperty("isLatest")
+    public boolean isLatest() {
+        return isLatest;
+    }
+
+    public void setIsLatest(Boolean latest) {
+        isLatest = latest != null ? latest : false;
     }
 
     @Override
