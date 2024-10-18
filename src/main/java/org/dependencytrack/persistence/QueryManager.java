@@ -557,6 +557,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProjects(team, excludeInactive, bypass, onlyRoot);
     }
 
+    public Project getLatestProjectVersion(final String name) {
+        return getProjectQueryManager().getLatestProjectVersion(name);
+    }
+
     public PaginatedResult getProjectsWithoutDescendantsOf(final boolean excludeInactive, final Project project) {
         return getProjectQueryManager().getProjectsWithoutDescendantsOf(excludeInactive, project);
     }
@@ -625,6 +629,11 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().createProject(project, tags, commitIndex);
     }
 
+    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+                                 PackageURL purl, boolean active, boolean isLatest, boolean commitIndex) {
+        return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, active, isLatest, commitIndex);
+    }
+
     public Project updateProject(Project transientProject, boolean commitIndex) {
         return getProjectQueryManager().updateProject(transientProject, commitIndex);
     }
@@ -635,9 +644,9 @@ public class QueryManager extends AlpineQueryManager {
 
     public Project clone(UUID from, String newVersion, boolean includeTags, boolean includeProperties,
                          boolean includeComponents, boolean includeServices, boolean includeAuditHistory,
-                         boolean includeACL, boolean includePolicyViolations) {
+                         boolean includeACL, boolean includePolicyViolations, boolean makeCloneLatest) {
         return getProjectQueryManager().clone(from, newVersion, includeTags, includeProperties,
-                includeComponents, includeServices, includeAuditHistory, includeACL, includePolicyViolations);
+                includeComponents, includeServices, includeAuditHistory, includeACL, includePolicyViolations, makeCloneLatest);
     }
 
     public Project updateLastBomImport(Project p, Date date, String bomFormat) {
@@ -792,7 +801,11 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public Policy createPolicy(String name, Policy.Operator operator, Policy.ViolationState violationState) {
-        return getPolicyQueryManager().createPolicy(name, operator, violationState);
+        return this.createPolicy(name, operator, violationState, false);
+    }
+
+    public Policy createPolicy(String name, Policy.Operator operator, Policy.ViolationState violationState, boolean onlyLatestProjectVersion) {
+        return getPolicyQueryManager().createPolicy(name, operator, violationState, onlyLatestProjectVersion);
     }
 
     public void removeProjectFromPolicies(final Project project) {
