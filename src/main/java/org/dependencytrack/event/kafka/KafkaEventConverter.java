@@ -19,6 +19,7 @@
 package org.dependencytrack.event.kafka;
 
 import alpine.event.framework.Event;
+import com.github.packageurl.MalformedPackageURLException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
@@ -53,8 +54,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
+import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 import static org.apache.commons.lang3.ObjectUtils.requireNonEmpty;
 
 /**
@@ -131,21 +132,31 @@ public final class KafkaEventConverter {
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
-        if (event == null || event.purlCoordinates() == null) {
+        if (event == null || event.purl() == null) {
             return null;
+        }
+        
+        final String key;
+        try {
+            key = aPackageURL()
+                    .withType(event.purl().getType())
+                    .withNamespace(event.purl().getNamespace())
+                    .withName(event.purl().getName())
+                    .build()
+                    .toString();
+        } catch (MalformedPackageURLException e) {
+            throw new IllegalStateException("Failed to build PURL coordinates without version", e);
         }
 
         final var componentBuilder = org.dependencytrack.proto.repometaanalysis.v1.Component.newBuilder()
-                .setPurl(event.purlCoordinates());
+                .setPurl(event.purl().toString());
         Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
-        Optional.ofNullable(event.componentUuid()).map(UUID::toString).ifPresent(componentBuilder::setUuid);
 
         final var analysisCommand = AnalysisCommand.newBuilder()
                 .setComponent(componentBuilder)
-                .setFetchMeta(event.fetchMeta())
                 .build();
 
-        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
+        return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, key, analysisCommand, null);
     }
 
     static KafkaEvent<String, String> convert(final GitHubAdvisoryMirrorEvent ignored) {

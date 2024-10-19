@@ -425,7 +425,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         integrityMetaComponent.setPublishedAt(publishedDate);
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
         integrityMetaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        qm.persist(integrityMetaComponent);
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
@@ -492,7 +492,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         integrityMetaComponent.setPublishedAt(publishedDate);
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
         integrityMetaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        qm.persist(integrityMetaComponent);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
