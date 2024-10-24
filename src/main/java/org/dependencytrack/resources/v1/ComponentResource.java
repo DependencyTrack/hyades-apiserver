@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
+import alpine.Config;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
@@ -36,7 +36,30 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.InternalComponentIdentificationEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.util.InternalComponentIdentifier;
+import org.dependencytrack.util.PurlUtil;
+
 import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -48,39 +71,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.InternalComponentIdentificationEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
-import org.dependencytrack.event.kafka.componentmeta.Handler;
-import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.util.PurlUtil;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
-import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
-import static org.dependencytrack.model.FetchStatus.PROCESSED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 /**
  * JAX-RS resources for processing components.
@@ -96,7 +92,6 @@ import static org.dependencytrack.model.FetchStatus.PROCESSED;
 })
 public class ComponentResource extends AlpineResource {
 
-    private static final Logger LOGGER = Logger.getLogger(ComponentResource.class);
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
     @GET
@@ -189,82 +184,6 @@ public class ComponentResource extends AlpineResource {
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
-            }
-        }
-    }
-
-    @GET
-    @Path("/integritymetadata")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = """
-                    Provides the published date and hashes of the requested version of component,
-                    as received from configured repositories for integrity analysis.""",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Integrity metadata of the component",
-                    content = @Content(schema = @Schema(implementation = IntegrityMetaComponent.class))
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The integrity meta information for the specified component cannot be found"),
-            @ApiResponse(responseCode = "400", description = "The package url being queried for is invalid")
-    })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getIntegrityMetaComponent(
-            @Parameter(description = "The package url of the component", required = true)
-            @QueryParam("purl") String purl) {
-        try {
-            final PackageURL packageURL = new PackageURL(purl);
-            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-                final RepositoryType type = RepositoryType.resolve(packageURL);
-                if (RepositoryType.UNSUPPORTED == type) {
-                    return Response.noContent().build();
-                }
-                final IntegrityMetaComponent result = qm.getIntegrityMetaComponent(packageURL.toString());
-                if (result == null) {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The integrity metadata for the specified component cannot be found.").build();
-                } else {
-                    //todo: future enhancement: provide pass-thru capability for component metadata not already present and being tracked
-                    return Response.ok(result).build();
-                }
-            }
-        } catch (MalformedPackageURLException e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-    }
-
-    @GET
-    @Path("/{uuid}/integritycheckstatus")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = """
-                    Provides the integrity check status of component with provided UUID,
-                    based on the configured repository for integrity analysis.""",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Integrity metadata of the component",
-                    content = @Content(schema = @Schema(implementation = IntegrityAnalysis.class))
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The integrity analysis information for the specified component cannot be found"),
-    })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getIntegrityStatus(
-            @Parameter(description = "UUID of the component for which integrity status information is needed", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(UUID.fromString(uuid));
-            if (result == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The integrity status for the specified component cannot be found.").build();
-            } else {
-                //todo: future enhancement: provide pass-thru capability for component metadata not already present and being tracked
-                return Response.ok(result).build();
             }
         }
     }
@@ -409,79 +328,82 @@ public class ComponentResource extends AlpineResource {
                 validator.validateProperty(jsonComponent, "sha3_512")
         );
 
-        try (QueryManager qm = new QueryManager()) {
-            Component parent = null;
-            if (jsonComponent.getParent() != null && jsonComponent.getParent().getUuid() != null) {
-                parent = qm.getObjectByUuid(Component.class, jsonComponent.getParent().getUuid());
-            }
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
-            final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
-            Component component = new Component();
-            component.setProject(project);
-            component.setAuthors(jsonComponent.getAuthors());
-            component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
-            component.setName(StringUtils.trimToNull(jsonComponent.getName()));
-            component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
-            component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
-            component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
-            component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
-            component.setClassifier(jsonComponent.getClassifier());
-            component.setPurl(jsonComponent.getPurl());
-            component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
-            component.setInternal(new InternalComponentIdentifier().isInternal(component));
-            component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
-            component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
-            component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
-            component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
-            component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
-            component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
-            component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
-            component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
-            component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
-            component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
-            component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
-            if (resolvedLicense != null) {
-                component.setLicense(null);
-                component.setLicenseExpression(null);
-                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                component.setResolvedLicense(resolvedLicense);
-            } else if (StringUtils.isNotBlank(jsonComponent.getLicense())) {
-                component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
-                component.setLicenseExpression(null);
-                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                component.setResolvedLicense(null);
-            } else if (StringUtils.isNotBlank(jsonComponent.getLicenseExpression())) {
-                component.setLicense(null);
-                component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
-                component.setLicenseUrl(null);
-                component.setResolvedLicense(null);
-            }
-            component.setParent(parent);
-            component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
-
-            component = qm.createComponent(component, true);
-            ComponentProjection componentProjection =
-                    new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                            component.isInternal(), component.getPurl());
-            try {
-                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                    calculateIntegrityResult(integrityMetaComponent, component, qm);
+        try (final var qm = new QueryManager()) {
+            final Component createdComponent = qm.callInTransaction(() -> {
+                Component parent = null;
+                if (jsonComponent.getParent() != null && jsonComponent.getParent().getUuid() != null) {
+                    parent = qm.getObjectByUuid(Component.class, jsonComponent.getParent().getUuid());
                 }
-            } catch (MalformedPackageURLException ex) {
-                LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The project could not be found.")
+                            .build());
+                }
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+                final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
+                Component component = new Component();
+                component.setProject(project);
+                component.setAuthors(jsonComponent.getAuthors());
+                component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
+                component.setName(StringUtils.trimToNull(jsonComponent.getName()));
+                component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
+                component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
+                component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
+                component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
+                component.setClassifier(jsonComponent.getClassifier());
+                component.setPurl(jsonComponent.getPurl());
+                component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
+                component.setInternal(new InternalComponentIdentifier().isInternal(component));
+                component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
+                component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
+                component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
+                component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
+                component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
+                component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
+                component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
+                component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
+                component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
+                component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
+                component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
+                if (resolvedLicense != null) {
+                    component.setLicense(null);
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                    component.setResolvedLicense(resolvedLicense);
+                } else if (StringUtils.isNotBlank(jsonComponent.getLicense())) {
+                    component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                    component.setResolvedLicense(null);
+                } else if (StringUtils.isNotBlank(jsonComponent.getLicenseExpression())) {
+                    component.setLicense(null);
+                    component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
+                    component.setLicenseUrl(null);
+                    component.setResolvedLicense(null);
+                }
+                component.setParent(parent);
+                component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
+
+                return qm.createComponent(component, true);
+            });
+
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INTEGRITY_CHECK_ENABLED)) {
+                useJdbiHandle(handle -> handle.attach(ComponentMetaDao.class)
+                        .createOrUpdateIntegrityAnalysesForComponents(List.of(createdComponent.getUuid())));
             }
-            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
+
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(createdComponent.getPurl(), createdComponent.isInternal()));
+            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), createdComponent, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
+            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, createdComponent.getUuid(), vulnAnalysisEvent.token(), 1);
             kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
-            return Response.status(Response.Status.CREATED).entity(component).build();
+            return Response.status(Response.Status.CREATED).entity(createdComponent).build();
         }
     }
 
@@ -526,11 +448,20 @@ public class ComponentResource extends AlpineResource {
                 validator.validateProperty(jsonComponent, "sha3_256"),
                 validator.validateProperty(jsonComponent, "sha3_512")
         );
-        try (QueryManager qm = new QueryManager()) {
-            Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
-            if (component != null) {
+        try (final var qm = new QueryManager()) {
+            final Component updatedComponent = qm.callInTransaction(() -> {
+                Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
+                if (component == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the component could not be found.")
+                            .build());
+                }
                 if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified component is forbidden")
+                            .build());
                 }
                 // Name cannot be empty or null - prevent it
                 final String name = StringUtils.trimToNull(jsonComponent.getName());
@@ -584,27 +515,19 @@ public class ComponentResource extends AlpineResource {
                 }
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
-                component = qm.updateComponent(component, true);
-                ComponentProjection componentProjection =
-                        new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                                component.isInternal(), component.getPurl());
-                try {
+                return qm.updateComponent(component, true);
+            });
 
-                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                    IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                    if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                        calculateIntegrityResult(integrityMetaComponent, component, qm);
-                    }
-                } catch (MalformedPackageURLException ex) {
-                    LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
-                }
-                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
-                qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
-                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
-                return Response.ok(component).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INTEGRITY_CHECK_ENABLED)) {
+                useJdbiHandle(handle -> handle.attach(ComponentMetaDao.class)
+                        .createOrUpdateIntegrityAnalysesForComponents(List.of(updatedComponent.getUuid())));
             }
+
+            kafkaEventDispatcher.dispatchEvent(new ComponentRepositoryMetaAnalysisEvent(updatedComponent.getPurl(), updatedComponent.isInternal()));
+            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), updatedComponent, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
+            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, updatedComponent.getUuid(), vulnAnalysisEvent.token(), 1);
+            kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
+            return Response.ok(updatedComponent).build();
         }
     }
 

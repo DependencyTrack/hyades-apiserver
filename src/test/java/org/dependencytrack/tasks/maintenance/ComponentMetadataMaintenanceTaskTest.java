@@ -27,6 +27,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.junit.Test;
 
+import javax.jdo.Query;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -80,10 +81,17 @@ public class ComponentMetadataMaintenanceTaskTest extends PersistenceCapableTest
         final var task = new ComponentMetadataMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new ComponentMetadataMaintenanceEvent()));
 
-        assertThat(qm.getIntegrityMetaComponent("pkg:maven/com.acme/acme-lib@1.0.0")).isNotNull();
-        assertThat(qm.getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3")).isNull();
+        assertThat(getIntegrityMetaComponent("pkg:maven/com.acme/acme-lib@1.0.0")).isNotNull();
+        assertThat(getIntegrityMetaComponent("pkg:maven/foo/bar@1.2.3")).isNull();
         assertThat(qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "com.acme", "acme-lib")).isNotNull();
         assertThat(qm.getRepositoryMetaComponent(RepositoryType.MAVEN, "foo", "bar")).isNull();
+    }
+
+    private IntegrityMetaComponent getIntegrityMetaComponent(final String purl) {
+        final Query<IntegrityMetaComponent> query = qm.getPersistenceManager().newQuery(IntegrityMetaComponent.class);
+        query.setFilter("purl == :purl");
+        query.setParameters(purl);
+        return query.executeUnique();
     }
 
 }

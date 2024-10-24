@@ -66,7 +66,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
         integrityMetaComponent.setLastFetch(published);
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
         integrityMetaComponent.setRepositoryUrl("repo.url.com");
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        qm.persist(integrityMetaComponent);
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
@@ -95,7 +95,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
         IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
         integrityMetaComponent.setPurl(component.getPurl().toString());
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        qm.persist(integrityMetaComponent);
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
@@ -113,7 +113,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
         IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
         integrityMetaComponent.setPurl(component.getPurl().toString());
         integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        qm.persist(integrityMetaComponent);
         component = qm.createComponent(component, false);
         ComponentMetaInformation componentMetaInformation = qm.getMetaInformation(component.getUuid());
         assertNull(componentMetaInformation.publishedDate());
