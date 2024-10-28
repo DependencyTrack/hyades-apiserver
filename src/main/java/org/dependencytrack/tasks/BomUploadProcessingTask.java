@@ -64,6 +64,8 @@ import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
+import org.dependencytrack.workflow.ClaimedWorkflowStepRun;
+import org.dependencytrack.workflow.WorkflowEngine;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -180,6 +182,8 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void processEvent(final Context ctx, final BomUploadEvent event) {
+        ClaimedWorkflowStepRun stepRun = WorkflowEngine.getInstance().claimStepRun(ctx.token, "consume-bom")
+                .orElseThrow();
         startBomConsumptionWorkflowStep(ctx);
 
         final ConsumedBom consumedBom;
@@ -200,11 +204,15 @@ public class BomUploadProcessingTask implements Subscriber {
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
+            WorkflowEngine.getInstance().failStepRun(stepRun);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
         startBomProcessingWorkflowStep(ctx);
+        WorkflowEngine.getInstance().completeStepRun(stepRun);
+        stepRun = WorkflowEngine.getInstance().claimStepRun(ctx.token, "process-bom")
+                .orElseThrow();
         dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
@@ -217,12 +225,14 @@ public class BomUploadProcessingTask implements Subscriber {
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
+            WorkflowEngine.getInstance().failStepRun(stepRun);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
         completeBomProcessingWorkflowStep(ctx);
+        WorkflowEngine.getInstance().completeStepRun(stepRun);
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {

@@ -123,4 +123,143 @@
             <column name="IS_LATEST"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-8" author="nscuro">
+        <createTable tableName="JOB">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="JOB_PK"/>
+            </column>
+            <column name="STATUS" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TAG" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PRIORITY" type="INT"/>
+            <column name="SCHEDULED_FOR" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PAYLOAD_TYPE" type="INT"/>
+            <column name="PAYLOAD" type="BYTEA"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STARTED_AT" type="TIMESTAMPTZ"/>
+            <column name="ATTEMPTS" type="INT"/>
+        </createTable>
+
+        <createTable tableName="WORKFLOW">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_PK"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ"/>
+        </createTable>
+
+        <createTable tableName="WORKFLOW_STEP">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_STEP_PK"/>
+            </column>
+            <column name="WORKFLOW_ID" type="BIGINT"/>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="WORKFLOW_STEP_DEPENDENCY">
+            <column name="DEPENDANT_STEP_ID" type="BIGINT"/>
+            <column name="DEPENDENCY_STEP_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="WORKFLOW_RUN">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_RUN_PK"/>
+            </column>
+            <column name="TOKEN" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="WORKFLOW_ID" type="BIGINT"/>
+            <column name="PRIORITY" type="INT"/>
+            <column name="STATUS" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STARTED_AT" type="TIMESTAMPTZ"/>
+        </createTable>
+
+        <createTable tableName="WORKFLOW_STEP_RUN">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_STEP_RUN_PK"/>
+            </column>
+            <column name="WORKFLOW_RUN_ID" type="BIGINT"/>
+            <column name="WORKFLOW_STEP_ID" type="BIGINT"/>
+            <column name="STATUS" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ"/>
+            <column name="STARTED_AT" type="TIMESTAMPTZ"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_STEP"
+                baseColumnNames="WORKFLOW_ID"
+                constraintName="WORKFLOW_STEP_WORKFLOW_FK"
+                referencedTableName="WORKFLOW"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_STEP_DEPENDENCY"
+                baseColumnNames="DEPENDANT_STEP_ID"
+                constraintName="WORKFLOW_STEP_DEPENDENT_STEP_FK"
+                referencedTableName="WORKFLOW_STEP"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_STEP_DEPENDENCY"
+                baseColumnNames="DEPENDENCY_STEP_ID"
+                constraintName="WORKFLOW_STEP_DEPENDENCY_STEP_FK"
+                referencedTableName="WORKFLOW_STEP"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_RUN"
+                baseColumnNames="WORKFLOW_ID"
+                constraintName="WORKFLOW_RUN_WORKFLOW_FK"
+                referencedTableName="WORKFLOW"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_STEP_RUN"
+                baseColumnNames="WORKFLOW_RUN_ID"
+                constraintName="WORKFLOW_STEP_RUN_WORKFLOW_RUN_FK"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_STEP_RUN"
+                baseColumnNames="WORKFLOW_STEP_ID"
+                constraintName="WORKFLOW_STEP_RUN_WORKFLOW_STEP_FK"
+                referencedTableName="WORKFLOW_STEP"
+                referencedColumnNames="ID"
+                onUpdate="NO ACTION"
+                onDelete="CASCADE"/>
+    </changeSet>
 </databaseChangeLog>

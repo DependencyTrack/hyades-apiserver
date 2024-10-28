@@ -1,0 +1,111 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.job;
+
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.customizer.BindMethods;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+
+import java.util.List;
+import java.util.Set;
+
+@RegisterConstructorMapper(QueuedJob.class)
+public interface JobDao {
+
+    @SqlUpdate("""
+            INSERT INTO "JOB"(
+              "STATUS"
+            , "TAG"
+            , "PRIORITY"
+            , "SCHEDULED_FOR"
+            , "PAYLOAD_TYPE"
+            , "PAYLOAD"
+            , "WORKFLOW_RUN_ID"
+            , "WORKFLOW_STEP_RUN_ID"
+            , "CREATED_AT"
+            , "STARTED_AT"
+            ) VALUES (
+              'NEW'
+            , :tag
+            , :priority
+            , :scheduledFor
+            , :payloadType
+            , :payload
+            , :workflowRunId
+            , :workflowStepRunId
+            , NOW()
+            , NULL)
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    QueuedJob enqueue(@BindMethods NewJob newJob);
+
+    @SqlUpdate("""
+            UPDATE "JOB"
+               SET "STATUS" = 'COMPLETE'
+             WHERE "ID" = :id
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    QueuedJob complete(@BindMethods QueuedJob queuedJob);
+
+    @SqlUpdate("""
+            UPDATE "JOB"
+               SET "STATUS" = 'FAILED'
+             WHERE "ID" = :id
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    QueuedJob fail(@BindMethods QueuedJob queuedJob);
+
+    @SqlUpdate("""
+            WITH "CTE_POLL" AS (
+                SELECT "ID"
+                  FROM "JOB"
+                 WHERE "STATUS" NOT IN ('RUNNING', 'COMPLETE')
+                   AND "SCHEDULED_FOR" <= NOW()
+                   AND "TAG" = ANY(:tags)
+                 ORDER BY "PRIORITY" DESC NULLS LAST
+                        , "SCHEDULED_FOR"
+                        , "CREATED_AT"
+                   FOR UPDATE
+                  SKIP LOCKED
+                 LIMIT 1)
+            UPDATE "JOB"
+               SET "STATUS" = 'RUNNING'
+                 , "STARTED_AT" = COALESCE("STARTED_AT", NOW())
+                 , "ATTEMPTS" = "ATTEMPTS" + 1
+              FROM "CTE_POLL"
+             WHERE "JOB"."ID" = "CTE_POLL"."ID"
+            RETURNING "JOB".*
+            """)
+    @GetGeneratedKeys("*")
+    QueuedJob poll(@Bind Set<String> tags);
+
+    @SqlQuery("""
+            SELECT *
+              FROM "JOB"
+             WHERE "TAG" = :tag
+            """)
+    List<QueuedJob> getAllByTag(@Bind String tag);
+
+}
