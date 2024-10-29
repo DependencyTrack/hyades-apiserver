@@ -222,6 +222,20 @@
             <column name="STARTED_AT" type="TIMESTAMPTZ"/>
         </createTable>
 
+        <!-- TODO: Indexes to support Job queue. -->
+
+        <createIndex tableName="WORKFLOW" indexName="WORKFLOW_NAME_VERSION_IDX" unique="true">
+            <column name="NAME"/>
+            <column name="VERSION"/>
+        </createIndex>
+        <createIndex tableName="WORKFLOW_STEP" indexName="WORKFLOW_RUN_WORKFLOW_ID_NAME_IDX" unique="true">
+            <column name="WORKFLOW_ID"/>
+            <column name="NAME"/>
+        </createIndex>
+        <createIndex tableName="WORKFLOW_RUN" indexName="WORKFLOW_RUN_TOKEN_IDX" unique="true">
+            <column name="TOKEN"/>
+        </createIndex>
+
         <addForeignKeyConstraint
                 baseTableName="WORKFLOW_STEP"
                 baseColumnNames="WORKFLOW_ID"
