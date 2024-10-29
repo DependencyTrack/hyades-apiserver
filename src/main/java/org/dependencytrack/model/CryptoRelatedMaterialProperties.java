@@ -27,7 +27,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 
-import org.cyclonedx.model.component.crypto.enums.Mechanism;
 import org.cyclonedx.model.component.crypto.enums.RelatedCryptoMaterialType;
 import org.cyclonedx.model.component.crypto.enums.State;
 import org.dependencytrack.resources.v1.serializers.Iso8601DateSerializer;
@@ -89,13 +88,10 @@ public class CryptoRelatedMaterialProperties implements Serializable {
     @Persistent
     @Column(name = "FORMAT", jdbcType = "VARCHAR", length=8)
     private String format;
-    @Persistent
-    @Column(name = "SECURED_BY_MECHANISM", jdbcType = "VARCHAR", length=16)
-    private Mechanism securedByMechanism;
-    @Persistent
-    @Column(name = "SECURED_BY_ALGORITHM_REF", jdbcType = "VARCHAR", length=64)
-    private String securedByAlgorithmRef;
-
+    @Persistent(defaultFetchGroup = "true", dependent = "true")
+    @Column(name = "SECURED_BY_ID", allowsNull = "true")
+    private SecuredBy securedBy;
+    
 
     public RelatedCryptoMaterialType getType() {
         return type;
@@ -185,19 +181,11 @@ public class CryptoRelatedMaterialProperties implements Serializable {
         this.format = format;
     }
 
-    public Mechanism getSecuredByMechanism() {
-        return securedByMechanism;
+    public SecuredBy getSecuredBy() {
+        return securedBy;
     }
 
-    public void setSecuredByMechanism(Mechanism securedByMechanism) {
-        this.securedByMechanism = securedByMechanism;
-    }
-
-    public String getSecuredByAlgorithmRef() {
-        return securedByAlgorithmRef;
-    }
-
-    public void setSecuredByAlgorithmRef(String securedByAlgorithmRef) {
-        this.securedByAlgorithmRef = securedByAlgorithmRef;
+    public void setSecuredBy(SecuredBy securedBy) {
+        this.securedBy = securedBy;
     }
 }

@@ -51,8 +51,11 @@ public class CryptoRelatedMaterialPropertiesTest {
         rel.setValue(value);
         rel.setSize(2048);
         rel.setFormat(format);
-        rel.setSecuredByAlgorithmRef(securedByAlgorithmRef);
-        rel.setSecuredByMechanism(Mechanism.SOFTWARE);
+
+        SecuredBy securedBy = new SecuredBy();
+        securedBy.setMechanism(Mechanism.SOFTWARE);
+        securedBy.setAlgorithmRef(securedByAlgorithmRef);
+        rel.setSecuredBy(securedBy);
 
         Assert.assertEquals(RelatedCryptoMaterialType.DIGEST, rel.getType());
         Assert.assertEquals(identifier, rel.getIdentifier());
@@ -65,7 +68,7 @@ public class CryptoRelatedMaterialPropertiesTest {
         Assert.assertEquals(value, rel.getValue());
         Assert.assertEquals((Integer)2048, rel.getSize());
         Assert.assertEquals(format, rel.getFormat());
-        Assert.assertEquals(securedByAlgorithmRef, rel.getSecuredByAlgorithmRef());
-        Assert.assertEquals(Mechanism.SOFTWARE, rel.getSecuredByMechanism());
+        Assert.assertEquals(securedByAlgorithmRef, rel.getSecuredBy().getAlgorithmRef());
+        Assert.assertEquals(Mechanism.SOFTWARE, rel.getSecuredBy().getMechanism());
     }
 }

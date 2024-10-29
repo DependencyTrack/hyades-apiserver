@@ -149,6 +149,7 @@
             <column name="CERTIFICATION_LEVEL" type="VARCHAR(32)"/>
             <column name="MODE" type="VARCHAR(16)"/>
             <column name="PADDING" type="VARCHAR(16)"/>
+            <column name="CRYPTO_FUNCTIONS" type="TEXT[]"/>
             <column name="CLASSICAL_SECURITY_LEVEL" type="INT"/>
             <column name="NIST_QUANTUM_SECURITY_LEVEL" type="INT"/>
         </createTable>
@@ -182,8 +183,15 @@
             <column name="VALUE" type="VARCHAR(32)"/>
             <column name="SIZE" type="INT"/>
             <column name="FORMAT" type="VARCHAR(8)"/>
-            <column name="SECURED_BY_MECHANISM" type="VARCHAR(16)"/>
-            <column name="SECURED_BY_ALGORITHM_REF" type="VARCHAR(64)"/>
+            <column name="SECURED_BY_ID" type="BIGINT"/>
+        </createTable>
+
+        <createTable tableName="SECURED_BY">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="SECURED_BY_PK"/>
+            </column>
+            <column name="MECHANISM" type="VARCHAR(16)"/>
+            <column name="ALGORITHM_REF" type="VARCHAR(64)"/>
         </createTable>
 
         <createTable tableName="PROTOCOL_PROPERTIES">
@@ -192,14 +200,7 @@
             </column>
             <column name="TYPE" type="VARCHAR(16)"/>
             <column name="VERSION" type="VARCHAR(16)"/>
-        </createTable>
-
-        <createTable tableName="CRYPTO_FUNCTIONS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTO_FUNCTIONS_PK"/>
-            </column>
-            <column name="ALGORITHM_PROPERTY_ID" type="BIGINT"/>
-            <column name="CRYPTO_FUNCTION" type="VARCHAR(32)"/>
+             <column name="CRYPTO_REFS" type="TEXT[]"/>
         </createTable>
 
         <createTable tableName="PROTOCOL_CIPHER_SUITES">
@@ -212,16 +213,8 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="CIPHER_SUITE_PK"/>
             </column>
             <column name="NAME" type="VARCHAR(64)"/>
-        </createTable>
-
-        <createTable tableName="CIPHER_SUITE_ALGORITHM">
-            <column name="CIPHER_SUITE_ID" type="BIGINT"/>
-            <column name="ALGORITHM" type="VARCHAR(64)"/>
-        </createTable>
-
-        <createTable tableName="CIPHER_SUITE_IDENTIFIER">
-            <column name="CIPHER_SUITE_ID" type="BIGINT"/>
-            <column name="IDENTIFIER" type="VARCHAR(8)"/>
+            <column name="ALGORITHMS" type="TEXT[]"/>
+            <column name="IDENTIFIERS" type="TEXT[]"/>
         </createTable>
 
         <createTable tableName="PROTOCOL_IKEV2_TYPES">
@@ -234,36 +227,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="IKEV2_TYPE_PK"/>
             </column>
             <column name="TYPE" type="VARCHAR(16)"/>
-        </createTable>
-
-        <createTable tableName="IKEV2_REF">
-            <column name="IKEV2_TYPE_ID" type="BIGINT"/>
-            <column name="REF" type="VARCHAR(64)"/>
-        </createTable>
-
-        <createTable tableName="CRYPTO_REFS">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="CRYPTO_REF_PK"/>
-            </column>
-            <column name="PROTOCOL_PROPERTY_ID" type="BIGINT"/>
-            <column name="CRYPTO_REF" type="VARCHAR(64)"/>
-        </createTable>
-
-        <createTable tableName="COMPONENT_OCCURRENCES">
-            <column name="COMPONENT_ID" type="BIGINT"/>
-            <column name="OCCURRENCE_ID" type="BIGINT"/>
-        </createTable>
-
-        <createTable tableName="OCCURRENCE">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="OCCURRENCES_PK"/>
-            </column>
-            <column name="BOM_REF" type="VARCHAR(64)"/>
-            <column name="LOCATION" type="VARCHAR(255)"/>
-            <column name="LINE" type="INT"/>
-            <column name="OFFSET" type="INT"/>
-            <column name="SYMBOL" type="INT"/>
-            <column name="ADDITIONAL_CONTEXT" type="VARCHAR(255)"/>
+            <column name="REFS" type="TEXT[]"/>
         </createTable>
 
         <addForeignKeyConstraint baseTableName="COMPONENT" baseColumnNames="CRYPTO_PROPERTIES_ID"

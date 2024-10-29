@@ -16,10 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.model;
-
-import java.io.Serializable;
-import java.util.List;
+package  org.dependencytrack.model;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -27,14 +24,15 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 
+import org.cyclonedx.model.component.crypto.enums.Mechanism;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-@PersistenceCapable(table = "IKEV2_TYPE")
+@PersistenceCapable(table = "SECURED_BY")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Ikev2Type implements Serializable {
-
-    private static final long serialVersionUID = 8548267900098588061L;
+public class SecuredBy {
+    private static final long serialVersionUID = 6421255046930674875L;
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
@@ -42,27 +40,26 @@ public class Ikev2Type implements Serializable {
     private long id;
 
     @Persistent
-    @Column(name = "TYPE", jdbcType = "VARCHAR", length=16)
-    private String type;
+    @Column(name = "MECHANISM", jdbcType = "VARCHAR", length=16)
+    private Mechanism mechanism;
 
-    @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REFS", jdbcType="ARRAY", sqlType = "TEXT ARRAY")
-    private List<String> refs;
+    @Persistent
+    @Column(name = "ALGORITHM_REF", jdbcType = "VARCHAR", length=64)
+    private String algorithmRef;
 
-    public String getType() {
-        return type;
+    public Mechanism getMechanism() {
+        return mechanism;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setMechanism(Mechanism mechanism) {
+        this.mechanism = mechanism;
     }
 
-    public List<String> getRefs() {
-        return refs;
+    public String getAlgorithmRef() {
+        return algorithmRef;
     }
 
-    public void setRefs(List<String> refs) {
-        this.refs = refs;
+    public void setAlgorithmRef(String algorithmRef) {
+        this.algorithmRef = algorithmRef;
     }
 }
-

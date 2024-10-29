@@ -32,9 +32,11 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 
 import org.cyclonedx.model.component.crypto.enums.ProtocolType;
+import org.dependencytrack.resources.v1.serializers.Ikev2TypesSerializer;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @PersistenceCapable(table= "PROTOCOL_PROPERTIES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -64,16 +66,15 @@ public class CryptoProtocolProperties implements Serializable {
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
     private List<CipherSuite> cipherSuites;
 
-    @Persistent(table = "PROTOCOL_IKEV2_TYPES")
+    @Persistent(table = "PROTOCOL_IKEV2_TYPES", defaultFetchGroup = "true")
     @Join(column = "PROTOCOL_PROPERTY_ID")
     @Element(column = "IKEV2_TYPE_ID", dependent = "true")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @JsonSerialize(using = Ikev2TypesSerializer.class)
     private List<Ikev2Type> ikev2Types;
 
-    @Persistent(table = "CRYPTO_REFS")
-    @Join(column = "PROTOCOL_PROPERTY_ID")
-    @Element(column = "CRYPTO_REF", dependent = "true")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "CRYPTO_REFS", jdbcType="ARRAY", sqlType = "TEXT ARRAY")
     private List<String> cryptoRefs;
 
     public ProtocolType getType() {

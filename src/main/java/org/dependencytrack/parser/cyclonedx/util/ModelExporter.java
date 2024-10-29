@@ -56,7 +56,6 @@ import org.dependencytrack.model.DataClassification;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Ikev2Type;
-import org.dependencytrack.model.Occurrence;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
@@ -636,15 +635,6 @@ public class ModelExporter {
             cycloneComponent.setCryptoProperties(cryptoProperties);
         }
 
-        if (component.getOccurrences() != null && !component.getOccurrences().isEmpty()) {
-            org.cyclonedx.model.Evidence evidence = new org.cyclonedx.model.Evidence();
-            List<org.cyclonedx.model.component.evidence.Occurrence> occs = new ArrayList<>();
-            for (Occurrence o: component.getOccurrences()) {
-                occs.add(convertOccurrence(o));
-            }
-            evidence.setOccurrences(occs);
-            cycloneComponent.setEvidence(evidence);
-        }
 
         if (component.getExternalReferences() != null && !component.getExternalReferences().isEmpty()) {
             List<org.cyclonedx.model.ExternalReference> references = new ArrayList<>();
@@ -679,16 +669,6 @@ public class ModelExporter {
         return cycloneComponent;
     }
 
-    private static org.cyclonedx.model.component.evidence.Occurrence convertOccurrence(Occurrence o) {
-        org.cyclonedx.model.component.evidence.Occurrence occ = new org.cyclonedx.model.component.evidence.Occurrence();
-        occ.setBomRef(o.getBomRef());
-        occ.setLine(o.getLine());
-        occ.setLocation(o.getLocation());
-        occ.setOffset(o.getOffset());
-        occ.setSymbol(o.getSymbol());
-        occ.setAdditionalContext(o.getAdditionalContext());
-        return occ;
-    }
     
     private static AlgorithmProperties convert(CryptoAlgorithmProperties algorithmProperties) {
         AlgorithmProperties ap = new AlgorithmProperties();
@@ -732,10 +712,10 @@ public class ModelExporter {
         rcmp.setValue(cryptoMaterialProperties.getValue());
         rcmp.setSize(cryptoMaterialProperties.getSize());
         rcmp.setFormat(cryptoMaterialProperties.getFormat());
-        if (cryptoMaterialProperties.getSecuredByMechanism() != null || cryptoMaterialProperties.getSecuredByAlgorithmRef() != null) {
+        if (cryptoMaterialProperties.getSecuredBy() != null) {
             SecuredBy sb = new SecuredBy();
-            sb.setMechanism(cryptoMaterialProperties.getSecuredByMechanism().getName());
-            sb.setAlgorithmRef(cryptoMaterialProperties.getAlgorithmRef());
+            sb.setMechanism(cryptoMaterialProperties.getSecuredBy().getMechanism().getName());
+            sb.setAlgorithmRef(cryptoMaterialProperties.getSecuredBy().getAlgorithmRef());
             rcmp.setSecuredBy(sb);
         }
         return rcmp;

@@ -22,11 +22,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -49,16 +45,12 @@ public class CipherSuite implements Serializable {
     @Column(name = "NAME", jdbcType = "VARCHAR", length=64)
     private String name;
 
-    @Persistent(table = "CIPHER_SUITE_ALGORITHM", defaultFetchGroup = "true")
-    @Join(column = "CIPHER_SUITE_ID")
-    @Element(column = "ALGORITHM", dependent = "true")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "ALGORITHMS", jdbcType="ARRAY", sqlType = "TEXT ARRAY")
     private List<String> algorithms;
 
-    @Persistent(table = "CIPHER_SUITE_IDENTIFIER", defaultFetchGroup = "true")
-    @Join(column = "CIPHER_SUITE_ID")
-    @Element(column = "IDENTIFIER", dependent = "true")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "IDENTIFIERS", jdbcType="ARRAY", sqlType = "TEXT ARRAY")
     private List<String> identifiers;
 
     public String getName() {

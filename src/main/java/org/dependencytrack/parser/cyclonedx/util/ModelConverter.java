@@ -35,7 +35,6 @@ import org.cyclonedx.model.component.crypto.CryptoProperties;
 import org.cyclonedx.model.component.crypto.CryptoRef;
 import org.cyclonedx.model.component.crypto.ProtocolProperties;
 import org.cyclonedx.model.component.crypto.RelatedCryptoMaterialProperties;
-import org.cyclonedx.model.component.crypto.SecuredBy;
 import org.cyclonedx.model.component.crypto.enums.Mechanism;
 import org.cyclonedx.model.license.Expression;
 import org.dependencytrack.model.AnalysisJustification;
@@ -53,11 +52,11 @@ import org.dependencytrack.model.CryptoRelatedMaterialProperties;
 import org.dependencytrack.model.DataClassification;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.Ikev2Type;
-import org.dependencytrack.model.Occurrence;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.SecuredBy;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tools;
 import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
@@ -326,13 +325,6 @@ public class ModelConverter {
             component.setCryptoAssetProperties(cryptoAssetProperties);
         }
 
-        if (cdxComponent.getEvidence() != null) {
-            List<org.cyclonedx.model.component.evidence.Occurrence> occurrences = cdxComponent.getEvidence().getOccurrences();
-            if (occurrences != null &&!occurrences.isEmpty()) {
-                component.setOccurrences(convertOccurrences(occurrences));
-            }
-        }
-
         return component;
     }
 
@@ -379,9 +371,10 @@ public class ModelConverter {
         crp.setSize(cryptoMaterialProperties.getSize());
         crp.setFormat(cryptoMaterialProperties.getFormat());
         if (cryptoMaterialProperties.getSecuredBy() != null) {
-            SecuredBy secBy = cryptoMaterialProperties.getSecuredBy();
-            crp.setSecuredByMechanism(Mechanism.valueOf(secBy.getMechanism().toUpperCase())); // allow "None"
-            crp.setSecuredByAlgorithmRef(secBy.getAlgorithmRef());
+            SecuredBy securedBy = new SecuredBy();
+            securedBy.setMechanism(Mechanism.valueOf(cryptoMaterialProperties.getSecuredBy().getMechanism().toUpperCase()));
+            securedBy.setAlgorithmRef(cryptoMaterialProperties.getSecuredBy().getAlgorithmRef());
+            crp.setSecuredBy(securedBy);
         }
         return crp;
     }
@@ -426,21 +419,6 @@ public class ModelConverter {
         return modelCS;
     }
 
-    private static List<Occurrence> convertOccurrences(
-        List<org.cyclonedx.model.component.evidence.Occurrence> occurrences ) {
-        List<Occurrence> occs = new ArrayList<>();
-        for(org.cyclonedx.model.component.evidence.Occurrence o: occurrences) {
-            Occurrence occ = new Occurrence();
-            occ.setBomRef(o.getBomRef());
-            occ.setLine(o.getLine());
-            occ.setLocation(o.getLocation());
-            occ.setOffset(o.getOffset());
-            occ.setSymbol(o.getSymbol());
-            occ.setAdditionalContext(o.getAdditionalContext());
-            occs.add(occ);
-        }
-        return occs;
-    }
 
     private static Component convert(@SuppressWarnings("deprecation") final Tool tool) {
         if (tool == null) {

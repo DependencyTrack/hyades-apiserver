@@ -21,6 +21,10 @@ package org.dependencytrack.tasks;
 import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.cyclonedx.model.component.crypto.enums.AssetType;
+import org.cyclonedx.model.component.crypto.enums.Primitive;
+import org.cyclonedx.model.component.crypto.enums.ProtocolType;
+import org.cyclonedx.model.component.crypto.enums.RelatedCryptoMaterialType;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -1664,6 +1668,305 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service -> {
             assertThat(service.getName()).isEqualTo("-");
         });
+    }
+
+    @Test
+    public void informWithCryptoAlgorithmTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {              
+                "bomFormat": "CycloneDX",
+                "specVersion": "1.6",
+                "serialNumber": "urn:uuid:e8c355aa-2142-4084-a8c7-6d42c8610ba2",
+                "version": 1,
+                "metadata": {
+                  "timestamp": "2024-01-09T12:00:00Z",
+                  "component": {
+                    "type": "application",
+                    "name": "my application",
+                    "version": "1.0"
+                  }
+                },
+                "components": [
+                  {
+                    "type": "cryptographic-asset",
+                    "name": "AES-128-GCM",
+                    "cryptoProperties": {
+                      "assetType": "algorithm",
+                      "algorithmProperties": {
+                        "primitive": "ae",
+                        "parameterSetIdentifier": "128",
+                        "mode": "gcm",
+                        "executionEnvironment": "software-plain-ram",
+                        "implementationPlatform": "x86_64",
+                        "certificationLevel": [ "none" ],
+                        "cryptoFunctions": [ "keygen", "encrypt", "decrypt", "tag" ],
+                        "classicalSecurityLevel": 128,
+                        "nistQuantumSecurityLevel": 1
+                      },
+                      "oid": "2.16.840.1.101.3.4.1.6"
+                    }
+                  },
+                  {
+                    "name": "SHA512withRSA",
+                    "type": "cryptographic-asset",
+                    "cryptoProperties": {
+                      "assetType": "algorithm",
+                      "algorithmProperties": {
+                        "primitive": "signature",
+                        "parameterSetIdentifier": "512",
+                        "executionEnvironment": "software-plain-ram",
+                        "implementationPlatform": "x86_64",
+                        "certificationLevel": [ "none" ],
+                        "cryptoFunctions": [ "sign", "verify" ],
+                        "nistQuantumSecurityLevel": 0
+                      },
+                      "oid": "1.2.840.113549.1.1.13"
+                    }
+                  }
+                ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        assertThat(qm.getAllCryptoAssets(project)).satisfiesExactlyInAnyOrder(
+          asset1 -> {
+            assertThat(asset1.getName()).isEqualTo("AES-128-GCM");
+            assertThat(asset1.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.ALGORITHM);
+            assertThat(asset1.getCryptoAssetProperties().getOid()).isEqualTo("2.16.840.1.101.3.4.1.6");
+            assertThat(asset1.getCryptoAssetProperties().getAlgorithmProperties().getPrimitive()).isEqualTo(Primitive.AE);
+          },
+          asset2 -> {
+            assertThat(asset2.getName()).isEqualTo("SHA512withRSA");
+            assertThat(asset2.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.ALGORITHM);
+            assertThat(asset2.getCryptoAssetProperties().getOid()).isEqualTo("1.2.840.113549.1.1.13");
+            assertThat(asset2.getCryptoAssetProperties().getAlgorithmProperties().getPrimitive()).isEqualTo(Primitive.SIGNATURE);
+          }
+        );
+    }
+
+    @Test
+    public void informWithCryptoProtocolTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "serialNumber": "urn:uuid:e8c355aa-2142-4084-a8c7-6d42c8610ba2",
+                  "version": 1,
+                  "metadata": {
+                    "timestamp": "2024-01-09T12:00:00Z",
+                    "component": {
+                      "type": "application",
+                      "name": "my application",
+                      "version": "1.0"
+                    }
+                  },
+                  "components": [
+                    {
+                      "name": "TLSv1.2",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/protocol/tls@1.2",
+                      "cryptoProperties": {
+                        "assetType": "protocol",
+                        "protocolProperties": {
+                          "type": "tls",
+                          "version": "1.2",
+                          "cipherSuites": [
+                            {
+                              "name": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                              "algorithms": [
+                                "crypto/algorithm/sha-384@2.16.840.1.101.3.4.2.9"
+                              ],
+                              "identifiers": [ "0xC0", "0x30" ]
+                            }
+                          ]
+                        },
+                        "oid": "1.3.18.0.2.32.104"
+                      }
+                    },
+                        {
+                      "name": "SHA384",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/algorithm/sha-384@2.16.840.1.101.3.4.2.9",
+                      "cryptoProperties": {
+                        "assetType": "algorithm",
+                        "algorithmProperties": {
+                          "parameterSetIdentifier": "384",
+                          "executionEnvironment": "software-plain-ram",
+                          "implementationPlatform": "x86_64",
+                          "certificationLevel": [ "none" ],
+                          "cryptoFunctions": [ "digest" ],
+                          "nistQuantumSecurityLevel": 2
+                        },
+                        "oid": "2.16.840.1.101.3.4.2.9"
+                      }
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllCryptoAssets(project)).satisfiesExactlyInAnyOrder(
+          asset1 -> {
+            assertThat(asset1.getName()).isEqualTo("TLSv1.2");
+            assertThat(asset1.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.PROTOCOL);
+            assertThat(asset1.getCryptoAssetProperties().getOid()).isEqualTo("1.3.18.0.2.32.104");
+            assertThat(asset1.getCryptoAssetProperties().getProtocolProperties().getType()).isEqualTo(ProtocolType.TLS);
+          },
+          asset2 -> {
+            assertThat(asset2.getName()).isEqualTo("SHA384");
+            assertThat(asset2.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.ALGORITHM);
+            assertThat(asset2.getCryptoAssetProperties().getOid()).isEqualTo("2.16.840.1.101.3.4.2.9");
+            assertThat(asset2.getCryptoAssetProperties().getAlgorithmProperties().getParameterSetIdentifier()).isEqualTo("384");
+          }
+        );
+    }
+
+    @Test
+    public void informWithCryptoCertificateTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "serialNumber": "urn:uuid:e8c355aa-2142-4084-a8c7-6d42c8610ba2",
+                  "version": 1,
+                  "metadata": {
+                    "timestamp": "2024-01-09T12:00:00Z",
+                    "component": {
+                      "type": "application",
+                      "name": "my application",
+                      "version": "1.0"
+                    }
+                  },
+                  "components": [
+                    {
+                      "name": "google.com",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/certificate/google.com@sha256:1e15e0fbd3ce95bde5945633ae96add551341b11e5bae7bba12e98ad84a5beb4",
+                      "cryptoProperties": {
+                        "assetType": "certificate",
+                        "certificateProperties": {
+                          "subjectName": "CN = www.google.com",
+                          "issuerName": "C = US, O = Google Trust Services LLC, CN = GTS CA 1C3",
+                          "notValidBefore": "2016-11-21T08:00:00Z",
+                          "notValidAfter": "2017-11-22T07:59:59Z",
+                          "signatureAlgorithmRef": "crypto/algorithm/sha-512-rsa@1.2.840.113549.1.1.13",
+                          "subjectPublicKeyRef": "crypto/key/rsa-2048@1.2.840.113549.1.1.1",
+                          "certificateFormat": "X.509",
+                          "certificateExtension": "crt"
+                        }
+                      }
+                    },
+                    {
+                      "name": "SHA512withRSA",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/algorithm/sha-512-rsa@1.2.840.113549.1.1.13",
+                      "cryptoProperties": {
+                        "assetType": "algorithm",
+                        "algorithmProperties": {
+                          "parameterSetIdentifier": "512",
+                          "executionEnvironment": "software-plain-ram",
+                          "implementationPlatform": "x86_64",
+                          "certificationLevel": [ "none" ],
+                          "cryptoFunctions": [ "digest" ],
+                          "nistQuantumSecurityLevel": 0
+                        },
+                        "oid": "1.2.840.113549.1.1.13"
+                      }
+                    },
+                    {
+                      "name": "RSA-2048",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/key/rsa-2048@1.2.840.113549.1.1.1",
+                      "cryptoProperties": {
+                        "assetType": "related-crypto-material",
+                        "relatedCryptoMaterialProperties": {
+                          "type": "public-key",
+                          "id": "2e9ef09e-dfac-4526-96b4-d02f31af1b22",
+                          "state": "active",
+                          "size": 2048,
+                          "algorithmRef": "crypto/algorithm/rsa-2048@1.2.840.113549.1.1.1",
+                          "securedBy": {
+                            "mechanism": "None"
+                          },
+                          "creationDate": "2016-11-21T08:00:00Z",
+                          "activationDate": "2016-11-21T08:20:00Z"
+                        },
+                        "oid": "1.2.840.113549.1.1.1"
+                      }
+                    },
+                    {
+                      "name": "RSA-2048",
+                      "type": "cryptographic-asset",
+                      "bom-ref": "crypto/algorithm/rsa-2048@1.2.840.113549.1.1.1",
+                      "cryptoProperties": {
+                        "assetType": "algorithm",
+                        "algorithmProperties": {
+                          "parameterSetIdentifier": "2048",
+                          "executionEnvironment": "software-plain-ram",
+                          "implementationPlatform": "x86_64",
+                          "certificationLevel": [ "none" ],
+                          "cryptoFunctions": [ "encapsulate", "decapsulate" ]
+                        },
+                        "oid": "1.2.840.113549.1.1.1"
+                      }
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllCryptoAssets(project)).satisfiesExactlyInAnyOrder(
+          asset1 -> {
+            assertThat(asset1.getName()).isEqualTo("google.com");
+            assertThat(asset1.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.CERTIFICATE);
+            assertThat(asset1.getCryptoAssetProperties().getOid()).isNull();
+            assertThat(asset1.getCryptoAssetProperties().getCertificateProperties().getCertificateFormat()).isEqualTo("X.509");
+          },
+          asset2 -> {
+            assertThat(asset2.getName()).isEqualTo("SHA512withRSA");
+            assertThat(asset2.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.ALGORITHM);
+            assertThat(asset2.getCryptoAssetProperties().getOid()).isEqualTo("1.2.840.113549.1.1.13");
+            assertThat(asset2.getCryptoAssetProperties().getAlgorithmProperties().getParameterSetIdentifier()).isEqualTo("512");
+          },
+          asset3 -> {
+            assertThat(asset3.getName()).isEqualTo("RSA-2048");
+            assertThat(asset3.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.RELATED_CRYPTO_MATERIAL);
+            assertThat(asset3.getCryptoAssetProperties().getOid()).isEqualTo("1.2.840.113549.1.1.1");
+            assertThat(asset3.getCryptoAssetProperties().getRelatedMaterialProperties().getType()).isEqualTo(RelatedCryptoMaterialType.PUBLIC_KEY);
+          },
+          asset4-> {
+            assertThat(asset4.getName()).isEqualTo("RSA-2048");
+            assertThat(asset4.getCryptoAssetProperties().getAssetType()).isEqualTo(AssetType.ALGORITHM);
+            assertThat(asset4.getCryptoAssetProperties().getOid()).isEqualTo("1.2.840.113549.1.1.1");
+            assertThat(asset4.getCryptoAssetProperties().getAlgorithmProperties().getParameterSetIdentifier()).isEqualTo("2048");
+          }
+        );
     }
 
     private void assertBomProcessedNotification() throws Exception {

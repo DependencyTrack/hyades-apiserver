@@ -22,11 +22,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -38,9 +34,11 @@ import org.cyclonedx.model.component.crypto.enums.ImplementationPlatform;
 import org.cyclonedx.model.component.crypto.enums.Mode;
 import org.cyclonedx.model.component.crypto.enums.Padding;
 import org.cyclonedx.model.component.crypto.enums.Primitive;
+import org.dependencytrack.resources.v1.serializers.CryptoFunctionsSerializer;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @PersistenceCapable(table= "ALGORITHM_PROPERTIES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -52,19 +50,6 @@ public class CryptoAlgorithmProperties implements Serializable {
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
     private long id;
-
-    // @Persistent
-    // @Column(name = "CRYPTO_PROPERTIES_ID")
-    // @JsonIgnore
-    // private CryptoAssetProperties cryptoAssetProperties;
-
-    // public CryptoAssetProperties getCryptoAssetProperties() {
-    //      return cryptoAssetProperties;
-    // }
-
-    // public void setCryptoAssetProperties(CryptoAssetProperties cryptoAssetProperties) {
-    //      this.cryptoAssetProperties = cryptoAssetProperties;
-    // }
 
     /*
      * algorithmProperties
@@ -93,13 +78,10 @@ public class CryptoAlgorithmProperties implements Serializable {
     @Persistent
     @Column(name = "PADDING", jdbcType = "VARCHAR", length=16)
     private Padding padding;
-
-    @Persistent(table = "CRYPTO_FUNCTIONS", defaultFetchGroup = "true")
-    @Join(column="ALGORITHM_PROPERTY_ID")
-    @Element(column="CRYPTO_FUNCTION", dependent = "true")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "CRYPTO_FUNCTIONS", jdbcType="ARRAY", sqlType = "TEXT ARRAY")
+    @JsonSerialize(using = CryptoFunctionsSerializer.class)
     private List<CryptoFunction> cryptoFunctions;
-
     @Persistent
     @Column(name = "CLASSICAL_SECURITY_LEVEL")
     private Integer classicalSecurityLevel;
@@ -110,70 +92,88 @@ public class CryptoAlgorithmProperties implements Serializable {
     public Primitive getPrimitive() {
         return primitive;
     }
+
     public void setPrimitive(Primitive primitive) {
         this.primitive = primitive;
     }
+
     public String getParameterSetIdentifier() {
         return parameterSetIdentifier;
     }
+
     public void setParameterSetIdentifier(String parameterSetIdentifier) {
         this.parameterSetIdentifier = parameterSetIdentifier;
     }
+
     public String getCurve() {
         return curve;
     }
+
     public void setCurve(String curve) {
         this.curve = curve;
     }
+
     public ExecutionEnvironment getExecutionEnvironment() {
         return executionEnvironment;
     }
+
     public void setExecutionEnvironment(ExecutionEnvironment executionEnvironment) {
         this.executionEnvironment = executionEnvironment;
     }
+
     public ImplementationPlatform getImplementationPlatform() {
         return implementationPlatform;
     }
+
     public void setImplementationPlatform(ImplementationPlatform implementationPlatform) {
         this.implementationPlatform = implementationPlatform;
     }
+
     public CertificationLevel getCertificationLevel() {
         return certificationLevel;
     }
+
     public void setCertificationLevel(CertificationLevel certificationLevel) {
         this.certificationLevel = certificationLevel;
     }
+
     public Mode getMode() {
         return mode;
     }
+
     public void setMode(Mode mode) {
         this.mode = mode;
     }
+
     public Padding getPadding() {
         return padding;
     }
+
     public void setPadding(Padding padding) {
         this.padding = padding;
     }
+
     public List<CryptoFunction> getCryptoFunctions() {
         return cryptoFunctions;
     }
+
     public void setCryptoFunctions(List<CryptoFunction> cryptoFunctions) {
+        
         this.cryptoFunctions = cryptoFunctions;
     }
     public Integer getClassicalSecurityLevel() {
         return classicalSecurityLevel;
     }
+
     public void setClassicalSecurityLevel(Integer classicalSecurityLevel) {
         this.classicalSecurityLevel = classicalSecurityLevel;
     }
+
     public Integer getNistQuantumSecurityLevel() {
         return nistQuantumSecurityLevel;
     }
+
     public void setNistQuantumSecurityLevel(Integer nistQuantumSecurityLevel) {
         this.nistQuantumSecurityLevel = nistQuantumSecurityLevel;
     }
-
-    
-
 }
