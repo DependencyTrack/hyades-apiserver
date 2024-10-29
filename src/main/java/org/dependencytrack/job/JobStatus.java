@@ -20,11 +20,11 @@ package org.dependencytrack.job;
 
 public enum JobStatus {
 
-    COMPLETE,
+    COMPLETED,
 
     FAILED,
 
-    NEW,
+    PENDING,
 
     RUNNING
 

@@ -20,10 +20,14 @@ package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
 import io.github.resilience4j.core.IntervalFunction;
+import org.dependencytrack.job.JobEvent.JobCompletedEvent;
+import org.dependencytrack.job.JobEvent.JobFailedEvent;
+import org.dependencytrack.job.JobEvent.JobStartedEvent;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,18 +50,14 @@ public class JobManager implements Closeable {
     private static final JobManager INSTANCE = new JobManager();
 
     private final Map<String, ExecutorService> executorByTag = new ConcurrentHashMap<>();
-    private final List<JobStatusListener> statusListeners = new CopyOnWriteArrayList<>();
+    private final List<JobEventListener> statusListeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
     public static JobManager getInstance() {
         return INSTANCE;
     }
 
-    public void tearDown() throws Exception {
-        close();
-    }
-
-    public void registerStatusListener(final JobStatusListener listener) {
+    public void registerStatusListener(final JobEventListener listener) {
         statusListeners.add(listener);
     }
 
@@ -87,7 +87,7 @@ public class JobManager implements Closeable {
                         final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(tags));
                         if (polledJob == null) {
                             final long backoffMs = intervalFunction.apply(pollMisses.incrementAndGet());
-                            LOGGER.info("Backing off for %dms".formatted(backoffMs));
+                            LOGGER.debug("Backing off for %dms".formatted(backoffMs));
                             try {
                                 Thread.sleep(backoffMs);
                                 continue;
@@ -97,7 +97,7 @@ public class JobManager implements Closeable {
                         }
 
                         pollMisses.set(0);
-                        notifyStatusChange(polledJob);
+                        notifyEventListeners(new JobStartedEvent(polledJob));
 
                         // TODO: Perform status changes to COMPLETED, FAILED, etc. asynchronously in batches for better throughput.
 
@@ -108,14 +108,14 @@ public class JobManager implements Closeable {
                             worker.process(polledJob);
                             final QueuedJob completedJob = inJdbiTransaction(
                                     handle -> handle.attach(JobDao.class).complete(polledJob));
-                            notifyStatusChange(completedJob);
-                            LOGGER.info("Job completed successfully");
+                            notifyEventListeners(new JobCompletedEvent(completedJob));
+                            LOGGER.debug("Job completed successfully");
                         } catch (RuntimeException e) {
                             // TODO: Retryable or fatal?
                             LOGGER.error("Job processing failed", e);
                             final QueuedJob failedJob = inJdbiTransaction(
                                     handle -> handle.attach(JobDao.class).fail(polledJob));
-                            notifyStatusChange(failedJob);
+                            notifyEventListeners(new JobFailedEvent(failedJob));
                         }
                     }
                 } catch (RuntimeException e) {
@@ -146,9 +146,8 @@ public class JobManager implements Closeable {
         }
     }
 
-    // TODO: Handle singleton jobs
-    public QueuedJob enqueue(final NewJob newJob) {
-        return inJdbiTransaction(handle -> handle.attach(JobDao.class).enqueue(newJob));
+    public List<QueuedJob> enqueueAll(final Collection<NewJob> newJobs) {
+        return inJdbiTransaction(handle -> handle.attach(JobDao.class).enqueueAll(newJobs));
     }
 
     @Override
@@ -177,9 +176,14 @@ public class JobManager implements Closeable {
         isShuttingDown.set(false);
     }
 
-    private void notifyStatusChange(final QueuedJob queuedJob) {
-        for (final JobStatusListener listener : statusListeners) {
-            listener.onStatusChanged(queuedJob);
+    private void notifyEventListeners(final JobEvent event) {
+        for (final JobEventListener listener : statusListeners) {
+            try {
+                listener.onJobEvent(event);
+            } catch (RuntimeException e) {
+                LOGGER.warn("Failed to notify listener %s for event: %s".formatted(
+                        listener.getClass().getName(), event), e);
+            }
         }
     }
 

@@ -19,15 +19,22 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.job.JobEvent;
+import org.dependencytrack.job.JobEvent.JobCompletedEvent;
+import org.dependencytrack.job.JobEvent.JobFailedEvent;
+import org.dependencytrack.job.JobEvent.JobStartedEvent;
+import org.dependencytrack.job.JobEventListener;
 import org.dependencytrack.job.JobManager;
-import org.dependencytrack.job.JobStatus;
-import org.dependencytrack.job.JobStatusListener;
 import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
+import org.dependencytrack.workflow.WorkflowDao.NewWorkflowRun;
+import org.dependencytrack.workflow.WorkflowDao.WorkflowRunTransition;
+import org.dependencytrack.workflow.WorkflowDao.WorkflowStepRunTransition;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,27 +49,30 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 // TODO: Metrics instrumentation
-public class WorkflowEngine implements JobStatusListener, Closeable {
+public class WorkflowEngine implements JobEventListener, Closeable {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngine.class);
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
-    private final BlockingQueue<QueuedJob> jobEventQueue = new ArrayBlockingQueue<>(100);
+    private final BlockingQueue<JobEvent> jobEventQueue = new ArrayBlockingQueue<>(100);
     private final ScheduledExecutorService jobEventFlushExecutor;
+    private final long jobEventFlushIntervalSeconds = 5;
     private final ReentrantLock jobEventFlushLock = new ReentrantLock();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
     public WorkflowEngine() {
         // TODO: Move this to a start() method and make sure the engine can be restarted if stopped.
+        // TODO: Find reasonable defaults for queue size and flush interval.
         jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor();
-        jobEventFlushExecutor.scheduleAtFixedRate(this::flushJobEvents, 1, 5, TimeUnit.SECONDS);
+        jobEventFlushExecutor.scheduleAtFixedRate(this::flushJobEvents, 1, jobEventFlushIntervalSeconds, TimeUnit.SECONDS);
     }
 
     public static WorkflowEngine getInstance() {
@@ -76,10 +86,12 @@ public class WorkflowEngine implements JobStatusListener, Closeable {
     public void deploy(final WorkflowSpec spec) {
         assertRunning();
 
+        // TODO: Validate spec
+
         useJdbiTransaction(handle -> {
             final var dao = handle.attach(WorkflowDao.class);
 
-            LOGGER.info("Deploying workflow %s v%d".formatted(spec.name(), spec.version()));
+            LOGGER.info("Deploying workflow %s/%d".formatted(spec.name(), spec.version()));
             final Workflow workflow = dao.createWorkflow(new NewWorkflow(spec.name(), spec.version()));
 
             final var workflowStepByName = new HashMap<String, WorkflowStep>(spec.stepSpecs().size());
@@ -106,53 +118,79 @@ public class WorkflowEngine implements JobStatusListener, Closeable {
         });
     }
 
-    public WorkflowRunView startWorkflow(final StartWorkflowOptions options) {
+    public List<WorkflowRunView> startWorkflows(final Collection<StartWorkflowOptions> options) {
         assertRunning();
         requireNonNull(options);
 
-        final WorkflowRunView startedWorkflowRun = inJdbiTransaction(handle -> {
+        final var jobsToQueue = new ArrayList<NewJob>();
+        final List<WorkflowRunView> startedWorkflowRuns = inJdbiTransaction(handle -> {
             final var dao = handle.attach(WorkflowDao.class);
 
-            final Workflow workflow = dao.getWorkflowByNameAndVersion(options.name(), options.version());
-            if (workflow == null) {
-                throw new NoSuchElementException("Workflow %s/%d does not exist".formatted(options.name(), options.version()));
+            final Map<Long, WorkflowRun> workflowRunById = dao.createWorkflowRuns(options.stream()
+                            .map(startOptions -> new NewWorkflowRun(
+                                    startOptions.name(),
+                                    startOptions.version(),
+                                    UUID.randomUUID()))
+                            .toList())
+                    .stream()
+                    .collect(Collectors.toMap(WorkflowRun::id, Function.identity()));
+            if (workflowRunById.size() != options.size()) {
+                throw new IllegalStateException("Expected to start %d workflow runs, but only started %d".formatted(
+                        options.size(), workflowRunById.size()));
             }
 
-            final List<WorkflowStep> steps = dao.getStepsByWorkflow(workflow);
-            if (steps == null || steps.isEmpty()) {
-                throw new IllegalStateException("Workflow %s/%d has no steps".formatted(workflow.name(), workflow.version()));
+            final Map<Long, List<WorkflowStepRun>> workflowStepRunsByWorkflowRunId = dao.createWorkflowStepRuns(workflowRunById.values()).stream()
+                    .collect(Collectors.groupingBy(WorkflowStepRun::workflowRunId, Collectors.toList()));
+
+            final var workflowRunViews = new ArrayList<WorkflowRunView>(workflowRunById.size());
+            for (final Map.Entry<Long, List<WorkflowStepRun>> entry : workflowStepRunsByWorkflowRunId.entrySet()) {
+                final WorkflowRun workflowRun = workflowRunById.get(entry.getKey());
+                final List<WorkflowStepRun> workflowStepRuns = entry.getValue();
+
+                workflowRunViews.add(new WorkflowRunView(
+                        "", // TODO: Get this.
+                        1, // TODO: Get this.
+                        workflowRun.token(),
+                        workflowRun.priority(),
+                        workflowRun.status(),
+                        workflowRun.createdAt(),
+                        workflowRun.updatedAt(),
+                        workflowRun.startedAt()));
             }
 
-            LOGGER.info("Starting workflow %s/%d".formatted(workflow.name(), workflow.version()));
-            final WorkflowRun workflowRun = dao.createWorkflowRun(workflow, UUID.randomUUID());
-            final List<WorkflowStepRunView> stepRunViews = steps.stream()
-                    .map(step -> {
-                        final WorkflowStepRun stepRun = dao.createStepRun(workflowRun, step);
-                        return new WorkflowStepRunView(
-                                step.name(),
-                                step.type(),
-                                stepRun.status(),
-                                stepRun.createdAt(),
-                                stepRun.updatedAt(),
-                                stepRun.startedAt());
-                    })
-                    .toList();
+            final List<ClaimedWorkflowStepRun> claimedStepRuns = dao.claimRunnableStepRunsOfType(
+                    workflowRunById.keySet(), WorkflowStepType.JOB);
+            if (!claimedStepRuns.isEmpty()) {
+                jobsToQueue.addAll(claimedStepRuns.stream()
+                        .map(claimedStepRun -> new NewJob(
+                                claimedStepRun.stepName(),
+                                claimedStepRun.priority(),
+                                /* scheduledFor */ null,
+                                /* payloadType */ null,
+                                /* payload */ null,
+                                claimedStepRun.workflowRunId(),
+                                claimedStepRun.id()))
+                        .toList());
+            }
 
-            return new WorkflowRunView(
-                    workflow.name(),
-                    workflow.version(),
-                    workflowRun.token(),
-                    workflowRun.priority(),
-                    workflowRun.status(),
-                    workflowRun.createdAt(),
-                    workflowRun.updatedAt(),
-                    workflowRun.startedAt(),
-                    stepRunViews);
+            return workflowRunViews;
         });
 
-        queueRunnableSteps(startedWorkflowRun.token());
+        if (!jobsToQueue.isEmpty()) {
+            final List<QueuedJob> queuedJobs = JobManager.getInstance().enqueueAll(jobsToQueue);
+            LOGGER.info("Queued %d jobs".formatted(queuedJobs.size()));
+        }
 
-        return startedWorkflowRun;
+        return startedWorkflowRuns;
+    }
+
+    public WorkflowRunView startWorkflow(final StartWorkflowOptions options) {
+        final List<WorkflowRunView> startedWorkflows = startWorkflows(List.of(options));
+        if (startedWorkflows.size() != 1) {
+            throw new IllegalStateException("Workflow was not started");
+        }
+
+        return startedWorkflows.getFirst();
     }
 
     public Optional<WorkflowRunView> getWorkflowRun(final UUID token) {
@@ -179,39 +217,6 @@ public class WorkflowEngine implements JobStatusListener, Closeable {
         });
     }
 
-    public Optional<ClaimedWorkflowStepRun> claimStepRun(final UUID token, String stepName) {
-        return inJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
-            final ClaimedWorkflowStepRun claimedStepRun = dao.claimRunnableStepRun(token, stepName);
-            return Optional.ofNullable(claimedStepRun);
-        });
-    }
-
-    public void completeStepRun(final ClaimedWorkflowStepRun stepRun) {
-        // TODO: Make this batch friendly.
-        useJdbiTransaction(handle -> {
-            // TODO: Handle illegal transitions.
-            final var dao = handle.attach(WorkflowDao.class);
-            dao.transitionStepRun(stepRun.id(), WorkflowStepRunStatus.COMPLETED);
-        });
-
-        // TODO: Check if entire workflow run can be completed.
-        queueRunnableSteps(stepRun.token());
-    }
-
-    public void failStepRun(final ClaimedWorkflowStepRun stepRun) {
-        // TODO: Make this batch friendly.
-        useJdbiTransaction(handle -> {
-            // TODO: Handle illegal transitions.
-            final var dao = handle.attach(WorkflowDao.class);
-            dao.transitionStepRun(stepRun.id(), WorkflowStepRunStatus.FAILED);
-            final int cancelledStepRuns = dao.cancelDependantStepRuns(stepRun.workflowRunId(), stepRun.stepId());
-            LOGGER.info("Cancelled %d dependant step runs".formatted(cancelledStepRuns));
-            dao.transitionWorkflowRun(stepRun.workflowRunId(), WorkflowRunStatus.FAILED);
-            LOGGER.info("Failed workflow run %s".formatted(stepRun.token()));
-        });
-    }
-
     public void restartStepRun(final UUID token, String stepName) {
         assertRunning();
 
@@ -235,46 +240,29 @@ public class WorkflowEngine implements JobStatusListener, Closeable {
         });
     }
 
-    private void queueRunnableSteps(final UUID token) {
-        useJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
-            final List<ClaimedWorkflowStepRun> claimedStepRuns = dao.claimRunnableStepRuns(token, null);
-            for (final ClaimedWorkflowStepRun claimedStepRun : claimedStepRuns) {
-                LOGGER.info("Claimed workflow step run: %s".formatted(claimedStepRun));
-                if (claimedStepRun.stepType() != WorkflowStepType.JOB) {
-                    throw new IllegalStateException("Invalid step type: %s".formatted(claimedStepRun.stepType()));
-                }
-
-                final QueuedJob queuedJob = JobManager.getInstance().enqueue(new NewJob(
-                        claimedStepRun.stepName(),
-                        /* priority */ claimedStepRun.priority(),
-                        /* scheduledFor */ Instant.now(),
-                        /* payloadType */ null,
-                        /* payload */ null,
-                        /* workflowRunId */ claimedStepRun.workflowRunId(),
-                        /* workflowStepRunId */ claimedStepRun.id()));
-                LOGGER.info("Queued job: %s".formatted(queuedJob));
-            }
-        });
-    }
-
     @Override
-    public void onStatusChanged(final QueuedJob queuedJob) {
-        if (queuedJob.workflowStepRunId() == null) {
+    public void onJobEvent(final JobEvent event) {
+        final boolean isRelevant = event instanceof JobCompletedEvent
+                                   || event instanceof JobFailedEvent
+                                   || event instanceof JobStartedEvent;
+        if (!isRelevant || event.job().workflowStepRunId() == null) {
             return;
         }
 
         final boolean queued;
         try {
-            queued = jobEventQueue.offer(queuedJob, 3, TimeUnit.SECONDS);
+            queued = jobEventQueue.offer(event, jobEventFlushIntervalSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Thread was interrupted while waiting to enqueue %s".formatted(event), e);
         }
 
         if (!queued) {
             flushJobEvents();
-            jobEventQueue.offer(queuedJob); // TODO: Assert success
+            if (!jobEventQueue.offer(event)) {
+                // Shouldn't ever happen, but without an exception we might never know when it does.
+                throw new IllegalStateException("%s could not be queued even after flushing queued events".formatted(event));
+            }
         }
     }
 
@@ -299,54 +287,94 @@ public class WorkflowEngine implements JobStatusListener, Closeable {
     private void flushJobEvents() {
         jobEventFlushLock.lock();
         try {
-            if (jobEventQueue.isEmpty()) {
-                LOGGER.info("Nothing to flush");
-                return;
-            }
-
-            LOGGER.info("Flushing %d events".formatted(jobEventQueue.size()));
-            final var latestEventByStepRunId = new HashMap<Long, QueuedJob>();
-            while (jobEventQueue.peek() != null) {
-                final QueuedJob event = jobEventQueue.poll();
-                latestEventByStepRunId.put(event.workflowStepRunId(), event);
-            }
-
-            // TODO: Move to DAO
-            final List<Map<String, Object>> foo = withJdbiHandle(handle -> handle.createQuery("""
-                        SELECT "WFR"."TOKEN" AS "token"
-                             , "WFR"."ID" AS "run_id"
-                             , "WFSR"."WORKFLOW_STEP_ID" AS "step_id"
-                             , "WFSR"."ID" AS "step_run_id"
-                          FROM "WORKFLOW_STEP_RUN" AS "WFSR"
-                         INNER JOIN "WORKFLOW_RUN" AS "WFR"
-                            ON "WFR"."ID" = "WFSR"."WORKFLOW_RUN_ID"
-                         WHERE "WFSR"."ID" = ANY(:stepRunIds)
-                        """)
-                    .bindArray("stepRunIds", Long.class, latestEventByStepRunId.keySet())
-                    .mapToMap()
-                    .list());
-
-            // TODO: Do this in a batch.
-            for (final Map<String, Object> results : foo) {
-                final QueuedJob event = latestEventByStepRunId.get((long) results.get("step_run_id"));
-                if (event.status() == JobStatus.COMPLETE) {
-                    completeStepRun(new ClaimedWorkflowStepRun(
-                            event.workflowStepRunId(),
-                            (long) results.get("step_id"),
-                            (long) results.get("run_id"),
-                            (UUID) results.get("token"),
-                            null, null, null, null));
-                } else if (event.status() == JobStatus.FAILED) {
-                    failStepRun(new ClaimedWorkflowStepRun(
-                            event.workflowStepRunId(),
-                            (long) results.get("step_id"),
-                            (long) results.get("run_id"),
-                            (UUID) results.get("token"),
-                            null, null, null, null));
-                }
-            }
+            flushJobEventsLocked();
         } finally {
             jobEventFlushLock.unlock();
+        }
+    }
+
+    private void flushJobEventsLocked() {
+        assert jobEventFlushLock.isHeldByCurrentThread();
+
+        if (jobEventQueue.isEmpty()) {
+            LOGGER.debug("Nothing to flush");
+            return;
+        }
+
+        LOGGER.debug("%d events in flush queue".formatted(jobEventQueue.size()));
+        final var latestEventByStepRunId = new HashMap<Long, JobEvent>();
+        while (jobEventQueue.peek() != null) {
+            final JobEvent event = jobEventQueue.poll();
+            latestEventByStepRunId.put(event.job().workflowStepRunId(), event);
+        }
+
+        final var transitions = new ArrayList<WorkflowStepRunTransition>(latestEventByStepRunId.size());
+        for (final Map.Entry<Long, JobEvent> entry : latestEventByStepRunId.entrySet()) {
+            final long stepRunId = entry.getKey();
+            final JobEvent event = entry.getValue();
+
+            switch (event) {
+                case JobCompletedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
+                        stepRunId, WorkflowStepRunStatus.COMPLETED));
+                case JobFailedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
+                        stepRunId, WorkflowStepRunStatus.FAILED));
+                case JobStartedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
+                        stepRunId, WorkflowStepRunStatus.RUNNING));
+                default -> throw new IllegalStateException("Unexpected event: " + event);
+            }
+        }
+
+        final var jobsToQueue = new ArrayList<NewJob>();
+        useJdbiTransaction(handle -> {
+            final var dao = handle.attach(WorkflowDao.class);
+
+            final List<WorkflowStepRun> transitionedStepRuns = dao.transitionStepRuns(transitions);
+            if (transitionedStepRuns.size() != transitions.size()) {
+                throw new IllegalStateException("Should have transitioned %d step runs, but only did %d".formatted(
+                        transitions.size(), transitionedStepRuns.size()));
+            }
+
+            LOGGER.info("Transitioned status of %d workflow step runs".formatted(transitionedStepRuns.size()));
+            final Map<WorkflowStepRunStatus, List<WorkflowStepRun>> stepRunsByStatus = transitionedStepRuns.stream()
+                    .collect(Collectors.groupingBy(WorkflowStepRun::status, Collectors.toList()));
+
+            final List<WorkflowStepRun> completedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.COMPLETED);
+            if (completedStepRuns != null) {
+                final List<ClaimedWorkflowStepRun> claimedStepRuns = dao.claimRunnableStepRunsOfType(
+                        completedStepRuns.stream().map(WorkflowStepRun::workflowRunId).toList(), WorkflowStepType.JOB);
+                jobsToQueue.addAll(claimedStepRuns.stream()
+                        .map(claimedStepRun -> new NewJob(
+                                claimedStepRun.stepName(),
+                                claimedStepRun.priority(),
+                                /* scheduledFor */ null,
+                                /* payloadType */ null,
+                                /* payload */ null,
+                                claimedStepRun.workflowRunId(),
+                                claimedStepRun.id()))
+                        .toList());
+
+                final List<WorkflowRun> completedWorkflowRuns = dao.completeWorkflowRunsWhenAllStepRunsCompleted(
+                        completedStepRuns.stream().map(WorkflowStepRun::workflowRunId).toList());
+                LOGGER.info("Completed %d workflow runs".formatted(completedWorkflowRuns.size()));
+            }
+
+            final List<WorkflowStepRun> failedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.FAILED);
+            if (failedStepRuns != null) {
+                final List<WorkflowStepRun> cancelledStepRuns = dao.cancelDependantStepRuns(failedStepRuns);
+                LOGGER.info("Cancelled %d workflow step runs".formatted(cancelledStepRuns.size()));
+
+                final List<WorkflowRun> failedWorkflowRuns = dao.transitionWorkflowRuns(failedStepRuns.stream()
+                        .map(stepRun -> new WorkflowRunTransition(
+                                stepRun.workflowRunId(),
+                                WorkflowRunStatus.FAILED))
+                        .toList());
+                LOGGER.info("Failed %d workflow runs".formatted(failedWorkflowRuns.size()));
+            }
+        });
+
+        if (!jobsToQueue.isEmpty()) {
+            final List<QueuedJob> queuedJobs = JobManager.getInstance().enqueueAll(jobsToQueue);
+            LOGGER.info("Queued %s jobs".formatted(queuedJobs.size()));
         }
     }
 

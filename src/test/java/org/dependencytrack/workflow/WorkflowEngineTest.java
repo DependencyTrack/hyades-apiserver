@@ -22,6 +22,8 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.job.JobManager;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -56,11 +58,15 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 return Optional.empty();
             }, 1);
 
+            final var workflowsToStart = new ArrayList<StartWorkflowOptions>(1000);
             for (int i = 0; i < 1000; i++) {
-                workflowEngine.startWorkflow(new StartWorkflowOptions(
+                workflowsToStart.add(new StartWorkflowOptions(
                         WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
                         WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
             }
+
+            final List<WorkflowRunView> startedWorkflows = workflowEngine.startWorkflows(workflowsToStart);
+            assertThat(startedWorkflows).hasSize(1000);
 
             await("foo")
                     .atMost(360, TimeUnit.SECONDS)

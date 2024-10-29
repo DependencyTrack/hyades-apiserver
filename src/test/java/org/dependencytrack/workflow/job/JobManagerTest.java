@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.job;
 
-import alpine.common.logging.Logger;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.job.JobDao;
 import org.dependencytrack.job.JobManager;
@@ -27,32 +26,45 @@ import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
 import org.junit.Test;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class JobManagerTest extends PersistenceCapableTest {
 
     @Test
-    public void foo() throws Exception {
-        useJdbiTransaction(handle -> handle.attach(JobDao.class).enqueue(
-                new NewJob("foo", null, Instant.now().plusSeconds(15), null, null, null, null)));
-
-        final Logger logger = Logger.getLogger(getClass());
+    public void shouldMarkSuccessfulJobAsCompleted() throws Exception {
         try (final var jobManager = new JobManager()) {
+            jobManager.enqueueAll(List.of(new NewJob("foo", null, null, null, null, null, null)));
+
+            jobManager.registerWorker(Set.of("foo"), job -> Optional.empty(), 2);
+
+            await("Job failure")
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(() -> {
+                        final List<QueuedJob> queuedJobs = withJdbiHandle(handle -> handle.attach(JobDao.class).getAllByTag("foo"));
+                        assertThat(queuedJobs).satisfiesExactly(queuedJob -> assertThat(queuedJob.status()).isEqualTo(JobStatus.COMPLETED));
+                    });
+        }
+    }
+
+    @Test
+    public void shouldMarkFailingJobAsFailed() throws Exception {
+        try (final var jobManager = new JobManager()) {
+            jobManager.enqueueAll(List.of(new NewJob("foo", null, null, null, null, null, null)));
+
             jobManager.registerWorker(Set.of("foo"), job -> {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Just for testing");
             }, 2);
 
-            await("Job completion")
-                    .atMost(30, TimeUnit.SECONDS)
+            await("Job failure")
+                    .atMost(5, TimeUnit.SECONDS)
                     .untilAsserted(() -> {
                         final List<QueuedJob> queuedJobs = withJdbiHandle(handle -> handle.attach(JobDao.class).getAllByTag("foo"));
                         assertThat(queuedJobs).satisfiesExactly(queuedJob -> assertThat(queuedJob.status()).isEqualTo(JobStatus.FAILED));
@@ -61,28 +73,32 @@ public class JobManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void test() {
-        useJdbiTransaction(jdbiHandle -> {
-            final var dao = jdbiHandle.attach(JobDao.class);
+    public void shouldPollJobsWithHigherPriorityFirst() throws Exception {
+        try (final var jobManager = new JobManager()) {
+            jobManager.enqueueAll(List.of(
+                    new NewJob("foo", 5, null, null, null, null, null),
+                    new NewJob("foo", 3, null, null, null, null, null),
+                    new NewJob("foo", 4, null, null, null, null, null),
+                    new NewJob("foo", 1, null, null, null, null, null),
+                    new NewJob("foo", 2, null, null, null, null, null)));
 
-            final var newJob = new NewJob("foo", 666, Instant.now(), null, null, null, null);
+            final var processedJobQueue = new ArrayBlockingQueue<QueuedJob>(5);
+            jobManager.registerWorker(Set.of("foo"), job -> {
+                processedJobQueue.add(job);
+                return Optional.empty();
+            }, 1);
 
-            final QueuedJob queuedJob = dao.enqueue(newJob);
-            assertThat(queuedJob).isNotNull();
+            await("Job processing")
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(() -> assertThat(processedJobQueue).hasSize(5));
 
-            final QueuedJob polledJob = dao.poll(Set.of("foo"));
-            assertThat(polledJob).isNotNull();
-            assertThat(polledJob.id()).isGreaterThan(0);
-            assertThat(polledJob.status()).isEqualTo(JobStatus.RUNNING);
-            assertThat(polledJob.priority()).isEqualTo(666);
-            assertThat(polledJob.createdAt()).isNotNull();
-            assertThat(polledJob.startedAt()).isNotNull();
-            assertThat(polledJob.attempts()).isEqualTo(1);
-
-            final QueuedJob secondPolledJob = dao.poll(Set.of("foo"));
-            assertThat(secondPolledJob).isNull();
-        });
-
+            assertThat(processedJobQueue).satisfiesExactly(
+                    job -> assertThat(job.priority()).isEqualTo(5),
+                    job -> assertThat(job.priority()).isEqualTo(4),
+                    job -> assertThat(job.priority()).isEqualTo(3),
+                    job -> assertThat(job.priority()).isEqualTo(2),
+                    job -> assertThat(job.priority()).isEqualTo(1));
+        }
     }
 
 }

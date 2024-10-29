@@ -22,16 +22,18 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
+import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 @RegisterConstructorMapper(QueuedJob.class)
 public interface JobDao {
 
-    @SqlUpdate("""
+    @SqlBatch("""
             INSERT INTO "JOB"(
               "STATUS"
             , "TAG"
@@ -41,25 +43,23 @@ public interface JobDao {
             , "PAYLOAD"
             , "WORKFLOW_STEP_RUN_ID"
             , "CREATED_AT"
-            , "STARTED_AT"
             ) VALUES (
-              'NEW'
+              'PENDING'
             , :tag
             , :priority
-            , :scheduledFor
+            , COALESCE(:scheduledFor, NOW())
             , :payloadType
             , :payload
             , :workflowStepRunId
-            , NOW()
-            , NULL)
+            , NOW())
             RETURNING *
             """)
     @GetGeneratedKeys("*")
-    QueuedJob enqueue(@BindMethods NewJob newJob);
+    List<QueuedJob> enqueueAll(@BindMethods Collection<NewJob> newJobs);
 
     @SqlUpdate("""
             UPDATE "JOB"
-               SET "STATUS" = 'COMPLETE'
+               SET "STATUS" = 'COMPLETED'
              WHERE "ID" = :id
             RETURNING *
             """)
@@ -79,7 +79,7 @@ public interface JobDao {
             WITH "CTE_POLL" AS (
                 SELECT "ID"
                   FROM "JOB"
-                 WHERE "STATUS" NOT IN ('COMPLETE', 'FAILED', 'RUNNING')
+                 WHERE "STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING')
                    AND "SCHEDULED_FOR" <= NOW()
                    AND "TAG" = ANY(:tags)
                  ORDER BY "PRIORITY" DESC NULLS LAST

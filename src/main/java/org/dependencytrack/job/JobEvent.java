@@ -16,21 +16,22 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.job;
 
-public enum WorkflowStepType {
+public sealed interface JobEvent permits JobEvent.JobCompletedEvent, JobEvent.JobFailedEvent, JobEvent.JobQueuedEvent, JobEvent.JobStartedEvent {
 
-    /**
-     * The engine will queue a job automatically for this step,
-     * and observe its outcome to determine the step status.
-     */
-    JOB,
+    QueuedJob job();
 
-    /**
-     * The step is to be claimed and updated manually.
-     */
-    MANUAL
+    record JobCompletedEvent(QueuedJob job) implements JobEvent {
+    }
 
-    // TODO: Event
+    record JobFailedEvent(QueuedJob job) implements JobEvent {
+    }
+
+    record JobQueuedEvent(QueuedJob job) implements JobEvent {
+    }
+
+    record JobStartedEvent(QueuedJob job) implements JobEvent {
+    }
 
 }

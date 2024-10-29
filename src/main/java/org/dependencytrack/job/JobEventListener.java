@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.job;
 
-public interface JobStatusListener {
+public interface JobEventListener {
 
-    void onStatusChanged(final QueuedJob queuedJob);
+    void onJobEvent(final JobEvent event);
 
 }
