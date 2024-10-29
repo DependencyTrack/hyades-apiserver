@@ -29,7 +29,6 @@ public record QueuedJob(
         Instant scheduledFor,
         JobPayloadType payloadType,
         byte[] payload,
-        @Nullable Long workflowRunId,
         @Nullable Long workflowStepRunId,
         Instant createdAt,
         @Nullable Instant startedAt,

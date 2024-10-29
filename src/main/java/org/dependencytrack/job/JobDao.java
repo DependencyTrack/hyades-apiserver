@@ -39,7 +39,6 @@ public interface JobDao {
             , "SCHEDULED_FOR"
             , "PAYLOAD_TYPE"
             , "PAYLOAD"
-            , "WORKFLOW_RUN_ID"
             , "WORKFLOW_STEP_RUN_ID"
             , "CREATED_AT"
             , "STARTED_AT"
@@ -50,7 +49,6 @@ public interface JobDao {
             , :scheduledFor
             , :payloadType
             , :payload
-            , :workflowRunId
             , :workflowStepRunId
             , NOW()
             , NULL)
@@ -81,7 +79,7 @@ public interface JobDao {
             WITH "CTE_POLL" AS (
                 SELECT "ID"
                   FROM "JOB"
-                 WHERE "STATUS" NOT IN ('RUNNING', 'COMPLETE')
+                 WHERE "STATUS" NOT IN ('COMPLETE', 'FAILED', 'RUNNING')
                    AND "SCHEDULED_FOR" <= NOW()
                    AND "TAG" = ANY(:tags)
                  ORDER BY "PRIORITY" DESC NULLS LAST

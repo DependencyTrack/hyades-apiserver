@@ -28,17 +28,17 @@ public class Workflows {
             "bom-upload-processing",
             1,
             List.of(
-                    new WorkflowStepSpec("consume-bom", Collections.emptySet()),
-                    new WorkflowStepSpec("process-bom", Set.of("consume-bom")),
-                    new WorkflowStepSpec("analyze-vulns", Set.of("process-bom")),
-                    new WorkflowStepSpec("evaluate-policies", Set.of("analyze-vulns")),
-                    new WorkflowStepSpec("update-metrics", Set.of("evaluate-policies"))));
+                    new WorkflowStepSpec("consume-bom", WorkflowStepType.JOB, Collections.emptySet()),
+                    new WorkflowStepSpec("process-bom", WorkflowStepType.JOB, Set.of("consume-bom")),
+                    new WorkflowStepSpec("analyze-vulns", WorkflowStepType.JOB, Set.of("process-bom")),
+                    new WorkflowStepSpec("evaluate-policies", WorkflowStepType.JOB, Set.of("analyze-vulns")),
+                    new WorkflowStepSpec("update-metrics", WorkflowStepType.JOB, Set.of("evaluate-policies"))));
 
     public static final WorkflowSpec WORKFLOW_PROJECT_VULNERABILITY_ANALYSIS_V1 = new WorkflowSpec(
             "project-vuln-analysis",
             1,
             List.of(
-                    new WorkflowStepSpec("analyze-vulns", Collections.emptySet()),
-                    new WorkflowStepSpec("update-metrics", Set.of("analyze-vulns"))));
+                    new WorkflowStepSpec("analyze-vulns", WorkflowStepType.JOB, Collections.emptySet()),
+                    new WorkflowStepSpec("update-metrics", WorkflowStepType.JOB, Set.of("analyze-vulns"))));
 
 }

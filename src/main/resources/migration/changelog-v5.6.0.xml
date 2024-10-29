@@ -124,6 +124,10 @@
         </createIndex>
     </changeSet>
 
+    <!--
+        TODO: Use Liquibase contexts to allow these to be applied to a different datasource?
+        TODO: Archive tables?
+    -->
     <changeSet id="v5.6.0-8" author="nscuro">
         <createTable tableName="JOB">
             <column autoIncrement="true" name="ID" type="BIGINT">
@@ -146,6 +150,7 @@
             </column>
             <column name="STARTED_AT" type="TIMESTAMPTZ"/>
             <column name="ATTEMPTS" type="INT"/>
+            <column name="WORKFLOW_STEP_RUN_ID" type="BIGINT"/>
         </createTable>
 
         <createTable tableName="WORKFLOW">
@@ -172,6 +177,9 @@
             <column name="NAME" type="TEXT">
                 <constraints nullable="false"/>
             </column>
+            <column name="TYPE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <createTable tableName="WORKFLOW_STEP_DEPENDENCY">
@@ -194,6 +202,7 @@
             <column name="CREATED_AT" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ"/>
             <column name="STARTED_AT" type="TIMESTAMPTZ"/>
         </createTable>
 

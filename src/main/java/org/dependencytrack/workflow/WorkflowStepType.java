@@ -18,16 +18,19 @@
  */
 package org.dependencytrack.workflow;
 
-import jakarta.annotation.Nullable;
-import java.util.UUID;
+public enum WorkflowStepType {
 
-public record ClaimedWorkflowStepRun(
-        long id,
-        long stepId,
-        long workflowRunId,
-        UUID token,
-        String stepName,
-        WorkflowStepType stepType,
-        WorkflowStepRunStatus status,
-        @Nullable Integer priority) {
+    /**
+     * The engine will queue a job automatically for this step,
+     * and observe its outcome to determine the step status.
+     */
+    JOB,
+
+    /**
+     * The step is claimed and updated manually.
+     */
+    MANUAL
+
+    // TODO: Event
+
 }

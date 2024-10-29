@@ -21,5 +21,6 @@ package org.dependencytrack.workflow;
 public record WorkflowStep(
         long id,
         long workflowId,
-        String name) {
+        String name,
+        WorkflowStepType type) {
 }

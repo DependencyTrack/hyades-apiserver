@@ -23,6 +23,7 @@ import java.time.Instant;
 
 public record WorkflowStepRunView(
         String stepName,
+        WorkflowStepType stepType,
         WorkflowStepRunStatus status,
         Instant createdAt,
         @Nullable Instant updatedAt,

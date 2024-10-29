@@ -32,6 +32,7 @@ public record WorkflowRunView(
         @Nullable Integer priority,
         WorkflowRunStatus status,
         Instant createdAt,
+        @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
         List<WorkflowStepRunView> steps) {
 
@@ -44,8 +45,9 @@ public record WorkflowRunView(
             final Integer priority,
             final WorkflowRunStatus status,
             final Instant createdAt,
+            @Nullable final Instant updatedAt,
             @Nullable final Instant startedAt) {
-        this(workflowName, workflowVersion, token, priority, status, createdAt, startedAt, null);
+        this(workflowName, workflowVersion, token, priority, status, createdAt, updatedAt, startedAt, null);
     }
 
 }

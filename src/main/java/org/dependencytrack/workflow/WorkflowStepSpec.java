@@ -22,6 +22,7 @@ import java.util.Set;
 
 public record WorkflowStepSpec(
         String name,
+        WorkflowStepType type,
         Set<String> stepDependencies) {
 
     // TODO: Unique ID to allow for multiple occurrences of a step in a workflow?

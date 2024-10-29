@@ -34,23 +34,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -76,10 +59,31 @@ import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.workflow.StartWorkflowOptions;
+import org.dependencytrack.workflow.WorkflowEngine;
+import org.dependencytrack.workflow.WorkflowRunView;
+import org.dependencytrack.workflow.Workflows;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -477,7 +481,11 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
+            final WorkflowRunView workflowRun = WorkflowEngine.getInstance().startWorkflow(new StartWorkflowOptions(
+                    Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
+                    Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+            bomUploadEvent.setChainIdentifier(workflowRun.token());
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
 
@@ -509,9 +517,14 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
+                final WorkflowRunView workflowRun = WorkflowEngine.getInstance().startWorkflow(new StartWorkflowOptions(
+                        Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
+                        Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
+
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
                 final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+                bomUploadEvent.setChainIdentifier(workflowRun.token());
 
                 qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
                 Event.dispatch(bomUploadEvent);

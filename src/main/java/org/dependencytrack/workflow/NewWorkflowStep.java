@@ -20,5 +20,6 @@ package org.dependencytrack.workflow;
 
 public record NewWorkflowStep(
         long workflowId,
-        String name) {
+        String name,
+        WorkflowStepType type) {
 }

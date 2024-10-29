@@ -24,10 +24,12 @@ import org.slf4j.MDC;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,14 +38,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
+// TODO: Metrics instrumentation
 public class JobManager implements Closeable {
 
     private static final Logger LOGGER = Logger.getLogger(JobManager.class);
     private static final JobManager INSTANCE = new JobManager();
 
     private final Map<String, ExecutorService> executorByTag = new ConcurrentHashMap<>();
+    private final List<JobStatusListener> statusListeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
     public static JobManager getInstance() {
@@ -52,6 +55,10 @@ public class JobManager implements Closeable {
 
     public void tearDown() throws Exception {
         close();
+    }
+
+    public void registerStatusListener(final JobStatusListener listener) {
+        statusListeners.add(listener);
     }
 
     public void registerWorker(final Set<String> tags, final JobWorker worker, final int concurrency) {
@@ -90,18 +97,30 @@ public class JobManager implements Closeable {
                         }
 
                         pollMisses.set(0);
+                        notifyStatusChange(polledJob);
+
+                        // TODO: Perform status changes to COMPLETED, FAILED, etc. asynchronously in batches for better throughput.
+
                         try (var ignoredMdcJobId = MDC.putCloseable("jobId", String.valueOf(polledJob.id()));
+                             var ignoredMdcJobTag = MDC.putCloseable("jobTag", polledJob.tag());
                              var ignoredMdcJobPriority = MDC.putCloseable("jobPriority", String.valueOf(polledJob.priority()));
                              var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempts", String.valueOf(polledJob.attempts()))) {
                             worker.process(polledJob);
-                            useJdbiTransaction(handle -> handle.attach(JobDao.class).complete(polledJob));
+                            final QueuedJob completedJob = inJdbiTransaction(
+                                    handle -> handle.attach(JobDao.class).complete(polledJob));
+                            notifyStatusChange(completedJob);
                             LOGGER.info("Job completed successfully");
                         } catch (RuntimeException e) {
+                            // TODO: Retryable or fatal?
                             LOGGER.error("Job processing failed", e);
-                            useJdbiTransaction(handle -> handle.attach(JobDao.class).fail(polledJob));
+                            final QueuedJob failedJob = inJdbiTransaction(
+                                    handle -> handle.attach(JobDao.class).fail(polledJob));
+                            notifyStatusChange(failedJob);
                         }
                     }
                 } catch (RuntimeException e) {
+                    // TODO: Potentially need to check if job needs to be failed.
+                    //  Better yet, organize try-catch-blocks to make this less ambiguous.
                     LOGGER.error("F", e);
                 } finally {
                     workersLatch.countDown();
@@ -127,6 +146,11 @@ public class JobManager implements Closeable {
         }
     }
 
+    // TODO: Handle singleton jobs
+    public QueuedJob enqueue(final NewJob newJob) {
+        return inJdbiTransaction(handle -> handle.attach(JobDao.class).enqueue(newJob));
+    }
+
     @Override
     public void close() throws IOException {
         LOGGER.info("Signaling workers to shut down");
@@ -149,7 +173,14 @@ public class JobManager implements Closeable {
         }
 
         executorByTag.clear();
+        statusListeners.clear();
         isShuttingDown.set(false);
+    }
+
+    private void notifyStatusChange(final QueuedJob queuedJob) {
+        for (final JobStatusListener listener : statusListeners) {
+            listener.onStatusChanged(queuedJob);
+        }
     }
 
 }

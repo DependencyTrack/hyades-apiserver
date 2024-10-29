@@ -29,6 +29,7 @@ public record WorkflowRun(
         @Nullable Integer priority,
         WorkflowRunStatus status,
         Instant createdAt,
+        @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
         @Nullable Instant endedAt) {
 

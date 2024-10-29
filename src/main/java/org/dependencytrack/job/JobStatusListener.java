@@ -16,18 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.job;
 
-import jakarta.annotation.Nullable;
-import java.util.UUID;
+public interface JobStatusListener {
 
-public record ClaimedWorkflowStepRun(
-        long id,
-        long stepId,
-        long workflowRunId,
-        UUID token,
-        String stepName,
-        WorkflowStepType stepType,
-        WorkflowStepRunStatus status,
-        @Nullable Integer priority) {
+    void onStatusChanged(final QueuedJob queuedJob);
+
 }
