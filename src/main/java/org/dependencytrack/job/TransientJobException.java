@@ -18,16 +18,10 @@
  */
 package org.dependencytrack.job;
 
-public enum JobStatus {
+public class TransientJobException extends RuntimeException {
 
-    COMPLETED,
-
-    FAILED,
-
-    PENDING,
-
-    PENDING_RETRY,
-
-    RUNNING
+    public TransientJobException(String message) {
+        super(message);
+    }
 
 }

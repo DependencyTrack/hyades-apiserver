@@ -29,10 +29,14 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowSubsystemInitializer.class);
 
+    private WorkflowEngine workflowEngine;
+
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing workflow engine");
-        final var workflowEngine = WorkflowEngine.getInstance();
+        workflowEngine = WorkflowEngine.getInstance();
+        workflowEngine.start();
+
         JobEngine.getInstance().registerStatusListener(workflowEngine);
 
         for (final WorkflowSpec workflow : Workflows.ALL_WORKFLOWS) {

@@ -27,6 +27,7 @@ import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -73,7 +74,7 @@ public interface JobDao {
             RETURNING *
             """)
     @GetGeneratedKeys("*")
-    List<QueuedJob> transitionStatus(@BindMethods Collection<JobStatusTransition> transitions);
+    List<QueuedJob> transitionStatuses(@BindMethods Collection<JobStatusTransition> transitions);
 
     @SqlUpdate("""
             WITH "CTE_POLL" AS (
@@ -98,6 +99,28 @@ public interface JobDao {
             """)
     @GetGeneratedKeys("*")
     QueuedJob poll(@Bind Set<String> kinds);
+
+    @SqlUpdate("""
+            WITH "CTE_POLL" AS (
+                SELECT "ID"
+                  FROM "JOB"
+                 WHERE "ID" = :job.id
+                   AND "STATUS" = 'RUNNING'
+                   FOR UPDATE
+                  SKIP LOCKED
+                 LIMIT 1)
+            UPDATE "JOB"
+               SET "STATUS" = 'PENDING_RETRY'
+                 , "SCHEDULED_FOR" = NOW() + :delay
+                 , "UPDATED_AT" = NOW()
+                 , "ATTEMPTS" = "ATTEMPTS" + 1
+                 , "FAILURE_REASON" = :failureReason
+              FROM "CTE_POLL"
+             WHERE "JOB"."ID" = "CTE_POLL"."ID"
+            RETURNING "JOB".*
+            """)
+    @GetGeneratedKeys("*")
+    QueuedJob requeueForRetry(@BindMethods("job") QueuedJob job, @Bind Duration delay, @Bind String failureReason);
 
     @SqlBatch("""
             INSERT INTO "JOB_SCHEDULE" (

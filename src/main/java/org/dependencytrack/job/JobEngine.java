@@ -87,6 +87,10 @@ public class JobEngine implements Closeable {
             return equals(CREATED) || equals(STOPPED);
         }
 
+        private boolean isStoppingOrStopped() {
+            return equals(STOPPING) || equals(STOPPED);
+        }
+
     }
 
     private static final Logger LOGGER = Logger.getLogger(JobEngine.class);
@@ -155,7 +159,10 @@ public class JobEngine implements Closeable {
     public void registerWorker(final Set<String> kinds, final int concurrency, final JobWorker worker) {
         final boolean isCloseable = Closeable.class.isAssignableFrom(worker.getClass());
         final int numThreads = isCloseable ? concurrency + 1 : concurrency;
-        final ExecutorService es = Executors.newFixedThreadPool(numThreads);
+        final ExecutorService es = Executors.newFixedThreadPool(numThreads, new BasicThreadFactory.Builder()
+                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                .namingPattern("JobEngine-Worker-" + String.join("-", kinds) + "-%d")
+                .build());
         executorByKind.put(worker.getClass().getName(), es);
         final var intervalFunction = IntervalFunction.ofExponentialRandomBackoff(
                 /* initialIntervalMillis */ 250,
@@ -170,7 +177,7 @@ public class JobEngine implements Closeable {
                 try (var ignoredMdcJobWorker = MDC.putCloseable("jobWorker", worker.getClass().getName());
                      var ignoredMdcJobWorkerThreadId = MDC.putCloseable("jobWorkerThread", workerThreadId.toString())) {
                     final var pollMisses = new AtomicInteger(0);
-                    while (state != State.STOPPING) {
+                    while (!state.isStoppingOrStopped()) {
                         final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(kinds));
                         if (polledJob == null) {
                             final long backoffMs = intervalFunction.apply(pollMisses.incrementAndGet());
@@ -200,14 +207,30 @@ public class JobEngine implements Closeable {
                             }
                             LOGGER.debug("Job completed successfully");
                         } catch (Exception e) {
-                            // TODO: Retryable or fatal?
-                            LOGGER.error("Job processing failed", e);
-                            final var event = new JobFailedEvent(Instant.now(), polledJob, e.getMessage());
-                            try {
-                                eventQueue.put(event);
-                            } catch (InterruptedException ex) {
-                                Thread.currentThread().interrupt();
-                                throw new IllegalStateException("Failed to enqueue %s".formatted(event), ex);
+                            if (e instanceof TransientJobException) {
+                                if (polledJob.attempts() < 6) {
+                                    final long delayMillis = intervalFunction.apply(polledJob.attempts());
+                                    final QueuedJob requeuedJob = inJdbiTransaction(handle ->
+                                            handle.attach(JobDao.class).requeueForRetry(
+                                                    polledJob,
+                                                    Duration.ofMillis(delayMillis),
+                                                    e.getMessage()));
+                                    // TODO: Send event?
+                                    // TODO: Can we do this asynchronously to improve throughput?
+                                    //  Would invalidate the retry delay due to the flush interval though.
+                                    LOGGER.warn("Queued for retry: %s".formatted(requeuedJob));
+
+                                } else {
+                                    LOGGER.warn("Max retry attempts exceeded for %s".formatted(polledJob));
+                                }
+                            } else {
+                                final var event = new JobFailedEvent(Instant.now(), polledJob, e.getMessage());
+                                try {
+                                    eventQueue.put(event);
+                                } catch (InterruptedException ex) {
+                                    Thread.currentThread().interrupt();
+                                    throw new IllegalStateException("Failed to enqueue %s".formatted(event), ex);
+                                }
                             }
                         }
                     }
@@ -386,7 +409,7 @@ public class JobEngine implements Closeable {
 
             final List<JobEvent> completedEvents = eventsByStatus.get(JobStatus.COMPLETED);
             if (completedEvents != null) {
-                completedJobs.addAll(dao.transitionStatus(completedEvents.stream()
+                completedJobs.addAll(dao.transitionStatuses(completedEvents.stream()
                         .map(event -> new JobStatusTransition(
                                 event.job().id(),
                                 JobStatus.COMPLETED,
@@ -397,7 +420,7 @@ public class JobEngine implements Closeable {
 
             final List<JobEvent> failedEvents = eventsByStatus.get(JobStatus.FAILED);
             if (failedEvents != null) {
-                failedJobs.addAll(dao.transitionStatus(failedEvents.stream()
+                failedJobs.addAll(dao.transitionStatuses(failedEvents.stream()
                         .map(event -> new JobStatusTransition(
                                 event.job().id(),
                                 JobStatus.FAILED,

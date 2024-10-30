@@ -35,10 +35,13 @@ public class JobSubsystemInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(JobSubsystemInitializer.class);
 
+    private JobEngine jobEngine;
+
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing job engine");
-        final var jobEngine = JobEngine.getInstance();
+        jobEngine = JobEngine.getInstance();
+        jobEngine.start();
 
         jobEngine.scheduleAll(List.of(
                 new NewJobSchedule("nvd-mirroring", "* * * * *", "mirror-nvd", null, null),
@@ -62,7 +65,7 @@ public class JobSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Shutting down engine manager");
 
         try {
-            JobEngine.getInstance().close();
+            jobEngine.close();
         } catch (IOException e) {
             LOGGER.warn("Graceful shutdown of job engine failed", e);
         }
@@ -83,8 +86,12 @@ public class JobSubsystemInitializer implements ServletContextListener {
 
             Thread.sleep(random.nextInt(10, 1000));
 
-            if (random.nextDouble() > 0.1) {
-                throw new IllegalStateException("Oh no!");
+            if (random.nextDouble() < 0.1) {
+                if (random.nextDouble() > 0.3) {
+                    throw new TransientJobException("I have the feeling this might resolve soon!");
+                }
+
+                throw new IllegalStateException("Oh no, this looks permanently broken!");
             }
 
             return Optional.empty();

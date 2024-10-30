@@ -130,7 +130,7 @@
     -->
     <changeSet id="v5.6.0-8" author="nscuro">
         <sql splitStatements="true">
-            CREATE TYPE JOB_STATUS AS ENUM ('COMPLETED', 'FAILED', 'PENDING', 'RUNNING');
+            CREATE TYPE JOB_STATUS AS ENUM ('COMPLETED', 'FAILED', 'PENDING', 'PENDING_RETRY', 'RUNNING');
             CREATE TYPE WORKFLOW_STEP_TYPE AS ENUM ('JOB', 'MANUAL');
             CREATE TYPE WORKFLOW_RUN_STATUS AS ENUM ('CANCELLED', 'COMPLETED', 'FAILED', 'PENDING', 'RUNNING');
             CREATE TYPE WORKFLOW_STEP_RUN_STATUS AS ENUM ('CANCELLED', 'COMPLETED', 'FAILED', 'PENDING', 'RUNNING');
@@ -333,7 +333,7 @@
                 -- NB: Due to batching, PENDING -> RUNNING transitions might be skipped.
                 -- Thus, we need to support PENDING -> COMPLETED/FAILED transitions as well.
                 ELSIF (OLD."STATUS" = 'PENDING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING'))
-                   OR (OLD."STATUS" = 'RUNNING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED'))
+                   OR (OLD."STATUS" = 'RUNNING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED', 'PENDING_RETRY'))
                    OR (OLD."STATUS" IN ('COMPLETED', 'FAILED')) THEN
                     RAISE EXCEPTION 'Invalid status transition from % to %', OLD."STATUS", NEW."STATUS";
                 END IF;
