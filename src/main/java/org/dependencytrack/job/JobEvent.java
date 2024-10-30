@@ -18,20 +18,25 @@
  */
 package org.dependencytrack.job;
 
+import java.time.Instant;
+
 public sealed interface JobEvent permits JobEvent.JobCompletedEvent, JobEvent.JobFailedEvent, JobEvent.JobQueuedEvent, JobEvent.JobStartedEvent {
+
+    Instant timestamp();
 
     QueuedJob job();
 
-    record JobCompletedEvent(QueuedJob job) implements JobEvent {
+    // TODO: Capture job result.
+    record JobCompletedEvent(Instant timestamp, QueuedJob job) implements JobEvent {
     }
 
-    record JobFailedEvent(QueuedJob job) implements JobEvent {
+    record JobFailedEvent(Instant timestamp, QueuedJob job, String failureReason) implements JobEvent {
     }
 
-    record JobQueuedEvent(QueuedJob job) implements JobEvent {
+    record JobQueuedEvent(Instant timestamp, QueuedJob job) implements JobEvent {
     }
 
-    record JobStartedEvent(QueuedJob job) implements JobEvent {
+    record JobStartedEvent(Instant timestamp, QueuedJob job) implements JobEvent {
     }
 
 }

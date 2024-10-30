@@ -19,6 +19,8 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import alpine.event.framework.LoggableUncaughtExceptionHandler;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.dependencytrack.job.JobEvent;
 import org.dependencytrack.job.JobEvent.JobCompletedEvent;
 import org.dependencytrack.job.JobEvent.JobFailedEvent;
@@ -33,12 +35,12 @@ import org.dependencytrack.workflow.WorkflowDao.WorkflowStepRunTransition;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,17 +64,34 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngine.class);
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
-    private final BlockingQueue<JobEvent> jobEventQueue = new ArrayBlockingQueue<>(100);
+    private final BlockingQueue<JobEvent> jobEventQueue;
     private final ScheduledExecutorService jobEventFlushExecutor;
-    private final long jobEventFlushIntervalSeconds = 5;
+    private final Duration jobEventFlushInterval;
     private final ReentrantLock jobEventFlushLock = new ReentrantLock();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
+    private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
     public WorkflowEngine() {
+        this(100, Duration.ofSeconds(1), Duration.ofSeconds(5));
+    }
+
+    public WorkflowEngine(
+            final int jobEventQueueSize,
+            final Duration jobEventFlushInitialDelay,
+            final Duration jobEventFlushInterval) {
         // TODO: Move this to a start() method and make sure the engine can be restarted if stopped.
         // TODO: Find reasonable defaults for queue size and flush interval.
-        jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor();
-        jobEventFlushExecutor.scheduleAtFixedRate(this::flushJobEvents, 1, jobEventFlushIntervalSeconds, TimeUnit.SECONDS);
+        this.jobEventQueue = new ArrayBlockingQueue<>(jobEventQueueSize);
+        this.jobEventFlushInterval = requireNonNull(jobEventFlushInterval);
+        this.jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                .namingPattern("WorkflowEngine-JobEventFlusher-%d")
+                .build());
+        this.jobEventFlushExecutor.scheduleAtFixedRate(
+                this::flushJobEvents,
+                jobEventFlushInitialDelay.toMillis(),
+                jobEventFlushInterval.toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     public static WorkflowEngine getInstance() {
@@ -84,8 +103,6 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     // TODO: Share transaction with JobManager?
 
     public void deploy(final WorkflowSpec spec) {
-        assertRunning();
-
         // TODO: Validate spec
 
         useJdbiTransaction(handle -> {
@@ -93,6 +110,10 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
             LOGGER.info("Deploying workflow %s/%d".formatted(spec.name(), spec.version()));
             final Workflow workflow = dao.createWorkflow(new NewWorkflow(spec.name(), spec.version()));
+            if (workflow == null) {
+                throw new IllegalStateException("Workflow %s/%d is already deployed".formatted(
+                        spec.name(), spec.version()));
+            }
 
             final var workflowStepByName = new HashMap<String, WorkflowStep>(spec.stepSpecs().size());
             final var workflowStepDependencies = new HashMap<String, Set<String>>();
@@ -217,31 +238,10 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         });
     }
 
-    public void restartStepRun(final UUID token, String stepName) {
-        assertRunning();
-
-        useJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
-            final WorkflowStepRun stepRun = dao.getStepRunForUpdateByTokenAndName(token, stepName);
-            if (stepRun == null) {
-                throw new NoSuchElementException("No step run exists for token %s and name %s".formatted(token, stepName));
-            }
-
-            if (!stepRun.status().canTransition(WorkflowStepRunStatus.PENDING)) {
-                throw new IllegalStateException("Can not transition step run from %s to %s".formatted(
-                        stepRun.status(), WorkflowStepRunStatus.PENDING));
-            }
-
-            final boolean transitioned = dao.transitionStepRun(stepRun.id(), WorkflowStepRunStatus.PENDING);
-            if (!transitioned) {
-                throw new IllegalStateException("Did not transition step run from %s to %s".formatted(
-                        stepRun.status(), WorkflowStepRunStatus.PENDING));
-            }
-        });
-    }
-
     @Override
     public void onJobEvent(final JobEvent event) {
+        assertRunning();
+
         final boolean isRelevant = event instanceof JobCompletedEvent
                                    || event instanceof JobFailedEvent
                                    || event instanceof JobStartedEvent;
@@ -251,7 +251,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
         final boolean queued;
         try {
-            queued = jobEventQueue.offer(event, jobEventFlushIntervalSeconds, TimeUnit.SECONDS);
+            queued = jobEventQueue.offer(event, jobEventFlushInterval.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Thread was interrupted while waiting to enqueue %s".formatted(event), e);
@@ -281,7 +281,10 @@ public class WorkflowEngine implements JobEventListener, Closeable {
             throw new RuntimeException(e);
         }
 
+        isStopped.set(true);
         flushJobEvents();
+        jobEventQueue.clear();
+        isShuttingDown.set(false);
     }
 
     private void flushJobEvents() {
@@ -297,7 +300,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         assert jobEventFlushLock.isHeldByCurrentThread();
 
         if (jobEventQueue.isEmpty()) {
-            LOGGER.debug("Nothing to flush");
+            LOGGER.debug("No job events to flush");
             return;
         }
 
@@ -315,11 +318,17 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
             switch (event) {
                 case JobCompletedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId, WorkflowStepRunStatus.COMPLETED));
-                case JobFailedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId, WorkflowStepRunStatus.FAILED));
+                        stepRunId,
+                        WorkflowStepRunStatus.COMPLETED,
+                        /* failureReason */ null));
+                case JobFailedEvent failedEvent -> transitions.add(new WorkflowStepRunTransition(
+                        stepRunId,
+                        WorkflowStepRunStatus.FAILED,
+                        "Job failed: %s".formatted(failedEvent.failureReason())));
                 case JobStartedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId, WorkflowStepRunStatus.RUNNING));
+                        stepRunId,
+                        WorkflowStepRunStatus.RUNNING,
+                        /* failureReason */ null));
                 default -> throw new IllegalStateException("Unexpected event: " + event);
             }
         }
@@ -334,7 +343,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
                         transitions.size(), transitionedStepRuns.size()));
             }
 
-            LOGGER.info("Transitioned status of %d workflow step runs".formatted(transitionedStepRuns.size()));
+            LOGGER.debug("Transitioned status of %d workflow step runs".formatted(transitionedStepRuns.size()));
             final Map<WorkflowStepRunStatus, List<WorkflowStepRun>> stepRunsByStatus = transitionedStepRuns.stream()
                     .collect(Collectors.groupingBy(WorkflowStepRun::status, Collectors.toList()));
 
@@ -355,32 +364,40 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
                 final List<WorkflowRun> completedWorkflowRuns = dao.completeWorkflowRunsWhenAllStepRunsCompleted(
                         completedStepRuns.stream().map(WorkflowStepRun::workflowRunId).toList());
-                LOGGER.info("Completed %d workflow runs".formatted(completedWorkflowRuns.size()));
+                if (LOGGER.isDebugEnabled()) {
+                    for (final WorkflowRun completedWorkflowRun : completedWorkflowRuns) {
+                        LOGGER.debug("Completed %s".formatted(completedWorkflowRun));
+                    }
+                }
             }
 
             final List<WorkflowStepRun> failedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.FAILED);
             if (failedStepRuns != null) {
                 final List<WorkflowStepRun> cancelledStepRuns = dao.cancelDependantStepRuns(failedStepRuns);
-                LOGGER.info("Cancelled %d workflow step runs".formatted(cancelledStepRuns.size()));
+                for (final WorkflowStepRun cancelledStepRun : cancelledStepRuns) {
+                    LOGGER.warn("Cancelled %s".formatted(cancelledStepRun));
+                }
 
                 final List<WorkflowRun> failedWorkflowRuns = dao.transitionWorkflowRuns(failedStepRuns.stream()
                         .map(stepRun -> new WorkflowRunTransition(
                                 stepRun.workflowRunId(),
                                 WorkflowRunStatus.FAILED))
                         .toList());
-                LOGGER.info("Failed %d workflow runs".formatted(failedWorkflowRuns.size()));
+                for (final WorkflowRun failedWorkflowRun : failedWorkflowRuns) {
+                    LOGGER.warn("Failed %s".formatted(failedWorkflowRun));
+                }
             }
         });
 
         if (!jobsToQueue.isEmpty()) {
             final List<QueuedJob> queuedJobs = JobManager.getInstance().enqueueAll(jobsToQueue);
-            LOGGER.info("Queued %s jobs".formatted(queuedJobs.size()));
+            LOGGER.debug("Queued %s jobs".formatted(queuedJobs.size()));
         }
     }
 
     private void assertRunning() {
-        if (isShuttingDown.get()) {
-            throw new IllegalStateException("Workflow engine is shutting down");
+        if (isStopped.get()) {
+            throw new IllegalStateException("Workflow engine is stopped");
         }
     }
 

@@ -23,9 +23,9 @@ import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -57,23 +57,19 @@ public interface JobDao {
     @GetGeneratedKeys("*")
     List<QueuedJob> enqueueAll(@BindMethods Collection<NewJob> newJobs);
 
-    @SqlUpdate("""
-            UPDATE "JOB"
-               SET "STATUS" = 'COMPLETED'
-             WHERE "ID" = :id
-            RETURNING *
-            """)
-    @GetGeneratedKeys("*")
-    QueuedJob complete(@BindMethods QueuedJob queuedJob);
+    record JobStatusTransition(long jobId, JobStatus status, String failureReason, Instant timestamp) {
+    }
 
-    @SqlUpdate("""
+    @SqlBatch("""
             UPDATE "JOB"
-               SET "STATUS" = 'FAILED'
-             WHERE "ID" = :id
+               SET "STATUS" = :status
+                 , "FAILURE_REASON" = :failureReason
+                 , "UPDATED_AT" = :timestamp
+             WHERE "ID" = :jobId
             RETURNING *
             """)
     @GetGeneratedKeys("*")
-    QueuedJob fail(@BindMethods QueuedJob queuedJob);
+    List<QueuedJob> transitionStatus(@BindMethods Collection<JobStatusTransition> transitions);
 
     @SqlUpdate("""
             WITH "CTE_POLL" AS (
@@ -91,19 +87,12 @@ public interface JobDao {
             UPDATE "JOB"
                SET "STATUS" = 'RUNNING'
                  , "STARTED_AT" = COALESCE("STARTED_AT", NOW())
-                 , "ATTEMPTS" = "ATTEMPTS" + 1
+                 , "ATTEMPTS" = COALESCE("ATTEMPTS", 0) + 1
               FROM "CTE_POLL"
              WHERE "JOB"."ID" = "CTE_POLL"."ID"
             RETURNING "JOB".*
             """)
     @GetGeneratedKeys("*")
     QueuedJob poll(@Bind Set<String> tags);
-
-    @SqlQuery("""
-            SELECT *
-              FROM "JOB"
-             WHERE "TAG" = :tag
-            """)
-    List<QueuedJob> getAllByTag(@Bind String tag);
 
 }

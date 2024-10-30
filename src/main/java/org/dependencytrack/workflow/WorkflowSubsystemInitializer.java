@@ -34,7 +34,12 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Initializing workflow engine");
         final var workflowEngine = WorkflowEngine.getInstance();
         JobManager.getInstance().registerStatusListener(workflowEngine);
-        workflowEngine.deploy(Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
+
+        try {
+            workflowEngine.deploy(Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to deploy workflow", e);
+        }
     }
 
     @Override

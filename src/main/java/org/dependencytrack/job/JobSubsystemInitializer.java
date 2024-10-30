@@ -35,8 +35,10 @@ public class JobSubsystemInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing job manager");
         final var jobManager = JobManager.getInstance();
-        jobManager.registerWorker(Set.of("consume-bom"), new RandomlyFailingJobWorker(), 2);
-        jobManager.registerWorker(Set.of("process-bom"), new RandomlyFailingJobWorker(), 1);
+
+        final SecureRandom random = new SecureRandom();
+        jobManager.registerWorker(Set.of("consume-bom"), 5, new RandomlyFailingJobWorker(random));
+        jobManager.registerWorker(Set.of("process-bom"), 5, new RandomlyFailingJobWorker(random));
     }
 
     @Override
@@ -50,16 +52,22 @@ public class JobSubsystemInitializer implements ServletContextListener {
         }
     }
 
-    public static class RandomlyFailingJobWorker implements JobWorker {
+    private static class RandomlyFailingJobWorker implements JobWorker {
 
         private static final Logger LOGGER = Logger.getLogger(RandomlyFailingJobWorker.class);
-        private final SecureRandom random = new SecureRandom();
+        private final SecureRandom random;
+
+        private RandomlyFailingJobWorker(final SecureRandom random) {
+            this.random = random;
+        }
 
         @Override
-        public Optional<JobResult> process(final QueuedJob job) {
-            LOGGER.info("Processing: " + job);
+        public Optional<JobResult> process(final QueuedJob job) throws Exception {
+            LOGGER.debug("Processing " + job);
 
-            if (random.nextBoolean()) {
+            Thread.sleep(random.nextInt(10, 1000));
+
+            if (random.nextDouble() > 100) {
                 throw new IllegalStateException("Oh no!");
             }
 

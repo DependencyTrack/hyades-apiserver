@@ -54,6 +54,7 @@ public interface WorkflowDao extends SqlObject {
             , :version
             , NOW()
             )
+            ON CONFLICT DO NOTHING
             RETURNING *
             """)
     @GetGeneratedKeys("*")
@@ -173,7 +174,7 @@ public interface WorkflowDao extends SqlObject {
                         AND "WFSR"."STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING')
                         -- If the workflow run has dependencies, those have to complete first.
                         AND NOT EXISTS (
-                            SELECT *
+                            SELECT 1
                               FROM "WORKFLOW_STEP_DEPENDENCY" AS "WFSD"
                              INNER JOIN "WORKFLOW_STEP" AS "WFS2"
                                 ON "WFS2"."ID" = "WFSD"."DEPENDENCY_STEP_ID"
@@ -183,11 +184,11 @@ public interface WorkflowDao extends SqlObject {
                              WHERE "WFSD"."DEPENDANT_STEP_ID" = "WFS"."ID"
                                AND "WFSR2"."STATUS" != 'COMPLETED')
                         FOR UPDATE OF "WFSR"
-                       SKIP LOCKED
                       LIMIT 1)
                 UPDATE "WORKFLOW_STEP_RUN" AS "WFSR"
                    SET "STATUS" = 'RUNNING'
                      , "STARTED_AT" = NOW()
+                     , "UPDATED_AT" = NOW()
                    FROM "CTE_STEP_RUN"
                   WHERE "WFSR"."ID" = "CTE_STEP_RUN"."ID"
                 RETURNING "WFSR"."ID" AS "id"
@@ -212,21 +213,6 @@ public interface WorkflowDao extends SqlObject {
                 .list();
     }
 
-    @SqlQuery("""
-            SELECT "WFSR"."ID" AS "ID"
-              FROM "WORKFLOW_STEP_RUN" AS "WFSR"
-             INNER JOIN "WORKFLOW_RUN" AS "WFR"
-                ON "WFR"."ID" = "WFSR"."WORKFLOW_RUN_ID"
-             INNER JOIN "WORKFLOW_STEP" AS "WFS"
-                ON "WFS"."ID" = "WFSR"."WORKFLOW_STEP_ID"
-             WHERE "WFR"."TOKEN" = :token
-               AND "WFS"."NAME" = :stepName
-               FOR UPDATE OF "WFSR"
-              SKIP LOCKED
-             LIMIT 1
-            """)
-    WorkflowStepRun getStepRunForUpdateByTokenAndName(@Bind UUID token, @Bind String name);
-
     record WorkflowRunTransition(long runId, WorkflowRunStatus newStatus) {
     }
 
@@ -248,23 +234,7 @@ public interface WorkflowDao extends SqlObject {
     @GetGeneratedKeys("*")
     List<WorkflowRun> transitionWorkflowRuns(@BindMethods Collection<WorkflowRunTransition> transitions);
 
-    @SqlUpdate("""
-            WITH "CTE_STEP_RUN" AS (
-                SELECT "WFSR"."ID" AS "ID"
-                  FROM "WORKFLOW_STEP_RUN" AS "WFSR"
-                 WHERE "WFSR"."ID" = :id
-                   FOR UPDATE OF "WFSR"
-                  SKIP LOCKED
-                 LIMIT 1)
-            UPDATE "WORKFLOW_STEP_RUN" AS "WFSR"
-               SET "STATUS" = :newStatus
-                 , "UPDATED_AT" = NOW()
-              FROM "CTE_STEP_RUN"
-             WHERE "WFSR"."ID" = "CTE_STEP_RUN"."ID"
-            """)
-    boolean transitionStepRun(@Bind long id, @Bind WorkflowStepRunStatus newStatus);
-
-    record WorkflowStepRunTransition(long stepRunId, WorkflowStepRunStatus newStatus) {
+    record WorkflowStepRunTransition(long stepRunId, WorkflowStepRunStatus newStatus, String failureReason) {
     }
 
     default List<WorkflowStepRun> transitionStepRuns(final Collection<WorkflowStepRunTransition> transitions) {
@@ -274,10 +244,10 @@ public interface WorkflowDao extends SqlObject {
                       FROM "WORKFLOW_STEP_RUN" AS "WFSR"
                      WHERE "WFSR"."ID" = :stepRunId
                        FOR UPDATE
-                      SKIP LOCKED
                      LIMIT 1)
                 UPDATE "WORKFLOW_STEP_RUN" AS "WFSR"
                    SET "STATUS" = :newStatus
+                     , "FAILURE_REASON" = :failureReason
                      , "UPDATED_AT" = NOW()
                   FROM "CTE_STEP_RUN"
                  WHERE "WFSR"."ID" = "CTE_STEP_RUN"."ID"
@@ -299,11 +269,14 @@ public interface WorkflowDao extends SqlObject {
             WITH "CTE_RUN" AS (
                 SELECT "WFR"."ID"
                   FROM "WORKFLOW_RUN" AS "WFR"
-                 INNER JOIN "WORKFLOW_STEP_RUN" AS "WFSR"
-                    ON "WFSR"."WORKFLOW_RUN_ID" = "WFR"."ID"
                  WHERE "WFR"."ID" = :workflowRunId
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM "WORKFLOW_STEP_RUN"
+                        WHERE "WORKFLOW_RUN_ID" = "WFR"."ID"
+                          AND "STATUS" != 'COMPLETED')
                    FOR UPDATE OF "WFR"
-                  SKIP LOCKED)
+                 LIMIT 1)
             UPDATE "WORKFLOW_RUN" AS "WFR"
                SET "STATUS" = 'COMPLETED'
                  , "UPDATED_AT" = NOW()
@@ -337,6 +310,6 @@ public interface WorkflowDao extends SqlObject {
             RETURNING *
             """)
     @GetGeneratedKeys("*")
-    List<WorkflowStepRun> cancelDependantStepRuns(@Bind Collection<WorkflowStepRun> workflowStepRuns);
+    List<WorkflowStepRun> cancelDependantStepRuns(@BindMethods Collection<WorkflowStepRun> workflowStepRuns);
 
 }

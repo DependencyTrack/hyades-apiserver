@@ -25,6 +25,7 @@ public record WorkflowStepRunView(
         String stepName,
         WorkflowStepType stepType,
         WorkflowStepRunStatus status,
+        @Nullable String failureReason,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt) {

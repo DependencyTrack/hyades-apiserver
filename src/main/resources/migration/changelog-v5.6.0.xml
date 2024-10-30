@@ -155,8 +155,10 @@
             <column name="CREATED_AT" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ"/>
             <column name="STARTED_AT" type="TIMESTAMPTZ"/>
             <column name="ATTEMPTS" type="INT"/>
+            <column name="FAILURE_REASON" type="text"/>
             <column name="WORKFLOW_STEP_RUN_ID" type="BIGINT"/>
         </createTable>
 
@@ -222,6 +224,7 @@
             <column name="STATUS" type="WORKFLOW_STEP_RUN_STATUS">
                 <constraints nullable="false"/>
             </column>
+            <column name="FAILURE_REASON" type="TEXT"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>

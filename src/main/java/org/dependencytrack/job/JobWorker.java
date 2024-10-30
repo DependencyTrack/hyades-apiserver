@@ -22,6 +22,6 @@ import java.util.Optional;
 
 public interface JobWorker {
 
-    Optional<JobResult> process(final QueuedJob job);
+    Optional<JobResult> process(final QueuedJob job) throws Exception;
 
 }

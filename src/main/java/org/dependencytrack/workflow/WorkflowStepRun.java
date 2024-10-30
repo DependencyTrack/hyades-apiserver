@@ -26,6 +26,7 @@ public record WorkflowStepRun(
         long workflowRunId,
         long workflowStepId,
         WorkflowStepRunStatus status,
+        @Nullable String failureReason,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt) {

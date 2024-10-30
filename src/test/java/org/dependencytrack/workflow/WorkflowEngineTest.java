@@ -20,109 +20,153 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.job.JobManager;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.junit.Test;
 
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1;
 
 public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
-    public void foo() throws Exception {
-        final var workflowEngine = WorkflowEngine.getInstance();
-        workflowEngine.deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
+    public void shouldHandleManyWorkflowRuns() throws Exception {
+        try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
+             final var jobManager = new JobManager(25, Duration.ZERO, Duration.ofMillis(100))) {
+            jobManager.registerStatusListener(workflowEngine);
 
-        final var jobManager = JobManager.getInstance();
-        jobManager.registerStatusListener(workflowEngine);
+            workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
+                    new WorkflowStepSpec("foo", WorkflowStepType.JOB, Collections.emptySet()),
+                    new WorkflowStepSpec("bar", WorkflowStepType.JOB, Set.of("foo")))));
 
-        try {
-            final var countDownLatch = new CountDownLatch(1000);
-            jobManager.registerWorker(Set.of("consume-bom"), job -> {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+            final var random = new SecureRandom();
+            jobManager.registerWorker(Set.of("foo"), 10, job -> {
+                Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
-            }, 10);
-            jobManager.registerWorker(Set.of("process-bom"), job -> {
-                countDownLatch.countDown();
+            });
+            jobManager.registerWorker(Set.of("bar"), 1, job -> {
+                Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
-            }, 1);
+            });
 
             final var workflowsToStart = new ArrayList<StartWorkflowOptions>(1000);
             for (int i = 0; i < 1000; i++) {
-                workflowsToStart.add(new StartWorkflowOptions(
-                        WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
-                        WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
+                workflowsToStart.add(new StartWorkflowOptions("test", 1));
             }
 
             final List<WorkflowRunView> startedWorkflows = workflowEngine.startWorkflows(workflowsToStart);
             assertThat(startedWorkflows).hasSize(1000);
 
-            await("foo")
+            await("Workflow run completion")
                     .atMost(360, TimeUnit.SECONDS)
-                    .until(() -> countDownLatch.getCount() == 0);
-        } finally {
-            jobManager.close();
-            workflowEngine.close();
+                    .untilAsserted(() -> {
+                        final long numCompletedWorkflowRuns = withJdbiHandle(handle -> handle.createQuery(
+                                        "SELECT COUNT(*) FROM \"WORKFLOW_RUN\" WHERE \"STATUS\" = 'COMPLETED'")
+                                .mapTo(Long.class)
+                                .one());
+                        assertThat(numCompletedWorkflowRuns).isEqualTo(1000);
+                    });
         }
     }
 
     @Test
-    public void test() {
-        final var manager = WorkflowEngine.getInstance();
-        manager.deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
+    public void shouldCancelDependantStepRunsOnFailure() throws Exception {
+        try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
+             final var jobManager = new JobManager(25, Duration.ZERO, Duration.ofMillis(100))) {
+            jobManager.registerStatusListener(workflowEngine);
 
-        final WorkflowRunView workflowRun = manager.startWorkflow(new StartWorkflowOptions(
-                WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
-                WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
+            workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
+                    new WorkflowStepSpec("foo", WorkflowStepType.JOB, Collections.emptySet()),
+                    new WorkflowStepSpec("bar", WorkflowStepType.JOB, Set.of("foo")),
+                    new WorkflowStepSpec("baz", WorkflowStepType.JOB, Set.of("bar")))));
 
-        assertThat(workflowRun.workflowName()).isEqualTo("bom-upload-processing");
-        assertThat(workflowRun.workflowVersion()).isEqualTo(1);
-        assertThat(workflowRun.token()).isNotNull();
-        assertThat(workflowRun.status()).isEqualTo(WorkflowRunStatus.PENDING);
-        assertThat(workflowRun.createdAt()).isNotNull();
-        assertThat(workflowRun.startedAt()).isNull();
-        assertThat(workflowRun.steps()).satisfiesExactlyInAnyOrder(
-                step -> {
-                    assertThat(step.stepName()).isEqualTo("consume-bom");
-                    assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
-                    assertThat(step.createdAt()).isNotNull();
-                    assertThat(step.startedAt()).isNull();
-                },
-                step -> {
-                    assertThat(step.stepName()).isEqualTo("process-bom");
-                    assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
-                    assertThat(step.createdAt()).isNotNull();
-                    assertThat(step.startedAt()).isNull();
-                },
-                step -> {
-                    assertThat(step.stepName()).isEqualTo("analyze-vulns");
-                    assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
-                    assertThat(step.createdAt()).isNotNull();
-                    assertThat(step.startedAt()).isNull();
-                },
-                step -> {
-                    assertThat(step.stepName()).isEqualTo("evaluate-policies");
-                    assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
-                    assertThat(step.createdAt()).isNotNull();
-                    assertThat(step.startedAt()).isNull();
-                },
-                step -> {
-                    assertThat(step.stepName()).isEqualTo("update-metrics");
-                    assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
-                    assertThat(step.createdAt()).isNotNull();
-                    assertThat(step.startedAt()).isNull();
-                });
+            workflowEngine.startWorkflow(new StartWorkflowOptions("test", 1));
+
+            jobManager.registerWorker(Set.of("foo"), 1, job -> {
+                throw new IllegalStateException("Just for testing");
+            });
+
+            await("Workflow completion")
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(() -> {
+                        final WorkflowRun workflowRun = withJdbiHandle(handle -> handle.createQuery(
+                                        "SELECT * FROM \"WORKFLOW_RUN\"")
+                                .map(ConstructorMapper.of(WorkflowRun.class))
+                                .one());
+                        assertThat(workflowRun.status()).isEqualTo(WorkflowRunStatus.FAILED);
+                    });
+
+            final List<WorkflowStepRun> workflowStepRuns = withJdbiHandle(
+                    handle -> handle.createQuery("SELECT * FROM \"WORKFLOW_STEP_RUN\"")
+                            .map(ConstructorMapper.of(WorkflowStepRun.class))
+                            .list());
+            assertThat(workflowStepRuns).satisfiesExactlyInAnyOrder(
+                    stepRun -> {
+                        assertThat(stepRun.status()).isEqualTo(WorkflowStepRunStatus.FAILED);
+                        assertThat(stepRun.failureReason()).isEqualTo("Job failed: Just for testing");
+                    },
+                    stepRun -> assertThat(stepRun.status()).isEqualTo(WorkflowStepRunStatus.CANCELLED),
+                    stepRun -> assertThat(stepRun.status()).isEqualTo(WorkflowStepRunStatus.CANCELLED));
+        }
+    }
+
+    @Test
+    public void shouldDeployWorkflowAndReturnCompleteView() throws Exception {
+        try (final var workflowEngine = new WorkflowEngine()) {
+            workflowEngine.deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
+
+            final WorkflowRunView workflowRun = workflowEngine.startWorkflow(new StartWorkflowOptions(
+                    WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
+                    WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
+
+            assertThat(workflowRun.workflowName()).isEqualTo("bom-upload-processing");
+            assertThat(workflowRun.workflowVersion()).isEqualTo(1);
+            assertThat(workflowRun.token()).isNotNull();
+            assertThat(workflowRun.status()).isEqualTo(WorkflowRunStatus.PENDING);
+            assertThat(workflowRun.createdAt()).isNotNull();
+            assertThat(workflowRun.startedAt()).isNull();
+            assertThat(workflowRun.steps()).satisfiesExactlyInAnyOrder(
+                    step -> {
+                        assertThat(step.stepName()).isEqualTo("consume-bom");
+                        assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
+                        assertThat(step.createdAt()).isNotNull();
+                        assertThat(step.startedAt()).isNull();
+                    },
+                    step -> {
+                        assertThat(step.stepName()).isEqualTo("process-bom");
+                        assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
+                        assertThat(step.createdAt()).isNotNull();
+                        assertThat(step.startedAt()).isNull();
+                    },
+                    step -> {
+                        assertThat(step.stepName()).isEqualTo("analyze-vulns");
+                        assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
+                        assertThat(step.createdAt()).isNotNull();
+                        assertThat(step.startedAt()).isNull();
+                    },
+                    step -> {
+                        assertThat(step.stepName()).isEqualTo("evaluate-policies");
+                        assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
+                        assertThat(step.createdAt()).isNotNull();
+                        assertThat(step.startedAt()).isNull();
+                    },
+                    step -> {
+                        assertThat(step.stepName()).isEqualTo("update-metrics");
+                        assertThat(step.status()).isEqualTo(WorkflowStepRunStatus.PENDING);
+                        assertThat(step.createdAt()).isNotNull();
+                        assertThat(step.startedAt()).isNull();
+                    });
+        }
     }
 
 }

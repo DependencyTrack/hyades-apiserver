@@ -31,8 +31,10 @@ public record QueuedJob(
         byte[] payload,
         @Nullable Long workflowStepRunId,
         Instant createdAt,
+        @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
-        int attempts) {
+        int attempts,
+        @Nullable String failureReason) {
 
     // TODO: Tenant?
     // TODO: Owner?

@@ -16,16 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.job;
+package org.dependencytrack.job;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.job.JobDao;
-import org.dependencytrack.job.JobManager;
-import org.dependencytrack.job.JobStatus;
-import org.dependencytrack.job.NewJob;
-import org.dependencytrack.job.QueuedJob;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -40,41 +37,55 @@ public class JobManagerTest extends PersistenceCapableTest {
 
     @Test
     public void shouldMarkSuccessfulJobAsCompleted() throws Exception {
-        try (final var jobManager = new JobManager()) {
-            jobManager.enqueueAll(List.of(new NewJob("foo", null, null, null, null, null, null)));
+        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
+            final QueuedJob queuedJob = jobManager.enqueue(new NewJob("foo", null, null, null, null, null, null));
 
-            jobManager.registerWorker(Set.of("foo"), job -> Optional.empty(), 2);
+            jobManager.registerWorker(Set.of("foo"), 2, job -> Optional.empty());
 
-            await("Job failure")
+            await("Job completion")
                     .atMost(5, TimeUnit.SECONDS)
                     .untilAsserted(() -> {
-                        final List<QueuedJob> queuedJobs = withJdbiHandle(handle -> handle.attach(JobDao.class).getAllByTag("foo"));
-                        assertThat(queuedJobs).satisfiesExactly(queuedJob -> assertThat(queuedJob.status()).isEqualTo(JobStatus.COMPLETED));
+                        final QueuedJob completedJob = withJdbiHandle(handle -> handle.createQuery(
+                                        "SELECT * FROM \"JOB\" WHERE \"ID\" = :id")
+                                .bind("id", queuedJob.id())
+                                .map(ConstructorMapper.of(QueuedJob.class))
+                                .one());
+                        assertThat(completedJob.status()).isEqualTo(JobStatus.COMPLETED);
+                        assertThat(completedJob.updatedAt()).isNotNull();
+                        assertThat(completedJob.attempts()).isEqualTo(1);
+                        assertThat(completedJob.failureReason()).isNull();
                     });
         }
     }
 
     @Test
     public void shouldMarkFailingJobAsFailed() throws Exception {
-        try (final var jobManager = new JobManager()) {
-            jobManager.enqueueAll(List.of(new NewJob("foo", null, null, null, null, null, null)));
+        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
+            final QueuedJob queuedJob = jobManager.enqueue(new NewJob("foo", null, null, null, null, null, null));
 
-            jobManager.registerWorker(Set.of("foo"), job -> {
+            jobManager.registerWorker(Set.of("foo"), 2, job -> {
                 throw new IllegalStateException("Just for testing");
-            }, 2);
+            });
 
             await("Job failure")
                     .atMost(5, TimeUnit.SECONDS)
                     .untilAsserted(() -> {
-                        final List<QueuedJob> queuedJobs = withJdbiHandle(handle -> handle.attach(JobDao.class).getAllByTag("foo"));
-                        assertThat(queuedJobs).satisfiesExactly(queuedJob -> assertThat(queuedJob.status()).isEqualTo(JobStatus.FAILED));
+                        final QueuedJob completedJob = withJdbiHandle(handle -> handle.createQuery(
+                                        "SELECT * FROM \"JOB\" WHERE \"ID\" = :id")
+                                .bind("id", queuedJob.id())
+                                .map(ConstructorMapper.of(QueuedJob.class))
+                                .one());
+                        assertThat(completedJob.status()).isEqualTo(JobStatus.FAILED);
+                        assertThat(completedJob.updatedAt()).isNotNull();
+                        assertThat(completedJob.attempts()).isEqualTo(1);
+                        assertThat(completedJob.failureReason()).isEqualTo("Just for testing");
                     });
         }
     }
 
     @Test
     public void shouldPollJobsWithHigherPriorityFirst() throws Exception {
-        try (final var jobManager = new JobManager()) {
+        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
             jobManager.enqueueAll(List.of(
                     new NewJob("foo", 5, null, null, null, null, null),
                     new NewJob("foo", 3, null, null, null, null, null),
@@ -83,12 +94,12 @@ public class JobManagerTest extends PersistenceCapableTest {
                     new NewJob("foo", 2, null, null, null, null, null)));
 
             final var processedJobQueue = new ArrayBlockingQueue<QueuedJob>(5);
-            jobManager.registerWorker(Set.of("foo"), job -> {
+            jobManager.registerWorker(Set.of("foo"), 1, job -> {
                 processedJobQueue.add(job);
                 return Optional.empty();
-            }, 1);
+            });
 
-            await("Job processing")
+            await("Job completion")
                     .atMost(5, TimeUnit.SECONDS)
                     .untilAsserted(() -> assertThat(processedJobQueue).hasSize(5));
 
