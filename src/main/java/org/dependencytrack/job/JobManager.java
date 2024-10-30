@@ -67,7 +67,7 @@ public class JobManager implements Closeable {
     private final BlockingQueue<JobEvent> eventQueue;
     private final ScheduledExecutorService eventFlushExecutor;
     private final ReentrantLock eventFlushLock = new ReentrantLock();
-    private final Map<String, ExecutorService> executorByTag = new ConcurrentHashMap<>();
+    private final Map<String, ExecutorService> executorByKind = new ConcurrentHashMap<>();
     private final List<JobEventListener> statusListeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
@@ -101,7 +101,7 @@ public class JobManager implements Closeable {
         statusListeners.add(listener);
     }
 
-    public void registerWorker(final Set<String> tags, final int concurrency, final JobWorker worker) {
+    public void registerWorker(final Set<String> kinds, final int concurrency, final JobWorker worker) {
         if (isShuttingDown.get()) {
             throw new IllegalStateException();
         }
@@ -109,7 +109,7 @@ public class JobManager implements Closeable {
         final boolean isCloseable = Closeable.class.isAssignableFrom(worker.getClass());
         final int numThreads = isCloseable ? concurrency + 1 : concurrency;
         final ExecutorService es = Executors.newFixedThreadPool(numThreads);
-        executorByTag.put(worker.getClass().getName(), es);
+        executorByKind.put(worker.getClass().getName(), es);
         final var intervalFunction = IntervalFunction.ofExponentialRandomBackoff(
                 /* initialIntervalMillis */ 250,
                 /* multiplier */ 1.5,
@@ -124,7 +124,7 @@ public class JobManager implements Closeable {
                      var ignoredMdcJobWorkerThreadId = MDC.putCloseable("jobWorkerThread", workerThreadId.toString())) {
                     final var pollMisses = new AtomicInteger(0);
                     while (!isShuttingDown.get()) {
-                        final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(tags));
+                        final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(kinds));
                         if (polledJob == null) {
                             final long backoffMs = intervalFunction.apply(pollMisses.incrementAndGet());
                             LOGGER.debug("Backing off for %dms".formatted(backoffMs));
@@ -140,7 +140,7 @@ public class JobManager implements Closeable {
                         notifyEventListeners(new JobStartedEvent(Instant.now(), polledJob));
 
                         try (var ignoredMdcJobId = MDC.putCloseable("jobId", String.valueOf(polledJob.id()));
-                             var ignoredMdcJobTag = MDC.putCloseable("jobTag", polledJob.tag());
+                             var ignoredMdcJobKind = MDC.putCloseable("jobKind", polledJob.kind());
                              var ignoredMdcJobPriority = MDC.putCloseable("jobPriority", String.valueOf(polledJob.priority()));
                              var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempts", String.valueOf(polledJob.attempts()))) {
                             worker.process(polledJob);
@@ -218,15 +218,15 @@ public class JobManager implements Closeable {
         isShuttingDown.set(true);
 
         LOGGER.info("Waiting for workers to complete shutdown");
-        for (final Map.Entry<String, ExecutorService> entry : executorByTag.entrySet()) {
-            final String tag = entry.getKey();
+        for (final Map.Entry<String, ExecutorService> entry : executorByKind.entrySet()) {
+            final String kind = entry.getKey();
             final ExecutorService executorService = entry.getValue();
 
             executorService.shutdown();
             try {
                 final boolean terminated = executorService.awaitTermination(30, TimeUnit.SECONDS);
                 if (!terminated) {
-                    LOGGER.warn("Executor for tag %s did not terminate".formatted(tag));
+                    LOGGER.warn("Executor for kind %s did not terminate".formatted(kind));
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -246,7 +246,7 @@ public class JobManager implements Closeable {
 
         flushEvents();
         eventQueue.clear();
-        executorByTag.clear();
+        executorByKind.clear();
         statusListeners.clear();
         isShuttingDown.set(false);
     }

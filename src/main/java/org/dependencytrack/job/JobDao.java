@@ -36,7 +36,7 @@ public interface JobDao {
     @SqlBatch("""
             INSERT INTO "JOB"(
               "STATUS"
-            , "TAG"
+            , "KIND"
             , "PRIORITY"
             , "SCHEDULED_FOR"
             , "PAYLOAD_TYPE"
@@ -45,7 +45,7 @@ public interface JobDao {
             , "CREATED_AT"
             ) VALUES (
               'PENDING'
-            , :tag
+            , :kind
             , :priority
             , COALESCE(:scheduledFor, NOW())
             , :payloadType
@@ -77,7 +77,7 @@ public interface JobDao {
                   FROM "JOB"
                  WHERE "STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING')
                    AND "SCHEDULED_FOR" <= NOW()
-                   AND "TAG" = ANY(:tags)
+                   AND "KIND" = ANY(:kinds)
                  ORDER BY "PRIORITY" DESC NULLS LAST
                         , "SCHEDULED_FOR"
                         , "CREATED_AT"
@@ -93,6 +93,6 @@ public interface JobDao {
             RETURNING "JOB".*
             """)
     @GetGeneratedKeys("*")
-    QueuedJob poll(@Bind Set<String> tags);
+    QueuedJob poll(@Bind Set<String> kinds);
 
 }

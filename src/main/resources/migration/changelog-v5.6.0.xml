@@ -143,7 +143,7 @@
             <column name="STATUS" type="JOB_STATUS">
                 <constraints nullable="false"/>
             </column>
-            <column name="TAG" type="text">
+            <column name="KIND" type="text">
                 <constraints nullable="false"/>
             </column>
             <column name="PRIORITY" type="INT"/>
@@ -294,5 +294,60 @@
                 referencedColumnNames="ID"
                 onUpdate="NO ACTION"
                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- TODO: Decide if we want to keep these. For the time being, they are useful to ensure correctness. -->
+    <changeSet id="v5.6.0-9" author="nscuro">
+        <sql splitStatements="false">
+            CREATE FUNCTION VALIDATE_JOB_STATUS_TRANSITION()
+                RETURNS TRIGGER LANGUAGE PLPGSQL AS $$
+            BEGIN
+                IF OLD."STATUS" = NEW."STATUS" THEN
+                   RETURN NEW;
+                -- NB: Due to batching, PENDING -> RUNNING transitions might be skipped.
+                -- Thus, we need to support PENDING -> COMPLETED/FAILED transitions as well.
+                ELSIF (OLD."STATUS" = 'PENDING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING'))
+                   OR (OLD."STATUS" = 'RUNNING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED'))
+                   OR (OLD."STATUS" IN ('COMPLETED', 'FAILED')) THEN
+                    RAISE EXCEPTION 'Invalid status transition from % to %', OLD."STATUS", NEW."STATUS";
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$;
+        </sql>
+        <sql splitStatements="false" stripComments="true">
+            CREATE FUNCTION VALIDATE_WORKFLOW_RUN_STATUS_TRANSITION()
+                RETURNS TRIGGER LANGUAGE PLPGSQL AS $$
+            BEGIN
+                IF OLD."STATUS" = NEW."STATUS" THEN
+                   RETURN NEW;
+                -- NB: Due to batching, PENDING -> RUNNING transitions might be skipped.
+                -- Thus, we need to support PENDING -> CANCELLED/COMPLETED/FAILED transitions as well.
+                ELSIF (OLD."STATUS" = 'PENDING' AND NEW."STATUS" NOT IN ('CANCELLED', 'COMPLETED', 'FAILED', 'RUNNING'))
+                   OR (OLD."STATUS" = 'RUNNING' AND NEW."STATUS" NOT IN ('CANCELLED', 'COMPLETED', 'FAILED'))
+                   OR (OLD."STATUS" = 'CANCELLED' AND NEW."STATUS" != 'PENDING')
+                   OR (OLD."STATUS" = 'FAILED' AND NEW."STATUS" != 'PENDING')
+                   OR (OLD."STATUS" = 'COMPLETED') THEN
+                    RAISE EXCEPTION 'Invalid status transition from % to %', OLD."STATUS", NEW."STATUS";
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$;
+        </sql>
+        <sql splitStatements="true">
+            CREATE TRIGGER TRIGGER_VALIDATE_JOB_STATUS_TRANSITION
+                BEFORE UPDATE ON "JOB" FOR EACH ROW
+                EXECUTE FUNCTION VALIDATE_JOB_STATUS_TRANSITION();
+
+            CREATE TRIGGER TRIGGER_VALIDATE_WORKFLOW_RUN_STATUS_TRANSITION
+                BEFORE UPDATE ON "WORKFLOW_RUN" FOR EACH ROW
+                EXECUTE FUNCTION VALIDATE_WORKFLOW_RUN_STATUS_TRANSITION();
+
+            CREATE TRIGGER TRIGGER_VALIDATE_WORKFLOW_STEP_RUN_STATUS_TRANSITION
+                BEFORE UPDATE ON "WORKFLOW_STEP_RUN" FOR EACH ROW
+                EXECUTE FUNCTION VALIDATE_WORKFLOW_RUN_STATUS_TRANSITION();
+        </sql>
     </changeSet>
 </databaseChangeLog>

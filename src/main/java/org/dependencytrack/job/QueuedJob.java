@@ -24,7 +24,7 @@ import java.time.Instant;
 public record QueuedJob(
         long id,
         JobStatus status,
-        String tag,
+        String kind,
         @Nullable Integer priority,
         Instant scheduledFor,
         JobPayloadType payloadType,

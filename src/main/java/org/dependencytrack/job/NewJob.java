@@ -21,7 +21,7 @@ package org.dependencytrack.job;
 import java.time.Instant;
 
 public record NewJob(
-        String tag,
+        String kind,
         Integer priority,
         Instant scheduledFor,
         JobPayloadType payloadType,
