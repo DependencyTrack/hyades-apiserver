@@ -54,42 +54,81 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 // TODO: Metrics instrumentation
-public class JobManager implements Closeable {
+public class JobEngine implements Closeable {
 
-    private static final Logger LOGGER = Logger.getLogger(JobManager.class);
-    private static final JobManager INSTANCE = new JobManager();
+    enum State {
 
-    private final BlockingQueue<JobEvent> eventQueue;
-    private final ScheduledExecutorService eventFlushExecutor;
+        CREATED(1),  // 0
+        STARTING(2), // 1
+        RUNNING(3),  // 2
+        STOPPING(4), // 3
+        STOPPED(1);  // 4
+
+        private final Set<Integer> allowedTransitions;
+
+        State(final Integer... allowedTransitions) {
+            this.allowedTransitions = Set.of(allowedTransitions);
+        }
+
+        private boolean canTransitionTo(final State newState) {
+            return allowedTransitions.contains(newState.ordinal());
+        }
+
+        private boolean isCreatedOrStopped() {
+            return equals(CREATED) || equals(STOPPED);
+        }
+
+    }
+
+    private static final Logger LOGGER = Logger.getLogger(JobEngine.class);
+    private static final JobEngine INSTANCE = new JobEngine();
+
+    private volatile State state = State.CREATED;
+    private final ReentrantLock stateLock = new ReentrantLock();
+    private final int eventQueueCapacity;
+    private BlockingQueue<JobEvent> eventQueue;
+    private ScheduledExecutorService eventFlushExecutor;
+    private final Duration initialEventFlushDelay;
+    private final Duration eventFlushInterval;
     private final ReentrantLock eventFlushLock = new ReentrantLock();
-    private final ScheduledExecutorService schedulerExecutor;
+    private ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> executorByKind = new ConcurrentHashMap<>();
     private final List<JobEventListener> statusListeners = new CopyOnWriteArrayList<>();
-    private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
-    public JobManager() {
+    public JobEngine() {
+        // TODO: Find reasonable defaults for queue size and flush interval.
         this(100, Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
-    public JobManager(
-            final int eventQueueSize,
+    public JobEngine(
+            final int eventQueueCapacity,
             final Duration initialEventFlushDelay,
             final Duration eventFlushInterval) {
-        // TODO: Move this to a start() method and make sure the engine can be restarted if stopped.
-        // TODO: Find reasonable defaults for queue size and flush interval.
-        this.eventQueue = new ArrayBlockingQueue<>(eventQueueSize);
+        this.eventQueueCapacity = eventQueueCapacity;
+        this.initialEventFlushDelay = requireNonNull(initialEventFlushDelay);
+        this.eventFlushInterval = requireNonNull(eventFlushInterval);
+    }
+
+    public static JobEngine getInstance() {
+        return INSTANCE;
+    }
+
+    public void start() {
+        setState(State.STARTING);
+
+        this.eventQueue = new ArrayBlockingQueue<>(eventQueueCapacity);
         this.eventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("JobManager-EventFlusher-%d")
+                .namingPattern("JobEngine-EventFlusher-%d")
                 .build());
         this.eventFlushExecutor.scheduleAtFixedRate(
                 this::flushEvents,
@@ -98,17 +137,15 @@ public class JobManager implements Closeable {
                 TimeUnit.MILLISECONDS);
         this.schedulerExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("JobManager-Scheduler-%d")
+                .namingPattern("JobEngine-Scheduler-%d")
                 .build());
         this.schedulerExecutor.scheduleAtFixedRate(
                 this::scheduleDueJobs,
                 1,
                 5,
                 TimeUnit.SECONDS);
-    }
 
-    public static JobManager getInstance() {
-        return INSTANCE;
+        setState(State.RUNNING);
     }
 
     public void registerStatusListener(final JobEventListener listener) {
@@ -116,10 +153,6 @@ public class JobManager implements Closeable {
     }
 
     public void registerWorker(final Set<String> kinds, final int concurrency, final JobWorker worker) {
-        if (isShuttingDown.get()) {
-            throw new IllegalStateException();
-        }
-
         final boolean isCloseable = Closeable.class.isAssignableFrom(worker.getClass());
         final int numThreads = isCloseable ? concurrency + 1 : concurrency;
         final ExecutorService es = Executors.newFixedThreadPool(numThreads);
@@ -137,7 +170,7 @@ public class JobManager implements Closeable {
                 try (var ignoredMdcJobWorker = MDC.putCloseable("jobWorker", worker.getClass().getName());
                      var ignoredMdcJobWorkerThreadId = MDC.putCloseable("jobWorkerThread", workerThreadId.toString())) {
                     final var pollMisses = new AtomicInteger(0);
-                    while (!isShuttingDown.get()) {
+                    while (state != State.STOPPING) {
                         final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(kinds));
                         if (polledJob == null) {
                             final long backoffMs = intervalFunction.apply(pollMisses.incrementAndGet());
@@ -253,8 +286,12 @@ public class JobManager implements Closeable {
 
     @Override
     public void close() throws IOException {
-        LOGGER.info("Signaling workers to shut down");
-        isShuttingDown.set(true);
+        if (state.isCreatedOrStopped()) {
+            return;
+        }
+
+        LOGGER.info("Stopping");
+        setState(State.STOPPING);
 
         LOGGER.info("Waiting for scheduler to stop");
         schedulerExecutor.shutdown();
@@ -298,9 +335,12 @@ public class JobManager implements Closeable {
 
         flushEvents();
         eventQueue.clear();
+        eventQueue = null;
         executorByKind.clear();
         statusListeners.clear();
-        isShuttingDown.set(false);
+        schedulerExecutor = null;
+        eventFlushExecutor = null;
+        setState(State.STOPPED);
     }
 
     private void flushEvents() {
@@ -313,7 +353,7 @@ public class JobManager implements Closeable {
     }
 
     private void flushEventsLocked() {
-        assert eventFlushLock.isLocked();
+        assert eventFlushLock.isHeldByCurrentThread();
 
         if (eventQueue.isEmpty()) {
             LOGGER.debug("No events to flush");
@@ -445,6 +485,25 @@ public class JobManager implements Closeable {
                 LOGGER.warn("Failed to notify listener %s for event: %s".formatted(
                         listener.getClass().getName(), event), e);
             }
+        }
+    }
+
+    State state() {
+        return state;
+    }
+
+    private void setState(final State newState) {
+        stateLock.lock();
+        try {
+            if (this.state.canTransitionTo(newState)) {
+                this.state = newState;
+                return;
+            }
+
+            throw new IllegalStateException(
+                    "Can not transition from state %s to %s".formatted(this.state, newState));
+        } finally {
+            stateLock.unlock();
         }
     }
 

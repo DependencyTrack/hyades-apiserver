@@ -21,12 +21,12 @@ package org.dependencytrack.workflow;
 import alpine.common.logging.Logger;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.dependencytrack.job.JobEngine;
 import org.dependencytrack.job.JobEvent;
 import org.dependencytrack.job.JobEvent.JobCompletedEvent;
 import org.dependencytrack.job.JobEvent.JobFailedEvent;
 import org.dependencytrack.job.JobEvent.JobStartedEvent;
 import org.dependencytrack.job.JobEventListener;
-import org.dependencytrack.job.JobManager;
 import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.workflow.WorkflowDao.NewWorkflowRun;
@@ -49,7 +49,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -61,28 +60,72 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 // TODO: Metrics instrumentation
 public class WorkflowEngine implements JobEventListener, Closeable {
 
+    enum State {
+
+        CREATED(1),  // 0
+        STARTING(2), // 1
+        RUNNING(3),  // 2
+        STOPPING(4), // 3
+        STOPPED(1);  // 4
+
+        private final Set<Integer> allowedTransitions;
+
+        State(final Integer... allowedTransitions) {
+            this.allowedTransitions = Set.of(allowedTransitions);
+        }
+
+        private boolean canTransitionTo(final State newState) {
+            return allowedTransitions.contains(newState.ordinal());
+        }
+
+        private boolean isCreatedOrStopped() {
+            return equals(CREATED) || equals(STOPPED);
+        }
+
+        private void assertRunning() {
+            if (!equals(RUNNING)) {
+                throw new IllegalStateException(
+                        "Engine must be in state %s, but is %s".formatted(RUNNING, this));
+            }
+        }
+
+    }
+
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngine.class);
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
-    private final BlockingQueue<JobEvent> jobEventQueue;
-    private final ScheduledExecutorService jobEventFlushExecutor;
+    private volatile State state = State.CREATED;
+    private final ReentrantLock stateLock = new ReentrantLock();
+    private final int jobEventQueueCapacity;
+    private BlockingQueue<JobEvent> jobEventQueue;
+    private ScheduledExecutorService jobEventFlushExecutor;
+    private final Duration jobEventFlushInitialDelay;
     private final Duration jobEventFlushInterval;
     private final ReentrantLock jobEventFlushLock = new ReentrantLock();
-    private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
-    private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
     public WorkflowEngine() {
+        // TODO: Find reasonable defaults for queue size and flush interval.
         this(100, Duration.ofSeconds(1), Duration.ofSeconds(5));
     }
 
     public WorkflowEngine(
-            final int jobEventQueueSize,
+            final int jobEventQueueCapacity,
             final Duration jobEventFlushInitialDelay,
             final Duration jobEventFlushInterval) {
-        // TODO: Move this to a start() method and make sure the engine can be restarted if stopped.
-        // TODO: Find reasonable defaults for queue size and flush interval.
-        this.jobEventQueue = new ArrayBlockingQueue<>(jobEventQueueSize);
+        this.jobEventQueueCapacity = jobEventQueueCapacity;
+        this.jobEventFlushInitialDelay = requireNonNull(jobEventFlushInitialDelay);
         this.jobEventFlushInterval = requireNonNull(jobEventFlushInterval);
+
+    }
+
+    public static WorkflowEngine getInstance() {
+        return INSTANCE;
+    }
+
+    public void start() {
+        setState(State.STARTING);
+
+        this.jobEventQueue = new ArrayBlockingQueue<>(jobEventQueueCapacity);
         this.jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .namingPattern("WorkflowEngine-JobEventFlusher-%d")
@@ -92,15 +135,13 @@ public class WorkflowEngine implements JobEventListener, Closeable {
                 jobEventFlushInitialDelay.toMillis(),
                 jobEventFlushInterval.toMillis(),
                 TimeUnit.MILLISECONDS);
-    }
 
-    public static WorkflowEngine getInstance() {
-        return INSTANCE;
+        setState(State.RUNNING);
     }
 
     // TODO: Listeners for workflow run state change?
     // TODO: Listeners for workflow step run state change?
-    // TODO: Share transaction with JobManager?
+    // TODO: Share transaction with JobEngine?
 
     public void deploy(final WorkflowSpec spec) {
         // TODO: Validate spec
@@ -140,8 +181,8 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     }
 
     public List<WorkflowRunView> startWorkflows(final Collection<StartWorkflowOptions> options) {
-        assertRunning();
         requireNonNull(options);
+        state.assertRunning();
 
         final var jobsToQueue = new ArrayList<NewJob>();
         final List<WorkflowRunView> startedWorkflowRuns = inJdbiTransaction(handle -> {
@@ -198,7 +239,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         });
 
         if (!jobsToQueue.isEmpty()) {
-            final List<QueuedJob> queuedJobs = JobManager.getInstance().enqueueAll(jobsToQueue);
+            final List<QueuedJob> queuedJobs = JobEngine.getInstance().enqueueAll(jobsToQueue);
             LOGGER.info("Queued %d jobs".formatted(queuedJobs.size()));
         }
 
@@ -240,7 +281,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
     @Override
     public void onJobEvent(final JobEvent event) {
-        assertRunning();
+        state.assertRunning();
 
         final boolean isRelevant = event instanceof JobCompletedEvent
                                    || event instanceof JobFailedEvent
@@ -268,7 +309,12 @@ public class WorkflowEngine implements JobEventListener, Closeable {
 
     @Override
     public void close() throws IOException {
-        isShuttingDown.set(true);
+        if (state.isCreatedOrStopped()) {
+            return;
+        }
+
+        LOGGER.info("Stopping");
+        setState(State.STOPPING);
 
         jobEventFlushExecutor.shutdown();
         try {
@@ -281,10 +327,11 @@ public class WorkflowEngine implements JobEventListener, Closeable {
             throw new RuntimeException(e);
         }
 
-        isStopped.set(true);
         flushJobEvents();
         jobEventQueue.clear();
-        isShuttingDown.set(false);
+        jobEventQueue = null;
+        jobEventFlushExecutor = null;
+        setState(State.STOPPED);
     }
 
     private void flushJobEvents() {
@@ -390,14 +437,31 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         });
 
         if (!jobsToQueue.isEmpty()) {
-            final List<QueuedJob> queuedJobs = JobManager.getInstance().enqueueAll(jobsToQueue);
-            LOGGER.debug("Queued %s jobs".formatted(queuedJobs.size()));
+            final List<QueuedJob> queuedJobs = JobEngine.getInstance().enqueueAll(jobsToQueue);
+            if (LOGGER.isDebugEnabled()) {
+                for (final QueuedJob queuedJob : queuedJobs) {
+                    LOGGER.debug("Queued %s".formatted(queuedJob));
+                }
+            }
         }
     }
 
-    private void assertRunning() {
-        if (isStopped.get()) {
-            throw new IllegalStateException("Workflow engine is stopped");
+    State state() {
+        return state;
+    }
+
+    private void setState(final State newState) {
+        stateLock.lock();
+        try {
+            if (this.state.canTransitionTo(newState)) {
+                this.state = newState;
+                return;
+            }
+
+            throw new IllegalStateException(
+                    "Can not transition from state %s to %s".formatted(this.state, newState));
+        } finally {
+            stateLock.unlock();
         }
     }
 

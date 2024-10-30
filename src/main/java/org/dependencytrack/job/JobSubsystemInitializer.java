@@ -37,34 +37,34 @@ public class JobSubsystemInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Initializing job manager");
-        final var jobManager = JobManager.getInstance();
+        LOGGER.info("Initializing job engine");
+        final var jobEngine = JobEngine.getInstance();
 
-        jobManager.scheduleAll(List.of(
+        jobEngine.scheduleAll(List.of(
                 new NewJobSchedule("nvd-mirroring", "* * * * *", "mirror-nvd", null, null),
                 new NewJobSchedule("portfolio-metrics-update", "* * * * *", "update-metrics-portfolio", null, null),
                 new NewJobSchedule("vuln-metrics-update", "* * * * *", "update-metrics-vulns", null, null)));
 
         final SecureRandom random = new SecureRandom();
-        jobManager.registerWorker(Set.of("consume-bom"), 5, new RandomlyFailingJobWorker(random));
-        jobManager.registerWorker(Set.of("process-bom"), 5, new RandomlyFailingJobWorker(random));
-        jobManager.registerWorker(Set.of("analyze-vulns-project"), 3, new RandomlyFailingJobWorker(random));
-        jobManager.registerWorker(Set.of("evaluate-policies-project"), 3, new RandomlyFailingJobWorker(random));
-        jobManager.registerWorker(Set.of("update-metrics-project"), 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker(Set.of("consume-bom"), 5, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker(Set.of("process-bom"), 5, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker(Set.of("analyze-vulns-project"), 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker(Set.of("evaluate-policies-project"), 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker(Set.of("update-metrics-project"), 3, new RandomlyFailingJobWorker(random));
 
-        jobManager.registerWorker(Set.of("mirror-nvd"), 1, new NistMirrorTask());
-        jobManager.registerWorker(Set.of("update-metrics-portfolio"), 1, new PortfolioMetricsUpdateTask());
-        jobManager.registerWorker(Set.of("update-metrics-vulns"), 1, new VulnerabilityMetricsUpdateTask());
+        jobEngine.registerWorker(Set.of("mirror-nvd"), 1, new NistMirrorTask());
+        jobEngine.registerWorker(Set.of("update-metrics-portfolio"), 1, new PortfolioMetricsUpdateTask());
+        jobEngine.registerWorker(Set.of("update-metrics-vulns"), 1, new VulnerabilityMetricsUpdateTask());
     }
 
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
-        LOGGER.info("Shutting down job manager");
+        LOGGER.info("Shutting down engine manager");
 
         try {
-            JobManager.getInstance().close();
+            JobEngine.getInstance().close();
         } catch (IOException e) {
-            LOGGER.warn("Graceful shutdown of job manager failed", e);
+            LOGGER.warn("Graceful shutdown of job engine failed", e);
         }
     }
 
@@ -83,7 +83,7 @@ public class JobSubsystemInitializer implements ServletContextListener {
 
             Thread.sleep(random.nextInt(10, 1000));
 
-            if (random.nextDouble() > 0.2) {
+            if (random.nextDouble() > 0.1) {
                 throw new IllegalStateException("Oh no!");
             }
 

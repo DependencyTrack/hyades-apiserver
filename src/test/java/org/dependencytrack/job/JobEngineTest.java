@@ -33,14 +33,36 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-public class JobManagerTest extends PersistenceCapableTest {
+public class JobEngineTest extends PersistenceCapableTest {
+
+    @Test
+    public void shouldHaveInitialStateCreated() throws Exception {
+        final var jobEngine = new JobEngine();
+        assertThat(jobEngine.state()).isEqualTo(JobEngine.State.CREATED);
+
+        jobEngine.close(); // Should be no-op.
+        assertThat(jobEngine.state()).isEqualTo(JobEngine.State.CREATED);
+    }
+
+    @Test
+    public void shouldHaveStatusStoppedAfterClose() throws Exception {
+        final var jobEngine = new JobEngine();
+        try (jobEngine) {
+            jobEngine.start();
+            assertThat(jobEngine.state()).isEqualTo(JobEngine.State.RUNNING);
+        }
+
+        assertThat(jobEngine.state()).isEqualTo(JobEngine.State.STOPPED);
+    }
 
     @Test
     public void shouldMarkSuccessfulJobAsCompleted() throws Exception {
-        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
-            final QueuedJob queuedJob = jobManager.enqueue(new NewJob("foo", null, null, null, null, null, null));
+        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+            jobEngine.start();
 
-            jobManager.registerWorker(Set.of("foo"), 2, job -> Optional.empty());
+            final QueuedJob queuedJob = jobEngine.enqueue(new NewJob("foo", null, null, null, null, null, null));
+
+            jobEngine.registerWorker(Set.of("foo"), 2, job -> Optional.empty());
 
             await("Job completion")
                     .atMost(5, TimeUnit.SECONDS)
@@ -60,10 +82,12 @@ public class JobManagerTest extends PersistenceCapableTest {
 
     @Test
     public void shouldMarkFailingJobAsFailed() throws Exception {
-        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
-            final QueuedJob queuedJob = jobManager.enqueue(new NewJob("foo", null, null, null, null, null, null));
+        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+            jobEngine.start();
 
-            jobManager.registerWorker(Set.of("foo"), 2, job -> {
+            final QueuedJob queuedJob = jobEngine.enqueue(new NewJob("foo", null, null, null, null, null, null));
+
+            jobEngine.registerWorker(Set.of("foo"), 2, job -> {
                 throw new IllegalStateException("Just for testing");
             });
 
@@ -85,8 +109,10 @@ public class JobManagerTest extends PersistenceCapableTest {
 
     @Test
     public void shouldPollJobsWithHigherPriorityFirst() throws Exception {
-        try (final var jobManager = new JobManager(10, Duration.ZERO, Duration.ofMillis(100))) {
-            jobManager.enqueueAll(List.of(
+        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+            jobEngine.start();
+
+            jobEngine.enqueueAll(List.of(
                     new NewJob("foo", 5, null, null, null, null, null),
                     new NewJob("foo", 3, null, null, null, null, null),
                     new NewJob("foo", 4, null, null, null, null, null),
@@ -94,7 +120,7 @@ public class JobManagerTest extends PersistenceCapableTest {
                     new NewJob("foo", 2, null, null, null, null, null)));
 
             final var processedJobQueue = new ArrayBlockingQueue<QueuedJob>(5);
-            jobManager.registerWorker(Set.of("foo"), 1, job -> {
+            jobEngine.registerWorker(Set.of("foo"), 1, job -> {
                 processedJobQueue.add(job);
                 return Optional.empty();
             });

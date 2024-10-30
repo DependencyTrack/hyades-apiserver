@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.job.JobManager;
+import org.dependencytrack.job.JobEngine;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.junit.Test;
 
@@ -42,19 +42,21 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldHandleManyWorkflowRuns() throws Exception {
         try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobManager = new JobManager(25, Duration.ZERO, Duration.ofMillis(100))) {
-            jobManager.registerStatusListener(workflowEngine);
+             final var jobEngine = new JobEngine(25, Duration.ZERO, Duration.ofMillis(100))) {
+            jobEngine.registerStatusListener(workflowEngine);
+            jobEngine.start();
 
             workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
                     new WorkflowStepSpec("foo", WorkflowStepType.JOB, Collections.emptySet()),
                     new WorkflowStepSpec("bar", WorkflowStepType.JOB, Set.of("foo")))));
+            workflowEngine.start();
 
             final var random = new SecureRandom();
-            jobManager.registerWorker(Set.of("foo"), 10, job -> {
+            jobEngine.registerWorker(Set.of("foo"), 10, job -> {
                 Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
             });
-            jobManager.registerWorker(Set.of("bar"), 1, job -> {
+            jobEngine.registerWorker(Set.of("bar"), 1, job -> {
                 Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
             });
@@ -82,17 +84,19 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldCancelDependantStepRunsOnFailure() throws Exception {
         try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobManager = new JobManager(25, Duration.ZERO, Duration.ofMillis(100))) {
-            jobManager.registerStatusListener(workflowEngine);
+             final var jobEngine = new JobEngine(25, Duration.ZERO, Duration.ofMillis(100))) {
+            jobEngine.registerStatusListener(workflowEngine);
+            jobEngine.start();
 
             workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
                     new WorkflowStepSpec("foo", WorkflowStepType.JOB, Collections.emptySet()),
                     new WorkflowStepSpec("bar", WorkflowStepType.JOB, Set.of("foo")),
                     new WorkflowStepSpec("baz", WorkflowStepType.JOB, Set.of("bar")))));
+            workflowEngine.start();
 
             workflowEngine.startWorkflow(new StartWorkflowOptions("test", 1));
 
-            jobManager.registerWorker(Set.of("foo"), 1, job -> {
+            jobEngine.registerWorker(Set.of("foo"), 1, job -> {
                 throw new IllegalStateException("Just for testing");
             });
 
