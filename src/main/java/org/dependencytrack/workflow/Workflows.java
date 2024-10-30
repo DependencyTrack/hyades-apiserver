@@ -24,21 +24,52 @@ import java.util.Set;
 
 public class Workflows {
 
-    public static final WorkflowSpec WORKFLOW_BOM_UPLOAD_PROCESSING_V1 = new WorkflowSpec(
-            "bom-upload-processing",
-            1,
-            List.of(
-                    new WorkflowStepSpec("consume-bom", WorkflowStepType.JOB, Collections.emptySet()),
-                    new WorkflowStepSpec("process-bom", WorkflowStepType.JOB, Set.of("consume-bom")),
-                    new WorkflowStepSpec("analyze-vulns", WorkflowStepType.JOB, Set.of("process-bom")),
-                    new WorkflowStepSpec("evaluate-policies", WorkflowStepType.JOB, Set.of("analyze-vulns")),
-                    new WorkflowStepSpec("update-metrics", WorkflowStepType.JOB, Set.of("evaluate-policies"))));
+    public static final List<WorkflowSpec> ALL_WORKFLOWS;
+    public static final WorkflowSpec WORKFLOW_BOM_UPLOAD_PROCESSING_V1;
+    public static final WorkflowSpec WORKFLOW_PROJECT_VULNERABILITY_ANALYSIS_V1;
 
-    public static final WorkflowSpec WORKFLOW_PROJECT_VULNERABILITY_ANALYSIS_V1 = new WorkflowSpec(
-            "project-vuln-analysis",
-            1,
-            List.of(
-                    new WorkflowStepSpec("analyze-vulns", WorkflowStepType.JOB, Collections.emptySet()),
-                    new WorkflowStepSpec("update-metrics", WorkflowStepType.JOB, Set.of("analyze-vulns"))));
+    static {
+        WORKFLOW_BOM_UPLOAD_PROCESSING_V1 = new WorkflowSpec(
+                "bom-upload-processing",
+                /* version */ 1,
+                List.of(
+                        new WorkflowStepSpec(
+                                "consume-bom",
+                                WorkflowStepType.JOB,
+                                Collections.emptySet()),
+                        new WorkflowStepSpec(
+                                "process-bom",
+                                WorkflowStepType.JOB,
+                                Set.of("consume-bom")),
+                        new WorkflowStepSpec(
+                                "analyze-vulns-project",
+                                WorkflowStepType.JOB,
+                                Set.of("process-bom")),
+                        new WorkflowStepSpec(
+                                "evaluate-policies-project",
+                                WorkflowStepType.JOB,
+                                Set.of("analyze-vulns-project")),
+                        new WorkflowStepSpec(
+                                "update-metrics-project",
+                                WorkflowStepType.JOB,
+                                Set.of("evaluate-policies-project"))));
+
+        WORKFLOW_PROJECT_VULNERABILITY_ANALYSIS_V1 = new WorkflowSpec(
+                "project-vuln-analysis",
+                /* version */ 1,
+                List.of(
+                        new WorkflowStepSpec(
+                                "analyze-vulns-project",
+                                WorkflowStepType.JOB,
+                                Collections.emptySet()),
+                        new WorkflowStepSpec(
+                                "update-metrics-project",
+                                WorkflowStepType.JOB,
+                                Set.of("analyze-vulns-project"))));
+
+        ALL_WORKFLOWS = List.of(
+                WORKFLOW_BOM_UPLOAD_PROCESSING_V1,
+                WORKFLOW_PROJECT_VULNERABILITY_ANALYSIS_V1);
+    }
 
 }

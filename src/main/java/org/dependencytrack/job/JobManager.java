@@ -20,9 +20,12 @@ package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
+import com.asahaf.javacron.InvalidExpressionException;
+import com.asahaf.javacron.Schedule;
 import io.github.resilience4j.core.IntervalFunction;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.dependencytrack.job.JobDao.JobStatusTransition;
+import org.dependencytrack.job.JobDao.ScheduleTriggerUpdate;
 import org.dependencytrack.job.JobEvent.JobCompletedEvent;
 import org.dependencytrack.job.JobEvent.JobFailedEvent;
 import org.dependencytrack.job.JobEvent.JobQueuedEvent;
@@ -39,6 +42,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -67,6 +71,7 @@ public class JobManager implements Closeable {
     private final BlockingQueue<JobEvent> eventQueue;
     private final ScheduledExecutorService eventFlushExecutor;
     private final ReentrantLock eventFlushLock = new ReentrantLock();
+    private final ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> executorByKind = new ConcurrentHashMap<>();
     private final List<JobEventListener> statusListeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
@@ -91,6 +96,15 @@ public class JobManager implements Closeable {
                 initialEventFlushDelay.toMillis(),
                 eventFlushInterval.toMillis(),
                 TimeUnit.MILLISECONDS);
+        this.schedulerExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                .namingPattern("JobManager-Scheduler-%d")
+                .build());
+        this.schedulerExecutor.scheduleAtFixedRate(
+                this::scheduleDueJobs,
+                1,
+                5,
+                TimeUnit.SECONDS);
     }
 
     public static JobManager getInstance() {
@@ -212,12 +226,49 @@ public class JobManager implements Closeable {
         return queuedJobs.getFirst();
     }
 
+    public List<JobSchedule> scheduleAll(final Collection<NewJobSchedule> schedules) {
+        return inJdbiTransaction(handle -> handle.attach(JobDao.class).createSchedules(schedules.stream()
+                .map(schedule -> {
+                    final Schedule cronSchedule;
+                    try {
+                        cronSchedule = Schedule.create(schedule.cron());
+                    } catch (InvalidExpressionException e) {
+                        throw new IllegalArgumentException(
+                                "Failed to parse cron expression for %s".formatted(schedule), e);
+                    }
+
+                    if (schedule.nextTrigger() != null) {
+                        return schedule;
+                    }
+
+                    return new NewJobSchedule(
+                            schedule.name(),
+                            schedule.cron(),
+                            schedule.jobKind(),
+                            schedule.jobPriority(),
+                            cronSchedule.next().toInstant());
+                })
+                .toList()));
+    }
+
     @Override
     public void close() throws IOException {
         LOGGER.info("Signaling workers to shut down");
         isShuttingDown.set(true);
 
-        LOGGER.info("Waiting for workers to complete shutdown");
+        LOGGER.info("Waiting for scheduler to stop");
+        schedulerExecutor.shutdown();
+        try {
+            final boolean terminated = schedulerExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            if (!terminated) {
+                LOGGER.warn("Scheduler did not terminate in time");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+
+        LOGGER.info("Waiting for workers to stop");
         for (final Map.Entry<String, ExecutorService> entry : executorByKind.entrySet()) {
             final String kind = entry.getKey();
             final ExecutorService executorService = entry.getValue();
@@ -226,18 +277,19 @@ public class JobManager implements Closeable {
             try {
                 final boolean terminated = executorService.awaitTermination(30, TimeUnit.SECONDS);
                 if (!terminated) {
-                    LOGGER.warn("Executor for kind %s did not terminate".formatted(kind));
+                    LOGGER.warn("Executor for kind %s did not terminate in time".formatted(kind));
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
 
+        LOGGER.info("Waiting for event flush worker to stop");
         eventFlushExecutor.shutdown();
         try {
             final boolean terminated = eventFlushExecutor.awaitTermination(30, TimeUnit.SECONDS);
             if (!terminated) {
-                LOGGER.warn("Flush executor did not terminate");
+                LOGGER.warn("Flush executor did not terminate in time");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -332,6 +384,57 @@ public class JobManager implements Closeable {
                     default -> throw new IllegalStateException("Unexpected job status: " + job.status());
                 })
                 .forEach(this::notifyEventListeners);
+    }
+
+    private void scheduleDueJobs() {
+        useJdbiTransaction(handle -> {
+            final var dao = handle.attach(JobDao.class);
+
+            final List<JobSchedule> dueSchedules = dao.getDueSchedules();
+            if (dueSchedules.isEmpty()) {
+                LOGGER.debug("No due schedules");
+                return;
+            }
+
+            final var jobsToQueue = dueSchedules.stream()
+                    .map(schedule -> new NewJob(
+                            schedule.jobKind(),
+                            schedule.jobPriority(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            null))
+                    .toList();
+
+            final List<QueuedJob> queuedJobs = dao.enqueueAll(jobsToQueue);
+            if (LOGGER.isDebugEnabled()) {
+                for (final QueuedJob queuedJob : queuedJobs) {
+                    LOGGER.debug("Queued %s".formatted(queuedJob));
+                }
+            }
+
+            final var triggerUpdates = dueSchedules.stream()
+                    .map(schedule -> {
+                        final Schedule cronSchedule;
+                        try {
+                            cronSchedule = Schedule.create(schedule.cron());
+                        } catch (InvalidExpressionException e) {
+                            LOGGER.warn("Failed to parse cron expression for %s".formatted(schedule), e);
+                            return null;
+                        }
+                        final Instant nextTrigger = cronSchedule.next().toInstant();
+                        return new ScheduleTriggerUpdate(schedule.id(), nextTrigger);
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+            final List<JobSchedule> updatedSchedules = dao.updateScheduleTriggers(triggerUpdates);
+            if (LOGGER.isDebugEnabled()) {
+                for (final JobSchedule updatedSchedule : updatedSchedules) {
+                    LOGGER.debug("Updated schedule: %s".formatted(updatedSchedule));
+                }
+            }
+        });
     }
 
     private void notifyEventListeners(final JobEvent event) {

@@ -35,10 +35,15 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         final var workflowEngine = WorkflowEngine.getInstance();
         JobManager.getInstance().registerStatusListener(workflowEngine);
 
-        try {
-            workflowEngine.deploy(Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
-        } catch (RuntimeException e) {
-            LOGGER.warn("Failed to deploy workflow", e);
+        for (final WorkflowSpec workflow : Workflows.ALL_WORKFLOWS) {
+            try {
+                workflowEngine.deploy(workflow);
+                LOGGER.info("Deployed workflow %s/%d".formatted(
+                        workflow.name(), workflow.version()));
+            } catch (RuntimeException e) {
+                LOGGER.warn("Failed to deploy workflow %s/%d".formatted(
+                        workflow.name(), workflow.version()), e);
+            }
         }
     }
 
@@ -49,7 +54,7 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         try {
             WorkflowEngine.getInstance().close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            LOGGER.warn("Graceful shutdown of workflow engine failed", e);
         }
     }
 }

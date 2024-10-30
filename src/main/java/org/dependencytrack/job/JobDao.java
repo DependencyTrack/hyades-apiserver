@@ -19,10 +19,12 @@
 package org.dependencytrack.job;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMappers;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Instant;
@@ -30,7 +32,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-@RegisterConstructorMapper(QueuedJob.class)
+@RegisterConstructorMappers(value = {
+        @RegisterConstructorMapper(QueuedJob.class),
+        @RegisterConstructorMapper(JobSchedule.class)})
 public interface JobDao {
 
     @SqlBatch("""
@@ -94,5 +98,48 @@ public interface JobDao {
             """)
     @GetGeneratedKeys("*")
     QueuedJob poll(@Bind Set<String> kinds);
+
+    @SqlBatch("""
+            INSERT INTO "JOB_SCHEDULE" (
+              "NAME"
+            , "CRON"
+            , "JOB_KIND"
+            , "JOB_PRIORITY"
+            , "CREATED_AT"
+            , "NEXT_TRIGGER"
+            ) VALUES (
+              :name
+            , :cron
+            , :jobKind
+            , :jobPriority
+            , NOW()
+            , :nextTrigger
+            )
+            ON CONFLICT("NAME") DO NOTHING
+            """)
+    @GetGeneratedKeys("*")
+    List<JobSchedule> createSchedules(@BindMethods Collection<NewJobSchedule> newSchedules);
+
+    @SqlQuery("""
+            SELECT *
+              FROM "JOB_SCHEDULE"
+             WHERE "NEXT_TRIGGER" <= NOW()
+               FOR UPDATE
+            """)
+    List<JobSchedule> getDueSchedules();
+
+    record ScheduleTriggerUpdate(long scheduleId, Instant nextTrigger) {
+    }
+
+    @SqlBatch("""
+            UPDATE "JOB_SCHEDULE"
+               SET "LAST_TRIGGER" = NOW()
+                 , "NEXT_TRIGGER" = :nextTrigger
+                 , "UPDATED_AT" = NOW()
+             WHERE "ID" = :scheduleId
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    List<JobSchedule> updateScheduleTriggers(@BindMethods Collection<ScheduleTriggerUpdate> triggerUpdates);
 
 }

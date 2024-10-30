@@ -29,12 +29,9 @@ import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
@@ -50,8 +47,6 @@ import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
-import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
-import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
 import java.util.HashMap;
@@ -80,12 +75,12 @@ public final class TaskScheduler extends BaseTaskScheduler {
         final Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
                 Map.entry(new VulnerabilityPolicyFetchEvent(), getCronScheduleForTask(VulnerabilityPolicyFetchTask.class)),
                 Map.entry(new LdapSyncEvent(), getCronScheduleForTask(LdapSyncTask.class)),
-                Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
+                // Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
                 Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
                 Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
                 Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
-                Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
-                Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
+                // Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
+                // Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
                 Map.entry(new InternalComponentIdentificationEvent(), getCronScheduleForTask(InternalComponentIdentificationTask.class)),
                 Map.entry(new PortfolioVulnerabilityAnalysisEvent(), getCronScheduleForTask(VulnerabilityAnalysisTask.class)),
                 Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), getCronScheduleForTask(RepositoryMetaAnalysisTask.class)),

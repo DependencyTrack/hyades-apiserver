@@ -162,6 +162,28 @@
             <column name="WORKFLOW_STEP_RUN_ID" type="BIGINT"/>
         </createTable>
 
+        <createTable tableName="JOB_SCHEDULE">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="JOB_SCHEDULE_PK"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CRON" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="JOB_KIND" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="JOB_PRIORITY" type="INT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ"/>
+            <column name="LAST_TRIGGER" type="TIMESTAMPTZ"/>
+            <column name="NEXT_TRIGGER" type="TIMESTAMPTZ"/>
+        </createTable>
+
         <createTable tableName="WORKFLOW">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_PK"/>
@@ -233,6 +255,10 @@
         </createTable>
 
         <!-- TODO: Indexes to support Job queue. -->
+
+        <createIndex tableName="JOB_SCHEDULE" indexName="JOB_SCHEDULE_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
 
         <createIndex tableName="WORKFLOW" indexName="WORKFLOW_NAME_VERSION_IDX" unique="true">
             <column name="NAME"/>

@@ -28,6 +28,9 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.job.JobResult;
+import org.dependencytrack.job.JobWorker;
+import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -38,6 +41,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +55,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
  *
  * @since 4.6.0
  */
-public class PortfolioMetricsUpdateTask implements Subscriber {
+public class PortfolioMetricsUpdateTask implements JobWorker, Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
     private static final int MAX_CONCURRENCY = SystemUtil.getCpuCores();
@@ -63,7 +67,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             try {
                 executeWithLock(
                         getLockConfigForTask(PortfolioMetricsUpdateTask.class),
-                        (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+                        (LockingTaskExecutor.Task) () -> updateMetrics(event.isForceRefresh()));
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
@@ -124,7 +128,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                     // It is unlikely though that either of these situations causes a block for
                     // over 15 minutes. If that happens, the system is under-resourced.
                     LOGGER.warn("Updating metrics for projects " + firstId + "-" + lastId +
-                            " took longer than expected (15m); Proceeding with potentially stale data");
+                                " took longer than expected (15m); Proceeding with potentially stale data");
                 }
                 LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
                 LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
@@ -135,7 +139,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 //initial duration of portfolio metrics can be set to 20min.
                 //No thread calculating metrics would be executing for more than 15min.
                 //lock can only be extended if lock until is held for time after current db time
-                if(isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
+                if (isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
                     Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
                     LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
                     LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
@@ -143,6 +147,19 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
         }
+    }
+
+    @Override
+    public Optional<JobResult> process(final QueuedJob job) throws Exception {
+        try {
+            executeWithLock(
+                    getLockConfigForTask(PortfolioMetricsUpdateTask.class),
+                    (LockingTaskExecutor.Task) () -> updateMetrics(true));
+        } catch (Throwable ex) {
+            throw new Exception("Error in acquiring lock and executing portfolio metrics task", ex);
+        }
+
+        return Optional.empty();
     }
 
     public record ProjectProjection(long id, UUID uuid) {
