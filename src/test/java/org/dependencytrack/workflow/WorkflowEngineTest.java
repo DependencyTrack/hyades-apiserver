@@ -42,7 +42,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldHandleManyWorkflowRuns() throws Exception {
         try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobEngine = new JobEngine(25, Duration.ZERO, Duration.ofMillis(100))) {
+             final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
             jobEngine.registerStatusListener(workflowEngine);
             jobEngine.start();
 
@@ -52,11 +52,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             workflowEngine.start();
 
             final var random = new SecureRandom();
-            jobEngine.registerWorker(Set.of("foo"), 10, job -> {
+            jobEngine.registerWorker("foo", 10, job -> {
                 Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
             });
-            jobEngine.registerWorker(Set.of("bar"), 1, job -> {
+            jobEngine.registerWorker("bar", 1, job -> {
                 Thread.sleep(random.nextInt(10, 250));
                 return Optional.empty();
             });
@@ -84,7 +84,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldCancelDependantStepRunsOnFailure() throws Exception {
         try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobEngine = new JobEngine(25, Duration.ZERO, Duration.ofMillis(100))) {
+             final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
             jobEngine.registerStatusListener(workflowEngine);
             jobEngine.start();
 
@@ -96,7 +96,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
             workflowEngine.startWorkflow(new StartWorkflowOptions("test", 1));
 
-            jobEngine.registerWorker(Set.of("foo"), 1, job -> {
+            jobEngine.registerWorker("foo", 1, job -> {
                 throw new IllegalStateException("Just for testing");
             });
 

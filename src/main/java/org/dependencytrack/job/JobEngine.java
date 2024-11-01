@@ -19,17 +19,21 @@
 package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Timer;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.dependencytrack.job.JobDao.JobStatusTransition;
-import org.dependencytrack.job.JobDao.ScheduleTriggerUpdate;
 import org.dependencytrack.job.JobEvent.JobCompletedEvent;
 import org.dependencytrack.job.JobEvent.JobFailedEvent;
 import org.dependencytrack.job.JobEvent.JobQueuedEvent;
 import org.dependencytrack.job.JobEvent.JobStartedEvent;
+import org.dependencytrack.job.persistence.JobDao;
+import org.dependencytrack.job.persistence.JobScheduleDao;
+import org.dependencytrack.job.persistence.JobScheduleTriggerUpdate;
+import org.dependencytrack.job.persistence.JobStatusTransition;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
@@ -39,15 +43,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -56,7 +59,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -98,8 +100,7 @@ public class JobEngine implements Closeable {
 
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
-    private final int eventQueueCapacity;
-    private BlockingQueue<JobEvent> eventQueue;
+    private Queue<JobEvent> eventQueue;
     private ScheduledExecutorService eventFlushExecutor;
     private final Duration initialEventFlushDelay;
     private final Duration eventFlushInterval;
@@ -110,14 +111,12 @@ public class JobEngine implements Closeable {
 
     public JobEngine() {
         // TODO: Find reasonable defaults for queue size and flush interval.
-        this(100, Duration.ofSeconds(1), Duration.ofSeconds(3));
+        this(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     public JobEngine(
-            final int eventQueueCapacity,
             final Duration initialEventFlushDelay,
             final Duration eventFlushInterval) {
-        this.eventQueueCapacity = eventQueueCapacity;
         this.initialEventFlushDelay = requireNonNull(initialEventFlushDelay);
         this.eventFlushInterval = requireNonNull(eventFlushInterval);
     }
@@ -129,7 +128,7 @@ public class JobEngine implements Closeable {
     public void start() {
         setState(State.STARTING);
 
-        this.eventQueue = new ArrayBlockingQueue<>(eventQueueCapacity);
+        this.eventQueue = new ConcurrentLinkedQueue<>();
         this.eventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .namingPattern("JobEngine-EventFlusher-%d")
@@ -156,14 +155,14 @@ public class JobEngine implements Closeable {
         statusListeners.add(listener);
     }
 
-    public void registerWorker(final Set<String> kinds, final int concurrency, final JobWorker worker) {
+    public void registerWorker(final String kind, final int concurrency, final JobWorker worker) {
         final boolean isCloseable = Closeable.class.isAssignableFrom(worker.getClass());
         final int numThreads = isCloseable ? concurrency + 1 : concurrency;
         final ExecutorService es = Executors.newFixedThreadPool(numThreads, new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("JobEngine-Worker-" + String.join("-", kinds) + "-%d")
+                .namingPattern("JobEngine-Worker-" + kind + "-%d")
                 .build());
-        executorByKind.put(worker.getClass().getName(), es);
+        executorByKind.put(kind, es);
         final var intervalFunction = IntervalFunction.ofExponentialRandomBackoff(
                 /* initialIntervalMillis */ 250,
                 /* multiplier */ 1.5,
@@ -178,7 +177,15 @@ public class JobEngine implements Closeable {
                      var ignoredMdcJobWorkerThreadId = MDC.putCloseable("jobWorkerThread", workerThreadId.toString())) {
                     final var pollMisses = new AtomicInteger(0);
                     while (!state.isStoppingOrStopped()) {
-                        final QueuedJob polledJob = inJdbiTransaction(handle -> handle.attach(JobDao.class).poll(kinds));
+                        final QueuedJob polledJob;
+                        final Timer.Sample pollTimerSample = Timer.start();
+                        try {
+                            polledJob = inJdbiTransaction(handle -> new JobDao(handle).poll(kind)).orElse(null);
+                        } finally {
+                            pollTimerSample.stop(Timer
+                                    .builder("job_engine_poll")
+                                    .register(Metrics.getRegistry()));
+                        }
                         if (polledJob == null) {
                             final long backoffMs = intervalFunction.apply(pollMisses.incrementAndGet());
                             LOGGER.debug("Backing off for %dms".formatted(backoffMs));
@@ -193,28 +200,24 @@ public class JobEngine implements Closeable {
                         pollMisses.set(0);
                         notifyEventListeners(new JobStartedEvent(Instant.now(), polledJob));
 
+                        final Timer.Sample processingTimerSample = Timer.start();
                         try (var ignoredMdcJobId = MDC.putCloseable("jobId", String.valueOf(polledJob.id()));
                              var ignoredMdcJobKind = MDC.putCloseable("jobKind", polledJob.kind());
                              var ignoredMdcJobPriority = MDC.putCloseable("jobPriority", String.valueOf(polledJob.priority()));
                              var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempts", String.valueOf(polledJob.attempts()))) {
                             worker.process(polledJob);
                             final var event = new JobCompletedEvent(Instant.now(), polledJob);
-                            try {
-                                eventQueue.put(event);
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                throw new IllegalStateException("Failed to enqueue %s".formatted(event), e);
-                            }
+                            eventQueue.add(event);
                             LOGGER.debug("Job completed successfully");
                         } catch (Exception e) {
                             if (e instanceof TransientJobException) {
                                 if (polledJob.attempts() < 6) {
                                     final long delayMillis = intervalFunction.apply(polledJob.attempts());
                                     final QueuedJob requeuedJob = inJdbiTransaction(handle ->
-                                            handle.attach(JobDao.class).requeueForRetry(
+                                            new JobDao(handle).requeueForRetry(
                                                     polledJob,
                                                     Duration.ofMillis(delayMillis),
-                                                    e.getMessage()));
+                                                    e.getMessage()).orElse(null));
                                     // TODO: Send event?
                                     // TODO: Can we do this asynchronously to improve throughput?
                                     //  Would invalidate the retry delay due to the flush interval though.
@@ -225,13 +228,12 @@ public class JobEngine implements Closeable {
                                 }
                             } else {
                                 final var event = new JobFailedEvent(Instant.now(), polledJob, e.getMessage());
-                                try {
-                                    eventQueue.put(event);
-                                } catch (InterruptedException ex) {
-                                    Thread.currentThread().interrupt();
-                                    throw new IllegalStateException("Failed to enqueue %s".formatted(event), ex);
-                                }
+                                eventQueue.add(event);
                             }
+                        } finally {
+                            processingTimerSample.stop(Timer
+                                    .builder("job_worker_process")
+                                    .register(Metrics.getRegistry()));
                         }
                     }
                 } catch (RuntimeException e) {
@@ -263,7 +265,8 @@ public class JobEngine implements Closeable {
     }
 
     public List<QueuedJob> enqueueAll(final Collection<NewJob> newJobs) {
-        final List<QueuedJob> queuedJobs = inJdbiTransaction(handle -> handle.attach(JobDao.class).enqueueAll(newJobs));
+        final List<QueuedJob> queuedJobs = inJdbiTransaction(
+                handle -> new JobDao(handle).enqueueAll(newJobs));
 
         // TODO: Notify in separate thread?
         for (final QueuedJob queuedJob : queuedJobs) {
@@ -283,7 +286,7 @@ public class JobEngine implements Closeable {
     }
 
     public List<JobSchedule> scheduleAll(final Collection<NewJobSchedule> schedules) {
-        return inJdbiTransaction(handle -> handle.attach(JobDao.class).createSchedules(schedules.stream()
+        return inJdbiTransaction(handle -> new JobScheduleDao(handle).createAll(schedules.stream()
                 .map(schedule -> {
                     final Schedule cronSchedule;
                     try {
@@ -367,11 +370,17 @@ public class JobEngine implements Closeable {
     }
 
     private void flushEvents() {
+        final Timer.Sample timerSample = Timer.start();
         eventFlushLock.lock();
         try {
             flushEventsLocked();
+        } catch (Throwable t) {
+            LOGGER.error("Flush failed", t);
         } finally {
             eventFlushLock.unlock();
+            timerSample.stop(Timer
+                    .builder("job_engine_event_flush")
+                    .register(Metrics.getRegistry()));
         }
     }
 
@@ -383,63 +392,48 @@ public class JobEngine implements Closeable {
             return;
         }
 
-        final var eventsByStatus = new HashMap<JobStatus, List<JobEvent>>();
+        final var dequeuedEvents = new ArrayList<JobEvent>(eventQueue.size());
         while (eventQueue.peek() != null) {
             final JobEvent event = eventQueue.poll();
-            final JobStatus status = switch (event) {
-                case JobCompletedEvent ignored -> JobStatus.COMPLETED;
-                case JobFailedEvent ignored -> JobStatus.FAILED;
-                default -> throw new IllegalStateException("Unexpected event: " + event);
-            };
-
-            eventsByStatus.compute(status, (ignored, events) -> {
-                if (events == null) {
-                    return new ArrayList<>(List.of(event));
-                }
-
-                events.add(event);
-                return events;
-            });
+            dequeuedEvents.add(event);
         }
 
-        final var completedJobs = new ArrayList<QueuedJob>();
-        final var failedJobs = new ArrayList<QueuedJob>();
-        useJdbiTransaction(handle -> {
-            final var dao = handle.attach(JobDao.class);
+        LOGGER.info("Flushing %d events".formatted(dequeuedEvents.size()));
+        final List<JobStatusTransition> transitions = dequeuedEvents.stream()
+                .map(event -> switch (event) {
+                    case JobCompletedEvent completedEvent -> new JobStatusTransition(
+                            completedEvent.job().id(),
+                            JobStatus.COMPLETED,
+                            /* failureReason */ null,
+                            completedEvent.timestamp());
+                    case JobFailedEvent failedEvent -> new JobStatusTransition(
+                            failedEvent.job().id(),
+                            JobStatus.FAILED,
+                            failedEvent.failureReason(),
+                            event.timestamp());
+                    default -> throw new IllegalStateException("Unexpected value: " + event);
+                })
+                .toList();
 
-            final List<JobEvent> completedEvents = eventsByStatus.get(JobStatus.COMPLETED);
-            if (completedEvents != null) {
-                completedJobs.addAll(dao.transitionStatuses(completedEvents.stream()
-                        .map(event -> new JobStatusTransition(
-                                event.job().id(),
-                                JobStatus.COMPLETED,
-                                /* failureReason */ null,
-                                event.timestamp()))
-                        .toList()));
-            }
 
-            final List<JobEvent> failedEvents = eventsByStatus.get(JobStatus.FAILED);
-            if (failedEvents != null) {
-                failedJobs.addAll(dao.transitionStatuses(failedEvents.stream()
-                        .map(event -> new JobStatusTransition(
-                                event.job().id(),
-                                JobStatus.FAILED,
-                                ((JobFailedEvent) event).failureReason(),
-                                event.timestamp()))
-                        .toList()));
-            }
-        });
+        final List<QueuedJob> transitionedJobs = inJdbiTransaction(
+                handle -> new JobDao(handle).transitionAll(transitions));
 
-        if (LOGGER.isDebugEnabled()) {
+        if (transitionedJobs.size() != transitions.size()) {
+            throw new IllegalStateException("Expected to transition %d jobs, but only transitioned %d".formatted(
+                    transitions.size(), transitionedJobs.size()));
+        }
+
+        /*if (LOGGER.isDebugEnabled()) {
             for (final QueuedJob completedJob : completedJobs) {
                 LOGGER.debug("Completed %s".formatted(completedJob));
             }
         }
         for (final QueuedJob failedJob : failedJobs) {
             LOGGER.warn("Failed %s".formatted(failedJob));
-        }
+        }*/
 
-        Stream.concat(completedJobs.stream(), failedJobs.stream())
+        transitionedJobs.stream()
                 .sorted(Comparator.comparing(QueuedJob::updatedAt))
                 .map(job -> switch (job.status()) {
                     case COMPLETED -> new JobCompletedEvent(job.updatedAt(), job);
@@ -451,9 +445,10 @@ public class JobEngine implements Closeable {
 
     private void scheduleDueJobs() {
         useJdbiTransaction(handle -> {
-            final var dao = handle.attach(JobDao.class);
+            final var jobDao = new JobDao(handle);
+            final var jobScheduleDao = new JobScheduleDao(handle);
 
-            final List<JobSchedule> dueSchedules = dao.getDueSchedules();
+            final List<JobSchedule> dueSchedules = jobScheduleDao.getAllDue();
             if (dueSchedules.isEmpty()) {
                 LOGGER.debug("No due schedules");
                 return;
@@ -470,14 +465,14 @@ public class JobEngine implements Closeable {
                             null))
                     .toList();
 
-            final List<QueuedJob> queuedJobs = dao.enqueueAll(jobsToQueue);
+            final List<QueuedJob> queuedJobs = jobDao.enqueueAll(jobsToQueue);
             if (LOGGER.isDebugEnabled()) {
                 for (final QueuedJob queuedJob : queuedJobs) {
                     LOGGER.debug("Queued %s".formatted(queuedJob));
                 }
             }
 
-            final var triggerUpdates = dueSchedules.stream()
+            final List<JobScheduleTriggerUpdate> triggerUpdates = dueSchedules.stream()
                     .map(schedule -> {
                         final Schedule cronSchedule;
                         try {
@@ -487,11 +482,11 @@ public class JobEngine implements Closeable {
                             return null;
                         }
                         final Instant nextTrigger = cronSchedule.next().toInstant();
-                        return new ScheduleTriggerUpdate(schedule.id(), nextTrigger);
+                        return new JobScheduleTriggerUpdate(schedule.id(), nextTrigger);
                     })
                     .filter(Objects::nonNull)
                     .toList();
-            final List<JobSchedule> updatedSchedules = dao.updateScheduleTriggers(triggerUpdates);
+            final List<JobSchedule> updatedSchedules = jobScheduleDao.updateAllTriggers(triggerUpdates);
             if (LOGGER.isDebugEnabled()) {
                 for (final JobSchedule updatedSchedule : updatedSchedules) {
                     LOGGER.debug("Updated schedule: %s".formatted(updatedSchedule));

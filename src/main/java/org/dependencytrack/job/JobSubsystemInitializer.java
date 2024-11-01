@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 public class JobSubsystemInitializer implements ServletContextListener {
 
@@ -49,15 +48,15 @@ public class JobSubsystemInitializer implements ServletContextListener {
                 new NewJobSchedule("vuln-metrics-update", "* * * * *", "update-metrics-vulns", null, null)));
 
         final SecureRandom random = new SecureRandom();
-        jobEngine.registerWorker(Set.of("consume-bom"), 5, new RandomlyFailingJobWorker(random));
-        jobEngine.registerWorker(Set.of("process-bom"), 5, new RandomlyFailingJobWorker(random));
-        jobEngine.registerWorker(Set.of("analyze-vulns-project"), 3, new RandomlyFailingJobWorker(random));
-        jobEngine.registerWorker(Set.of("evaluate-policies-project"), 3, new RandomlyFailingJobWorker(random));
-        jobEngine.registerWorker(Set.of("update-metrics-project"), 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker("consume-bom", 5, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker("process-bom", 5, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker("analyze-vulns-project", 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker("evaluate-policies-project", 3, new RandomlyFailingJobWorker(random));
+        jobEngine.registerWorker("update-metrics-project", 3, new RandomlyFailingJobWorker(random));
 
-        jobEngine.registerWorker(Set.of("mirror-nvd"), 1, new NistMirrorTask());
-        jobEngine.registerWorker(Set.of("update-metrics-portfolio"), 1, new PortfolioMetricsUpdateTask());
-        jobEngine.registerWorker(Set.of("update-metrics-vulns"), 1, new VulnerabilityMetricsUpdateTask());
+        jobEngine.registerWorker("mirror-nvd", 1, new NistMirrorTask());
+        jobEngine.registerWorker("update-metrics-portfolio", 1, new PortfolioMetricsUpdateTask());
+        jobEngine.registerWorker("update-metrics-vulns", 1, new VulnerabilityMetricsUpdateTask());
     }
 
     @Override
@@ -66,7 +65,7 @@ public class JobSubsystemInitializer implements ServletContextListener {
 
         try {
             jobEngine.close();
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             LOGGER.warn("Graceful shutdown of job engine failed", e);
         }
     }

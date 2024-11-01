@@ -146,7 +146,7 @@
             <column name="KIND" type="text">
                 <constraints nullable="false"/>
             </column>
-            <column name="PRIORITY" type="INT"/>
+            <column name="PRIORITY" type="SMALLINT"/>
             <column name="SCHEDULED_FOR" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>
@@ -254,7 +254,17 @@
             <column name="STARTED_AT" type="TIMESTAMPTZ"/>
         </createTable>
 
-        <!-- TODO: Indexes to support Job queue. -->
+        <sql splitStatements="true" stripComments="true">
+            -- Covering(!) index that serves the WHERE, as well as the ORDER BY
+            -- clause of the poll query.
+            CREATE INDEX "JOB_POLL_IDX" ON "JOB" (
+              "PRIORITY" DESC NULLS LAST
+            , "SCHEDULED_FOR"
+            , "CREATED_AT"
+            , "STATUS"
+            , "KIND"
+            ) INCLUDE ("ID") WHERE "STATUS" = ANY('{PENDING, PENDING_RETRY}'::JOB_STATUS[]);
+        </sql>
 
         <createIndex tableName="JOB_SCHEDULE" indexName="JOB_SCHEDULE_NAME_IDX" unique="true">
             <column name="NAME"/>

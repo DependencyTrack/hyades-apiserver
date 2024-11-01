@@ -42,10 +42,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -97,7 +97,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
     private final int jobEventQueueCapacity;
-    private BlockingQueue<JobEvent> jobEventQueue;
+    private Queue<JobEvent> jobEventQueue;
     private ScheduledExecutorService jobEventFlushExecutor;
     private final Duration jobEventFlushInitialDelay;
     private final Duration jobEventFlushInterval;
@@ -125,7 +125,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     public void start() {
         setState(State.STARTING);
 
-        this.jobEventQueue = new ArrayBlockingQueue<>(jobEventQueueCapacity);
+        this.jobEventQueue = new ConcurrentLinkedQueue<>();
         this.jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .namingPattern("WorkflowEngine-JobEventFlusher-%d")
@@ -286,24 +286,8 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         final boolean isRelevant = event instanceof JobCompletedEvent
                                    || event instanceof JobFailedEvent
                                    || event instanceof JobStartedEvent;
-        if (!isRelevant || event.job().workflowStepRunId() == null) {
-            return;
-        }
-
-        final boolean queued;
-        try {
-            queued = jobEventQueue.offer(event, jobEventFlushInterval.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Thread was interrupted while waiting to enqueue %s".formatted(event), e);
-        }
-
-        if (!queued) {
-            flushJobEvents();
-            if (!jobEventQueue.offer(event)) {
-                // Shouldn't ever happen, but without an exception we might never know when it does.
-                throw new IllegalStateException("%s could not be queued even after flushing queued events".formatted(event));
-            }
+        if (isRelevant && event.job().workflowStepRunId() != null) {
+            jobEventQueue.add(event);
         }
     }
 

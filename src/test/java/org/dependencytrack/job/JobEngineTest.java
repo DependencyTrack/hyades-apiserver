@@ -25,7 +25,6 @@ import org.junit.Test;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -57,12 +56,12 @@ public class JobEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldMarkSuccessfulJobAsCompleted() throws Exception {
-        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+        try (final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
             jobEngine.start();
 
             final QueuedJob queuedJob = jobEngine.enqueue(new NewJob("foo", null, null, null, null, null, null));
 
-            jobEngine.registerWorker(Set.of("foo"), 2, job -> Optional.empty());
+            jobEngine.registerWorker("foo", 2, job -> Optional.empty());
 
             await("Job completion")
                     .atMost(5, TimeUnit.SECONDS)
@@ -82,12 +81,12 @@ public class JobEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldMarkFailingJobAsFailed() throws Exception {
-        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+        try (final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
             jobEngine.start();
 
             final QueuedJob queuedJob = jobEngine.enqueue(new NewJob("foo", null, null, null, null, null, null));
 
-            jobEngine.registerWorker(Set.of("foo"), 2, job -> {
+            jobEngine.registerWorker("foo", 2, job -> {
                 throw new IllegalStateException("Just for testing");
             });
 
@@ -109,7 +108,7 @@ public class JobEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldPollJobsWithHigherPriorityFirst() throws Exception {
-        try (final var jobEngine = new JobEngine(10, Duration.ZERO, Duration.ofMillis(100))) {
+        try (final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
             jobEngine.start();
 
             jobEngine.enqueueAll(List.of(
@@ -120,7 +119,7 @@ public class JobEngineTest extends PersistenceCapableTest {
                     new NewJob("foo", 2, null, null, null, null, null)));
 
             final var processedJobQueue = new ArrayBlockingQueue<QueuedJob>(5);
-            jobEngine.registerWorker(Set.of("foo"), 1, job -> {
+            jobEngine.registerWorker("foo", 1, job -> {
                 processedJobQueue.add(job);
                 return Optional.empty();
             });

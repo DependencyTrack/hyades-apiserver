@@ -56,8 +56,8 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Shutting down workflow engine");
 
         try {
-            WorkflowEngine.getInstance().close();
-        } catch (IOException e) {
+            workflowEngine.close();
+        } catch (IOException | RuntimeException e) {
             LOGGER.warn("Graceful shutdown of workflow engine failed", e);
         }
     }
