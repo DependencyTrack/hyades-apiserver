@@ -19,6 +19,7 @@
 package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.proto.job.v1alpha1.JobResult;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;

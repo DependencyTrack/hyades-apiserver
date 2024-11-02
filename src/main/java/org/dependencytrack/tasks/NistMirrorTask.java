@@ -24,10 +24,10 @@ import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.job.JobResult;
 import org.dependencytrack.job.JobWorker;
 import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
 import java.util.Optional;
 

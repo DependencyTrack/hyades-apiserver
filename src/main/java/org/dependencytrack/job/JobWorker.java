@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.job;
 
+import org.dependencytrack.proto.job.v1alpha1.JobResult;
+
 import java.util.Optional;
 
 public interface JobWorker {

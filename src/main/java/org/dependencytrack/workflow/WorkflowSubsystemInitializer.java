@@ -19,7 +19,6 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.job.JobEngine;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -36,8 +35,6 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Initializing workflow engine");
         workflowEngine = WorkflowEngine.getInstance();
         workflowEngine.start();
-
-        JobEngine.getInstance().registerStatusListener(workflowEngine);
 
         for (final WorkflowSpec workflow : Workflows.ALL_WORKFLOWS) {
             try {

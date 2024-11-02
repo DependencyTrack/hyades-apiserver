@@ -18,20 +18,27 @@
  */
 package org.dependencytrack.workflow;
 
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.job.JobEngine;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.testcontainers.kafka.KafkaContainer;
 
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -39,11 +46,28 @@ import static org.dependencytrack.workflow.Workflows.WORKFLOW_BOM_UPLOAD_PROCESS
 
 public class WorkflowEngineTest extends PersistenceCapableTest {
 
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    @Rule
+    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
+
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
+
+        environmentVariables.set("KAFKA_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
+
+        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
+            adminClient.createTopics(List.of(new NewTopic("dtrack.event.job", 3, (short) 1))).all().get();
+        }
+    }
+
     @Test
     public void shouldHandleManyWorkflowRuns() throws Exception {
-        try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
-            jobEngine.registerStatusListener(workflowEngine);
+        try (final var jobEngine = new JobEngine();
+             final var workflowEngine = new WorkflowEngine(jobEngine)) {
             jobEngine.start();
 
             workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
@@ -83,9 +107,8 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldCancelDependantStepRunsOnFailure() throws Exception {
-        try (final var workflowEngine = new WorkflowEngine(25, Duration.ZERO, Duration.ofMillis(100));
-             final var jobEngine = new JobEngine(Duration.ZERO, Duration.ofMillis(100))) {
-            jobEngine.registerStatusListener(workflowEngine);
+        try (final var jobEngine = new JobEngine();
+             final var workflowEngine = new WorkflowEngine(jobEngine)) {
             jobEngine.start();
 
             workflowEngine.deploy(new WorkflowSpec("test", 1, List.of(
@@ -126,7 +149,8 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldDeployWorkflowAndReturnCompleteView() throws Exception {
-        try (final var workflowEngine = new WorkflowEngine()) {
+        try (final var jobEngine = new JobEngine();
+             final var workflowEngine = new WorkflowEngine(jobEngine)) {
             workflowEngine.deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
 
             final WorkflowRunView workflowRun = workflowEngine.startWorkflow(new StartWorkflowOptions(

@@ -18,18 +18,19 @@
  */
 package org.dependencytrack.job.persistence;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.dependencytrack.job.JobStatus;
 import org.dependencytrack.job.QueuedJob;
+import org.dependencytrack.proto.job.v1alpha1.JobArguments;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 
-final class QueuedJobRowMapper implements RowMapper<QueuedJob> {
+public class QueuedJobRowMapper implements RowMapper<QueuedJob> {
 
     @Override
     public QueuedJob map(final ResultSet rs, final StatementContext ctx) throws SQLException {
@@ -39,8 +40,7 @@ final class QueuedJobRowMapper implements RowMapper<QueuedJob> {
                 rs.getString("KIND"),
                 nullableInteger(rs, "PRIORITY"),
                 Instant.ofEpochMilli(rs.getTimestamp("SCHEDULED_FOR").getTime()),
-                null,
-                null,
+                nullableArguments(rs),
                 rs.getLong("WORKFLOW_STEP_RUN_ID"),
                 Instant.ofEpochMilli(rs.getDate("CREATED_AT").getTime()),
                 nullableInstant(rs, "UPDATED_AT"),
@@ -48,6 +48,19 @@ final class QueuedJobRowMapper implements RowMapper<QueuedJob> {
                 rs.getInt("ATTEMPTS"),
                 rs.getString("FAILURE_REASON")
         );
+    }
+
+    private static JobArguments nullableArguments(final ResultSet rs) throws SQLException {
+        final byte[] argumentsBytes = rs.getBytes("ARGUMENTS");
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        try {
+            return JobArguments.parseFrom(argumentsBytes);
+        } catch (InvalidProtocolBufferException e) {
+            throw new IllegalStateException("Failed to deserialize job arguments", e);
+        }
     }
 
     private static Instant nullableInstant(final ResultSet rs, final String columnName) throws SQLException {

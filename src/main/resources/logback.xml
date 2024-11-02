@@ -16,6 +16,14 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
+    <logger name="org.dependencytrack.job" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
+    <logger name="org.dependencytrack.workflow" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
     <logger name="org.eclipse.jetty" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>

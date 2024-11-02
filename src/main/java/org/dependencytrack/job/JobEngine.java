@@ -18,22 +18,37 @@
  */
 package org.dependencytrack.job;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
+import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.dependencytrack.job.JobEvent.JobCompletedEvent;
-import org.dependencytrack.job.JobEvent.JobFailedEvent;
-import org.dependencytrack.job.JobEvent.JobQueuedEvent;
-import org.dependencytrack.job.JobEvent.JobStartedEvent;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.record.CompressionType;
+import org.apache.kafka.common.serialization.LongDeserializer;
+import org.apache.kafka.common.serialization.LongSerializer;
+import org.dependencytrack.job.event.JobEventConsumer;
+import org.dependencytrack.job.event.JobEventKafkaProtobufDeserializer;
+import org.dependencytrack.job.event.JobEventKafkaProtobufSerializer;
 import org.dependencytrack.job.persistence.JobDao;
 import org.dependencytrack.job.persistence.JobScheduleDao;
 import org.dependencytrack.job.persistence.JobScheduleTriggerUpdate;
-import org.dependencytrack.job.persistence.JobStatusTransition;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent.JobCompleted;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent.JobFailed;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent.JobQueued;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent.JobStarted;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
@@ -42,17 +57,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,7 +71,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static java.util.Objects.requireNonNull;
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.ACKS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.COMPRESSION_TYPE_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.LINGER_MS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG;
+import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
@@ -89,8 +112,15 @@ public class JobEngine implements Closeable {
             return equals(CREATED) || equals(STOPPED);
         }
 
-        private boolean isStoppingOrStopped() {
-            return equals(STOPPING) || equals(STOPPED);
+        private boolean isNotStoppingOrStopped() {
+            return !equals(STOPPING) && !equals(STOPPED);
+        }
+
+        private void assertRunning() {
+            if (!equals(RUNNING)) {
+                throw new IllegalStateException(
+                        "Engine must be in state %s, but is %s".formatted(RUNNING, this));
+            }
         }
 
     }
@@ -98,28 +128,19 @@ public class JobEngine implements Closeable {
     private static final Logger LOGGER = Logger.getLogger(JobEngine.class);
     private static final JobEngine INSTANCE = new JobEngine();
 
+    private final UUID instanceId = UUID.randomUUID();
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
-    private Queue<JobEvent> eventQueue;
-    private ScheduledExecutorService eventFlushExecutor;
-    private final Duration initialEventFlushDelay;
-    private final Duration eventFlushInterval;
-    private final ReentrantLock eventFlushLock = new ReentrantLock();
+    private JobEventConsumer eventConsumer;
+    private KafkaConsumer<Long, JobEvent> kafkaEventConsumer;
+    private KafkaProducer<Long, JobEvent> kafkaEventProducer;
+    private KafkaClientMetrics kafkaEventConsumerMetrics;
+    private KafkaClientMetrics kafkaEventProducerMetrics;
+    private ExecutorService eventConsumerExecutor;
     private ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> executorByKind = new ConcurrentHashMap<>();
-    private final List<JobEventListener> statusListeners = new CopyOnWriteArrayList<>();
-
-    public JobEngine() {
-        // TODO: Find reasonable defaults for queue size and flush interval.
-        this(Duration.ofSeconds(1), Duration.ofSeconds(3));
-    }
-
-    public JobEngine(
-            final Duration initialEventFlushDelay,
-            final Duration eventFlushInterval) {
-        this.initialEventFlushDelay = requireNonNull(initialEventFlushDelay);
-        this.eventFlushInterval = requireNonNull(eventFlushInterval);
-    }
+    private final IntervalFunction retryIntervalFunction =
+            IntervalFunction.ofExponentialRandomBackoff(250, 1.5, 0.3, 5000);
 
     public static JobEngine getInstance() {
         return INSTANCE;
@@ -128,21 +149,43 @@ public class JobEngine implements Closeable {
     public void start() {
         setState(State.STARTING);
 
-        this.eventQueue = new ConcurrentLinkedQueue<>();
-        this.eventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+        kafkaEventProducer = new KafkaProducer<>(Map.ofEntries(
+                Map.entry(BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(KAFKA_BOOTSTRAP_SERVERS)),
+                Map.entry(CLIENT_ID_CONFIG, "dtrack-jobengine-eventproducer-" + instanceId),
+                Map.entry(KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class.getName()),
+                Map.entry(VALUE_SERIALIZER_CLASS_CONFIG, JobEventKafkaProtobufSerializer.class.getName()),
+                Map.entry(COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name),
+                Map.entry(LINGER_MS_CONFIG, "100"),
+                Map.entry(ACKS_CONFIG, "1")));
+        kafkaEventConsumer = new KafkaConsumer<>(Map.ofEntries(
+                Map.entry(BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(KAFKA_BOOTSTRAP_SERVERS)),
+                Map.entry(CLIENT_ID_CONFIG, "dtrack-jobengine-eventconsumer-" + instanceId),
+                Map.entry(GROUP_ID_CONFIG, "dtrack-jobengine"),
+                Map.entry(KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName()),
+                Map.entry(VALUE_DESERIALIZER_CLASS_CONFIG, JobEventKafkaProtobufDeserializer.class.getName()),
+                Map.entry(ENABLE_AUTO_COMMIT_CONFIG, "false"),
+                Map.entry(AUTO_OFFSET_RESET_CONFIG, "earliest")));
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            kafkaEventConsumerMetrics = new KafkaClientMetrics(kafkaEventConsumer);
+            kafkaEventConsumerMetrics.bindTo(Metrics.getRegistry());
+            kafkaEventProducerMetrics = new KafkaClientMetrics(kafkaEventProducer);
+            kafkaEventProducerMetrics.bindTo(Metrics.getRegistry());
+        }
+        eventConsumer = new JobEventConsumer(
+                kafkaEventConsumer,
+                /* batchLingerDuration */ Duration.ofMillis(500), // TODO: Read from config.
+                /* batchSize */ 1000); // TODO: Read from config.
+        kafkaEventConsumer.subscribe(List.of("dtrack.event.job"), eventConsumer);
+        eventConsumerExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("JobEngine-EventFlusher-%d")
+                .namingPattern("JobEngine-EventConsumer-%d")
                 .build());
-        this.eventFlushExecutor.scheduleAtFixedRate(
-                this::flushEvents,
-                initialEventFlushDelay.toMillis(),
-                eventFlushInterval.toMillis(),
-                TimeUnit.MILLISECONDS);
-        this.schedulerExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+        eventConsumerExecutor.execute(eventConsumer);
+        schedulerExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .namingPattern("JobEngine-Scheduler-%d")
                 .build());
-        this.schedulerExecutor.scheduleAtFixedRate(
+        schedulerExecutor.scheduleAtFixedRate(
                 this::scheduleDueJobs,
                 1,
                 5,
@@ -151,14 +194,10 @@ public class JobEngine implements Closeable {
         setState(State.RUNNING);
     }
 
-    public void registerStatusListener(final JobEventListener listener) {
-        statusListeners.add(listener);
-    }
-
     public void registerWorker(final String kind, final int concurrency, final JobWorker worker) {
-        final boolean isCloseable = Closeable.class.isAssignableFrom(worker.getClass());
-        final int numThreads = isCloseable ? concurrency + 1 : concurrency;
-        final ExecutorService es = Executors.newFixedThreadPool(numThreads, new BasicThreadFactory.Builder()
+        state.assertRunning();
+
+        final ExecutorService es = Executors.newFixedThreadPool(concurrency, new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .namingPattern("JobEngine-Worker-" + kind + "-%d")
                 .build());
@@ -169,14 +208,13 @@ public class JobEngine implements Closeable {
                 /* randomizationFactor */ 0.3,
                 /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(5));
 
-        final var workersLatch = new CountDownLatch(concurrency);
         for (int i = 0; i < concurrency; i++) {
             final var workerThreadId = UUID.randomUUID();
-            es.submit(() -> {
-                try (var ignoredMdcJobWorker = MDC.putCloseable("jobWorker", worker.getClass().getName());
+            es.execute(() -> {
+                try (var ignoredMdcJobWorker = MDC.putCloseable("jobWorker", worker.getClass().getSimpleName());
                      var ignoredMdcJobWorkerThreadId = MDC.putCloseable("jobWorkerThread", workerThreadId.toString())) {
                     final var pollMisses = new AtomicInteger(0);
-                    while (!state.isStoppingOrStopped()) {
+                    while (state.isNotStoppingOrStopped()) {
                         final QueuedJob polledJob;
                         final Timer.Sample pollTimerSample = Timer.start();
                         try {
@@ -198,80 +236,85 @@ public class JobEngine implements Closeable {
                         }
 
                         pollMisses.set(0);
-                        notifyEventListeners(new JobStartedEvent(Instant.now(), polledJob));
+                        dispatchEvents(List.of(JobEvent.newBuilder()
+                                .setJobId(polledJob.id())
+                                .setJobKind(polledJob.kind())
+                                .setTimestamp(Timestamps.now())
+                                .setWorkflowStepRunId(polledJob.workflowStepRunId() != null
+                                        ? polledJob.workflowStepRunId()
+                                        : 0)
+                                .setJobStartedSubject(JobStarted.newBuilder()
+                                        .setAttempt(polledJob.attempts())
+                                        .build())
+                                .build()));
 
                         final Timer.Sample processingTimerSample = Timer.start();
                         try (var ignoredMdcJobId = MDC.putCloseable("jobId", String.valueOf(polledJob.id()));
                              var ignoredMdcJobKind = MDC.putCloseable("jobKind", polledJob.kind());
                              var ignoredMdcJobPriority = MDC.putCloseable("jobPriority", String.valueOf(polledJob.priority()));
-                             var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempts", String.valueOf(polledJob.attempts()))) {
+                             var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempt", String.valueOf(polledJob.attempts()))) {
+                            LOGGER.debug("Processing");
                             worker.process(polledJob);
-                            final var event = new JobCompletedEvent(Instant.now(), polledJob);
-                            eventQueue.add(event);
+                            dispatchEvents(List.of(JobEvent.newBuilder()
+                                    .setJobId(polledJob.id())
+                                    .setJobKind(polledJob.kind())
+                                    .setTimestamp(Timestamps.now())
+                                    .setWorkflowStepRunId(polledJob.workflowStepRunId() != null
+                                            ? polledJob.workflowStepRunId()
+                                            : 0)
+                                    .setJobCompletedSubject(JobCompleted.newBuilder()
+                                            .setAttempt(polledJob.attempts())
+                                            .build())
+                                    .build()));
                             LOGGER.debug("Job completed successfully");
                         } catch (Exception e) {
-                            if (e instanceof TransientJobException) {
-                                if (polledJob.attempts() < 6) {
-                                    final long delayMillis = intervalFunction.apply(polledJob.attempts());
-                                    final QueuedJob requeuedJob = inJdbiTransaction(handle ->
-                                            new JobDao(handle).requeueForRetry(
-                                                    polledJob,
-                                                    Duration.ofMillis(delayMillis),
-                                                    e.getMessage()).orElse(null));
-                                    // TODO: Send event?
-                                    // TODO: Can we do this asynchronously to improve throughput?
-                                    //  Would invalidate the retry delay due to the flush interval though.
-                                    LOGGER.warn("Queued for retry: %s".formatted(requeuedJob));
-
-                                } else {
-                                    LOGGER.warn("Max retry attempts exceeded for %s".formatted(polledJob));
-                                }
-                            } else {
-                                final var event = new JobFailedEvent(Instant.now(), polledJob, e.getMessage());
-                                eventQueue.add(event);
+                            final JobFailed.Builder jobFailedBuilder = JobFailed.newBuilder()
+                                    .setAttempt(polledJob.attempts())
+                                    .setFailureReason(e.getMessage());
+                            if (e instanceof TransientJobException && (polledJob.attempts() + 1) <= 6) {
+                                final long retryDelay = retryIntervalFunction.apply(polledJob.attempts());
+                                final Instant nextAttempt = Instant.now().plusMillis(retryDelay);
+                                jobFailedBuilder.setNextAttemptAt(Timestamps.fromMillis(nextAttempt.toEpochMilli()));
                             }
+
+                            dispatchEvents(List.of(JobEvent.newBuilder()
+                                    .setJobId(polledJob.id())
+                                    .setJobKind(polledJob.kind())
+                                    .setTimestamp(Timestamps.now())
+                                    .setWorkflowStepRunId(polledJob.workflowStepRunId() != null
+                                            ? polledJob.workflowStepRunId()
+                                            : 0)
+                                    .setJobFailedSubject(jobFailedBuilder.build())
+                                    .build()));
+                            LOGGER.debug("Job failed", e);
                         } finally {
                             processingTimerSample.stop(Timer
                                     .builder("job_worker_process")
                                     .register(Metrics.getRegistry()));
                         }
                     }
-                } catch (RuntimeException e) {
-                    // TODO: Potentially need to check if job needs to be failed.
-                    //  Better yet, organize try-catch-blocks to make this less ambiguous.
-                    LOGGER.error("F", e);
-                } finally {
-                    workersLatch.countDown();
-                }
-            });
-        }
-
-        if (isCloseable) {
-            es.submit(() -> {
-                try {
-                    workersLatch.await();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-
-                try (var ignoredMdcJobWorker = MDC.putCloseable("jobWorker", worker.getClass().getName())) {
-                    final var closeable = (Closeable) worker;
-                    closeable.close();
-                } catch (IOException | RuntimeException e) {
-                    LOGGER.error("Failed to close worker", e);
                 }
             });
         }
     }
 
     public List<QueuedJob> enqueueAll(final Collection<NewJob> newJobs) {
+        state.assertRunning();
+
         final List<QueuedJob> queuedJobs = inJdbiTransaction(
                 handle -> new JobDao(handle).enqueueAll(newJobs));
 
-        // TODO: Notify in separate thread?
-        for (final QueuedJob queuedJob : queuedJobs) {
-            notifyEventListeners(new JobQueuedEvent(queuedJob.createdAt(), queuedJob));
-        }
+        dispatchEvents(queuedJobs.stream()
+                .map(queuedJob -> JobEvent.newBuilder()
+                        .setJobId(queuedJob.id())
+                        .setJobKind(queuedJob.kind())
+                        .setTimestamp(Timestamps.now())
+                        .setWorkflowStepRunId(queuedJob.workflowStepRunId() != null
+                                ? queuedJob.workflowStepRunId()
+                                : 0)
+                        .setJobQueuedSubject(JobQueued.newBuilder())
+                        .build())
+                .toList());
 
         return queuedJobs;
     }
@@ -319,6 +362,9 @@ public class JobEngine implements Closeable {
         LOGGER.info("Stopping");
         setState(State.STOPPING);
 
+        // TODO: Ensure the shutdown timeout is enforced across all activities,
+        //  i.e. the entire process should take no more than 30sec.
+
         LOGGER.info("Waiting for scheduler to stop");
         schedulerExecutor.shutdown();
         try {
@@ -340,110 +386,51 @@ public class JobEngine implements Closeable {
             try {
                 final boolean terminated = executorService.awaitTermination(30, TimeUnit.SECONDS);
                 if (!terminated) {
-                    LOGGER.warn("Executor for kind %s did not terminate in time".formatted(kind));
+                    LOGGER.warn("Executor for kind %s did not stop in time".formatted(kind));
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
 
-        LOGGER.info("Waiting for event flush worker to stop");
-        eventFlushExecutor.shutdown();
+        LOGGER.info("Waiting for event consumer to stop");
+        eventConsumer.shutdown();
+        eventConsumerExecutor.shutdown();
         try {
-            final boolean terminated = eventFlushExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            final boolean terminated = eventConsumerExecutor.awaitTermination(30, TimeUnit.SECONDS);
             if (!terminated) {
-                LOGGER.warn("Flush executor did not terminate in time");
+                LOGGER.warn("Event consumer did not stop in time");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
-        flushEvents();
-        eventQueue.clear();
-        eventQueue = null;
+        kafkaEventConsumer.close(Duration.ofSeconds(30));
+        if (kafkaEventConsumerMetrics != null) {
+            kafkaEventConsumerMetrics.close();
+        }
+
+        LOGGER.info("Waiting for event producer to stop");
+        kafkaEventProducer.close(Duration.ofSeconds(30));
+        if (kafkaEventProducerMetrics != null) {
+            kafkaEventProducerMetrics.close();
+        }
+
+        eventConsumer = null;
+        kafkaEventConsumer = null;
+        kafkaEventConsumerMetrics = null;
+        eventConsumerExecutor = null;
+        kafkaEventProducer = null;
+        kafkaEventProducerMetrics = null;
         executorByKind.clear();
-        statusListeners.clear();
         schedulerExecutor = null;
-        eventFlushExecutor = null;
         setState(State.STOPPED);
     }
 
-    private void flushEvents() {
-        final Timer.Sample timerSample = Timer.start();
-        eventFlushLock.lock();
-        try {
-            flushEventsLocked();
-        } catch (Throwable t) {
-            LOGGER.error("Flush failed", t);
-        } finally {
-            eventFlushLock.unlock();
-            timerSample.stop(Timer
-                    .builder("job_engine_event_flush")
-                    .register(Metrics.getRegistry()));
-        }
-    }
-
-    private void flushEventsLocked() {
-        assert eventFlushLock.isHeldByCurrentThread();
-
-        if (eventQueue.isEmpty()) {
-            LOGGER.debug("No events to flush");
-            return;
-        }
-
-        final var dequeuedEvents = new ArrayList<JobEvent>(eventQueue.size());
-        while (eventQueue.peek() != null) {
-            final JobEvent event = eventQueue.poll();
-            dequeuedEvents.add(event);
-        }
-
-        LOGGER.info("Flushing %d events".formatted(dequeuedEvents.size()));
-        final List<JobStatusTransition> transitions = dequeuedEvents.stream()
-                .map(event -> switch (event) {
-                    case JobCompletedEvent completedEvent -> new JobStatusTransition(
-                            completedEvent.job().id(),
-                            JobStatus.COMPLETED,
-                            /* failureReason */ null,
-                            completedEvent.timestamp());
-                    case JobFailedEvent failedEvent -> new JobStatusTransition(
-                            failedEvent.job().id(),
-                            JobStatus.FAILED,
-                            failedEvent.failureReason(),
-                            event.timestamp());
-                    default -> throw new IllegalStateException("Unexpected value: " + event);
-                })
-                .toList();
-
-
-        final List<QueuedJob> transitionedJobs = inJdbiTransaction(
-                handle -> new JobDao(handle).transitionAll(transitions));
-
-        if (transitionedJobs.size() != transitions.size()) {
-            throw new IllegalStateException("Expected to transition %d jobs, but only transitioned %d".formatted(
-                    transitions.size(), transitionedJobs.size()));
-        }
-
-        /*if (LOGGER.isDebugEnabled()) {
-            for (final QueuedJob completedJob : completedJobs) {
-                LOGGER.debug("Completed %s".formatted(completedJob));
-            }
-        }
-        for (final QueuedJob failedJob : failedJobs) {
-            LOGGER.warn("Failed %s".formatted(failedJob));
-        }*/
-
-        transitionedJobs.stream()
-                .sorted(Comparator.comparing(QueuedJob::updatedAt))
-                .map(job -> switch (job.status()) {
-                    case COMPLETED -> new JobCompletedEvent(job.updatedAt(), job);
-                    case FAILED -> new JobFailedEvent(job.updatedAt(), job, job.failureReason());
-                    default -> throw new IllegalStateException("Unexpected job status: " + job.status());
-                })
-                .forEach(this::notifyEventListeners);
-    }
-
     private void scheduleDueJobs() {
+        final var queuedJobs = new ArrayList<QueuedJob>();
+
         useJdbiTransaction(handle -> {
             final var jobDao = new JobDao(handle);
             final var jobScheduleDao = new JobScheduleDao(handle);
@@ -455,17 +442,11 @@ public class JobEngine implements Closeable {
             }
 
             final var jobsToQueue = dueSchedules.stream()
-                    .map(schedule -> new NewJob(
-                            schedule.jobKind(),
-                            schedule.jobPriority(),
-                            null,
-                            null,
-                            null,
-                            null,
-                            null))
+                    .map(schedule -> new NewJob(schedule.jobKind())
+                            .withPriority(schedule.jobPriority()))
                     .toList();
 
-            final List<QueuedJob> queuedJobs = jobDao.enqueueAll(jobsToQueue);
+            queuedJobs.addAll(jobDao.enqueueAll(jobsToQueue));
             if (LOGGER.isDebugEnabled()) {
                 for (final QueuedJob queuedJob : queuedJobs) {
                     LOGGER.debug("Queued %s".formatted(queuedJob));
@@ -493,17 +474,49 @@ public class JobEngine implements Closeable {
                 }
             }
         });
+
+        if (!queuedJobs.isEmpty()) {
+            dispatchEvents(queuedJobs.stream()
+                    .map(queuedJob -> JobEvent.newBuilder()
+                            .setJobId(queuedJob.id())
+                            .setJobKind(queuedJob.kind())
+                            .setTimestamp(Timestamps.fromMillis(queuedJob.createdAt().toEpochMilli()))
+                            .setJobQueuedSubject(JobQueued.newBuilder().build())
+                            .build())
+                    .toList());
+        }
     }
 
-    private void notifyEventListeners(final JobEvent event) {
-        for (final JobEventListener listener : statusListeners) {
-            try {
-                listener.onJobEvent(event);
-            } catch (RuntimeException e) {
-                LOGGER.warn("Failed to notify listener %s for event: %s".formatted(
-                        listener.getClass().getName(), event), e);
-            }
+    private CompletableFuture<?> dispatchEvents(final List<JobEvent> events) {
+        final var sendFutures = new ArrayList<CompletableFuture<RecordMetadata>>(events.size());
+        for (final JobEvent event : events) {
+            final var sendFuture = new CompletableFuture<RecordMetadata>();
+            sendFutures.add(sendFuture);
+
+            final var producerRecord = new ProducerRecord<>("dtrack.event.job", event.getJobId(), event);
+            kafkaEventProducer.send(producerRecord, (metadata, exception) -> {
+                if (exception != null) {
+                    try {
+                        // JSON is easier to read in logs than the default text format.
+                        final String eventJson = JsonFormat.printer().print(event);
+                        LOGGER.error("Failed to produce %s".formatted(eventJson), exception);
+                    } catch (InvalidProtocolBufferException e) {
+                        LOGGER.warn("Failed to serialize event as JSON", e);
+                        LOGGER.error("Failed to produce %s".formatted(event), exception);
+                    }
+
+                    sendFuture.completeExceptionally(exception);
+                } else {
+                    sendFuture.complete(metadata);
+                }
+            });
         }
+
+        if (sendFutures.size() == 1) {
+            return sendFutures.getFirst();
+        }
+
+        return CompletableFuture.allOf(sendFutures.toArray(new CompletableFuture[0]));
     }
 
     State state() {

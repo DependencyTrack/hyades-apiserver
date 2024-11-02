@@ -16,10 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.job;
+package org.dependencytrack.job.event;
 
-public interface JobEventListener {
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
 
-    void onJobEvent(final JobEvent event);
-
+public class JobEventKafkaProtobufSerializer extends KafkaProtobufSerializer<JobEvent> {
 }

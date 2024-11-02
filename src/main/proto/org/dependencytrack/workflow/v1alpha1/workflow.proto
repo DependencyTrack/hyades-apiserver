@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.v1alpha1;
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.v1alpha1";
+
+message WorkflowArguments {
+}

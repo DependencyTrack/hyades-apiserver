@@ -22,24 +22,30 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.job.JobWorker;
+import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.job.v1alpha1.JobResult;
+import org.dependencytrack.proto.job.v1alpha1.UpdateProjectMetricsArguments;
 import org.slf4j.MDC;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
+import static org.dependencytrack.proto.job.v1alpha1.JobArguments.ArgumentsCase.UPDATE_PROJECT_METRICS_ARGS;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
  *
  * @since 4.6.0
  */
-public class ProjectMetricsUpdateTask implements Subscriber {
+public class ProjectMetricsUpdateTask implements JobWorker, Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
 
@@ -68,6 +74,19 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         } finally {
             LOGGER.debug("Completed metrics update in %s".formatted(Duration.ofNanos(System.nanoTime() - startTimeNs)));
         }
+    }
+
+    @Override
+    public Optional<JobResult> process(final QueuedJob job) throws Exception {
+        if (job.arguments().getArgumentsCase() != UPDATE_PROJECT_METRICS_ARGS) {
+            throw new IllegalArgumentException("Unsupported arguments of type: " + job.arguments().getArgumentsCase());
+        }
+
+        final UpdateProjectMetricsArguments arguments = job.arguments().getUpdateProjectMetricsArgs();
+        final UUID projectUuid = UUID.fromString(arguments.getProjectUuid());
+        updateMetrics(projectUuid);
+
+        return Optional.empty();
     }
 
 }

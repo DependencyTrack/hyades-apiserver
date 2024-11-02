@@ -30,6 +30,7 @@ import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -234,21 +235,26 @@ public interface WorkflowDao extends SqlObject {
     @GetGeneratedKeys("*")
     List<WorkflowRun> transitionWorkflowRuns(@BindMethods Collection<WorkflowRunTransition> transitions);
 
-    record WorkflowStepRunTransition(long stepRunId, WorkflowStepRunStatus newStatus, String failureReason) {
+    record WorkflowStepRunTransition(
+            long stepRunId,
+            WorkflowStepRunStatus newStatus,
+            String failureReason,
+            Instant timestamp) {
     }
 
     default List<WorkflowStepRun> transitionStepRuns(final Collection<WorkflowStepRunTransition> transitions) {
         final PreparedBatch batch = getHandle().prepareBatch("""
                 WITH "CTE_STEP_RUN" AS (
-                    SELECT "WFSR"."ID" AS "ID"
-                      FROM "WORKFLOW_STEP_RUN" AS "WFSR"
-                     WHERE "WFSR"."ID" = :stepRunId
+                    SELECT "ID"
+                      FROM "WORKFLOW_STEP_RUN"
+                     WHERE "ID" = :stepRunId
+                       AND ("UPDATED_AT" IS NULL OR "UPDATED_AT" < :timestamp)
                        FOR UPDATE
                      LIMIT 1)
                 UPDATE "WORKFLOW_STEP_RUN" AS "WFSR"
                    SET "STATUS" = :newStatus
                      , "FAILURE_REASON" = :failureReason
-                     , "UPDATED_AT" = NOW()
+                     , "UPDATED_AT" = :timestamp
                   FROM "CTE_STEP_RUN"
                  WHERE "WFSR"."ID" = "CTE_STEP_RUN"."ID"
                 RETURNING "WFSR".*

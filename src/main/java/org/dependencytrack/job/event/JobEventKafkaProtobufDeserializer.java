@@ -16,7 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.job;
+package org.dependencytrack.job.event;
 
-public enum JobPayloadType {
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
+
+public class JobEventKafkaProtobufDeserializer extends KafkaProtobufDeserializer<JobEvent> {
+
+    public JobEventKafkaProtobufDeserializer() {
+        super(JobEvent.parser());
+    }
+
 }

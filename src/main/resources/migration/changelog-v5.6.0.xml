@@ -150,8 +150,7 @@
             <column name="SCHEDULED_FOR" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>
-            <column name="PAYLOAD_TYPE" type="INT"/>
-            <column name="PAYLOAD" type="BYTEA"/>
+            <column name="ARGUMENTS" type="BYTEA"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ">
                 <constraints nullable="false"/>
             </column>

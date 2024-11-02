@@ -28,12 +28,12 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.job.JobResult;
 import org.dependencytrack.job.JobWorker;
 import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;

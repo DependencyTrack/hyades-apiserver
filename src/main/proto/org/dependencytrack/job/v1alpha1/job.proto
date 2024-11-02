@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package org.dependencytrack.job.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.job.v1alpha1";
+
+message JobEvent {
+  // ID of the job.
+  int64 job_id = 1;
+
+  // Kind of the job.
+  string job_kind = 2;
+
+  // When the event occurred.
+  google.protobuf.Timestamp timestamp = 3;
+
+  // ID of the workflow step run the job belongs to.
+  // Will be <= 0 when not associated with a workflow.
+  int64 workflow_step_run_id = 4;
+
+  // Subject of the event.
+  oneof subject {
+    // Subject informing about a successfully completed job.
+    JobCompleted job_completed_subject = 50;
+
+    // Subject informing about a failed job.
+    JobFailed job_failed_subject = 51;
+
+    // Subject informing about a queued job.
+    JobQueued job_queued_subject = 52;
+
+    // Subject informing about a started job.
+    JobStarted job_started_subject = 53;
+  }
+
+  message JobCompleted {
+    // Attempt which succeeded.
+    int32 attempt = 1;
+  }
+
+  message JobFailed {
+    // Attempt during which the failure occurred.
+    int32 attempt = 1;
+
+    // Reason of the failure.
+    string failure_reason = 2;
+
+    // When the next attempt is scheduled for at the earliest.
+    google.protobuf.Timestamp next_attempt_at = 3;
+  }
+
+  message JobQueued {
+  }
+
+  message JobStarted {
+    // Attempt of execution.
+    int32 attempt = 1;
+  }
+
+}
+
+message JobArguments {
+  oneof arguments {
+    UpdateProjectMetricsArguments update_project_metrics_args = 1;
+  }
+}
+
+message JobResult {
+}
+
+message UpdateProjectMetricsArguments {
+  string project_uuid = 1;
+}

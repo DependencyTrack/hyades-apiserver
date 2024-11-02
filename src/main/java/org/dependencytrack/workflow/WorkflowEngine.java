@@ -18,20 +18,21 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
+import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.LongDeserializer;
 import org.dependencytrack.job.JobEngine;
-import org.dependencytrack.job.JobEvent;
-import org.dependencytrack.job.JobEvent.JobCompletedEvent;
-import org.dependencytrack.job.JobEvent.JobFailedEvent;
-import org.dependencytrack.job.JobEvent.JobStartedEvent;
-import org.dependencytrack.job.JobEventListener;
 import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
+import org.dependencytrack.job.event.JobEventKafkaProtobufDeserializer;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
 import org.dependencytrack.workflow.WorkflowDao.NewWorkflowRun;
-import org.dependencytrack.workflow.WorkflowDao.WorkflowRunTransition;
-import org.dependencytrack.workflow.WorkflowDao.WorkflowStepRunTransition;
+import org.dependencytrack.workflow.event.WorkflowJobEventConsumer;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,23 +43,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
+import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 // TODO: Metrics instrumentation
-public class WorkflowEngine implements JobEventListener, Closeable {
+public class WorkflowEngine implements Closeable {
 
     enum State {
 
@@ -94,28 +101,21 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngine.class);
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
+    private final UUID instanceId = UUID.randomUUID();
+    private final JobEngine jobEngine;
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
-    private final int jobEventQueueCapacity;
-    private Queue<JobEvent> jobEventQueue;
-    private ScheduledExecutorService jobEventFlushExecutor;
-    private final Duration jobEventFlushInitialDelay;
-    private final Duration jobEventFlushInterval;
-    private final ReentrantLock jobEventFlushLock = new ReentrantLock();
+    private WorkflowJobEventConsumer jobEventConsumer;
+    private KafkaConsumer<Long, JobEvent> jobEventKafkaConsumer;
+    private KafkaClientMetrics jobEventConsumerMetrics;
+    private ExecutorService jobEventConsumerExecutor;
 
-    public WorkflowEngine() {
-        // TODO: Find reasonable defaults for queue size and flush interval.
-        this(100, Duration.ofSeconds(1), Duration.ofSeconds(5));
+    WorkflowEngine(final JobEngine jobEngine) {
+        this.jobEngine = jobEngine;
     }
 
-    public WorkflowEngine(
-            final int jobEventQueueCapacity,
-            final Duration jobEventFlushInitialDelay,
-            final Duration jobEventFlushInterval) {
-        this.jobEventQueueCapacity = jobEventQueueCapacity;
-        this.jobEventFlushInitialDelay = requireNonNull(jobEventFlushInitialDelay);
-        this.jobEventFlushInterval = requireNonNull(jobEventFlushInterval);
-
+    public WorkflowEngine() {
+        this(JobEngine.getInstance());
     }
 
     public static WorkflowEngine getInstance() {
@@ -125,16 +125,29 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     public void start() {
         setState(State.STARTING);
 
-        this.jobEventQueue = new ConcurrentLinkedQueue<>();
-        this.jobEventFlushExecutor = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+        jobEventKafkaConsumer = new KafkaConsumer<>(Map.ofEntries(
+                Map.entry(BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().getProperty(KAFKA_BOOTSTRAP_SERVERS)),
+                Map.entry(KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName()),
+                Map.entry(VALUE_DESERIALIZER_CLASS_CONFIG, JobEventKafkaProtobufDeserializer.class.getName()),
+                Map.entry(CLIENT_ID_CONFIG, "dtrack-workflowengine-jobeventconsumer-" + instanceId),
+                Map.entry(GROUP_ID_CONFIG, "dtrack-workflowengine"),
+                Map.entry(ENABLE_AUTO_COMMIT_CONFIG, "false"),
+                Map.entry(AUTO_OFFSET_RESET_CONFIG, "earliest")));
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            jobEventConsumerMetrics = new KafkaClientMetrics(jobEventKafkaConsumer);
+            jobEventConsumerMetrics.bindTo(Metrics.getRegistry());
+        }
+        jobEventConsumer = new WorkflowJobEventConsumer(
+                jobEventKafkaConsumer,
+                jobEngine,
+                /* batchLingerDuration */ Duration.ofMillis(500),
+                /* batchSize */ 1000);
+        jobEventKafkaConsumer.subscribe(List.of("dtrack.event.job"), jobEventConsumer);
+        jobEventConsumerExecutor = Executors.newSingleThreadExecutor(new BasicThreadFactory.Builder()
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("WorkflowEngine-JobEventFlusher-%d")
+                .namingPattern("WorkflowEngine-JobEventConsumer-%d")
                 .build());
-        this.jobEventFlushExecutor.scheduleAtFixedRate(
-                this::flushJobEvents,
-                jobEventFlushInitialDelay.toMillis(),
-                jobEventFlushInterval.toMillis(),
-                TimeUnit.MILLISECONDS);
+        jobEventConsumerExecutor.execute(jobEventConsumer);
 
         setState(State.RUNNING);
     }
@@ -224,14 +237,9 @@ public class WorkflowEngine implements JobEventListener, Closeable {
                     workflowRunById.keySet(), WorkflowStepType.JOB);
             if (!claimedStepRuns.isEmpty()) {
                 jobsToQueue.addAll(claimedStepRuns.stream()
-                        .map(claimedStepRun -> new NewJob(
-                                claimedStepRun.stepName(),
-                                claimedStepRun.priority(),
-                                /* scheduledFor */ null,
-                                /* payloadType */ null,
-                                /* payload */ null,
-                                claimedStepRun.workflowRunId(),
-                                claimedStepRun.id()))
+                        .map(claimedStepRun -> new NewJob(claimedStepRun.stepName())
+                                .withPriority(claimedStepRun.priority())
+                                .withWorkflowStepRunId(claimedStepRun.id()))
                         .toList());
             }
 
@@ -239,7 +247,7 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         });
 
         if (!jobsToQueue.isEmpty()) {
-            final List<QueuedJob> queuedJobs = JobEngine.getInstance().enqueueAll(jobsToQueue);
+            final List<QueuedJob> queuedJobs = jobEngine.enqueueAll(jobsToQueue);
             LOGGER.info("Queued %d jobs".formatted(queuedJobs.size()));
         }
 
@@ -280,18 +288,6 @@ public class WorkflowEngine implements JobEventListener, Closeable {
     }
 
     @Override
-    public void onJobEvent(final JobEvent event) {
-        state.assertRunning();
-
-        final boolean isRelevant = event instanceof JobCompletedEvent
-                                   || event instanceof JobFailedEvent
-                                   || event instanceof JobStartedEvent;
-        if (isRelevant && event.job().workflowStepRunId() != null) {
-            jobEventQueue.add(event);
-        }
-    }
-
-    @Override
     public void close() throws IOException {
         if (state.isCreatedOrStopped()) {
             return;
@@ -300,134 +296,26 @@ public class WorkflowEngine implements JobEventListener, Closeable {
         LOGGER.info("Stopping");
         setState(State.STOPPING);
 
-        jobEventFlushExecutor.shutdown();
+        // TODO: Ensure the shutdown timeout is enforced across all activities,
+        //  i.e. the entire process should take no more than 30sec.
+
+        jobEventConsumer.shutdown();
+        jobEventConsumerExecutor.shutdown();
         try {
-            final boolean terminated = jobEventFlushExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            final boolean terminated = jobEventConsumerExecutor.awaitTermination(30, TimeUnit.SECONDS);
             if (!terminated) {
-                LOGGER.warn("Flush executor did not terminate");
+                LOGGER.warn("Job consumer executor did not terminate");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
-        flushJobEvents();
-        jobEventQueue.clear();
-        jobEventQueue = null;
-        jobEventFlushExecutor = null;
+        jobEventConsumer = null;
+        jobEventKafkaConsumer = null;
+        jobEventConsumerMetrics = null;
+        jobEventConsumerExecutor = null;
         setState(State.STOPPED);
-    }
-
-    private void flushJobEvents() {
-        jobEventFlushLock.lock();
-        try {
-            flushJobEventsLocked();
-        } finally {
-            jobEventFlushLock.unlock();
-        }
-    }
-
-    private void flushJobEventsLocked() {
-        assert jobEventFlushLock.isHeldByCurrentThread();
-
-        if (jobEventQueue.isEmpty()) {
-            LOGGER.debug("No job events to flush");
-            return;
-        }
-
-        LOGGER.debug("%d events in flush queue".formatted(jobEventQueue.size()));
-        final var latestEventByStepRunId = new HashMap<Long, JobEvent>();
-        while (jobEventQueue.peek() != null) {
-            final JobEvent event = jobEventQueue.poll();
-            latestEventByStepRunId.put(event.job().workflowStepRunId(), event);
-        }
-
-        final var transitions = new ArrayList<WorkflowStepRunTransition>(latestEventByStepRunId.size());
-        for (final Map.Entry<Long, JobEvent> entry : latestEventByStepRunId.entrySet()) {
-            final long stepRunId = entry.getKey();
-            final JobEvent event = entry.getValue();
-
-            switch (event) {
-                case JobCompletedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId,
-                        WorkflowStepRunStatus.COMPLETED,
-                        /* failureReason */ null));
-                case JobFailedEvent failedEvent -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId,
-                        WorkflowStepRunStatus.FAILED,
-                        "Job failed: %s".formatted(failedEvent.failureReason())));
-                case JobStartedEvent ignored -> transitions.add(new WorkflowStepRunTransition(
-                        stepRunId,
-                        WorkflowStepRunStatus.RUNNING,
-                        /* failureReason */ null));
-                default -> throw new IllegalStateException("Unexpected event: " + event);
-            }
-        }
-
-        final var jobsToQueue = new ArrayList<NewJob>();
-        useJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
-
-            final List<WorkflowStepRun> transitionedStepRuns = dao.transitionStepRuns(transitions);
-            if (transitionedStepRuns.size() != transitions.size()) {
-                throw new IllegalStateException("Should have transitioned %d step runs, but only did %d".formatted(
-                        transitions.size(), transitionedStepRuns.size()));
-            }
-
-            LOGGER.debug("Transitioned status of %d workflow step runs".formatted(transitionedStepRuns.size()));
-            final Map<WorkflowStepRunStatus, List<WorkflowStepRun>> stepRunsByStatus = transitionedStepRuns.stream()
-                    .collect(Collectors.groupingBy(WorkflowStepRun::status, Collectors.toList()));
-
-            final List<WorkflowStepRun> completedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.COMPLETED);
-            if (completedStepRuns != null) {
-                final List<ClaimedWorkflowStepRun> claimedStepRuns = dao.claimRunnableStepRunsOfType(
-                        completedStepRuns.stream().map(WorkflowStepRun::workflowRunId).toList(), WorkflowStepType.JOB);
-                jobsToQueue.addAll(claimedStepRuns.stream()
-                        .map(claimedStepRun -> new NewJob(
-                                claimedStepRun.stepName(),
-                                claimedStepRun.priority(),
-                                /* scheduledFor */ null,
-                                /* payloadType */ null,
-                                /* payload */ null,
-                                claimedStepRun.workflowRunId(),
-                                claimedStepRun.id()))
-                        .toList());
-
-                final List<WorkflowRun> completedWorkflowRuns = dao.completeWorkflowRunsWhenAllStepRunsCompleted(
-                        completedStepRuns.stream().map(WorkflowStepRun::workflowRunId).toList());
-                if (LOGGER.isDebugEnabled()) {
-                    for (final WorkflowRun completedWorkflowRun : completedWorkflowRuns) {
-                        LOGGER.debug("Completed %s".formatted(completedWorkflowRun));
-                    }
-                }
-            }
-
-            final List<WorkflowStepRun> failedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.FAILED);
-            if (failedStepRuns != null) {
-                final List<WorkflowStepRun> cancelledStepRuns = dao.cancelDependantStepRuns(failedStepRuns);
-                for (final WorkflowStepRun cancelledStepRun : cancelledStepRuns) {
-                    LOGGER.warn("Cancelled %s".formatted(cancelledStepRun));
-                }
-
-                final List<WorkflowRun> failedWorkflowRuns = dao.transitionWorkflowRuns(failedStepRuns.stream()
-                        .map(stepRun -> new WorkflowRunTransition(
-                                stepRun.workflowRunId(),
-                                WorkflowRunStatus.FAILED))
-                        .toList());
-                for (final WorkflowRun failedWorkflowRun : failedWorkflowRuns) {
-                    LOGGER.warn("Failed %s".formatted(failedWorkflowRun));
-                }
-            }
-        });
-
-        if (!jobsToQueue.isEmpty()) {
-            final List<QueuedJob> queuedJobs = JobEngine.getInstance().enqueueAll(jobsToQueue);
-            if (LOGGER.isDebugEnabled()) {
-                for (final QueuedJob queuedJob : queuedJobs) {
-                    LOGGER.debug("Queued %s".formatted(queuedJob));
-                }
-            }
-        }
     }
 
     State state() {

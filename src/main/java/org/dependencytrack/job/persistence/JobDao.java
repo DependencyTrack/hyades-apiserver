@@ -47,8 +47,7 @@ public class JobDao {
                 , "KIND"
                 , "PRIORITY"
                 , "SCHEDULED_FOR"
-                , "PAYLOAD_TYPE"
-                , "PAYLOAD"
+                , "ARGUMENTS"
                 , "WORKFLOW_STEP_RUN_ID"
                 , "CREATED_AT"
                 ) VALUES (
@@ -56,8 +55,7 @@ public class JobDao {
                 , :kind
                 , :priority
                 , COALESCE(:scheduledFor, NOW())
-                , :payloadType
-                , :payload
+                , :arguments
                 , :workflowStepRunId
                 , NOW())
                 RETURNING *
@@ -68,13 +66,13 @@ public class JobDao {
                     .bind("kind", newJob.kind())
                     .bind("priority", newJob.priority())
                     .bind("scheduledFor", newJob.scheduledFor())
-                    .bind("payloadType", newJob.payloadType())
-                    .bind("payload", newJob.payload())
+                    .bind("arguments", newJob.arguments())
                     .bind("workflowStepRunId", newJob.workflowStepRunId())
                     .add();
         }
 
         return preparedBatch
+                .registerArgument(new JobArgumentsArgument.Factory())
                 .executePreparedBatch("*")
                 .map(queuedJobRowMapper)
                 .list();
@@ -142,9 +140,11 @@ public class JobDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 UPDATE "JOB"
                    SET "STATUS" = :status
+                     , "SCHEDULED_FOR" = COALESCE(:scheduledFor, "SCHEDULED_FOR")
                      , "FAILURE_REASON" = :failureReason
                      , "UPDATED_AT" = :timestamp
                  WHERE "ID" = :jobId
+                   AND ("UPDATED_AT" IS NULL OR "UPDATED_AT" < :timestamp)
                 RETURNING *
                 """);
 
@@ -152,6 +152,7 @@ public class JobDao {
             preparedBatch
                     .bind("status", transition.status())
                     .bind("failureReason", transition.failureReason())
+                    .bind("scheduledFor", transition.scheduledFor())
                     .bind("timestamp", transition.timestamp())
                     .bind("jobId", transition.jobId())
                     .add();

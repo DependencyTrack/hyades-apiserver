@@ -21,10 +21,25 @@ package org.dependencytrack.job.persistence;
 import org.dependencytrack.job.JobStatus;
 
 import java.time.Instant;
+import java.util.Objects;
 
 public record JobStatusTransition(
         long jobId,
         JobStatus status,
+        Instant timestamp,
         String failureReason,
-        Instant timestamp) {
+        Instant scheduledFor) {
+
+    public JobStatusTransition(final long jobId, final JobStatus status, final Instant timestamp) {
+        this(jobId, Objects.requireNonNull(status), Objects.requireNonNull(timestamp), null, null);
+    }
+
+    public JobStatusTransition withFailureReason(final String failureReason) {
+        return new JobStatusTransition(this.jobId, this.status, this.timestamp, failureReason, this.scheduledFor);
+    }
+
+    public JobStatusTransition withScheduledFor(final Instant scheduledFor) {
+        return new JobStatusTransition(this.jobId, this.status, this.timestamp, this.failureReason, scheduledFor);
+    }
+
 }

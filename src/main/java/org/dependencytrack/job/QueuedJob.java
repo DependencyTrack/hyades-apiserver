@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.job;
 
+import org.dependencytrack.proto.job.v1alpha1.JobArguments;
+
 import jakarta.annotation.Nullable;
 import java.time.Instant;
 
@@ -27,8 +29,7 @@ public record QueuedJob(
         String kind,
         @Nullable Integer priority,
         Instant scheduledFor,
-        JobPayloadType payloadType,
-        byte[] payload,
+        JobArguments arguments,
         @Nullable Long workflowStepRunId,
         Instant createdAt,
         @Nullable Instant updatedAt,
