@@ -52,7 +52,7 @@ public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
     }
 
     @Override
-    protected boolean filterBatchRecord(final ConsumerRecord<Long, JobEvent> record) {
+    protected boolean shouldAddToBatch(final ConsumerRecord<Long, JobEvent> record) {
         return RELEVANT_EVENT_SUBJECTS.contains(record.value().getSubjectCase());
     }
 
@@ -85,7 +85,7 @@ public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
                         case JOB_COMPLETED_SUBJECT -> new JobStatusTransition(
                                 event.getJobId(), JobStatus.COMPLETED, eventTimestamp);
                         case JOB_FAILED_SUBJECT -> {
-                            final JobEvent.JobFailed jobFailedSubject = event.getJobFailedSubject();
+                            final JobEvent.JobFailedSubject jobFailedSubject = event.getJobFailedSubject();
                             final boolean isRetryable = jobFailedSubject.hasNextAttemptAt();
                             final JobStatus newStatus = isRetryable ? JobStatus.PENDING_RETRY : JobStatus.FAILED;
                             final Instant nextAttemptAt = jobFailedSubject.hasNextAttemptAt()
@@ -101,9 +101,6 @@ public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
                 })
                 .toList();
 
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Flushing status transitions: " + transitions);
-        }
         final List<QueuedJob> transitionedJobs = inJdbiTransaction(
                 handle -> new JobDao(handle).transitionAll(transitions));
 

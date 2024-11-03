@@ -24,24 +24,24 @@ message JobEvent {
   // Subject of the event.
   oneof subject {
     // Subject informing about a successfully completed job.
-    JobCompleted job_completed_subject = 50;
+    JobCompletedSubject job_completed_subject = 50;
 
     // Subject informing about a failed job.
-    JobFailed job_failed_subject = 51;
+    JobFailedSubject job_failed_subject = 51;
 
     // Subject informing about a queued job.
-    JobQueued job_queued_subject = 52;
+    JobQueuedSubject job_queued_subject = 52;
 
     // Subject informing about a started job.
-    JobStarted job_started_subject = 53;
+    JobStartedSubject job_started_subject = 53;
   }
 
-  message JobCompleted {
+  message JobCompletedSubject {
     // Attempt which succeeded.
     int32 attempt = 1;
   }
 
-  message JobFailed {
+  message JobFailedSubject {
     // Attempt during which the failure occurred.
     int32 attempt = 1;
 
@@ -52,10 +52,10 @@ message JobEvent {
     google.protobuf.Timestamp next_attempt_at = 3;
   }
 
-  message JobQueued {
+  message JobQueuedSubject {
   }
 
-  message JobStarted {
+  message JobStartedSubject {
     // Attempt of execution.
     int32 attempt = 1;
   }

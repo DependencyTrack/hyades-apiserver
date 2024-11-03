@@ -20,6 +20,8 @@ package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -92,8 +94,14 @@ public class JobEngineBenchmarkTest extends PersistenceCapableTest {
 
         statPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
         statPrinterExecutor.scheduleAtFixedRate(() -> {
+            final Gauge eventConsumerBatchRecordsGauge;
+            final DistributionSummary eventConsumerFlushBatchSizeDistributionSummary;
             final Timer pollTimer, processTimer;
             try {
+                eventConsumerBatchRecordsGauge = Metrics.getRegistry()
+                        .get("dtrack.kafka.batch.consumer.batch.records").gauge();
+                eventConsumerFlushBatchSizeDistributionSummary = Metrics.getRegistry()
+                        .get("dtrack.kafka.batch.consumer.flush.batch.size").summary();
                 pollTimer = Metrics.getRegistry().get("job_engine_poll").timer();
                 processTimer = Metrics.getRegistry().get("job_worker_process").timer();
             } catch (MeterNotFoundException e) {
@@ -104,11 +112,16 @@ public class JobEngineBenchmarkTest extends PersistenceCapableTest {
             LOGGER.info("""
                     Stats: \
                     poll={mean: %.2fms, max: %.2fms}, \
-                    process={mean: %.2fms, max: %.2fms}""".formatted(
+                    process={mean: %.2fms, max: %.2fms}, \
+                    eventConsumerFlushBatchSize={mean=%.2f, max=%.2f}, \
+                    eventConsumerBatchRecords=%.2f""".formatted(
                     pollTimer.mean(TimeUnit.MILLISECONDS),
                     pollTimer.max(TimeUnit.MILLISECONDS),
                     processTimer.mean(TimeUnit.MILLISECONDS),
-                    processTimer.max(TimeUnit.MILLISECONDS)));
+                    processTimer.max(TimeUnit.MILLISECONDS),
+                    eventConsumerFlushBatchSizeDistributionSummary.mean(),
+                    eventConsumerFlushBatchSizeDistributionSummary.max(),
+                    eventConsumerBatchRecordsGauge.value()));
         }, 0, 1, TimeUnit.SECONDS);
     }
 

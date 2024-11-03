@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.dependencytrack.job.JobEngine;
@@ -45,9 +44,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -106,9 +102,9 @@ public class WorkflowEngine implements Closeable {
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
     private WorkflowJobEventConsumer jobEventConsumer;
+    private Thread jobEventConsumerThread;
     private KafkaConsumer<Long, JobEvent> jobEventKafkaConsumer;
     private KafkaClientMetrics jobEventConsumerMetrics;
-    private ExecutorService jobEventConsumerExecutor;
 
     WorkflowEngine(final JobEngine jobEngine) {
         this.jobEngine = jobEngine;
@@ -137,17 +133,16 @@ public class WorkflowEngine implements Closeable {
             jobEventConsumerMetrics = new KafkaClientMetrics(jobEventKafkaConsumer);
             jobEventConsumerMetrics.bindTo(Metrics.getRegistry());
         }
+
         jobEventConsumer = new WorkflowJobEventConsumer(
                 jobEventKafkaConsumer,
                 jobEngine,
                 /* batchLingerDuration */ Duration.ofMillis(500),
                 /* batchSize */ 1000);
         jobEventKafkaConsumer.subscribe(List.of("dtrack.event.job"), jobEventConsumer);
-        jobEventConsumerExecutor = Executors.newSingleThreadExecutor(new BasicThreadFactory.Builder()
-                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("WorkflowEngine-JobEventConsumer-%d")
-                .build());
-        jobEventConsumerExecutor.execute(jobEventConsumer);
+        jobEventConsumerThread = new Thread(jobEventConsumer, "WorkflowEngine-JobEventConsumer");
+        jobEventConsumerThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
+        jobEventConsumerThread.start();
 
         setState(State.RUNNING);
     }
@@ -300,11 +295,10 @@ public class WorkflowEngine implements Closeable {
         //  i.e. the entire process should take no more than 30sec.
 
         jobEventConsumer.shutdown();
-        jobEventConsumerExecutor.shutdown();
         try {
-            final boolean terminated = jobEventConsumerExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            final boolean terminated = jobEventConsumerThread.join(Duration.ofSeconds(30));
             if (!terminated) {
-                LOGGER.warn("Job consumer executor did not terminate");
+                LOGGER.warn("Event consumer did not stop in time");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -312,9 +306,9 @@ public class WorkflowEngine implements Closeable {
         }
 
         jobEventConsumer = null;
+        jobEventConsumerThread = null;
         jobEventKafkaConsumer = null;
         jobEventConsumerMetrics = null;
-        jobEventConsumerExecutor = null;
         setState(State.STOPPED);
     }
 

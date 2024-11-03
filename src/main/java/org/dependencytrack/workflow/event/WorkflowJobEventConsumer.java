@@ -67,7 +67,7 @@ public class WorkflowJobEventConsumer extends KafkaBatchConsumer<Long, JobEvent>
     }
 
     @Override
-    protected boolean filterBatchRecord(final ConsumerRecord<Long, JobEvent> record) {
+    protected boolean shouldAddToBatch(final ConsumerRecord<Long, JobEvent> record) {
         if (!RELEVANT_EVENT_SUBJECTS.contains(record.value().getSubjectCase())) {
             return false;
         }
