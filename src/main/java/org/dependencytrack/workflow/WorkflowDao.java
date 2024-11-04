@@ -18,9 +18,12 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.job.persistence.WorkflowRunArgsArgument;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.sqlobject.SqlObject;
+import org.jdbi.v3.sqlobject.config.RegisterArgumentFactory;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMappers;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -61,7 +64,12 @@ public interface WorkflowDao extends SqlObject {
     @GetGeneratedKeys("*")
     Workflow createWorkflow(@BindMethods NewWorkflow newWorkflow);
 
-    record NewWorkflowRun(String workflowName, int workflowVersion, UUID token) {
+    record NewWorkflowRun(
+            String workflowName,
+            int workflowVersion,
+            UUID token,
+            Integer priority,
+            WorkflowRunArgs arguments) {
     }
 
     @SqlBatch("""
@@ -69,11 +77,15 @@ public interface WorkflowDao extends SqlObject {
               "WORKFLOW_ID"
             , "TOKEN"
             , "STATUS"
+            , "PRIORITY"
+            , "ARGUMENTS"
             , "CREATED_AT"
             )
             SELECT "ID"
                  , :token
                  , 'PENDING'
+                 , :priority
+                 , :arguments
                  , NOW()
               FROM "WORKFLOW"
              WHERE "NAME" = :workflowName
@@ -81,6 +93,7 @@ public interface WorkflowDao extends SqlObject {
             RETURNING *
             """)
     @GetGeneratedKeys("*")
+    @RegisterArgumentFactory(WorkflowRunArgsArgument.Factory.class)
     List<WorkflowRun> createWorkflowRuns(@BindMethods Collection<NewWorkflowRun> newWorkflowRuns);
 
     @SqlBatch("""

@@ -23,9 +23,7 @@ import org.dependencytrack.job.QueuedJob;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
-import org.jdbi.v3.core.statement.Update;
 
-import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +31,12 @@ import java.util.Optional;
 public class JobDao {
 
     private final Handle jdbiHandle;
+    private final RowMapper<PolledJob> polledJobRowMapper;
     private final RowMapper<QueuedJob> queuedJobRowMapper;
 
     public JobDao(final Handle jdbiHandle) {
         this.jdbiHandle = jdbiHandle;
+        this.polledJobRowMapper = new PolledJobRowMapper();
         this.queuedJobRowMapper = new QueuedJobRowMapper();
     }
 
@@ -72,46 +72,17 @@ public class JobDao {
         }
 
         return preparedBatch
-                .registerArgument(new JobArgumentsArgument.Factory())
+                .registerArgument(new JobArgsArgument.Factory())
                 .executePreparedBatch("*")
                 .map(queuedJobRowMapper)
                 .list();
     }
 
-    public Optional<QueuedJob> requeueForRetry(final QueuedJob queuedJob, final Duration delay, final String failureReason) {
-        final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE_POLL" AS (
-                    SELECT "ID"
-                      FROM "JOB"
-                     WHERE "ID" = :jobId
-                       AND "STATUS" = 'RUNNING'
-                       FOR UPDATE
-                      SKIP LOCKED
-                     LIMIT 1)
-                UPDATE "JOB"
-                   SET "STATUS" = 'PENDING_RETRY'
-                     , "SCHEDULED_FOR" = NOW() + :delay
-                     , "UPDATED_AT" = NOW()
-                     , "ATTEMPTS" = "ATTEMPTS" + 1
-                     , "FAILURE_REASON" = :failureReason
-                  FROM "CTE_POLL"
-                 WHERE "JOB"."ID" = "CTE_POLL"."ID"
-                RETURNING "JOB".*
-                """);
-
-        return update
-                .bind("jobId", queuedJob.id())
-                .bind("delay", delay)
-                .bind("failureReason", failureReason)
-                .executeAndReturnGeneratedKeys("*")
-                .map(queuedJobRowMapper)
-                .findOne();
-    }
-
-    public Optional<QueuedJob> poll(final String kind) {
+    public Optional<PolledJob> poll(final String kind) {
         return jdbiHandle.createUpdate("""
                         WITH "CTE_POLL" AS (
                             SELECT "ID"
+                                 , "WORKFLOW_STEP_RUN_ID"
                               FROM "JOB"
                              WHERE "KIND" = :kind
                                AND "STATUS" = ANY(CAST('{PENDING, PENDING_RETRY}' AS JOB_STATUS[]))
@@ -124,15 +95,23 @@ public class JobDao {
                              LIMIT 1)
                         UPDATE "JOB"
                            SET "STATUS" = 'RUNNING'
-                             , "STARTED_AT" = COALESCE("STARTED_AT", NOW())
-                             , "ATTEMPTS" = COALESCE("ATTEMPTS", 0) + 1
+                             , "UPDATED_AT" = NOW()
+                             , "STARTED_AT" = COALESCE("JOB"."STARTED_AT", NOW())
+                             , "ATTEMPTS" = COALESCE("JOB"."ATTEMPTS", 0) + 1
                           FROM "CTE_POLL"
+                          LEFT JOIN "WORKFLOW_STEP_RUN" AS "WFSR"
+                            ON "WFSR"."ID" = "CTE_POLL"."WORKFLOW_STEP_RUN_ID"
+                          LEFT JOIN "WORKFLOW_RUN" AS "WFR"
+                            ON "WFR"."ID" = "WFSR"."WORKFLOW_RUN_ID"
                          WHERE "JOB"."ID" = "CTE_POLL"."ID"
                         RETURNING "JOB".*
+                                , "WFR"."ID" AS "WORKFLOW_RUN_ID"
+                                , "WFR"."TOKEN" AS "WORKFLOW_RUN_TOKEN"
+                                , "WFR"."ARGUMENTS" AS "WORKFLOW_RUN_ARGUMENTS"
                         """)
                 .bind("kind", kind)
                 .executeAndReturnGeneratedKeys("*")
-                .map(queuedJobRowMapper)
+                .map(polledJobRowMapper)
                 .findOne();
     }
 

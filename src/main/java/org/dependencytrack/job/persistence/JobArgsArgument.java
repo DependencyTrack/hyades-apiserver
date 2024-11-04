@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.job.persistence;
 
-import org.dependencytrack.proto.job.v1alpha1.JobArguments;
+import org.dependencytrack.proto.job.v1alpha1.JobArgs;
 import org.jdbi.v3.core.argument.AbstractArgumentFactory;
 import org.jdbi.v3.core.argument.Argument;
 import org.jdbi.v3.core.config.ConfigRegistry;
@@ -28,33 +28,34 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 
-public class JobArgumentsArgument implements Argument {
+public class JobArgsArgument implements Argument {
 
-    private final JobArguments arguments;
+    private final JobArgs jobArgs;
 
-    JobArgumentsArgument(final JobArguments arguments) {
-        this.arguments = arguments;
+    JobArgsArgument(final JobArgs jobArgs) {
+        this.jobArgs = jobArgs;
     }
 
     @Override
     public void apply(final int position, final PreparedStatement statement, final StatementContext ctx) throws SQLException {
-        if (arguments == null) {
+        if (jobArgs == null) {
+            statement.setNull(position, Types.LONGVARBINARY);
             return;
         }
 
-        final byte[] argumentsBytes = arguments.toByteArray();
+        final byte[] argumentsBytes = jobArgs.toByteArray();
         statement.setBytes(position, argumentsBytes);
     }
 
-    public static class Factory extends AbstractArgumentFactory<JobArguments> {
+    public static class Factory extends AbstractArgumentFactory<JobArgs> {
 
         public Factory() {
-            super(Types.BLOB);
+            super(Types.LONGVARBINARY);
         }
 
         @Override
-        protected Argument build(final JobArguments value, final ConfigRegistry config) {
-            return new JobArgumentsArgument(value);
+        protected Argument build(final JobArgs value, final ConfigRegistry config) {
+            return new JobArgsArgument(value);
         }
 
     }

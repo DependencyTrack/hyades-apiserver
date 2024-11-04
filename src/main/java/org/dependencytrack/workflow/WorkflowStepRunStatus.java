@@ -18,24 +18,12 @@
  */
 package org.dependencytrack.workflow;
 
-import java.util.Set;
-
 public enum WorkflowStepRunStatus {
 
-    PENDING(1, 2),    // 0
-    RUNNING(2, 3, 4), // 1
-    CANCELLED(0),     // 2
-    COMPLETED,        // 3
-    FAILED(0);        // 4
-
-    private final Set<Integer> allowedTransitions;
-
-    WorkflowStepRunStatus(final Integer... allowedTransitions) {
-        this.allowedTransitions = Set.of(allowedTransitions);
-    }
-
-    public boolean canTransition(final WorkflowStepRunStatus newStatus) {
-        return allowedTransitions.contains(newStatus.ordinal());
-    }
+    PENDING,
+    RUNNING,
+    CANCELLED,
+    COMPLETED,
+    FAILED
 
 }

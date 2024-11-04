@@ -21,9 +21,18 @@ package org.dependencytrack.job;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.job.persistence.QueuedJobRowMapper;
-import org.dependencytrack.proto.job.v1alpha1.JobArguments;
-import org.dependencytrack.proto.job.v1alpha1.UpdateProjectMetricsArguments;
+import org.dependencytrack.proto.job.v1alpha1.JobArgs;
+import org.dependencytrack.proto.job.v1alpha1.UpdateProjectMetricsJobArgs;
+import org.dependencytrack.proto.workflow.v1alpha1.ProcessBomUploadWorkflowRunArgs;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
+import org.dependencytrack.workflow.StartWorkflowOptions;
+import org.dependencytrack.workflow.WorkflowEngine;
+import org.dependencytrack.workflow.WorkflowRunView;
+import org.dependencytrack.workflow.WorkflowSpec;
+import org.dependencytrack.workflow.WorkflowStepSpec;
+import org.dependencytrack.workflow.WorkflowStepType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,6 +40,9 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.kafka.KafkaContainer;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.proto.job.v1alpha1.JobArguments.ArgumentsCase.UPDATE_PROJECT_METRICS_ARGS;
+import static org.dependencytrack.proto.job.v1alpha1.JobArgs.ArgsCase.UPDATE_PROJECT_METRICS_ARGS;
 
 public class JobEngineTest extends PersistenceCapableTest {
 
@@ -194,7 +206,7 @@ public class JobEngineTest extends PersistenceCapableTest {
                     new NewJob("foo").withPriority(1),
                     new NewJob("foo").withPriority(2)));
 
-            final var processedJobQueue = new ArrayBlockingQueue<QueuedJob>(5);
+            final var processedJobQueue = new ArrayBlockingQueue<PolledJob>(5);
             jobEngine.registerWorker("foo", 1, job -> {
                 processedJobQueue.add(job);
                 return Optional.empty();
@@ -214,18 +226,67 @@ public class JobEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void shouldPollJobsWithWorkflowArguments() throws Exception {
+        final var workflowRunArgs = WorkflowRunArgs.newBuilder()
+                .setProcessBomUploadArgs(ProcessBomUploadWorkflowRunArgs.newBuilder()
+                        .setProjectUuid("426af683-277c-405d-8b9c-4b05c3838534")
+                        .setProjectName("acme-app")
+                        .setProjectVersion("1.0.0")
+                        .build())
+                .build();
+
+        final WorkflowRunView workflowRun;
+        final var polledJobQueue = new ArrayBlockingQueue<PolledJob>(1);
+        try (final var jobEngine = new JobEngine();
+             final var workflowEngine = new WorkflowEngine(jobEngine)) {
+            jobEngine.start();
+            jobEngine.registerWorker("bar", 1, job -> {
+                polledJobQueue.add(job);
+                return Optional.empty();
+            });
+
+            workflowEngine.start();
+            workflowEngine.deploy(new WorkflowSpec(
+                    "foo", 1, List.of(new WorkflowStepSpec("bar", WorkflowStepType.JOB, Collections.emptySet()))));
+            workflowRun = workflowEngine.startWorkflow(
+                    new StartWorkflowOptions("foo", 1)
+                            .withPriority(666)
+                            .withArguments(workflowRunArgs));
+
+            await("Job polling")
+                    .atMost(Duration.ofSeconds(5))
+                    .untilAsserted(() -> assertThat(polledJobQueue).hasSize(1));
+        }
+
+        assertThat(polledJobQueue).satisfiesExactly(job -> {
+            assertThat(job.id()).isPositive();
+            assertThat(job.status()).isEqualTo(JobStatus.RUNNING);
+            assertThat(job.kind()).isEqualTo("bar");
+            assertThat(job.priority()).isEqualTo(666);
+            assertThat(job.scheduledFor()).isBeforeOrEqualTo(Instant.now());
+            assertThat(job.workflowRunId()).isPositive();
+            assertThat(job.workflowRunToken()).isEqualTo(workflowRun.token());
+            assertThat(job.workflowRunArgs()).isEqualTo(workflowRunArgs);
+            assertThat(job.createdAt()).isBeforeOrEqualTo(Instant.now());
+            assertThat(job.updatedAt()).isBeforeOrEqualTo(Instant.now());
+            assertThat(job.startedAt()).isBeforeOrEqualTo(Instant.now());
+            assertThat(job.attempt()).isEqualTo(1);
+        });
+    }
+
+    @Test
     public void shouldPersistJobArguments() throws Exception {
         try (final var jobEngine = new JobEngine()) {
             jobEngine.start();
 
             final QueuedJob queuedJob = jobEngine.enqueue(new NewJob("foo")
-                    .withArguments(JobArguments.newBuilder()
-                            .setUpdateProjectMetricsArgs(UpdateProjectMetricsArguments.newBuilder()
+                    .withArguments(JobArgs.newBuilder()
+                            .setUpdateProjectMetricsArgs(UpdateProjectMetricsJobArgs.newBuilder()
                                     .setProjectUuid("5423bf42-cdce-4248-ada7-b03da317cdf4")
                                     .build())
                             .build()));
 
-            assertThat(queuedJob.arguments().getArgumentsCase()).isEqualTo(UPDATE_PROJECT_METRICS_ARGS);
+            assertThat(queuedJob.arguments().getArgsCase()).isEqualTo(UPDATE_PROJECT_METRICS_ARGS);
             assertThat(queuedJob.arguments().getUpdateProjectMetricsArgs().getProjectUuid()).isEqualTo("5423bf42-cdce-4248-ada7-b03da317cdf4");
         }
     }

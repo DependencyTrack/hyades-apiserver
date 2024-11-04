@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.job;
 
-import org.dependencytrack.proto.job.v1alpha1.JobArguments;
+import org.dependencytrack.proto.job.v1alpha1.JobArgs;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -27,7 +27,7 @@ public record NewJob(
         String kind,
         Integer priority,
         Instant scheduledFor,
-        JobArguments arguments,
+        JobArgs arguments,
         Long workflowStepRunId) {
 
     public NewJob(final String kind) {
@@ -42,7 +42,7 @@ public record NewJob(
         return new NewJob(this.kind, this.priority, scheduledFor, this.arguments, this.workflowStepRunId);
     }
 
-    public NewJob withArguments(final JobArguments arguments) {
+    public NewJob withArguments(final JobArgs arguments) {
         return new NewJob(this.kind, this.priority, this.scheduledFor, arguments, this.workflowStepRunId);
     }
 

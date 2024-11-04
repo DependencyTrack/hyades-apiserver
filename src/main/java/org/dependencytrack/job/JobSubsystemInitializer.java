@@ -19,6 +19,7 @@
 package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.proto.job.v1alpha1.JobResult;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
@@ -81,7 +82,7 @@ public class JobSubsystemInitializer implements ServletContextListener {
         }
 
         @Override
-        public Optional<JobResult> process(final QueuedJob job) throws Exception {
+        public Optional<JobResult> process(final PolledJob job) throws Exception {
             LOGGER.debug("Processing " + job);
 
             Thread.sleep(random.nextInt(10, 1000));

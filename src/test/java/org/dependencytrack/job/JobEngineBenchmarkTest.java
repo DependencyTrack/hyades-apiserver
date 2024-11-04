@@ -96,7 +96,7 @@ public class JobEngineBenchmarkTest extends PersistenceCapableTest {
         statPrinterExecutor.scheduleAtFixedRate(() -> {
             final Gauge eventConsumerBatchRecordsGauge;
             final DistributionSummary eventConsumerFlushBatchSizeDistributionSummary;
-            final Timer pollTimer, processTimer;
+            final Timer pollTimer, processTimer, flushTimer;
             try {
                 eventConsumerBatchRecordsGauge = Metrics.getRegistry()
                         .get("dtrack.kafka.batch.consumer.batch.records").gauge();
@@ -104,6 +104,7 @@ public class JobEngineBenchmarkTest extends PersistenceCapableTest {
                         .get("dtrack.kafka.batch.consumer.flush.batch.size").summary();
                 pollTimer = Metrics.getRegistry().get("job_engine_poll").timer();
                 processTimer = Metrics.getRegistry().get("job_worker_process").timer();
+                flushTimer = Metrics.getRegistry().get("dtrack.kafka.batch.consumer.flush.latency").timer();
             } catch (MeterNotFoundException e) {
                 LOGGER.info("Meters not ready yet");
                 return;
@@ -113,12 +114,15 @@ public class JobEngineBenchmarkTest extends PersistenceCapableTest {
                     Stats: \
                     poll={mean: %.2fms, max: %.2fms}, \
                     process={mean: %.2fms, max: %.2fms}, \
-                    eventConsumerFlushBatchSize={mean=%.2f, max=%.2f}, \
-                    eventConsumerBatchRecords=%.2f""".formatted(
+                    flush={mean: %.2fms, max: %.2fms}, \
+                    flushBatchSize={mean=%.2f, max=%.2f}, \
+                    batchRecords=%.2f""".formatted(
                     pollTimer.mean(TimeUnit.MILLISECONDS),
                     pollTimer.max(TimeUnit.MILLISECONDS),
                     processTimer.mean(TimeUnit.MILLISECONDS),
                     processTimer.max(TimeUnit.MILLISECONDS),
+                    flushTimer.mean(TimeUnit.MILLISECONDS),
+                    flushTimer.max(TimeUnit.MILLISECONDS),
                     eventConsumerFlushBatchSizeDistributionSummary.mean(),
                     eventConsumerFlushBatchSizeDistributionSummary.max(),
                     eventConsumerBatchRecordsGauge.value()));

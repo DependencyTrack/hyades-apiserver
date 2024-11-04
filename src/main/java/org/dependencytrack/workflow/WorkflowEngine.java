@@ -104,9 +104,9 @@ public class WorkflowEngine implements Closeable {
     private WorkflowJobEventConsumer jobEventConsumer;
     private Thread jobEventConsumerThread;
     private KafkaConsumer<Long, JobEvent> jobEventKafkaConsumer;
-    private KafkaClientMetrics jobEventConsumerMetrics;
+    private KafkaClientMetrics jobEventKafkaConsumerMetrics;
 
-    WorkflowEngine(final JobEngine jobEngine) {
+    public WorkflowEngine(final JobEngine jobEngine) {
         this.jobEngine = jobEngine;
     }
 
@@ -130,8 +130,8 @@ public class WorkflowEngine implements Closeable {
                 Map.entry(ENABLE_AUTO_COMMIT_CONFIG, "false"),
                 Map.entry(AUTO_OFFSET_RESET_CONFIG, "earliest")));
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            jobEventConsumerMetrics = new KafkaClientMetrics(jobEventKafkaConsumer);
-            jobEventConsumerMetrics.bindTo(Metrics.getRegistry());
+            jobEventKafkaConsumerMetrics = new KafkaClientMetrics(jobEventKafkaConsumer);
+            jobEventKafkaConsumerMetrics.bindTo(Metrics.getRegistry());
         }
 
         jobEventConsumer = new WorkflowJobEventConsumer(
@@ -200,7 +200,9 @@ public class WorkflowEngine implements Closeable {
                             .map(startOptions -> new NewWorkflowRun(
                                     startOptions.name(),
                                     startOptions.version(),
-                                    UUID.randomUUID()))
+                                    UUID.randomUUID(),
+                                    startOptions.priority(),
+                                    startOptions.arguments()))
                             .toList())
                     .stream()
                     .collect(Collectors.toMap(WorkflowRun::id, Function.identity()));
@@ -294,21 +296,23 @@ public class WorkflowEngine implements Closeable {
         // TODO: Ensure the shutdown timeout is enforced across all activities,
         //  i.e. the entire process should take no more than 30sec.
 
+        LOGGER.info("Waiting for job event consumer to stop");
         jobEventConsumer.shutdown();
         try {
             final boolean terminated = jobEventConsumerThread.join(Duration.ofSeconds(30));
             if (!terminated) {
-                LOGGER.warn("Event consumer did not stop in time");
+                LOGGER.warn("Job event consumer did not stop in time");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
-        jobEventConsumer = null;
-        jobEventConsumerThread = null;
-        jobEventKafkaConsumer = null;
-        jobEventConsumerMetrics = null;
+        jobEventKafkaConsumer.close(Duration.ofSeconds(30));
+        if (jobEventKafkaConsumerMetrics != null) {
+            jobEventKafkaConsumerMetrics.close();
+        }
+
         setState(State.STOPPED);
     }
 
@@ -319,6 +323,10 @@ public class WorkflowEngine implements Closeable {
     private void setState(final State newState) {
         stateLock.lock();
         try {
+            if (this.state == newState) {
+                return;
+            }
+
             if (this.state.canTransitionTo(newState)) {
                 this.state = newState;
                 return;

@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.job;
 
+import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
 import java.util.Optional;
 
 public interface JobWorker {
 
-    Optional<JobResult> process(final QueuedJob job) throws Exception;
+    Optional<JobResult> process(final PolledJob job) throws Exception;
 
 }

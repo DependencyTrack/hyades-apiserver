@@ -21,13 +21,9 @@ package org.dependencytrack.workflow;
 public enum WorkflowRunStatus {
 
     CANCELLED,
-
     COMPLETED,
-
     FAILED,
-
     PENDING,
-
     RUNNING,
 
 }

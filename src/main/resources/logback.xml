@@ -16,11 +16,11 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <logger name="org.dependencytrack.job" level="DEBUG" additivity="false">
+    <logger name="org.dependencytrack.job" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <logger name="org.dependencytrack.workflow" level="DEBUG" additivity="false">
+    <logger name="org.dependencytrack.workflow" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 

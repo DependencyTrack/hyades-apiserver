@@ -29,7 +29,7 @@ import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.job.JobWorker;
-import org.dependencytrack.job.QueuedJob;
+import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -150,7 +150,7 @@ public class PortfolioMetricsUpdateTask implements JobWorker, Subscriber {
     }
 
     @Override
-    public Optional<JobResult> process(final QueuedJob job) throws Exception {
+    public Optional<JobResult> process(final PolledJob job) throws Exception {
         try {
             executeWithLock(
                     getLockConfigForTask(PortfolioMetricsUpdateTask.class),

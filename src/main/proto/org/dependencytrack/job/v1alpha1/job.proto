@@ -62,15 +62,15 @@ message JobEvent {
 
 }
 
-message JobArguments {
-  oneof arguments {
-    UpdateProjectMetricsArguments update_project_metrics_args = 1;
+message JobArgs {
+  oneof args {
+    UpdateProjectMetricsJobArgs update_project_metrics_args = 1;
   }
 }
 
 message JobResult {
 }
 
-message UpdateProjectMetricsArguments {
+message UpdateProjectMetricsJobArgs {
   string project_uuid = 1;
 }

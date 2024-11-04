@@ -19,8 +19,8 @@
 package org.dependencytrack.job.persistence;
 
 import org.dependencytrack.job.JobStatus;
-import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.proto.job.v1alpha1.JobArgs;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -28,28 +28,30 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInstant;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInteger;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableLong;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableProto;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableUuid;
 
-public class QueuedJobRowMapper implements RowMapper<QueuedJob> {
+public class PolledJobRowMapper implements RowMapper<PolledJob> {
 
     @Override
-    public QueuedJob map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new QueuedJob(
+    public PolledJob map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new PolledJob(
                 rs.getLong("ID"),
                 JobStatus.valueOf(rs.getString("STATUS")),
                 rs.getString("KIND"),
                 nullableInteger(rs, "PRIORITY"),
                 Instant.ofEpochMilli(rs.getTimestamp("SCHEDULED_FOR").getTime()),
                 nullableProto(rs, "ARGUMENTS", JobArgs.parser()),
-                rs.getLong("WORKFLOW_STEP_RUN_ID"),
-                Instant.ofEpochMilli(rs.getDate("CREATED_AT").getTime()),
-                nullableInstant(rs, "UPDATED_AT"),
-                nullableInstant(rs, "STARTED_AT"),
-                rs.getInt("ATTEMPTS"),
-                rs.getString("FAILURE_REASON")
-        );
+                nullableLong(rs, "WORKFLOW_RUN_ID"),
+                nullableUuid(rs, "WORKFLOW_RUN_TOKEN"),
+                nullableLong(rs, "WORKFLOW_STEP_RUN_ID"),
+                nullableProto(rs, "WORKFLOW_RUN_ARGUMENTS", WorkflowRunArgs.parser()),
+                Instant.ofEpochMilli(rs.getTimestamp("CREATED_AT").getTime()),
+                Instant.ofEpochMilli(rs.getTimestamp("UPDATED_AT").getTime()),
+                Instant.ofEpochMilli(rs.getTimestamp("STARTED_AT").getTime()),
+                rs.getInt("ATTEMPTS"));
     }
 
 }

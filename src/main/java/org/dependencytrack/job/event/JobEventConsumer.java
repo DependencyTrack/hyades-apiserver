@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.job.event;
 
-import alpine.common.logging.Logger;
 import com.google.protobuf.util.Timestamps;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -35,11 +34,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
 
-    private static final Logger LOGGER = Logger.getLogger(JobEventConsumer.class);
     private static final Set<JobEvent.SubjectCase> RELEVANT_EVENT_SUBJECTS = Set.of(
             JobEvent.SubjectCase.JOB_COMPLETED_SUBJECT,
             JobEvent.SubjectCase.JOB_FAILED_SUBJECT);
@@ -101,14 +99,16 @@ public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
                 })
                 .toList();
 
-        final List<QueuedJob> transitionedJobs = inJdbiTransaction(
-                handle -> new JobDao(handle).transitionAll(transitions));
+        useJdbiTransaction(handle -> {
+            final var dao = new JobDao(handle);
+            final List<QueuedJob> transitionedJobs = dao.transitionAll(transitions);
 
-        // NB: Assertion can fail when replaying historical events,
-        // or when consuming duplicate records.
-        assert transitionedJobs.size() == transitions.size()
-                : "Expected to transition %d jobs, but only transitioned %d".formatted(
-                transitions.size(), transitionedJobs.size());
+            // NB: Assertion can fail when replaying historical events,
+            // or when consuming duplicate records.
+            assert transitionedJobs.size() == transitions.size()
+                    : "Expected to transition %d jobs, but only transitioned %d".formatted(
+                    transitions.size(), transitionedJobs.size());
+        });
 
         return true;
     }

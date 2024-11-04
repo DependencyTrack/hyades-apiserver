@@ -24,6 +24,7 @@ import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.BaseUnits;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -91,6 +92,7 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
     private Gauge batchRecordsGaugeMeter;
     private DistributionSummary flushBatchSizeDistributionMeter;
     private Counter flushCounterMeter;
+    private Timer flushTimerMeter;
 
     private Instant lastFlushedAt;
 
@@ -142,7 +144,7 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
                 // TODO: Use exponential backoff for poll timeout in case we're paused for retry.
                 records = kafkaConsumer.poll(Duration.ofSeconds(1));
             } catch (WakeupException e) {
-                logger.debug("Consumer woke up during poll", e);
+                logger.debug("Consumer woke up during poll");
                 continue;
             }
             if (records.isEmpty()) {
@@ -256,6 +258,7 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
         }
 
         final boolean didFlush;
+        final Timer.Sample flushTimerSample = Timer.start();
         try {
             didFlush = flushBatch(List.copyOf(recordBatch));
         } catch (AssertionError | IllegalStateException e) { // Use dedicated exception for this.
@@ -265,6 +268,10 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
             kafkaConsumer.pause(kafkaConsumer.assignment());
             setState(State.PAUSED_RETRY);
             return false;
+        } finally {
+            if (flushTimerMeter != null) {
+                flushTimerSample.stop(flushTimerMeter);
+            }
         }
         if (!didFlush) {
             return false;
@@ -342,6 +349,10 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
     private void setState(final State newState) {
         stateLock.lock();
         try {
+            if (this.state == newState) {
+                return;
+            }
+
             if (this.state.canTransitionTo(newState)) {
                 this.state = newState;
                 kafkaConsumer.wakeup();
@@ -370,9 +381,13 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
                 .baseUnit(BaseUnits.OBJECTS)
                 .tag("name", getClass().getSimpleName())
                 .register(Metrics.getRegistry());
-        flushCounterMeter = Counter.builder(METER_PREFIX + "flush")
+        flushCounterMeter = Counter.builder(METER_PREFIX + "flushes")
                 .description("Number of flush operations")
                 .baseUnit(BaseUnits.OPERATIONS)
+                .tag("name", getClass().getSimpleName())
+                .register(Metrics.getRegistry());
+        flushTimerMeter = Timer.builder(METER_PREFIX + "flush.latency")
+                .description("Latency of flush operations")
                 .tag("name", getClass().getSimpleName())
                 .register(Metrics.getRegistry());
     }

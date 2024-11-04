@@ -16,26 +16,29 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.job.persistence;
 
+import org.dependencytrack.job.JobStatus;
+import org.dependencytrack.proto.job.v1alpha1.JobArgs;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
 
-public record StartWorkflowOptions(
-        String name,
-        int version,
-        Integer priority,
-        WorkflowRunArgs arguments) {
+import jakarta.annotation.Nullable;
+import java.time.Instant;
+import java.util.UUID;
 
-    public StartWorkflowOptions(final String name, final int version) {
-        this(name, version, null, null);
-    }
-
-    public StartWorkflowOptions withPriority(final Integer priority) {
-        return new StartWorkflowOptions(this.name, this.version, priority, this.arguments);
-    }
-
-    public StartWorkflowOptions withArguments(final WorkflowRunArgs arguments) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, arguments);
-    }
-
+public record PolledJob(
+        long id,
+        JobStatus status,
+        String kind,
+        @Nullable Integer priority,
+        Instant scheduledFor,
+        @Nullable JobArgs arguments,
+        @Nullable Long workflowRunId,
+        @Nullable UUID workflowRunToken,
+        @Nullable Long workflowStepRunId,
+        @Nullable WorkflowRunArgs workflowRunArgs,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant startedAt,
+        int attempt) {
 }

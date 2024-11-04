@@ -25,7 +25,7 @@ import alpine.model.ConfigProperty;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.job.JobWorker;
-import org.dependencytrack.job.QueuedJob;
+import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
@@ -61,7 +61,7 @@ public class NistMirrorTask implements JobWorker, LoggableSubscriber {
     }
 
     @Override
-    public Optional<JobResult> process(final QueuedJob job) throws Exception {
+    public Optional<JobResult> process(final PolledJob job) throws Exception {
         inform(new NistMirrorEvent());
         return Optional.empty();
     }

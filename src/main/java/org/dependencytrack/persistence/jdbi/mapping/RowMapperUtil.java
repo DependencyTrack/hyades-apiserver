@@ -21,6 +21,9 @@ package org.dependencytrack.persistence.jdbi.mapping;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import org.jdbi.v3.core.result.UnableToProduceResultException;
@@ -31,12 +34,14 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -104,9 +109,61 @@ public class RowMapperUtil {
         return value;
     }
 
+    public static Long nullableLong(final ResultSet rs, final String columnName) throws SQLException {
+        final long longValue = rs.getLong(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        return longValue;
+    }
+
+    public static Instant nullableInstant(final ResultSet rs, final String columnName) throws SQLException {
+        final java.sql.Timestamp date = rs.getTimestamp(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        return Instant.ofEpochMilli(date.getTime());
+    }
+
+    public static Integer nullableInteger(final ResultSet rs, final String columnName) throws SQLException {
+        final int integer = rs.getInt(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        return integer;
+    }
+
+    public static <T extends Message> T nullableProto(
+            final ResultSet rs,
+            final String columnName,
+            final Parser<T> parser) throws SQLException {
+        final byte[] protoBytes = rs.getBytes(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        try {
+            return parser.parseFrom(protoBytes);
+        } catch (InvalidProtocolBufferException e) {
+            throw new IllegalStateException("Failed to deserialize proto", e);
+        }
+    }
+
     public static Timestamp nullableTimestamp(final ResultSet rs, final String columnName) throws SQLException {
         final Date timestamp = rs.getTimestamp(columnName);
         return timestamp != null ? Timestamps.fromDate(timestamp) : null;
+    }
+
+    public static UUID nullableUuid(final ResultSet rs, final String columnName) throws SQLException {
+        final String uuid = rs.getString(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        return UUID.fromString(uuid);
     }
 
     public static ZonedDateTime nullableZonedDateTime(final ResultSet rs, final String columnName) throws SQLException {
