@@ -151,6 +151,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldDeployWorkflowAndReturnCompleteView() throws Exception {
         try (final var jobEngine = new JobEngine();
              final var workflowEngine = new WorkflowEngine(jobEngine)) {
+            workflowEngine.start();
             workflowEngine.deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
 
             final WorkflowRunView workflowRun = workflowEngine.startWorkflow(new StartWorkflowOptions(

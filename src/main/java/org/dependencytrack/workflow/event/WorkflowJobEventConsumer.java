@@ -28,13 +28,14 @@ import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.proto.job.v1alpha1.JobEvent;
 import org.dependencytrack.workflow.ClaimedWorkflowStepRun;
-import org.dependencytrack.workflow.WorkflowDao;
-import org.dependencytrack.workflow.WorkflowDao.WorkflowStepRunTransition;
 import org.dependencytrack.workflow.WorkflowRun;
 import org.dependencytrack.workflow.WorkflowRunStatus;
+import org.dependencytrack.workflow.WorkflowRunTransition;
 import org.dependencytrack.workflow.WorkflowStepRun;
 import org.dependencytrack.workflow.WorkflowStepRunStatus;
+import org.dependencytrack.workflow.WorkflowStepRunTransition;
 import org.dependencytrack.workflow.WorkflowStepType;
+import org.dependencytrack.workflow.persistence.WorkflowDao;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -131,9 +132,9 @@ public class WorkflowJobEventConsumer extends KafkaBatchConsumer<Long, JobEvent>
 
         final var jobsToQueue = new ArrayList<NewJob>();
         useJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
+            final var dao = new WorkflowDao(handle);
 
-            final List<WorkflowStepRun> transitionedStepRuns = dao.transitionStepRuns(transitions);
+            final List<WorkflowStepRun> transitionedStepRuns = dao.transitionWorkflowStepRuns(transitions);
 
             // NB: Assertion can fail when replaying historical events,
             // or when consuming duplicate records.
@@ -166,13 +167,13 @@ public class WorkflowJobEventConsumer extends KafkaBatchConsumer<Long, JobEvent>
 
             final List<WorkflowStepRun> failedStepRuns = stepRunsByStatus.get(WorkflowStepRunStatus.FAILED);
             if (failedStepRuns != null) {
-                final List<WorkflowStepRun> cancelledStepRuns = dao.cancelDependantStepRuns(failedStepRuns);
+                final List<WorkflowStepRun> cancelledStepRuns = dao.cancelDependantWorkflowStepRuns(failedStepRuns);
                 for (final WorkflowStepRun cancelledStepRun : cancelledStepRuns) {
                     LOGGER.warn("Cancelled %s".formatted(cancelledStepRun));
                 }
 
                 final List<WorkflowRun> failedWorkflowRuns = dao.transitionWorkflowRuns(failedStepRuns.stream()
-                        .map(stepRun -> new WorkflowDao.WorkflowRunTransition(
+                        .map(stepRun -> new WorkflowRunTransition(
                                 stepRun.workflowRunId(),
                                 WorkflowRunStatus.FAILED))
                         .toList());

@@ -40,10 +40,6 @@ import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.Group;
 import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.workflow.StartWorkflowOptions;
-import org.dependencytrack.workflow.WorkflowEngine;
-import org.dependencytrack.workflow.WorkflowRunView;
-import org.dependencytrack.workflow.WorkflowStepRunStatus;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -90,7 +86,6 @@ import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
-import static org.dependencytrack.workflow.Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
@@ -103,8 +98,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyType(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getDescription());
-
-        WorkflowEngine.getInstance().deploy(WORKFLOW_BOM_UPLOAD_PROCESSING_V1);
     }
 
     @Test
@@ -114,12 +107,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
 
-        WorkflowRunView workflowRun = WorkflowEngine.getInstance().startWorkflow(
-                new StartWorkflowOptions(
-                        WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
-                        WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
-        bomUploadEvent.setChainIdentifier(workflowRun.token());
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
         new BomUploadProcessingTask().inform(bomUploadEvent);
@@ -263,17 +251,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
-
-        workflowRun = WorkflowEngine.getInstance().getWorkflowRun(workflowRun.token()).orElseThrow();
-        assertThat(workflowRun.steps()).satisfiesExactlyInAnyOrder(
-                stepRun -> {
-                    assertThat(stepRun.stepName()).isEqualTo("consume-bom");
-                    assertThat(stepRun.status()).isEqualTo(WorkflowStepRunStatus.COMPLETED);
-                },
-                stepRun -> {
-                    assertThat(stepRun.stepName()).isEqualTo("process-bom");
-                    assertThat(stepRun.status()).isEqualTo(WorkflowStepRunStatus.COMPLETED);
-                });
     }
 
     @Test

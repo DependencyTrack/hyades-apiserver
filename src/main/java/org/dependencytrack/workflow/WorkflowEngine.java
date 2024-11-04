@@ -30,8 +30,8 @@ import org.dependencytrack.job.NewJob;
 import org.dependencytrack.job.QueuedJob;
 import org.dependencytrack.job.event.JobEventKafkaProtobufDeserializer;
 import org.dependencytrack.proto.job.v1alpha1.JobEvent;
-import org.dependencytrack.workflow.WorkflowDao.NewWorkflowRun;
 import org.dependencytrack.workflow.event.WorkflowJobEventConsumer;
+import org.dependencytrack.workflow.persistence.WorkflowDao;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -41,7 +41,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
@@ -155,7 +154,7 @@ public class WorkflowEngine implements Closeable {
         // TODO: Validate spec
 
         useJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
+            final var dao = new WorkflowDao(handle);
 
             LOGGER.info("Deploying workflow %s/%d".formatted(spec.name(), spec.version()));
             final Workflow workflow = dao.createWorkflow(new NewWorkflow(spec.name(), spec.version()));
@@ -167,7 +166,8 @@ public class WorkflowEngine implements Closeable {
             final var workflowStepByName = new HashMap<String, WorkflowStep>(spec.stepSpecs().size());
             final var workflowStepDependencies = new HashMap<String, Set<String>>();
             for (final WorkflowStepSpec stepSpec : spec.stepSpecs()) {
-                final WorkflowStep step = dao.createStep(new NewWorkflowStep(workflow.id(), stepSpec.name(), stepSpec.type()));
+                final WorkflowStep step = dao.createWorkflowStep(
+                        new NewWorkflowStep(workflow.id(), stepSpec.name(), stepSpec.type()));
                 workflowStepByName.put(step.name(), step);
 
                 if (!stepSpec.stepDependencies().isEmpty()) {
@@ -182,7 +182,7 @@ public class WorkflowEngine implements Closeable {
                 final WorkflowStep step = workflowStepByName.get(stepName);
                 for (final String dependencyName : dependencyNames) {
                     final WorkflowStep dependencyStep = workflowStepByName.get(dependencyName);
-                    dao.createStepDependency(step.id(), dependencyStep.id());
+                    dao.createWorkflowStepDependency(step.id(), dependencyStep.id());
                 }
             }
         });
@@ -194,7 +194,7 @@ public class WorkflowEngine implements Closeable {
 
         final var jobsToQueue = new ArrayList<NewJob>();
         final List<WorkflowRunView> startedWorkflowRuns = inJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
+            final var dao = new WorkflowDao(handle);
 
             final Map<Long, WorkflowRun> workflowRunById = dao.createWorkflowRuns(options.stream()
                             .map(startOptions -> new NewWorkflowRun(
@@ -258,30 +258,6 @@ public class WorkflowEngine implements Closeable {
         }
 
         return startedWorkflows.getFirst();
-    }
-
-    public Optional<WorkflowRunView> getWorkflowRun(final UUID token) {
-        return inJdbiTransaction(handle -> {
-            final var dao = handle.attach(WorkflowDao.class);
-
-            final WorkflowRunView workflowRun = dao.getWorkflowRunViewByToken(token);
-            if (workflowRun == null) {
-                return Optional.empty();
-            }
-
-            final List<WorkflowStepRunView> stepRuns = dao.getStepRunViewsByToken(token);
-
-            return Optional.of(new WorkflowRunView(
-                    workflowRun.workflowName(),
-                    workflowRun.workflowVersion(),
-                    workflowRun.token(),
-                    workflowRun.priority(),
-                    workflowRun.status(),
-                    workflowRun.createdAt(),
-                    workflowRun.updatedAt(),
-                    workflowRun.startedAt(),
-                    stepRuns));
-        });
     }
 
     @Override
