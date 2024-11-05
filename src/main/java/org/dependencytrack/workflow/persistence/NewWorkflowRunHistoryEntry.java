@@ -16,18 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.workflow.persistence;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
+import java.util.UUID;
 
-public record WorkflowStepRun(
-        long id,
-        long workflowRunId,
-        long workflowStepId,
-        WorkflowStepRunStatus status,
-        @Nullable String failureReason,
-        Instant createdAt,
-        @Nullable Instant updatedAt,
-        @Nullable Instant startedAt) {
+public record NewWorkflowRunHistoryEntry(
+        UUID workflowRunId,
+        Instant timestamp,
+        String eventType,
+        String activityName,
+        String activityInvocationId,
+        String arguments,
+        String result) {
 }

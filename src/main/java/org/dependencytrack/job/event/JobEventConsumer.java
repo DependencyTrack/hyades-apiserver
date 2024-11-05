@@ -81,7 +81,10 @@ public class JobEventConsumer extends KafkaBatchConsumer<Long, JobEvent> {
 
                     return switch (event.getSubjectCase()) {
                         case JOB_COMPLETED_SUBJECT -> new JobStatusTransition(
-                                event.getJobId(), JobStatus.COMPLETED, eventTimestamp);
+                                event.getJobId(), JobStatus.COMPLETED, eventTimestamp)
+                                .withResult(event.getJobCompletedSubject().hasResult()
+                                        ? event.getJobCompletedSubject().getResult()
+                                        : null);
                         case JOB_FAILED_SUBJECT -> {
                             final JobEvent.JobFailedSubject jobFailedSubject = event.getJobFailedSubject();
                             final boolean isRetryable = jobFailedSubject.hasNextAttemptAt();

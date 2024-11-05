@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.event.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.event.v1alpha1";
+
+message WorkflowEvent {
+  // ID of the workflow run.
+  string workflow_run_id = 1;
+
+  // When the event occurred.
+  google.protobuf.Timestamp timestamp = 2;
+
+  oneof subject {
+    // Subject informing about a started workflow run.
+    WorkflowRunStarted workflow_run_started = 100;
+
+    // Subject informing about a completed workflow run.
+    WorkflowRunCompleted workflow_run_completed = 101;
+
+    // Subject informing about a failed workflow run.
+    WorkflowRunFailed workflow_run_failed = 102;
+
+    // Subject informing about a requested workflow run.
+    WorkflowRunRequested workflow_run_requested = 103;
+
+    WorkflowStepRunQueued workflow_step_run_queued = 200;
+    WorkflowStepRunStarted workflow_step_run_started = 201;
+    WorkflowStepRunCompleted workflow_step_run_completed = 202;
+    WorkflowStepRunFailed workflow_step_run_failed = 203;
+
+    WorkflowActivityRunRequested workflow_activity_run_requested = 300;
+    WorkflowActivityRunQueued workflow_activity_run_queued = 301;
+    WorkflowActivityRunStarted workflow_activity_run_started = 302;
+    WorkflowActivityRunCompleted workflow_activity_run_completed = 303;
+    WorkflowActivityRunFailed workflow_activity_run_failed = 304;
+  }
+}
+
+message WorkflowRunStarted {
+  // Name of the workflow.
+  string name = 1;
+
+  // Arguments in JSON format.
+  optional string arguments = 2;
+}
+
+message WorkflowRunCompleted {
+  // Name of the workflow.
+  string name = 1;
+}
+
+message WorkflowRunFailed {
+  // Name of the workflow.
+  string name = 1;
+}
+
+message WorkflowRunRequested {
+  // Name of the workflow.
+  string name = 1;
+
+  // Arguments in JSON format.
+  optional string arguments = 2;
+}
+
+message WorkflowStepRunQueued {
+}
+
+message WorkflowStepRunStarted {
+}
+
+message WorkflowStepRunCompleted {
+}
+
+message WorkflowStepRunFailed {
+  // Reason of the failure.
+  string failure_reason = 1;
+}
+
+message WorkflowActivityRunQueued {
+  // Name of the activity.
+  string activity_name = 1;
+
+  // ID of the invocation.
+  string invocation_id = 2;
+
+  // Arguments in JSON format.
+  optional string arguments = 3;
+}
+
+message WorkflowActivityRunRequested {
+  // Name of the activity.
+  string activity_name = 1;
+
+  // ID of the invocation.
+  string invocation_id = 2;
+
+  // Arguments in JSON format.
+  optional string arguments = 3;
+}
+
+message WorkflowActivityRunStarted {
+  // Name of the activity.
+  string activity_name = 1;
+
+  // ID of the invocation.
+  string invocation_id = 2;
+}
+
+message WorkflowActivityRunCompleted {
+  // Name of the activity.
+  string activity_name = 1;
+
+  // ID of the invocation.
+  string invocation_id = 2;
+
+  // Result in JSON format.
+  optional string result = 3;
+}
+
+message WorkflowActivityRunFailed {
+  // Name of the activity.
+  string activity_name = 1;
+
+  // ID of the invocation.
+  string invocation_id = 2;
+
+  // Reason of the failure.
+  string failure_reason = 3;
+}
+
+message WorkflowActivityResult {
+}

@@ -16,14 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.job.event.serialization;
 
-public enum WorkflowStepRunStatus {
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
 
-    PENDING,
-    RUNNING,
-    CANCELLED,
-    COMPLETED,
-    FAILED
+public class JobEventKafkaProtobufDeserializer extends KafkaProtobufDeserializer<JobEvent> {
+
+    public JobEventKafkaProtobufDeserializer() {
+        super(JobEvent.parser());
+    }
 
 }

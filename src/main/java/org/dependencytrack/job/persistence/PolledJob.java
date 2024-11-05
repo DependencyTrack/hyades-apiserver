@@ -19,8 +19,6 @@
 package org.dependencytrack.job.persistence;
 
 import org.dependencytrack.job.JobStatus;
-import org.dependencytrack.proto.job.v1alpha1.JobArgs;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
 
 import jakarta.annotation.Nullable;
 import java.time.Instant;
@@ -32,11 +30,10 @@ public record PolledJob(
         String kind,
         @Nullable Integer priority,
         Instant scheduledFor,
-        @Nullable JobArgs arguments,
-        @Nullable Long workflowRunId,
-        @Nullable UUID workflowRunToken,
-        @Nullable Long workflowStepRunId,
-        @Nullable WorkflowRunArgs workflowRunArgs,
+        @Nullable String arguments,
+        @Nullable UUID workflowRunId,
+        @Nullable String workflowActivityName,
+        @Nullable String workflowActivityInvocationId,
         Instant createdAt,
         Instant updatedAt,
         Instant startedAt,

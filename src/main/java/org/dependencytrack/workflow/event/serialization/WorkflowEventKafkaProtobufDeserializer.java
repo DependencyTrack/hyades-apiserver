@@ -16,21 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.workflow.event.serialization;
 
-public enum WorkflowStepType {
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufDeserializer;
+import org.dependencytrack.proto.workflow.event.v1alpha1.WorkflowEvent;
 
-    /**
-     * The engine will queue a job automatically for this step,
-     * and observe its outcome to determine the step status.
-     */
-    JOB,
+public class WorkflowEventKafkaProtobufDeserializer extends KafkaProtobufDeserializer<WorkflowEvent> {
 
-    /**
-     * The step is to be claimed and updated manually.
-     */
-    MANUAL
-
-    // TODO: Event
+    public WorkflowEventKafkaProtobufDeserializer() {
+        super(WorkflowEvent.parser());
+    }
 
 }

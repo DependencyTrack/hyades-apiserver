@@ -16,12 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.job.event.serialization;
 
-import java.util.List;
+import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerializer;
+import org.dependencytrack.proto.job.v1alpha1.JobEvent;
 
-public record WorkflowSpec(
-        String name,
-        int version,
-        List<WorkflowStepSpec> stepSpecs) {
+public class JobEventKafkaProtobufSerializer extends KafkaProtobufSerializer<JobEvent> {
 }

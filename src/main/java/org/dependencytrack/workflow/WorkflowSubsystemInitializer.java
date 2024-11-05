@@ -35,17 +35,6 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Initializing workflow engine");
         workflowEngine = WorkflowEngine.getInstance();
         workflowEngine.start();
-
-        for (final WorkflowSpec workflow : Workflows.ALL_WORKFLOWS) {
-            try {
-                workflowEngine.deploy(workflow);
-                LOGGER.info("Deployed workflow %s/%d".formatted(
-                        workflow.name(), workflow.version()));
-            } catch (RuntimeException e) {
-                LOGGER.warn("Failed to deploy workflow %s/%d".formatted(
-                        workflow.name(), workflow.version()), e);
-            }
-        }
     }
 
     @Override

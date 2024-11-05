@@ -28,12 +28,11 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.job.JobContext;
 import org.dependencytrack.job.JobWorker;
-import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -55,7 +54,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
  *
  * @since 4.6.0
  */
-public class PortfolioMetricsUpdateTask implements JobWorker, Subscriber {
+public class PortfolioMetricsUpdateTask implements JobWorker<Void, Void>, Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
     private static final int MAX_CONCURRENCY = SystemUtil.getCpuCores();
@@ -150,7 +149,7 @@ public class PortfolioMetricsUpdateTask implements JobWorker, Subscriber {
     }
 
     @Override
-    public Optional<JobResult> process(final PolledJob job) throws Exception {
+    public Optional<Void> process(final JobContext<Void> ctx) throws Exception {
         try {
             executeWithLock(
                     getLockConfigForTask(PortfolioMetricsUpdateTask.class),

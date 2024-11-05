@@ -18,10 +18,9 @@
  */
 package org.dependencytrack.job;
 
-import org.dependencytrack.proto.job.v1alpha1.JobArgs;
-
 import jakarta.annotation.Nullable;
 import java.time.Instant;
+import java.util.UUID;
 
 public record QueuedJob(
         long id,
@@ -29,8 +28,10 @@ public record QueuedJob(
         String kind,
         @Nullable Integer priority,
         Instant scheduledFor,
-        @Nullable JobArgs arguments,
-        @Nullable Long workflowStepRunId,
+        @Nullable String arguments,
+        @Nullable UUID workflowRunId,
+        @Nullable String workflowActivityName,
+        @Nullable String workflowActivityInvocationId,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,

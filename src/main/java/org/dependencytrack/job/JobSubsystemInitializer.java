@@ -19,8 +19,6 @@
 package org.dependencytrack.job;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.job.persistence.PolledJob;
-import org.dependencytrack.proto.job.v1alpha1.JobResult;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
@@ -72,7 +70,7 @@ public class JobSubsystemInitializer implements ServletContextListener {
         }
     }
 
-    private static class RandomlyFailingJobWorker implements JobWorker {
+    private static class RandomlyFailingJobWorker implements JobWorker<Void, Void> {
 
         private static final Logger LOGGER = Logger.getLogger(RandomlyFailingJobWorker.class);
         private final SecureRandom random;
@@ -82,8 +80,8 @@ public class JobSubsystemInitializer implements ServletContextListener {
         }
 
         @Override
-        public Optional<JobResult> process(final PolledJob job) throws Exception {
-            LOGGER.debug("Processing " + job);
+        public Optional<Void> process(final JobContext<Void> ctx) throws Exception {
+            LOGGER.debug("Processing " + ctx);
 
             Thread.sleep(random.nextInt(10, 1000));
 

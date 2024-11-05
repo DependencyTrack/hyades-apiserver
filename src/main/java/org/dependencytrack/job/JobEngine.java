@@ -24,6 +24,9 @@ import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.Timestamps;
@@ -40,8 +43,8 @@ import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.dependencytrack.job.event.JobEventConsumer;
-import org.dependencytrack.job.event.JobEventKafkaProtobufDeserializer;
-import org.dependencytrack.job.event.JobEventKafkaProtobufSerializer;
+import org.dependencytrack.job.event.serialization.JobEventKafkaProtobufDeserializer;
+import org.dependencytrack.job.event.serialization.JobEventKafkaProtobufSerializer;
 import org.dependencytrack.job.persistence.JobDao;
 import org.dependencytrack.job.persistence.JobScheduleDao;
 import org.dependencytrack.job.persistence.JobScheduleTriggerUpdate;
@@ -62,6 +65,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -198,7 +202,7 @@ public class JobEngine implements Closeable {
         setState(State.RUNNING);
     }
 
-    public void registerWorker(final String kind, final int concurrency, final JobWorker worker) {
+    public <A, R> void registerWorker(final String kind, final int concurrency, final JobWorker<A, R> worker) {
         state.assertRunning();
 
         if (executorByKind.containsKey(kind)) {
@@ -258,8 +262,22 @@ public class JobEngine implements Closeable {
                              var ignoredMdcJobPriority = MDC.putCloseable("jobPriority", String.valueOf(polledJob.priority()));
                              var ignoredMdcJobAttempts = MDC.putCloseable("jobAttempt", String.valueOf(polledJob.attempt()))) {
                             LOGGER.debug("Processing");
-                            worker.process(polledJob);
-                            dispatchJobCompletedEvent(polledJob);
+                            final A arguments;
+                            if (polledJob.arguments() != null) {
+                                arguments = new JsonMapper().readValue(
+                                        polledJob.arguments(), new TypeReference<>() {
+                                        });
+                            } else {
+                                arguments = null;
+                            }
+                            final Optional<R> result = worker.process(new JobContext<>(
+                                    polledJob.id(),
+                                    polledJob.priority(),
+                                    polledJob.workflowRunId(),
+                                    polledJob.workflowActivityName(),
+                                    polledJob.workflowActivityInvocationId(),
+                                    arguments));
+                            dispatchJobCompletedEvent(polledJob, result.orElse(null));
                             LOGGER.debug("Job completed successfully");
                         } catch (Exception e) {
                             final JobFailedSubject.Builder subjectBuilder = JobFailedSubject.newBuilder()
@@ -447,7 +465,7 @@ public class JobEngine implements Closeable {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private CompletableFuture<?> dispatchJobCompletedEvent(final PolledJob job) {
+    private <T> CompletableFuture<?> dispatchJobCompletedEvent(final PolledJob job, final T result) {
         final JobEvent.Builder eventBuilder = newEventBuilder(job);
 
         // We only persist timestamps in millisecond resolution,
@@ -465,10 +483,19 @@ public class JobEngine implements Closeable {
             }
         }
 
+        final JobCompletedSubject.Builder subjectBuilder = JobCompletedSubject.newBuilder()
+                .setAttempt(job.attempt());
+        if (result != null) {
+            try {
+                final String resultJson = new JsonMapper().writeValueAsString(result);
+                subjectBuilder.setResult(resultJson);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         return dispatchEvents(List.of(eventBuilder
-                .setJobCompletedSubject(JobCompletedSubject.newBuilder()
-                        .setAttempt(job.attempt())
-                        .build())
+                .setJobCompletedSubject(subjectBuilder.build())
                 .build()));
     }
 
@@ -553,23 +580,37 @@ public class JobEngine implements Closeable {
     }
 
     private static JobEvent.Builder newEventBuilder(final PolledJob job) {
-        return JobEvent.newBuilder()
+        final JobEvent.Builder builder = JobEvent.newBuilder()
                 .setJobId(job.id())
                 .setJobKind(job.kind())
-                .setTimestamp(Timestamps.now())
-                .setWorkflowStepRunId(job.workflowStepRunId() != null
-                        ? job.workflowStepRunId()
-                        : 0);
+                .setTimestamp(Timestamps.now());
+        if (job.workflowRunId() != null) {
+            builder.setWorkflowRunId(job.workflowRunId().toString());
+        }
+        if (job.workflowActivityName() != null) {
+            builder.setWorkflowActivityName(job.workflowActivityName());
+        }
+        if (job.workflowActivityInvocationId() != null) {
+            builder.setWorkflowActivityInvocationId(job.workflowActivityInvocationId());
+        }
+        return builder;
     }
 
     private static JobEvent.Builder newEventBuilder(final QueuedJob job) {
-        return JobEvent.newBuilder()
+        final JobEvent.Builder builder = JobEvent.newBuilder()
                 .setJobId(job.id())
                 .setJobKind(job.kind())
-                .setTimestamp(Timestamps.now())
-                .setWorkflowStepRunId(job.workflowStepRunId() != null
-                        ? job.workflowStepRunId()
-                        : 0);
+                .setTimestamp(Timestamps.now());
+        if (job.workflowRunId() != null) {
+            builder.setWorkflowRunId(job.workflowRunId().toString());
+        }
+        if (job.workflowActivityName() != null) {
+            builder.setWorkflowActivityName(job.workflowActivityName());
+        }
+        if (job.workflowActivityInvocationId() != null) {
+            builder.setWorkflowActivityInvocationId(job.workflowActivityInvocationId());
+        }
+        return builder;
     }
 
     State state() {

@@ -28,18 +28,23 @@ public record JobStatusTransition(
         JobStatus status,
         Instant timestamp,
         String failureReason,
-        Instant scheduledFor) {
+        Instant scheduledFor,
+        String result) {
 
     public JobStatusTransition(final long jobId, final JobStatus status, final Instant timestamp) {
-        this(jobId, Objects.requireNonNull(status), Objects.requireNonNull(timestamp), null, null);
+        this(jobId, Objects.requireNonNull(status), Objects.requireNonNull(timestamp), null, null, null);
     }
 
     public JobStatusTransition withFailureReason(final String failureReason) {
-        return new JobStatusTransition(this.jobId, this.status, this.timestamp, failureReason, this.scheduledFor);
+        return new JobStatusTransition(this.jobId, this.status, this.timestamp, failureReason, this.scheduledFor, this.result);
     }
 
     public JobStatusTransition withScheduledFor(final Instant scheduledFor) {
-        return new JobStatusTransition(this.jobId, this.status, this.timestamp, this.failureReason, scheduledFor);
+        return new JobStatusTransition(this.jobId, this.status, this.timestamp, this.failureReason, scheduledFor, this.result);
+    }
+
+    public JobStatusTransition withResult(final String result) {
+        return new JobStatusTransition(this.jobId, this.status, this.timestamp, this.failureReason, this.scheduledFor, result);
     }
 
 }

@@ -48,15 +48,19 @@ public class JobDao {
                 , "PRIORITY"
                 , "SCHEDULED_FOR"
                 , "ARGUMENTS"
-                , "WORKFLOW_STEP_RUN_ID"
+                , "WORKFLOW_RUN_ID"
+                , "WORKFLOW_ACTIVITY_NAME"
+                , "WORKFLOW_ACTIVITY_INVOCATION_ID"
                 , "CREATED_AT"
                 ) VALUES (
                   'PENDING'
                 , :kind
                 , :priority
                 , COALESCE(:scheduledFor, NOW())
-                , :arguments
-                , :workflowStepRunId
+                , CAST(:arguments AS JSONB)
+                , :workflowRunId
+                , :workflowActivityName
+                , :workflowActivityInvocationId
                 , NOW())
                 RETURNING *
                 """);
@@ -67,12 +71,13 @@ public class JobDao {
                     .bind("priority", newJob.priority())
                     .bind("scheduledFor", newJob.scheduledFor())
                     .bind("arguments", newJob.arguments())
-                    .bind("workflowStepRunId", newJob.workflowStepRunId())
+                    .bind("workflowRunId", newJob.workflowRunId())
+                    .bind("workflowActivityName", newJob.workflowActivityName())
+                    .bind("workflowActivityInvocationId", newJob.workflowActivityInvocationId())
                     .add();
         }
 
         return preparedBatch
-                .registerArgument(new JobArgsArgument.Factory())
                 .executePreparedBatch("*")
                 .map(queuedJobRowMapper)
                 .list();
@@ -82,7 +87,6 @@ public class JobDao {
         return jdbiHandle.createUpdate("""
                         WITH "CTE_POLL" AS (
                             SELECT "ID"
-                                 , "WORKFLOW_STEP_RUN_ID"
                               FROM "JOB"
                              WHERE "KIND" = :kind
                                AND "STATUS" = ANY(CAST('{PENDING, PENDING_RETRY}' AS JOB_STATUS[]))
@@ -96,18 +100,11 @@ public class JobDao {
                         UPDATE "JOB"
                            SET "STATUS" = 'RUNNING'
                              , "UPDATED_AT" = NOW()
-                             , "STARTED_AT" = COALESCE("JOB"."STARTED_AT", NOW())
+                             , "STARTED_AT" = NOW()
                              , "ATTEMPTS" = COALESCE("JOB"."ATTEMPTS", 0) + 1
                           FROM "CTE_POLL"
-                          LEFT JOIN "WORKFLOW_STEP_RUN" AS "WFSR"
-                            ON "WFSR"."ID" = "CTE_POLL"."WORKFLOW_STEP_RUN_ID"
-                          LEFT JOIN "WORKFLOW_RUN" AS "WFR"
-                            ON "WFR"."ID" = "WFSR"."WORKFLOW_RUN_ID"
                          WHERE "JOB"."ID" = "CTE_POLL"."ID"
-                        RETURNING "JOB".*
-                                , "WFR"."ID" AS "WORKFLOW_RUN_ID"
-                                , "WFR"."TOKEN" AS "WORKFLOW_RUN_TOKEN"
-                                , "WFR"."ARGUMENTS" AS "WORKFLOW_RUN_ARGUMENTS"
+                        RETURNING *
                         """)
                 .bind("kind", kind)
                 .executeAndReturnGeneratedKeys("*")
@@ -120,6 +117,7 @@ public class JobDao {
                 UPDATE "JOB"
                    SET "STATUS" = :status
                      , "SCHEDULED_FOR" = COALESCE(:scheduledFor, "SCHEDULED_FOR")
+                     , "RESULT" = CAST(:result AS JSONB)
                      , "FAILURE_REASON" = :failureReason
                      , "UPDATED_AT" = :timestamp
                  WHERE "ID" = :jobId
@@ -130,8 +128,9 @@ public class JobDao {
         for (final JobStatusTransition transition : transitions) {
             preparedBatch
                     .bind("status", transition.status())
-                    .bind("failureReason", transition.failureReason())
                     .bind("scheduledFor", transition.scheduledFor())
+                    .bind("result", transition.result())
+                    .bind("failureReason", transition.failureReason())
                     .bind("timestamp", transition.timestamp())
                     .bind("jobId", transition.jobId())
                     .add();

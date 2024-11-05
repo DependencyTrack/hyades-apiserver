@@ -18,24 +18,18 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
+public record StartWorkflowOptions<T>(String name, Integer priority, T arguments) {
 
-public record StartWorkflowOptions(
-        String name,
-        int version,
-        Integer priority,
-        WorkflowRunArgs arguments) {
-
-    public StartWorkflowOptions(final String name, final int version) {
-        this(name, version, null, null);
+    public StartWorkflowOptions(final String name) {
+        this(name, null, null);
     }
 
-    public StartWorkflowOptions withPriority(final Integer priority) {
-        return new StartWorkflowOptions(this.name, this.version, priority, this.arguments);
+    public StartWorkflowOptions<T> withPriority(final Integer priority) {
+        return new StartWorkflowOptions<>(this.name, priority, this.arguments);
     }
 
-    public StartWorkflowOptions withArguments(final WorkflowRunArgs arguments) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, arguments);
+    public StartWorkflowOptions<T> withArguments(final T arguments) {
+        return new StartWorkflowOptions<>(this.name, this.priority, arguments);
     }
 
 }

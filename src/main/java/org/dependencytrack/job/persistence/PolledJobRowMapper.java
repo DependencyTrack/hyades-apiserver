@@ -19,8 +19,6 @@
 package org.dependencytrack.job.persistence;
 
 import org.dependencytrack.job.JobStatus;
-import org.dependencytrack.proto.job.v1alpha1.JobArgs;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunArgs;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -29,8 +27,6 @@ import java.sql.SQLException;
 import java.time.Instant;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInteger;
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableLong;
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableProto;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableUuid;
 
 public class PolledJobRowMapper implements RowMapper<PolledJob> {
@@ -43,11 +39,10 @@ public class PolledJobRowMapper implements RowMapper<PolledJob> {
                 rs.getString("KIND"),
                 nullableInteger(rs, "PRIORITY"),
                 Instant.ofEpochMilli(rs.getTimestamp("SCHEDULED_FOR").getTime()),
-                nullableProto(rs, "ARGUMENTS", JobArgs.parser()),
-                nullableLong(rs, "WORKFLOW_RUN_ID"),
-                nullableUuid(rs, "WORKFLOW_RUN_TOKEN"),
-                nullableLong(rs, "WORKFLOW_STEP_RUN_ID"),
-                nullableProto(rs, "WORKFLOW_RUN_ARGUMENTS", WorkflowRunArgs.parser()),
+                rs.getString("ARGUMENTS"),
+                nullableUuid(rs, "WORKFLOW_RUN_ID"),
+                rs.getString("WORKFLOW_ACTIVITY_NAME"),
+                rs.getString("WORKFLOW_ACTIVITY_INVOCATION_ID"),
                 Instant.ofEpochMilli(rs.getTimestamp("CREATED_AT").getTime()),
                 Instant.ofEpochMilli(rs.getTimestamp("UPDATED_AT").getTime()),
                 Instant.ofEpochMilli(rs.getTimestamp("STARTED_AT").getTime()),

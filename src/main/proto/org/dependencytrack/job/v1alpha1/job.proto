@@ -17,9 +17,14 @@ message JobEvent {
   // When the event occurred.
   google.protobuf.Timestamp timestamp = 3;
 
-  // ID of the workflow step run the job belongs to.
-  // Will be <= 0 when not associated with a workflow.
-  int64 workflow_step_run_id = 4;
+  // ID of the workflow run the job belongs to.
+  optional string workflow_run_id = 4;
+
+  // Name of the workflow activity the job belongs to.
+  optional string workflow_activity_name = 5;
+
+  // Name of the workflow activity invocation ID the job belongs to.
+  optional string workflow_activity_invocation_id = 6;
 
   // Subject of the event.
   oneof subject {
@@ -39,6 +44,9 @@ message JobEvent {
   message JobCompletedSubject {
     // Attempt which succeeded.
     int32 attempt = 1;
+
+    // Result of the job in JSON format.
+    optional string result = 2;
   }
 
   message JobFailedSubject {
@@ -49,7 +57,7 @@ message JobEvent {
     string failure_reason = 2;
 
     // When the next attempt is scheduled for at the earliest.
-    google.protobuf.Timestamp next_attempt_at = 3;
+    optional google.protobuf.Timestamp next_attempt_at = 3;
   }
 
   message JobQueuedSubject {
@@ -60,17 +68,4 @@ message JobEvent {
     int32 attempt = 1;
   }
 
-}
-
-message JobArgs {
-  oneof args {
-    UpdateProjectMetricsJobArgs update_project_metrics_args = 1;
-  }
-}
-
-message JobResult {
-}
-
-message UpdateProjectMetricsJobArgs {
-  string project_uuid = 1;
 }

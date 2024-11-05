@@ -24,16 +24,15 @@ import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.job.JobContext;
 import org.dependencytrack.job.JobWorker;
-import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.job.v1alpha1.JobResult;
 
 import java.util.Optional;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_NVD_ENABLED;
 
-public class NistMirrorTask implements JobWorker, LoggableSubscriber {
+public class NistMirrorTask implements JobWorker<Void, Void>, LoggableSubscriber {
 
     private static final Logger LOGGER = Logger.getLogger(NistMirrorTask.class);
 
@@ -61,7 +60,7 @@ public class NistMirrorTask implements JobWorker, LoggableSubscriber {
     }
 
     @Override
-    public Optional<JobResult> process(final PolledJob job) throws Exception {
+    public Optional<Void> process(final JobContext<Void> ctx) throws Exception {
         inform(new NistMirrorEvent());
         return Optional.empty();
     }

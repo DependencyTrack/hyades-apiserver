@@ -59,10 +59,6 @@ import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.workflow.StartWorkflowOptions;
-import org.dependencytrack.workflow.WorkflowEngine;
-import org.dependencytrack.workflow.WorkflowRunView;
-import org.dependencytrack.workflow.Workflows;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -481,11 +477,7 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final WorkflowRunView workflowRun = WorkflowEngine.getInstance().startWorkflow(new StartWorkflowOptions(
-                    Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
-                    Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-            bomUploadEvent.setChainIdentifier(workflowRun.token());
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
 
@@ -517,15 +509,9 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
-                final WorkflowRunView workflowRun = WorkflowEngine.getInstance().startWorkflow(new StartWorkflowOptions(
-                        Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.name(),
-                        Workflows.WORKFLOW_BOM_UPLOAD_PROCESSING_V1.version()));
-
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
                 final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-                bomUploadEvent.setChainIdentifier(workflowRun.token());
-
                 qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
                 Event.dispatch(bomUploadEvent);
 

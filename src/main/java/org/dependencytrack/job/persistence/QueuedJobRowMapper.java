@@ -20,7 +20,6 @@ package org.dependencytrack.job.persistence;
 
 import org.dependencytrack.job.JobStatus;
 import org.dependencytrack.job.QueuedJob;
-import org.dependencytrack.proto.job.v1alpha1.JobArgs;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -30,7 +29,7 @@ import java.time.Instant;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInstant;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInteger;
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableProto;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableUuid;
 
 public class QueuedJobRowMapper implements RowMapper<QueuedJob> {
 
@@ -42,14 +41,15 @@ public class QueuedJobRowMapper implements RowMapper<QueuedJob> {
                 rs.getString("KIND"),
                 nullableInteger(rs, "PRIORITY"),
                 Instant.ofEpochMilli(rs.getTimestamp("SCHEDULED_FOR").getTime()),
-                nullableProto(rs, "ARGUMENTS", JobArgs.parser()),
-                rs.getLong("WORKFLOW_STEP_RUN_ID"),
+                rs.getString("ARGUMENTS"),
+                nullableUuid(rs, "WORKFLOW_RUN_ID"),
+                rs.getString("WORKFLOW_ACTIVITY_NAME"),
+                rs.getString("WORKFLOW_ACTIVITY_INVOCATION_ID"),
                 Instant.ofEpochMilli(rs.getDate("CREATED_AT").getTime()),
                 nullableInstant(rs, "UPDATED_AT"),
                 nullableInstant(rs, "STARTED_AT"),
                 rs.getInt("ATTEMPTS"),
-                rs.getString("FAILURE_REASON")
-        );
+                rs.getString("FAILURE_REASON"));
     }
 
 }

@@ -21,31 +21,35 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.job.JobContext;
 import org.dependencytrack.job.JobWorker;
-import org.dependencytrack.job.persistence.PolledJob;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.job.v1alpha1.JobResult;
-import org.dependencytrack.proto.job.v1alpha1.UpdateProjectMetricsJobArgs;
 import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
-import static org.dependencytrack.proto.job.v1alpha1.JobArgs.ArgsCase.UPDATE_PROJECT_METRICS_ARGS;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
  *
  * @since 4.6.0
  */
-public class ProjectMetricsUpdateTask implements JobWorker, Subscriber {
+public class ProjectMetricsUpdateTask implements JobWorker<ProjectMetricsUpdateTask.JobArguments, Void>, Subscriber {
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record JobArguments(UUID projectUuid, String projectName, String projectVersion) {
+    }
 
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
 
@@ -77,14 +81,18 @@ public class ProjectMetricsUpdateTask implements JobWorker, Subscriber {
     }
 
     @Override
-    public Optional<JobResult> process(final PolledJob job) throws Exception {
-        if (job.arguments().getArgsCase() != UPDATE_PROJECT_METRICS_ARGS) {
-            throw new IllegalArgumentException("Unsupported arguments of type: " + job.arguments().getArgsCase());
+    public Optional<Void> process(final JobContext<JobArguments> ctx) throws Exception {
+        final JobArguments arguments = ctx.arguments();
+        if (arguments.projectUuid == null) {
+            LOGGER.warn("No project UUID provided");
+            return Optional.empty();
         }
 
-        final UpdateProjectMetricsJobArgs arguments = job.arguments().getUpdateProjectMetricsArgs();
-        final UUID projectUuid = UUID.fromString(arguments.getProjectUuid());
-        updateMetrics(projectUuid);
+        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, arguments.projectUuid().toString());
+             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, arguments.projectName());
+             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, arguments.projectVersion())) {
+            Metrics.updateProjectMetrics(arguments.projectUuid());
+        }
 
         return Optional.empty();
     }
