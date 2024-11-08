@@ -187,7 +187,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         throw new AssertionError("Technical Difficulties");
                     }
 
-                    ctx.callActivity("xyz", "321", null, null, Duration.ofSeconds(1));
+                    ctx.callActivity("xyz", "321", null, JsonNode.class, Duration.ofSeconds(1));
 
                     return Optional.empty();
                 }
