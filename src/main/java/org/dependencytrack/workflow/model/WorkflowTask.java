@@ -51,6 +51,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     public void complete(final Instant timestamp, final String result) {
         setStatus(WorkflowTaskStatus.COMPLETED);
         this.result = result;
+        this.failureDetails = null;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;
         maybeMarkModified();
@@ -60,6 +61,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         setStatus(nextAttemptAt != null
                 ? WorkflowTaskStatus.PENDING_RETRY
                 : WorkflowTaskStatus.FAILED);
+        this.result = null;
         this.failureDetails = failureDetails;
         if (nextAttemptAt != null) {
             this.scheduledFor = nextAttemptAt;

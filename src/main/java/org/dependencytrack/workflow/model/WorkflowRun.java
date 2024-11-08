@@ -71,6 +71,7 @@ public final class WorkflowRun {
     public void complete(final Instant timestamp, final String result) {
         setStatus(WorkflowRunStatus.COMPLETED);
         this.result = result;
+        this.failureDetails = null;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;
         maybeMarkModified();
@@ -78,6 +79,7 @@ public final class WorkflowRun {
 
     public void fail(final Instant timestamp, final String failureDetails) {
         setStatus(WorkflowRunStatus.FAILED);
+        this.result = null;
         this.failureDetails = failureDetails;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;

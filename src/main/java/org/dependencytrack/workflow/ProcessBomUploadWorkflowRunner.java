@@ -32,19 +32,19 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode
     public Optional<Void> run(final WorkflowRunContext<ObjectNode> ctx) throws Exception {
         try {
             ctx.callActivity("ingest-bom", "123", null, Void.class, Duration.ZERO);
-        } catch (RuntimeException e) {
+        } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to ingest BOM", e.getCause());
         }
 
         try {
             ctx.callActivity("evaluate-project-policies", "456", null, Void.class, Duration.ZERO);
-        } catch (RuntimeException e) {
+        } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to evaluate project policies", e.getCause());
         }
 
         try {
             ctx.callActivity("update-project-metrics", "789", null, Void.class, Duration.ZERO);
-        } catch (RuntimeException e) {
+        } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to update project metrics", e.getCause());
         }
 
