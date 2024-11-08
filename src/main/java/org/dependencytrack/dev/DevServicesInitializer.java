@@ -171,7 +171,8 @@ public class DevServicesInitializer implements ServletContextListener {
                 new NewTopic(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), 1, (short) 1),
                 new NewTopic(KafkaTopics.VULN_ANALYSIS_COMMAND.name(), 1, (short) 1),
                 new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED.name(), 1, (short) 1)
+                new NewTopic(KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED.name(), 1, (short) 1),
+                new NewTopic("dtrack.event.workflow", 3, (short) 1)
         ));
 
         try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers))) {

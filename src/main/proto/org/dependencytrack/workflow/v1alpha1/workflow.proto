@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.v1alpha1";
+
+message WorkflowEvent {
+  // ID of the event.
+  string id = 1;
+
+  // ID of the workflow run.
+  string workflow_run_id = 2;
+
+  // When the event occurred.
+  google.protobuf.Timestamp timestamp = 3;
+
+  oneof subject {
+    WorkflowRunRequested run_requested = 100;
+    WorkflowRunQueued run_queued = 101;
+    WorkflowRunStarted run_started = 102;
+    WorkflowRunSuspended run_suspended = 103;
+    WorkflowRunResumed run_resumed = 104;
+    WorkflowRunCompleted run_completed = 105;
+    WorkflowRunFailed run_failed = 106;
+
+    WorkflowActivityRunRequested activity_run_requested = 200;
+    WorkflowActivityRunQueued activity_run_queued = 201;
+    WorkflowActivityRunStarted activity_run_started = 202;
+    WorkflowActivityRunCompleted activity_run_completed = 203;
+    WorkflowActivityRunFailed activity_run_failed = 204;
+  }
+}
+
+message WorkflowRunRequested {
+  // Name of the workflow to run.
+  string name = 1;
+
+  // Version of the workflow to run.
+  int32 version = 2;
+
+  optional int32 priority = 3;
+
+  optional string arguments = 4;
+}
+
+message WorkflowRunQueued {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 priority = 2;
+
+  optional string arguments = 3;
+}
+
+message WorkflowRunStarted {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 attempt = 2;
+
+  optional string arguments = 3;
+}
+
+message WorkflowRunSuspended {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 attempt = 2;
+
+  oneof resume_condition {
+    WorkflowActivityCompletedResumeCondition activity_completed_resume_condition = 100;
+  }
+}
+
+message WorkflowRunResumed {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 attempt = 2;
+}
+
+message WorkflowRunCompleted {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 attempt = 2;
+
+  optional string result = 3;
+}
+
+message WorkflowRunFailed {
+  // ID of the task executing the workflow.
+  string task_id = 1;
+
+  int32 attempt = 2;
+
+  // Details about the failure.
+  string failure_details = 3;
+
+  // When the next attempt is scheduled for at the earliest.
+  optional google.protobuf.Timestamp next_attempt_at = 4;
+}
+
+message WorkflowActivityRunRequested {
+  // ID of the activity run.
+  string run_id = 1;
+
+  // Name of the activity.
+  string activity_name = 2;
+
+  // ID of the invocation.
+  string invocation_id = 3;
+
+  // Arguments in JSON format.
+  optional string arguments = 4;
+
+  // ID of the task that invoked this activity.
+  string invoking_task_id = 5;
+}
+
+message WorkflowActivityRunQueued {
+  // ID of the activity run.
+  string run_id = 1;
+
+  // ID of the task executing the activity.
+  string task_id = 2;
+
+  // Name of the activity.
+  string activity_name = 4;
+
+  // ID of the invocation.
+  string invocation_id = 5;
+
+  // Arguments in JSON format.
+  optional string arguments = 6;
+
+  // ID of the task that invoked this activity.
+  string invoking_task_id = 7;
+}
+
+message WorkflowActivityRunStarted {
+  // ID of the activity run.
+  string run_id = 1;
+
+  // ID of the task executing the activity.
+  // Not set when the activity is executed locally.
+  optional string task_id = 2;
+
+  // Name of the activity.
+  string activity_name = 4;
+
+  // ID of the invocation.
+  string invocation_id = 5;
+
+  int32 attempt = 6;
+
+  // Arguments in JSON format.
+  optional string arguments = 7;
+
+  // Whether the activity is executed locally.
+  bool is_local = 8;
+
+  // ID of the task that invoked this activity.
+  string invoking_task_id = 9;
+}
+
+message WorkflowActivityRunCompleted {
+  // ID of the activity run.
+  string run_id = 1;
+
+  // ID of the task executing the activity.
+  // Not set when the activity was executed locally.
+  optional string task_id = 2;
+
+  // Name of the activity.
+  string activity_name = 4;
+
+  // ID of the invocation.
+  string invocation_id = 5;
+
+  int32 attempt = 6;
+
+  // Result in JSON format.
+  optional string result = 7;
+
+  // Whether the activity was executed locally.
+  bool is_local = 8;
+
+  // ID of the task that invoked this activity.
+  string invoking_task_id = 9;
+}
+
+message WorkflowActivityRunFailed {
+  // ID of the activity run.
+  string run_id = 1;
+
+  // ID of the task executing the activity.
+  // Not set when the activity was executed locally.
+  optional string task_id = 2;
+
+  // Name of the activity.
+  string activity_name = 4;
+
+  // ID of the invocation.
+  string invocation_id = 5;
+
+  int32 attempt = 6;
+
+  // Details about the failure.
+  string failure_details = 7;
+
+  // When the next attempt is scheduled for at the earliest.
+  optional google.protobuf.Timestamp next_attempt_at = 8;
+
+  // Whether the activity is executed locally.
+  bool is_local = 9;
+
+  // ID of the task that invoked this activity.
+  string invoking_task_id = 10;
+}
+
+message WorkflowActivityCompletedResumeCondition {
+  string run_id = 1;
+}

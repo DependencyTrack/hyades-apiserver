@@ -23,8 +23,6 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.job.JobContext;
-import org.dependencytrack.job.JobWorker;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
@@ -33,19 +31,16 @@ import org.dependencytrack.persistence.QueryManager;
 import org.slf4j.MDC;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.UUID;
 
-import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
-import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
  *
  * @since 4.6.0
  */
-public class ProjectMetricsUpdateTask implements JobWorker<ProjectMetricsUpdateTask.JobArguments, Void>, Subscriber {
+public class ProjectMetricsUpdateTask implements Subscriber {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record JobArguments(UUID projectUuid, String projectName, String projectVersion) {
@@ -78,23 +73,6 @@ public class ProjectMetricsUpdateTask implements JobWorker<ProjectMetricsUpdateT
         } finally {
             LOGGER.debug("Completed metrics update in %s".formatted(Duration.ofNanos(System.nanoTime() - startTimeNs)));
         }
-    }
-
-    @Override
-    public Optional<Void> process(final JobContext<JobArguments> ctx) throws Exception {
-        final JobArguments arguments = ctx.arguments();
-        if (arguments.projectUuid == null) {
-            LOGGER.warn("No project UUID provided");
-            return Optional.empty();
-        }
-
-        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, arguments.projectUuid().toString());
-             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, arguments.projectName());
-             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, arguments.projectVersion())) {
-            Metrics.updateProjectMetrics(arguments.projectUuid());
-        }
-
-        return Optional.empty();
     }
 
 }

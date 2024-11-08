@@ -33,6 +33,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
+import org.dependencytrack.exception.TransientException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -261,9 +262,9 @@ public abstract class KafkaBatchConsumer<K, V> implements Runnable, ConsumerReba
         final Timer.Sample flushTimerSample = Timer.start();
         try {
             didFlush = flushBatch(List.copyOf(recordBatch));
-        } catch (AssertionError | IllegalStateException e) { // Use dedicated exception for this.
+        } catch (TransientException e) {
             logger.warn("""
-                    Encountered retryable exception while flushing batch; \
+                    Encountered transient exception while flushing batch; \
                     Pausing consumption from %s""".formatted(kafkaConsumer.assignment()), e);
             kafkaConsumer.pause(kafkaConsumer.assignment());
             setState(State.PAUSED_RETRY);

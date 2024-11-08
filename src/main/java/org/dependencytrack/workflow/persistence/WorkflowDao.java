@@ -19,45 +19,147 @@
 package org.dependencytrack.workflow.persistence;
 
 import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class WorkflowDao {
 
     private final Handle jdbiHandle;
+    private final RowMapper<PolledWorkflowTaskRow> polledWorkflowTaskRowMapper;
+    private final RowMapper<WorkflowTaskRow> queuedWorkflowTaskRowMapper;
 
     public WorkflowDao(Handle jdbiHandle) {
         this.jdbiHandle = jdbiHandle;
+        this.polledWorkflowTaskRowMapper = new PolledWorkflowTaskRowMapper();
+        this.queuedWorkflowTaskRowMapper = new WorkflowTaskRowMapper();
     }
 
-    public List<WorkflowRunHistoryEntryRow> createWorkflowRunHistoryEntries(
-            final Collection<NewWorkflowRunHistoryEntry> entries) {
+    public List<WorkflowRunRow> createAllRuns(final Collection<NewWorkflowRun> newRuns) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                INSERT INTO "WORKFLOW_RUN_EVENT_HISTORY" (
-                  "WORKFLOW_RUN_ID"
-                , "TIMESTAMP"
-                , "EVENT_TYPE"
-                , "ACTIVITY_NAME"
-                , "ACTIVITY_INVOCATION_ID"
-                , "ARGUMENTS"
-                , "RESULT"
+                INSERT INTO "WORKFLOW_RUN" (
+                  "ID"
+                , "WORKFLOW_NAME"
+                , "WORKFLOW_VERSION"
+                , "STATUS"
+                , "PRIORITY"
+                , "CREATED_AT"
                 ) VALUES (
-                  :workflowRunId
-                , :timestamp
-                , CAST(:eventType AS WORKFLOW_EVENT_TYPE)
-                , :activityName
-                , :activityInvocationId
-                , CAST(:arguments AS JSONB)
-                , CAST(:result AS JSONB)
+                  :id
+                , :workflowName
+                , :workflowVersion
+                , 'PENDING'
+                , :priority
+                , :createdAt
                 )
+                ON CONFLICT ("ID") DO NOTHING
+                RETURNING *
                 """);
 
-        for (final NewWorkflowRunHistoryEntry entry : entries) {
+        for (final NewWorkflowRun newRun : newRuns) {
+            preparedBatch
+                    .bindMethods(newRun)
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .list();
+    }
+
+    public WorkflowRunRow createRun(final NewWorkflowRun newRun) {
+        final List<WorkflowRunRow> createdRuns = createAllRuns(List.of(newRun));
+        if (!createdRuns.isEmpty()) {
+            return createdRuns.getFirst();
+        }
+
+        return null;
+    }
+
+    public List<WorkflowRunRow> updateAllRuns(final Collection<WorkflowRunUpdate> runUpdates) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                WITH "CTE_RUN" AS (
+                    SELECT "ID"
+                      FROM "WORKFLOW_RUN"
+                     WHERE "ID" = :id
+                       FOR UPDATE
+                     LIMIT 1)
+                UPDATE "WORKFLOW_RUN"
+                   SET "STATUS" = :status
+                     , "RESULT" = CAST(:result AS JSONB)
+                     , "FAILURE_DETAILS" = :failureDetails
+                     , "UPDATED_AT" = :updatedAt
+                     , "ENDED_AT" = :endedAt
+                  FROM "CTE_RUN"
+                 WHERE "WORKFLOW_RUN"."ID" = "CTE_RUN"."ID"
+                RETURNING "WORKFLOW_RUN".*
+                """);
+
+        for (final WorkflowRunUpdate runUpdate : runUpdates) {
+            preparedBatch
+                    .bindMethods(runUpdate)
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .list();
+    }
+
+    public List<WorkflowRunRow> getWorkflowRunsById(final Collection<UUID> ids) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT *
+                  FROM "WORKFLOW_RUN"
+                 WHERE "ID" = ANY(:ids)
+                """);
+
+        return query
+                .bindArray("ids", UUID.class, ids)
+                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .list();
+    }
+
+    public List<WorkflowRunLogEntryRow> createWorkflowRunLogEntries(
+            final Collection<NewWorkflowRunLogEntryRow> entries) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                INSERT INTO "WORKFLOW_RUN_LOG" (
+                  "WORKFLOW_RUN_ID"
+                , "EVENT_ID"
+                , "TIMESTAMP"
+                , "EVENT_TYPE"
+                , "ACTIVITY_RUN_ID"
+                , "ACTIVITY_NAME"
+                , "ACTIVITY_INVOCATION_ID"
+                , "ACTIVITY_IS_LOCAL"
+                , "ARGUMENTS"
+                , "RESULT"
+                , "FAILURE_DETAILS"
+                ) VALUES (
+                  :workflowRunId
+                , :eventId
+                , :timestamp
+                , CAST(:eventType AS WORKFLOW_EVENT_TYPE)
+                , :activityRunId
+                , :activityName
+                , :activityInvocationId
+                , :activityIsLocal
+                , CAST(:arguments AS JSONB)
+                , CAST(:result AS JSONB)
+                , :failureDetails
+                )
+                ON CONFLICT ("WORKFLOW_RUN_ID", "TIMESTAMP", "EVENT_ID") DO NOTHING
+                """);
+
+        for (final NewWorkflowRunLogEntryRow entry : entries) {
             preparedBatch
                     .bindMethods(entry)
                     .add();
@@ -65,21 +167,173 @@ public class WorkflowDao {
 
         return preparedBatch
                 .executePreparedBatch("*")
-                .map(ConstructorMapper.of(WorkflowRunHistoryEntryRow.class))
+                .map(ConstructorMapper.of(WorkflowRunLogEntryRow.class))
                 .list();
     }
 
-    public List<WorkflowRunHistoryEntryRow> getWorkflowRunHistory(final UUID workflowRunId) {
+    public List<WorkflowRunLogEntryRow> getWorkflowRunLog(final UUID workflowRunId) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT *
-                  FROM "WORKFLOW_RUN_EVENT_HISTORY"
+                  FROM "WORKFLOW_RUN_LOG"
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                  ORDER BY "TIMESTAMP"
                 """);
 
         return query
                 .bind("workflowRunId", workflowRunId)
-                .map(ConstructorMapper.of(WorkflowRunHistoryEntryRow.class))
+                .map(ConstructorMapper.of(WorkflowRunLogEntryRow.class))
+                .list();
+    }
+
+    public boolean hasActivityCompletionLog(
+            final UUID workflowRunId,
+            final UUID activityRunId,
+            final Instant upToTimestamp) {
+        return jdbiHandle.createQuery("""
+                        SELECT EXISTS(
+                            SELECT 1
+                              FROM "WORKFLOW_RUN_LOG"
+                             WHERE "WORKFLOW_RUN_ID" = :workflowRunId
+                               AND "ACTIVITY_RUN_ID" = :activityRunId
+                               AND "EVENT_TYPE" = ANY(CAST('{ACTIVITY_RUN_COMPLETED, ACTIVITY_RUN_FAILED}' AS WORKFLOW_EVENT_TYPE[]))
+                               AND "TIMESTAMP" <= :upToTimestamp)
+                        """)
+                .bind("workflowRunId", workflowRunId)
+                .bind("activityRunId", activityRunId)
+                .bind("upToTimestamp", upToTimestamp)
+                .mapTo(Boolean.class)
+                .one();
+    }
+
+    public List<WorkflowTaskRow> enqueueAllTasks(final Collection<NewWorkflowTask> newTasks) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                INSERT INTO "WORKFLOW_TASK" (
+                  "ID"
+                , "STATUS"
+                , "QUEUE"
+                , "PRIORITY"
+                , "SCHEDULED_FOR"
+                , "ARGUMENTS"
+                , "WORKFLOW_RUN_ID"
+                , "ACTIVITY_RUN_ID"
+                , "ACTIVITY_NAME"
+                , "ACTIVITY_INVOCATION_ID"
+                , "INVOKING_TASK_ID"
+                , "CREATED_AT"
+                ) VALUES (
+                  :id
+                , 'PENDING'
+                , :queue
+                , :priority
+                , COALESCE(:scheduledFor, NOW())
+                , CAST(:arguments AS JSONB)
+                , :workflowRunId
+                , :activityRunId
+                , :activityName
+                , :activityInvocationId
+                , :invokingTaskId
+                , NOW())
+                RETURNING *
+                """);
+
+        for (final NewWorkflowTask newTask : newTasks) {
+            preparedBatch
+                    .bind("id", newTask.id())
+                    .bind("queue", newTask.queue())
+                    .bind("priority", newTask.priority())
+                    .bind("scheduledFor", newTask.scheduledFor())
+                    .bind("arguments", newTask.arguments())
+                    .bind("workflowRunId", newTask.workflowRunId())
+                    .bind("activityRunId", newTask.activityRunId())
+                    .bind("activityName", newTask.activityName())
+                    .bind("activityInvocationId", newTask.activityInvocationId())
+                    .bind("invokingTaskId", newTask.invokingTaskId())
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(queuedWorkflowTaskRowMapper)
+                .list();
+    }
+
+    public List<WorkflowTaskRow> updateAllTasks(final Collection<WorkflowTaskUpdate> taskUpdates) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                WITH "CTE_TASK" AS (
+                    SELECT "ID"
+                      FROM "WORKFLOW_TASK"
+                     WHERE "ID" = :id
+                       FOR UPDATE
+                      SKIP LOCKED
+                     LIMIT 1)
+                UPDATE "WORKFLOW_TASK"
+                   SET "STATUS" = :status
+                     , "SCHEDULED_FOR" = :scheduledFor
+                     , "RESULT" = CAST(:result AS JSONB)
+                     , "FAILURE_DETAILS" = :failureDetails
+                     , "UPDATED_AT" = :updatedAt
+                     , "ENDED_AT" = :endedAt
+                  FROM "CTE_TASK"
+                 WHERE "WORKFLOW_TASK"."ID" = "CTE_TASK"."ID"
+                RETURNING *
+                """);
+
+        for (final WorkflowTaskUpdate taskUpdate : taskUpdates) {
+            preparedBatch
+                    .bindMethods(taskUpdate)
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(queuedWorkflowTaskRowMapper)
+                .list();
+    }
+
+    public Optional<PolledWorkflowTaskRow> poll(final String queue) {
+        return jdbiHandle.createUpdate("""
+                        WITH "CTE_POLL" AS (
+                            SELECT "ID"
+                                 , "STATUS"
+                              FROM "WORKFLOW_TASK"
+                             WHERE "QUEUE" = :queue
+                               AND "STATUS" = ANY(CAST('{PENDING, PENDING_RETRY, PENDING_RESUME}' AS WORKFLOW_TASK_STATUS[]))
+                               AND "SCHEDULED_FOR" <= NOW()
+                             ORDER BY "PRIORITY" DESC NULLS LAST
+                                    , "SCHEDULED_FOR"
+                                    , "CREATED_AT"
+                               FOR UPDATE
+                              SKIP LOCKED
+                             LIMIT 1)
+                        UPDATE "WORKFLOW_TASK"
+                           SET "STATUS" = 'RUNNING'
+                             , "UPDATED_AT" = NOW()
+                             , "STARTED_AT" = NOW()
+                             , "ATTEMPT" = CASE WHEN "WORKFLOW_TASK"."STATUS" = 'PENDING_RESUME'
+                                                THEN "WORKFLOW_TASK"."ATTEMPT"
+                                                ELSE COALESCE("WORKFLOW_TASK"."ATTEMPT", 0) + 1
+                                             END
+                          FROM "CTE_POLL"
+                         WHERE "WORKFLOW_TASK"."ID" = "CTE_POLL"."ID"
+                        RETURNING "WORKFLOW_TASK".*
+                                , "CTE_POLL"."STATUS" AS "PREVIOUS_STATUS"
+                        """)
+                .bind("queue", queue)
+                .executeAndReturnGeneratedKeys("*")
+                .map(polledWorkflowTaskRowMapper)
+                .findOne();
+    }
+
+    public List<WorkflowTaskRow> getQueuedTasksById(final Collection<UUID> taskIds) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT *
+                  FROM "WORKFLOW_TASK"
+                 WHERE "ID" = ANY(:taskIds)
+                """);
+
+        return query
+                .bindArray("taskIds", UUID.class, taskIds)
+                .map(queuedWorkflowTaskRowMapper)
                 .list();
     }
 

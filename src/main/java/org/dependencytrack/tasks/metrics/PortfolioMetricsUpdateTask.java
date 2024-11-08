@@ -28,8 +28,6 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.job.JobContext;
-import org.dependencytrack.job.JobWorker;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -40,7 +38,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -54,7 +51,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
  *
  * @since 4.6.0
  */
-public class PortfolioMetricsUpdateTask implements JobWorker<Void, Void>, Subscriber {
+public class PortfolioMetricsUpdateTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PortfolioMetricsUpdateTask.class);
     private static final int MAX_CONCURRENCY = SystemUtil.getCpuCores();
@@ -146,19 +143,6 @@ public class PortfolioMetricsUpdateTask implements JobWorker<Void, Void>, Subscr
                 activeProjects = fetchNextActiveProjectsPage(pm, lastId);
             }
         }
-    }
-
-    @Override
-    public Optional<Void> process(final JobContext<Void> ctx) throws Exception {
-        try {
-            executeWithLock(
-                    getLockConfigForTask(PortfolioMetricsUpdateTask.class),
-                    (LockingTaskExecutor.Task) () -> updateMetrics(true));
-        } catch (Throwable ex) {
-            throw new Exception("Error in acquiring lock and executing portfolio metrics task", ex);
-        }
-
-        return Optional.empty();
     }
 
     public record ProjectProjection(long id, UUID uuid) {

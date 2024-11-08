@@ -59,6 +59,9 @@ import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.workflow.WorkflowEngine;
+import org.dependencytrack.workflow.model.StartWorkflowOptions;
+import org.dependencytrack.workflow.model.WorkflowRun;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -477,6 +480,11 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
+            final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
+                    new StartWorkflowOptions<>("process-bom-upload", 1)
+                            .withPriority(666)
+                            .withArguments(/* TODO */null)).join();
+
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
@@ -508,6 +516,11 @@ public class BomResource extends AlpineResource {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
+
+                final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
+                        new StartWorkflowOptions<>("process-bom-upload", 1)
+                                .withPriority(666)
+                                .withArguments(/* TODO */null)).join();
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130

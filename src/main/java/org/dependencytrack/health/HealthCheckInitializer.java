@@ -24,7 +24,6 @@ import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.processor.ProcessorsHealthCheck;
-import org.dependencytrack.job.JobSubsystemHealthCheck;
 import org.dependencytrack.workflow.WorkflowSubsystemHealthCheck;
 
 import jakarta.servlet.ServletContextEvent;
@@ -44,7 +43,6 @@ public class HealthCheckInitializer implements ServletContextListener {
 
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
-        HealthCheckRegistry.getInstance().register("job-subsystem", new JobSubsystemHealthCheck());
         HealthCheckRegistry.getInstance().register("kafka-processors", new ProcessorsHealthCheck());
         HealthCheckRegistry.getInstance().register("workflow-subsystem", new WorkflowSubsystemHealthCheck());
     }

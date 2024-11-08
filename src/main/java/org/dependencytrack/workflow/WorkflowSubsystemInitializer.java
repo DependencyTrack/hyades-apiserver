@@ -19,10 +19,13 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.exception.TransientException;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.Optional;
 
 public class WorkflowSubsystemInitializer implements ServletContextListener {
 
@@ -35,6 +38,16 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Initializing workflow engine");
         workflowEngine = WorkflowEngine.getInstance();
         workflowEngine.start();
+
+        final var random = new SecureRandom();
+        workflowEngine.registerWorkflowRunner(
+                "process-bom-upload", 5, new ProcessBomUploadWorkflowRunner());
+        workflowEngine.registerActivityRunner(
+                "ingest-bom", 5, new RandomlyFailingActivityRunner(random));
+        workflowEngine.registerActivityRunner(
+                "evaluate-project-policies", 5, new RandomlyFailingActivityRunner(random));
+        workflowEngine.registerActivityRunner(
+                "update-project-metrics", 5, new RandomlyFailingActivityRunner(random));
     }
 
     @Override
@@ -47,4 +60,33 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
             LOGGER.warn("Graceful shutdown of workflow engine failed", e);
         }
     }
+
+    public static class RandomlyFailingActivityRunner implements WorkflowActivityRunner<Void, Void> {
+
+        private static final Logger LOGGER = Logger.getLogger(RandomlyFailingActivityRunner.class);
+        private final SecureRandom random;
+
+        public RandomlyFailingActivityRunner(final SecureRandom random) {
+            this.random = random;
+        }
+
+        @Override
+        public Optional<Void> run(final WorkflowActivityContext<Void> ctx) throws Exception {
+            LOGGER.debug("Processing " + ctx);
+
+            Thread.sleep(random.nextInt(10, 1000));
+
+            if (random.nextDouble() < 0.1) {
+                if (random.nextDouble() > 0.3) {
+                    throw new TransientException("I have the feeling this might resolve soon!");
+                }
+
+                throw new IllegalStateException("Oh no, this looks permanently broken!");
+            }
+
+            return Optional.empty();
+        }
+
+    }
+
 }

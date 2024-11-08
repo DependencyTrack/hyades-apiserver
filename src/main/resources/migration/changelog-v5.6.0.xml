@@ -130,55 +130,39 @@
     -->
     <changeSet id="v5.6.0-8" author="nscuro">
         <sql splitStatements="true">
-            CREATE TYPE JOB_STATUS AS ENUM ('COMPLETED', 'FAILED', 'PENDING', 'PENDING_RETRY', 'RUNNING');
+            CREATE TYPE WORKFLOW_RUN_STATUS AS ENUM (
+              'COMPLETED'
+            , 'FAILED'
+            , 'PENDING'
+            , 'RUNNING');
+            CREATE TYPE WORKFLOW_TASK_STATUS AS ENUM (
+              'COMPLETED'
+            , 'FAILED'
+            , 'PENDING'
+            , 'PENDING_RESUME'
+            , 'PENDING_RETRY'
+            , 'RUNNING'
+            , 'SUSPENDED');
             CREATE TYPE WORKFLOW_EVENT_TYPE AS ENUM (
-              'WORKFLOW_RUN_REQUESTED'
-            , 'WORKFLOW_RUN_STARTED'
-            , 'WORKFLOW_RUN_COMPLETED'
-            , 'WORKFLOW_RUN_FAILED'
-            , 'WORKFLOW_STEP_RUN_QUEUED'
-            , 'WORKFLOW_STEP_RUN_STARTED'
-            , 'WORKFLOW_STEP_RUN_COMPLETED'
-            , 'WORKFLOW_STEP_RUN_FAILED'
-            , 'WORKFLOW_ACTIVITY_RUN_REQUESTED'
-            , 'WORKFLOW_ACTIVITY_RUN_QUEUED'
-            , 'WORKFLOW_ACTIVITY_RUN_STARTED'
-            , 'WORKFLOW_ACTIVITY_RUN_COMPLETED'
-            , 'WORKFLOW_ACTIVITY_RUN_FAILED'
-            )
+              'RUN_REQUESTED'
+            , 'RUN_QUEUED'
+            , 'RUN_STARTED'
+            , 'RUN_SUSPENDED'
+            , 'RUN_RESUMED'
+            , 'RUN_COMPLETED'
+            , 'RUN_FAILED_TRANSIENT'
+            , 'RUN_FAILED'
+            , 'ACTIVITY_RUN_REQUESTED'
+            , 'ACTIVITY_RUN_QUEUED'
+            , 'ACTIVITY_RUN_STARTED'
+            , 'ACTIVITY_RUN_COMPLETED'
+            , 'ACTIVITY_RUN_FAILED_TRANSIENT'
+            , 'ACTIVITY_RUN_FAILED');
         </sql>
 
-        <createTable tableName="JOB">
+        <createTable tableName="WORKFLOW_SCHEDULE">
             <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="JOB_PK"/>
-            </column>
-            <column name="STATUS" type="JOB_STATUS">
-                <constraints nullable="false"/>
-            </column>
-            <column name="KIND" type="text">
-                <constraints nullable="false"/>
-            </column>
-            <column name="PRIORITY" type="SMALLINT"/>
-            <column name="SCHEDULED_FOR" type="TIMESTAMPTZ(3)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="WORKFLOW_RUN_ID" type="UUID"/>
-            <column name="WORKFLOW_ACTIVITY_NAME" type="TEXT"/>
-            <column name="WORKFLOW_ACTIVITY_INVOCATION_ID" type="TEXT"/>
-            <column name="ARGUMENTS" type="JSONB"/>
-            <column name="RESULT" type="JSONB"/>
-            <column name="FAILURE_REASON" type="text"/>
-            <column name="ATTEMPTS" type="INT"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="STARTED_AT" type="TIMESTAMPTZ(3)"/>
-        </createTable>
-
-        <createTable tableName="JOB_SCHEDULE">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="JOB_SCHEDULE_PK"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_SCHEDULE_PK"/>
             </column>
             <column name="NAME" type="TEXT">
                 <constraints nullable="false"/>
@@ -186,10 +170,10 @@
             <column name="CRON" type="TEXT">
                 <constraints nullable="false"/>
             </column>
-            <column name="JOB_KIND" type="TEXT">
+            <column name="WORKFLOW" type="TEXT">
                 <constraints nullable="false"/>
             </column>
-            <column name="JOB_PRIORITY" type="INT"/>
+            <column name="ARGUMENTS" type="JSONB"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
@@ -198,73 +182,113 @@
             <column name="NEXT_TRIGGER" type="TIMESTAMPTZ(3)"/>
         </createTable>
 
-        <createTable tableName="WORKFLOW_RUN_EVENT_HISTORY">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_RUN_EVENT_HISTORY_PK"/>
+        <createTable tableName="WORKFLOW_RUN">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_RUN_PK"/>
             </column>
-            <column name="WORKFLOW_RUN_ID" type="UUID">
+            <column name="WORKFLOW_NAME" type="TEXT">
                 <constraints nullable="false"/>
             </column>
-            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)">
+            <column name="WORKFLOW_VERSION" type="SMALLINT">
                 <constraints nullable="false"/>
             </column>
+            <column name="STATUS" type="WORKFLOW_RUN_STATUS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PRIORITY" type="SMALLINT"/>
+            <column name="RESULT" type="JSONB"/>
+            <column name="FAILURE_DETAILS" type="TEXT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="STARTED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="ENDED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <createTable tableName="WORKFLOW_RUN_LOG">
+            <column name="WORKFLOW_RUN_ID" type="UUID"/>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)"/>
+            <column name="EVENT_ID" type="UUID"/>
             <column name="EVENT_TYPE" type="WORKFLOW_EVENT_TYPE">
                 <constraints nullable="false"/>
             </column>
+            <column name="ACTIVITY_RUN_ID" type="UUID"/>
             <column name="ACTIVITY_NAME" type="TEXT"/>
             <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
+            <column name="ACTIVITY_IS_LOCAL" type="BOOL"/>
             <column name="ARGUMENTS" type="JSONB"/>
             <column name="RESULT" type="JSONB"/>
+            <column name="FAILURE_DETAILS" type="TEXT"/>
+        </createTable>
+
+        <!-- TODO: Partition by status? -->
+        <createTable tableName="WORKFLOW_TASK">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="WORKFLOW_TASK_PK"/>
+            </column>
+            <column name="STATUS" type="WORKFLOW_TASK_STATUS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="QUEUE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PRIORITY" type="SMALLINT"/>
+            <column name="SCHEDULED_FOR" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="WORKFLOW_RUN_ID" type="UUID"/>
+            <column name="ACTIVITY_RUN_ID" type="UUID"/>
+            <column name="ACTIVITY_NAME" type="TEXT"/>
+            <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
+            <column name="INVOKING_TASK_ID" type="UUID"/>
+            <column name="ARGUMENTS" type="JSONB"/>
+            <column name="RESULT" type="JSONB"/>
+            <column name="FAILURE_DETAILS" type="TEXT"/>
+            <column name="ATTEMPT" type="INT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="STARTED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="ENDED_AT" type="TIMESTAMPTZ(3)"/>
         </createTable>
 
         <sql splitStatements="true" stripComments="true">
             -- Covering(!) index that serves the WHERE, as well as the ORDER BY
             -- clause of the poll query.
-            CREATE INDEX "JOB_POLL_IDX" ON "JOB" (
+            CREATE INDEX "WORKFLOW_TASK_POLL_IDX" ON "WORKFLOW_TASK" (
               "PRIORITY" DESC NULLS LAST
             , "SCHEDULED_FOR"
             , "CREATED_AT"
             , "STATUS"
-            , "KIND"
+            , "QUEUE"
             ) INCLUDE ("ID")
-              WHERE "STATUS" = ANY('{PENDING, PENDING_RETRY}'::JOB_STATUS[]);
+              WHERE "STATUS" = ANY('{PENDING, PENDING_RETRY, PENDING_RESUME}'::WORKFLOW_TASK_STATUS[]);
         </sql>
 
-        <createIndex tableName="JOB_SCHEDULE" indexName="JOB_SCHEDULE_NAME_IDX" unique="true">
+        <addPrimaryKey
+                tableName="WORKFLOW_RUN_LOG"
+                columnNames="WORKFLOW_RUN_ID, TIMESTAMP, EVENT_ID"/>
+
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_RUN_LOG"
+                baseColumnNames="WORKFLOW_RUN_ID"
+                constraintName="WORKFLOW_RUN_LOG_WORKFLOW_RUN_FK"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_TASK"
+                baseColumnNames="INVOKING_TASK_ID"
+                constraintName="WORKFLOW_TASK_INVOKING_TASK_FK"
+                referencedTableName="WORKFLOW_TASK"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="WORKFLOW_SCHEDULE" indexName="WORKFLOW_SCHEDULE_NAME_IDX" unique="true">
             <column name="NAME"/>
         </createIndex>
-
-        <createIndex tableName="WORKFLOW_RUN_EVENT_HISTORY" indexName="WORKFLOW_RUN_EVENT_HISTORY_RUN_ID_TIMESTAMP_IDX">
-            <column name="WORKFLOW_RUN_ID"/>
-            <column name="TIMESTAMP"/>
-        </createIndex>
-    </changeSet>
-
-    <!-- TODO: Decide if we want to keep these. For the time being, they are useful to ensure correctness. -->
-    <changeSet id="v5.6.0-9" author="nscuro">
-        <sql splitStatements="false">
-            CREATE FUNCTION VALIDATE_JOB_STATUS_TRANSITION()
-                RETURNS TRIGGER LANGUAGE PLPGSQL AS $$
-            BEGIN
-                IF OLD."STATUS" = NEW."STATUS" THEN
-                   RETURN NEW;
-                -- NB: Due to batching, PENDING -> RUNNING transitions might be skipped.
-                -- Thus, we need to support PENDING -> COMPLETED/FAILED transitions as well.
-                ELSIF (OLD."STATUS" = 'PENDING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED', 'RUNNING'))
-                   OR (OLD."STATUS" = 'RUNNING' AND NEW."STATUS" NOT IN ('COMPLETED', 'FAILED', 'PENDING_RETRY'))
-                   OR (OLD."STATUS" IN ('COMPLETED', 'FAILED')) THEN
-                    RAISE EXCEPTION 'Invalid status transition from % to %', OLD."STATUS", NEW."STATUS";
-                END IF;
-
-                RETURN NEW;
-            END;
-            $$;
-        </sql>
-
-        <sql splitStatements="true">
-            CREATE TRIGGER TRIGGER_VALIDATE_JOB_STATUS_TRANSITION
-                BEFORE UPDATE ON "JOB" FOR EACH ROW
-                EXECUTE FUNCTION VALIDATE_JOB_STATUS_TRANSITION();
-        </sql>
     </changeSet>
 </databaseChangeLog>

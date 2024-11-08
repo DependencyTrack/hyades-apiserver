@@ -21,77 +21,124 @@ package org.dependencytrack.workflow;
 import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import org.dependencytrack.workflow.persistence.WorkflowRunHistoryEntryRow;
+import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
+import org.dependencytrack.workflow.serialization.SerializationException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.proto.workflow.event.v1alpha1.WorkflowEvent.SubjectCase.WORKFLOW_ACTIVITY_RUN_COMPLETED;
-import static org.dependencytrack.proto.workflow.event.v1alpha1.WorkflowEvent.SubjectCase.WORKFLOW_ACTIVITY_RUN_QUEUED;
+import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_COMPLETED;
+import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_QUEUED;
+import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_STARTED;
 
-public class WorkflowRunContext<T> {
+public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
-    private static final Logger LOGGER = Logger.getLogger(WorkflowRunContext.class);
-
-    private final WorkflowEngine workflowEngine;
-    private final UUID workflowRunId;
-    private final List<WorkflowRunHistoryEntryRow> history;
+    private final Logger logger;
+    private final WorkflowEngine engine;
+    private List<WorkflowRunLogEntryRow> log;
 
     WorkflowRunContext(
-            final WorkflowEngine workflowEngine,
-            final UUID workflowRunId,
-            final List<WorkflowRunHistoryEntryRow> history) {
-        this.workflowEngine = workflowEngine;
-        this.workflowRunId = workflowRunId;
-        this.history = history;
+            final Class<?> runnerClass,
+            final WorkflowEngine engine,
+            final UUID taskId,
+            final String taskQueue,
+            final Integer taskPriority,
+            final UUID runId,
+            final A arguments) {
+        super(taskId, taskQueue, taskPriority, runId, arguments);
+        this.logger = Logger.getLogger(runnerClass);
+        this.engine = engine;
     }
 
-    public <A, R> CompletableFuture<R> callActivity(
-            final String name,
+    // TODO: Retry policy
+    public <AA, AR> AR callActivity(
+            final String activityName,
             final String invocationId,
-            final A arguments,
-            final Class<R> resultClass) {
-        requireNonNull(name, "name must not be null");
+            final AA arguments,
+            final Class<AR> resultClass,
+            final Duration timeout) {
+        requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
 
-        WorkflowRunHistoryEntryRow queuedEvent = null;
-        WorkflowRunHistoryEntryRow completedEvent = null;
-        for (final WorkflowRunHistoryEntryRow historyEntry : history) {
-            if (!name.equals(historyEntry.activityName())
+        WorkflowRunLogEntryRow queuedEvent = null;
+        WorkflowRunLogEntryRow completedEvent = null;
+        for (final WorkflowRunLogEntryRow historyEntry : getLog()) {
+            if (!activityName.equals(historyEntry.activityName())
                 || !invocationId.equals(historyEntry.activityInvocationId())) {
                 continue;
             }
 
-            if (WORKFLOW_ACTIVITY_RUN_QUEUED.name().equals(historyEntry.eventType())) {
+            if (historyEntry.eventType() == ACTIVITY_RUN_QUEUED) {
                 queuedEvent = historyEntry;
-            } else if (WORKFLOW_ACTIVITY_RUN_COMPLETED.name().equals(historyEntry.eventType()) && queuedEvent != null) {
+            } else if (historyEntry.eventType() == ACTIVITY_RUN_COMPLETED && queuedEvent != null) {
                 completedEvent = historyEntry;
                 break;
             }
         }
 
+        // TODO: If there is a pending execution already in the history,
+        //  don't request a new one. Register a future for its result instead.
+
         if (queuedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(queuedEvent)) {
-            LOGGER.info("Activity completion not found in history; Triggering execution");
-            return workflowEngine
-                    .callActivity(workflowRunId, name, invocationId, serializeJson(arguments))
-                    .thenApply(resultBytes -> deserializeJson(resultBytes, resultClass));
+            logger.info("Activity completion not found in history; Triggering execution");
+            final String functionResult = engine.callActivity(
+                    taskId(), runId(), activityName, invocationId, engine.serializeJson(arguments), timeout);
+            return engine.deserializeJson(functionResult, resultClass);
         }
 
-        LOGGER.info("Completion of activity %s#%s found in history entry %d from %s".formatted(
-                name, invocationId, completedEvent.id(), completedEvent.timestamp()));
+        logger.info("Completion of activity %s#%s found in history event %s from %s".formatted(
+                activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
 
-        return CompletableFuture.completedFuture(deserializeJson(completedEvent.result(), resultClass));
+        return engine.deserializeJson(completedEvent.result(), resultClass);
     }
 
-    private static <T> Predicate<WorkflowRunHistoryEntryRow> argumentsMatch(final T arguments) {
+    public <AA, AR> AR callLocalActivity(
+            final String activityName,
+            final String invocationId,
+            final AA arguments,
+            final Class<AR> resultClass,
+            final Function<AA, AR> activityFunction) {
+        requireNonNull(activityName, "activityName must not be null");
+        requireNonNull(invocationId, "invocationId must not be null");
+        requireNonNull(activityFunction, "activityFunction must not be null");
+
+        WorkflowRunLogEntryRow startedEvent = null;
+        WorkflowRunLogEntryRow completedEvent = null;
+        for (final WorkflowRunLogEntryRow historyEntry : getLog()) {
+            if (!activityName.equals(historyEntry.activityName())
+                || !invocationId.equals(historyEntry.activityInvocationId())) {
+                continue;
+            }
+
+            if (historyEntry.eventType() == ACTIVITY_RUN_STARTED) {
+                startedEvent = historyEntry;
+            } else if (historyEntry.eventType() == ACTIVITY_RUN_COMPLETED && startedEvent != null) {
+                completedEvent = historyEntry;
+                break;
+            }
+        }
+
+        if (startedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(startedEvent)) {
+            logger.info("Completion of local activity %s#%s not found in history"
+                    .formatted(activityName, invocationId));
+            return engine.callLocalActivity(taskId(), runId(), activityName, invocationId, arguments, activityFunction);
+        }
+
+        logger.info("Completion of local activity %s#%s found in history event %s from %s".formatted(
+                activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
+
+        return engine.deserializeJson(completedEvent.result(), resultClass);
+    }
+
+    private <T> Predicate<WorkflowRunLogEntryRow> argumentsMatch(final T arguments) {
         if (arguments == null) {
             return entry -> {
                 if (entry.arguments() != null) {
-                    LOGGER.warn("Argument mismatch: null -> %s".formatted(entry.arguments()));
+                    logger.warn("Argument mismatch: null -> %s".formatted(entry.arguments()));
                     return false;
                 }
 
@@ -99,23 +146,22 @@ public class WorkflowRunContext<T> {
             };
         }
 
-        final var jsonMapper = new JsonMapper();
-        final JsonNode argumentsJsonNode = jsonMapper.convertValue(arguments, JsonNode.class);
+        final JsonNode argumentsJson = engine.jsonMapper().convertValue(arguments, JsonNode.class);
 
         return entry -> {
             if (entry.arguments() == null) {
-                LOGGER.warn("Arguments mismatch: %s -> null".formatted(arguments));
+                logger.warn("Arguments mismatch: %s -> null".formatted(arguments));
                 return false;
             }
 
-            final JsonNode entryArgumentsJsonNode;
+            final JsonNode logEntryArgumentsJson;
             try {
-                entryArgumentsJsonNode = jsonMapper.readTree(entry.arguments());
+                logEntryArgumentsJson = engine.jsonMapper().readTree(entry.arguments());
             } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                throw new SerializationException("Failed to deserialize log entry arguments", e);
             }
-            if (!argumentsJsonNode.equals(entryArgumentsJsonNode)) {
-                LOGGER.warn("Arguments mismatch: %s -> %s".formatted(argumentsJsonNode, entryArgumentsJsonNode));
+            if (!argumentsJson.equals(logEntryArgumentsJson)) {
+                logger.warn("Arguments mismatch: %s -> %s".formatted(logEntryArgumentsJson, argumentsJson));
                 return false;
             }
 
@@ -123,28 +169,12 @@ public class WorkflowRunContext<T> {
         };
     }
 
-    private static <T> String serializeJson(final T object) {
-        if (object == null) {
-            return null;
+    private List<WorkflowRunLogEntryRow> getLog() {
+        if (log == null) {
+            log = engine.getWorkflowRunLog(runId());
         }
 
-        try {
-            return new JsonMapper().writeValueAsString(object);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static <T> T deserializeJson(final String json, final Class<T> clazz) {
-        if (json == null || clazz == null) {
-            return null;
-        }
-
-        try {
-            return new JsonMapper().readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        return log;
     }
 
 }
