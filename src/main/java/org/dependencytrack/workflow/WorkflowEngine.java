@@ -23,8 +23,9 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
@@ -61,6 +62,7 @@ import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufSerializer;
+import org.jdbi.v3.core.generic.GenericTypes;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -266,6 +268,12 @@ public final class WorkflowEngine implements Closeable {
             final WorkflowRunner<A, R> runner) {
         state.assertRunning();
 
+        // NB: This doesn't work if runner is a lambda, see https://stackoverflow.com/a/61667278.
+        // For now, this is a reasonable tradeoff since lambdas will only be used in tests anyway.
+        final JavaType argumentType = GenericTypes.findGenericParameter(runner.getClass(), WorkflowTaskRunner.class, 0)
+                .map(TypeFactory.defaultInstance()::constructType)
+                .orElseThrow(() -> new IllegalStateException("Unable to determine argument type"));
+
         final String queue = "workflow-" + workflowName;
         if (taskExecutorByQueue.containsKey(queue)) {
             throw new IllegalStateException("A runner for workflow %s is already registered".formatted(workflowName));
@@ -291,8 +299,7 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowName(),
                         polledTask.workflowVersion(),
                         polledTask.workflowRunId(),
-                        deserializeJson(polledTask.arguments(), new TypeReference<>() {
-                        }));
+                        deserializeJson(polledTask.arguments(), argumentType));
 
         for (int i = 0; i < concurrency; i++) {
             executorService.execute(new WorkflowTaskCoordinator<>(this, runner, contextFactory, queue));
@@ -304,6 +311,12 @@ public final class WorkflowEngine implements Closeable {
             final int concurrency,
             final WorkflowActivityRunner<A, R> runner) {
         state.assertRunning();
+
+        // NB: This doesn't work if runner is a lambda, see https://stackoverflow.com/a/61667278
+        // For now, this is a reasonable tradeoff since lambdas will only be used in tests anyway.
+        final JavaType argumentType = GenericTypes.findGenericParameter(runner.getClass(), WorkflowTaskRunner.class, 0)
+                .map(TypeFactory.defaultInstance()::constructType)
+                .orElseThrow(() -> new IllegalStateException("Unable to determine argument type"));
 
         final String queue = "activity-" + activityName;
         if (taskExecutorByQueue.containsKey(queue)) {
@@ -331,8 +344,7 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowRunId(),
                         polledTask.activityName(),
                         polledTask.activityInvocationId(),
-                        deserializeJson(polledTask.arguments(), new TypeReference<>() {
-                        }));
+                        deserializeJson(polledTask.arguments(), argumentType));
 
 
         for (int i = 0; i < concurrency; i++) {
@@ -492,6 +504,16 @@ public final class WorkflowEngine implements Closeable {
                         .build())
                 .join();
 
+        // The "suspend -> resume" cycle takes at least a second.
+        // Blocking for a second or less is pointless.
+        if (timeout.compareTo(Duration.ofSeconds(1)) <= 0) {
+            LOGGER.debug("Timeout %s is too small; Suspending immediately".formatted(timeout));
+            throw new WorkflowRunSuspendedException(
+                    WorkflowActivityCompletedResumeCondition.newBuilder()
+                            .setRunId(activityRunId.toString())
+                            .build());
+        }
+
         final ActivityResultWatch resultWatch =
                 activityResultCompleter.watchActivityResult(workflowRunId, activityName, invocationId);
         try {
@@ -598,13 +620,13 @@ public final class WorkflowEngine implements Closeable {
         }
     }
 
-    <T> T deserializeJson(final String json, final TypeReference<T> typeReference) {
-        if (json == null || typeReference == null) {
+    <T> T deserializeJson(final String json, JavaType type) {
+        if (json == null || type == null) {
             return null;
         }
 
         try {
-            return jsonMapper.readValue(json, typeReference);
+            return jsonMapper.readValue(json, type);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

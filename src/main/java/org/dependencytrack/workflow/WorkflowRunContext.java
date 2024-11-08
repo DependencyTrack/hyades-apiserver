@@ -86,13 +86,13 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         //  don't request a new one. Register a future for its result instead.
 
         if (queuedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(queuedEvent)) {
-            logger.info("Activity completion not found in history; Triggering execution");
+            logger.debug("Activity completion not found in history; Triggering execution");
             final String functionResult = engine.callActivity(
                     taskId(), workflowRunId(), activityName, invocationId, engine.serializeJson(arguments), timeout);
             return engine.deserializeJson(functionResult, resultClass);
         }
 
-        logger.info("Completion of activity %s#%s found in history event %s from %s".formatted(
+        logger.debug("Completion of activity %s#%s found in history event %s from %s".formatted(
                 activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
 
         return engine.deserializeJson(completedEvent.result(), resultClass);
@@ -126,12 +126,12 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         }
 
         if (startedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(startedEvent)) {
-            logger.info("Completion of local activity %s#%s not found in history"
+            logger.debug("Completion of local activity %s#%s not found in history"
                     .formatted(activityName, invocationId));
             return engine.callLocalActivity(taskId(), workflowRunId(), activityName, invocationId, arguments, activityFunction);
         }
 
-        logger.info("Completion of local activity %s#%s found in history event %s from %s".formatted(
+        logger.debug("Completion of local activity %s#%s found in history event %s from %s".formatted(
                 activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
 
         return engine.deserializeJson(completedEvent.result(), resultClass);

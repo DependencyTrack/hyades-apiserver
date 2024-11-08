@@ -51,6 +51,7 @@ import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunUpdate;
 import org.dependencytrack.workflow.persistence.WorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowTaskUpdate;
+import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -176,15 +177,18 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
                 final var ctx = new EventProcessingContext(
                         dao, eventTimestamp, workflowRunId, runById, taskById, eventsToSend);
 
-                switch (event.getSubjectCase()) {
-                    case RUN_REQUESTED -> onRunRequested(ctx, event.getRunRequested());
-                    case RUN_STARTED -> onRunStarted(ctx, event.getRunStarted());
-                    case RUN_COMPLETED -> onRunCompleted(ctx, event.getRunCompleted());
-                    case RUN_FAILED -> onRunFailed(ctx, event.getRunFailed());
-                    case RUN_SUSPENDED -> onRunSuspended(ctx, event.getRunSuspended());
-                    case ACTIVITY_RUN_REQUESTED -> onActivityRunRequested(ctx, event.getActivityRunRequested());
-                    case ACTIVITY_RUN_COMPLETED -> onActivityRunCompleted(ctx, event.getActivityRunCompleted());
-                    case ACTIVITY_RUN_FAILED -> onActivityRunFailed(ctx, event.getActivityRunFailed());
+                try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", workflowRunId.toString());
+                     var ignoredMdcEventType = MDC.putCloseable("workflowEventType", event.getSubjectCase().name())) {
+                    switch (event.getSubjectCase()) {
+                        case RUN_REQUESTED -> onRunRequested(ctx, event.getRunRequested());
+                        case RUN_STARTED -> onRunStarted(ctx, event.getRunStarted());
+                        case RUN_COMPLETED -> onRunCompleted(ctx, event.getRunCompleted());
+                        case RUN_FAILED -> onRunFailed(ctx, event.getRunFailed());
+                        case RUN_SUSPENDED -> onRunSuspended(ctx, event.getRunSuspended());
+                        case ACTIVITY_RUN_REQUESTED -> onActivityRunRequested(ctx, event.getActivityRunRequested());
+                        case ACTIVITY_RUN_COMPLETED -> onActivityRunCompleted(ctx, event.getActivityRunCompleted());
+                        case ACTIVITY_RUN_FAILED -> onActivityRunFailed(ctx, event.getActivityRunFailed());
+                    }
                 }
             }
 
@@ -210,19 +214,21 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             final var tasksToEnqueue = new ArrayList<NewWorkflowTask>();
             for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.NEW, Collections.emptyList())) {
                 tasksToEnqueue.add(switch (task) {
-                    case WorkflowRunTask runTask -> new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
-                            .withPriority(runTask.priority())
-                            .withScheduledFor(runTask.scheduledFor())
-                            .withArguments(runTask.arguments());
-                    case WorkflowActivityRunTask runTask -> new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
-                            .withPriority(runTask.priority())
-                            .withScheduledFor(runTask.scheduledFor())
-                            .withArguments(runTask.arguments())
-                            .withActivityRun(
-                                    runTask.activityRunId(),
-                                    runTask.activityName(),
-                                    runTask.activityInvocationId(),
-                                    runTask.invokingTaskId());
+                    case WorkflowRunTask runTask ->
+                            new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
+                                    .withPriority(runTask.priority())
+                                    .withScheduledFor(runTask.scheduledFor())
+                                    .withArguments(runTask.arguments());
+                    case WorkflowActivityRunTask runTask ->
+                            new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
+                                    .withPriority(runTask.priority())
+                                    .withScheduledFor(runTask.scheduledFor())
+                                    .withArguments(runTask.arguments())
+                                    .withActivityRun(
+                                            runTask.activityRunId(),
+                                            runTask.activityName(),
+                                            runTask.activityInvocationId(),
+                                            runTask.invokingTaskId());
                 });
             }
 
@@ -243,7 +249,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
                     LOGGER.debug("Workflow run unchanged: " + run.id());
                 }
                 for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.UNMODIFIED, Collections.emptyList())) {
-                    LOGGER.debug("Task unchanged: " + task);
+                    LOGGER.debug("Task unchanged: " + task.id());
                 }
             }
 
@@ -253,7 +259,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
 
                 if (LOGGER.isDebugEnabled()) {
                     for (final WorkflowRunRow runRow : updatedRunRows) {
-                        LOGGER.debug("Updated workflow run: " + runRow);
+                        LOGGER.debug("Updated workflow run: " + runRow.id());
                     }
                 }
             }
@@ -264,7 +270,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
 
                 if (LOGGER.isDebugEnabled()) {
                     for (final WorkflowTaskRow taskRow : createdTaskRows) {
-                        LOGGER.debug("Created task: " + taskRow);
+                        LOGGER.debug("Created task: " + taskRow.id());
                     }
                 }
             }
@@ -275,7 +281,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
 
                 if (LOGGER.isDebugEnabled()) {
                     for (final WorkflowTaskRow taskRow : updatedTaskRows) {
-                        LOGGER.debug("Updated task: " + taskRow);
+                        LOGGER.debug("Updated task: " + taskRow.id());
                     }
                 }
             }
@@ -486,6 +492,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             final WorkflowRunRequested subject) {
         final var now = Instant.now();
 
+        LOGGER.debug("Enqueueing workflow run task");
         final var newTask = new WorkflowRunTask(ctx.workflowRunId(), "workflow-" + subject.getName());
         if (subject.hasPriority()) {
             newTask.setPriority(subject.getPriority());
@@ -503,6 +510,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             executionQueuedBuilder.setArguments(subject.getArguments());
         }
 
+        LOGGER.debug("Enqueueing %s event".formatted(WorkflowEvent.SubjectCase.RUN_QUEUED));
         ctx.enqueueEvent(
                 WorkflowEvent.newBuilder()
                         .setId(UUID.randomUUID().toString())
@@ -519,6 +527,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
 
         // When resuming from suspension, the run is already in running state.
         if (run.status() != WorkflowRunStatus.RUNNING) {
+            LOGGER.debug("Starting workflow run");
             run.start(ctx.eventTimestamp());
         }
     }
@@ -526,9 +535,11 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
     private void onRunCompleted(
             final EventProcessingContext ctx,
             final WorkflowRunCompleted subject) {
+        LOGGER.debug("Completing workflow run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
         task.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
 
+        LOGGER.debug("Completing workflow run");
         final WorkflowRun run = ctx.getRunById(ctx.workflowRunId());
         run.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
     }
@@ -540,10 +551,12 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
                 ? Instant.ofEpochMilli(Timestamps.toMillis(subject.getNextAttemptAt()))
                 : null;
 
+        LOGGER.debug("Failing workflow run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
         task.fail(ctx.eventTimestamp(), subject.getFailureDetails(), nextAttemptAt);
 
         if (task.status() == WorkflowTaskStatus.FAILED) {
+            LOGGER.debug("Failing workflow run because task failure is not retryable");
             final WorkflowRun run = ctx.getRunById(ctx.workflowRunId());
             run.fail(ctx.eventTimestamp(), subject.getFailureDetails());
         }
@@ -552,14 +565,16 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
     private void onRunSuspended(
             final EventProcessingContext ctx,
             final WorkflowRunSuspended subject) {
-        // Only suspend when the condition the run is waiting for hasn't yet occurred.
-        // It's possible that the suspension event arrives after the condition is already fulfilled.
+        LOGGER.debug("Suspending workflow run task");
+        final var task = (WorkflowRunTask) ctx.getTaskById(subject.getTaskId());
+        task.suspend(ctx.eventTimestamp());
+
         if (subject.hasActivityCompletedResumeCondition()) {
             final WorkflowActivityCompletedResumeCondition condition =
                     subject.getActivityCompletedResumeCondition();
-            if (!ctx.hasActivityCompleted(condition.getRunId())) {
-                final var task = (WorkflowRunTask) ctx.getTaskById(subject.getTaskId());
-                task.suspend(ctx.eventTimestamp());
+            if (ctx.hasActivityCompleted(condition.getRunId())) {
+                LOGGER.debug("Resuming suspended workflow run task because the resume condition is already fulfilled");
+                task.resume(ctx.eventTimestamp());
             }
         }
     }
@@ -572,6 +587,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
         final String activityName = subject.getActivityName();
         final String invocationId = subject.getInvocationId();
 
+        LOGGER.debug("Enqueuing activity run task");
         final var newTask = new WorkflowActivityRunTask(
                 ctx.workflowRunId(),
                 "activity-" + activityName,
@@ -593,6 +609,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             subjectBuilder.setArguments(subject.getArguments());
         }
 
+        LOGGER.debug("Enqueuing %s event".formatted(WorkflowEvent.SubjectCase.ACTIVITY_RUN_QUEUED));
         ctx.enqueueEvent(
                 WorkflowEvent.newBuilder()
                         .setId(UUID.randomUUID().toString())
@@ -606,17 +623,18 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             final EventProcessingContext ctx,
             final WorkflowActivityRunCompleted subject) {
         if (subject.getIsLocal()) {
+            LOGGER.debug("Activity run is local; Nothing to do");
             return;
         }
 
+        LOGGER.debug("Completing activity run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
         task.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
 
         final var invokingTask = (WorkflowRunTask) ctx.getTaskById(subject.getInvokingTaskId());
         if (invokingTask.status() == WorkflowTaskStatus.SUSPENDED) {
+            LOGGER.debug("Resuming suspended workflow run task %s".formatted(invokingTask.id()));
             invokingTask.resume(ctx.eventTimestamp());
-            LOGGER.info("Resumed suspended task %s for workflow run %s".formatted(
-                    invokingTask.id(), ctx.workflowRunId()));
         }
     }
 
@@ -624,6 +642,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             final EventProcessingContext ctx,
             final WorkflowActivityRunFailed subject) {
         if (subject.getIsLocal()) {
+            LOGGER.debug("Activity run is local; Nothing to do");
             return;
         }
 
@@ -631,12 +650,16 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
                 ? Instant.ofEpochMilli(Timestamps.toMillis(subject.getNextAttemptAt()))
                 : null;
 
+        LOGGER.debug("Failing activity run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
         task.fail(ctx.eventTimestamp(), subject.getFailureDetails(), nextAttemptAt);
 
         if (task.status() == WorkflowTaskStatus.FAILED) {
             final var invokingTask = (WorkflowRunTask) ctx.getTaskById(subject.getInvokingTaskId());
             if (invokingTask.status() == WorkflowTaskStatus.SUSPENDED) {
+                LOGGER.debug("""
+                        Resuming suspended workflow run task %s because the \
+                        activity task failure is not retryable""".formatted(invokingTask.id()));
                 invokingTask.resume(ctx.eventTimestamp());
             }
         }

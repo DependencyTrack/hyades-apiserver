@@ -47,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -73,14 +74,18 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    @SuppressWarnings("Convert2Lambda")
     public void shouldHandleManyWorkflowRuns() throws Exception {
         try (final var engine = new WorkflowEngine()) {
             engine.start();
 
             final var random = new SecureRandom();
-            engine.registerWorkflowRunner("foo", 10, ctx -> {
-                ctx.callActivity("bar", "666", null, Void.class, Duration.ofSeconds(1));
-                return Optional.empty();
+            engine.registerWorkflowRunner("foo", 10, new WorkflowRunner<Void, Void>() {
+                @Override
+                public Optional<Void> run(final WorkflowRunContext<Void> ctx) {
+                    ctx.callActivity("bar", "666", null, Void.class, Duration.ofSeconds(1));
+                    return Optional.empty();
+                }
             });
 
             engine.registerActivityRunner("bar", 10, new RandomlyFailingActivityRunner(random));
@@ -107,23 +112,30 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    @SuppressWarnings("Convert2Lambda")
     public void shouldSuspendWhileWaitingForFunctionResult() throws Exception {
         try (final var engine = new WorkflowEngine()) {
             engine.start();
 
-            engine.<Void, JsonNode>registerWorkflowRunner("foo", 1, ctx -> {
-                final JsonNode functionArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
-                final ObjectNode functionResult = ctx.callActivity(
-                        "abc", "123", functionArguments, ObjectNode.class, Duration.ofSeconds(1));
+            engine.registerWorkflowRunner("foo", 1, new WorkflowRunner<Void, JsonNode>() {
+                @Override
+                public Optional<JsonNode> run(final WorkflowRunContext<Void> ctx) {
+                    final JsonNode functionArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
+                    final ObjectNode functionResult = ctx.callActivity(
+                            "abc", "123", functionArguments, ObjectNode.class, Duration.ofSeconds(1));
 
-                functionResult.put("execution", "done");
-                return Optional.of(functionResult);
+                    functionResult.put("execution", "done");
+                    return Optional.of(functionResult);
+                }
             });
 
-            engine.<ObjectNode, ObjectNode>registerActivityRunner("abc", 1, ctx -> {
-                final var argObject = ctx.arguments().orElseThrow();
-                argObject.put("hello", "dlrow");
-                return Optional.of(argObject);
+            engine.registerActivityRunner("abc", 1, new WorkflowActivityRunner<ObjectNode, ObjectNode>() {
+                @Override
+                public Optional<ObjectNode> run(final WorkflowActivityContext<ObjectNode> ctx) {
+                    final var argObject = ctx.arguments().orElseThrow();
+                    argObject.put("hello", "dlrow");
+                    return Optional.of(argObject);
+                }
             });
 
             final WorkflowRun workflowRun = engine.startWorkflow(
@@ -135,6 +147,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
                         assertThat(currentWorkflowRun).isNotNull();
                         assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                        assertThatJson(currentWorkflowRun.result()).isEqualTo(/* language=JSON */ """
+                                {
+                                  "hello": "dlrow",
+                                  "execution": "done"
+                                }
+                                """);
                     });
 
             assertThat(engine.getWorkflowRunLog(workflowRun.id())).satisfiesExactly(
@@ -152,29 +170,42 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    @SuppressWarnings("Convert2Lambda")
     public void shouldReplayFunctionResultsOnWorkflowRetry() throws Exception {
         final var workflowAttempts = new AtomicInteger(0);
 
         try (final var engine = new WorkflowEngine()) {
             engine.start();
 
-            engine.<JsonNode, Void>registerWorkflowRunner("foo", 1, ctx -> {
-                final JsonNode functionArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
-                ctx.callActivity("abc", "123", functionArguments, JsonNode.class, Duration.ofSeconds(1));
+            engine.registerWorkflowRunner("foo", 1, new WorkflowRunner<JsonNode, Void>() {
+                @Override
+                public Optional<Void> run(final WorkflowRunContext<JsonNode> ctx) {
+                    final JsonNode functionArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
+                    ctx.callActivity("abc", "123", functionArguments, JsonNode.class, Duration.ofSeconds(1));
 
-                if (workflowAttempts.incrementAndGet() < 2) {
-                    throw new AssertionError("Technical Difficulties");
+                    if (workflowAttempts.incrementAndGet() < 2) {
+                        throw new AssertionError("Technical Difficulties");
+                    }
+
+                    ctx.callActivity("xyz", "321", null, null, Duration.ofSeconds(1));
+
+                    return Optional.empty();
                 }
-
-                ctx.callActivity("xyz", "321", null, null, Duration.ofSeconds(1));
-
-                return Optional.empty();
             });
 
-            engine.<JsonNode, JsonNode>registerActivityRunner("abc", 1,
-                    ctx -> Optional.of(JsonNodeFactory.instance.objectNode().put("hey", 666)));
+            engine.registerActivityRunner("abc", 1, new WorkflowActivityRunner<JsonNode, JsonNode>() {
+                @Override
+                public Optional<JsonNode> run(final WorkflowActivityContext<JsonNode> ctx) {
+                    return Optional.of(JsonNodeFactory.instance.objectNode().put("hey", 666));
+                }
+            });
 
-            engine.<JsonNode, Void>registerActivityRunner("xyz", 1, ctx -> Optional.empty());
+            engine.registerActivityRunner("xyz", 1, new WorkflowActivityRunner<JsonNode, Void>() {
+                @Override
+                public Optional<Void> run(final WorkflowActivityContext<JsonNode> ctx) {
+                    return Optional.empty();
+                }
+            });
 
             final WorkflowRun workflowRun = engine.startWorkflow(
                     new StartWorkflowOptions<ObjectNode>("foo", 1)
@@ -213,24 +244,28 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    @SuppressWarnings("Convert2Lambda")
     public void shouldReplayLocalFunctionResultsOnWorkflowRetry() throws Exception {
         final var workflowAttempts = new AtomicInteger(0);
 
         try (final var engine = new WorkflowEngine()) {
             engine.start();
 
-            engine.<JsonNode, Void>registerWorkflowRunner("foo", 1, ctx -> {
-                final var abcArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
-                final JsonNode ignoredAbcResult = ctx.callLocalActivity("abc", "123", abcArguments, JsonNode.class,
-                        args -> JsonNodeFactory.instance.objectNode().put("hey", 666));
+            engine.registerWorkflowRunner("foo", 1, new WorkflowRunner<JsonNode, Void>() {
+                @Override
+                public Optional<Void> run(final WorkflowRunContext<JsonNode> ctx) throws Exception {
+                    final var abcArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
+                    final JsonNode ignoredAbcResult = ctx.callLocalActivity("abc", "123", abcArguments, JsonNode.class,
+                            args -> JsonNodeFactory.instance.objectNode().put("hey", 666));
 
-                if (workflowAttempts.incrementAndGet() < 2) {
-                    throw new AssertionError("Technical Difficulties");
+                    if (workflowAttempts.incrementAndGet() < 2) {
+                        throw new AssertionError("Technical Difficulties");
+                    }
+
+                    final Object ignoredXyzResult = ctx.callLocalActivity("xyz", "321", null, Void.class, args -> null);
+
+                    return Optional.empty();
                 }
-
-                final Object ignoredXyzResult = ctx.callLocalActivity("xyz", "321", null, Void.class, args -> null);
-
-                return Optional.empty();
             });
 
             final WorkflowRun workflowRun = engine.startWorkflow(
@@ -262,11 +297,15 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    @SuppressWarnings("Convert2Lambda")
     public void shouldRecordWorkflowAsFailedWhenExecutionFails() throws Exception {
         try (final var engine = new WorkflowEngine()) {
             engine.start();
-            engine.<Void, Void>registerWorkflowRunner("foo", 1, ctx -> {
-                throw new IllegalStateException("Broken beyond repair");
+            engine.registerWorkflowRunner("foo", 1, new WorkflowRunner<Void, Void>() {
+                @Override
+                public Optional<Void> run(final WorkflowRunContext<Void> ctx) {
+                    throw new IllegalStateException("Broken beyond repair");
+                }
             });
 
             final WorkflowRun workflowRun = engine.startWorkflow(

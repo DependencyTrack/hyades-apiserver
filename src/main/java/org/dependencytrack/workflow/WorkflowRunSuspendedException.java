@@ -29,6 +29,11 @@ class WorkflowRunSuspendedException extends RuntimeException {
         this.resumeCondition = resumeCondition;
     }
 
+    WorkflowRunSuspendedException(final WorkflowActivityCompletedResumeCondition resumeCondition) {
+        super();
+        this.resumeCondition = resumeCondition;
+    }
+
     public WorkflowActivityCompletedResumeCondition getResumeCondition() {
         return resumeCondition;
     }
