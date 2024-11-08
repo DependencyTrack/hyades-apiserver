@@ -36,10 +36,12 @@ public class PolledWorkflowTaskRowMapper implements RowMapper<PolledWorkflowTask
     public PolledWorkflowTaskRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledWorkflowTaskRow(
                 rs.getObject("ID", UUID.class),
-                WorkflowTaskStatus.valueOf(rs.getString("STATUS")),
-                WorkflowTaskStatus.valueOf(rs.getString("PREVIOUS_STATUS")),
                 rs.getString("QUEUE"),
                 nullableInteger(rs, "PRIORITY"),
+                WorkflowTaskStatus.valueOf(rs.getString("STATUS")),
+                WorkflowTaskStatus.valueOf(rs.getString("PREVIOUS_STATUS")),
+                rs.getString("WORKFLOW_NAME"),
+                rs.getInt("WORKFLOW_VERSION"),
                 nullableUuid(rs, "WORKFLOW_RUN_ID"),
                 nullableUuid(rs, "ACTIVITY_RUN_ID"),
                 rs.getString("ACTIVITY_NAME"),
@@ -47,8 +49,6 @@ public class PolledWorkflowTaskRowMapper implements RowMapper<PolledWorkflowTask
                 nullableUuid(rs, "INVOKING_TASK_ID"),
                 rs.getString("ARGUMENTS"),
                 rs.getInt("ATTEMPT"),
-                Instant.ofEpochMilli(rs.getTimestamp("CREATED_AT").getTime()),
-                Instant.ofEpochMilli(rs.getTimestamp("UPDATED_AT").getTime()),
                 Instant.ofEpochMilli(rs.getTimestamp("STARTED_AT").getTime()));
     }
 

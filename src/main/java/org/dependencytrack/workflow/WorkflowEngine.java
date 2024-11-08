@@ -288,8 +288,8 @@ public final class WorkflowEngine implements Closeable {
                         runner.getClass(),
                         /* workflowEngine */ this,
                         polledTask.id(),
-                        polledTask.queue(),
-                        polledTask.priority(),
+                        polledTask.workflowName(),
+                        polledTask.workflowVersion(),
                         polledTask.workflowRunId(),
                         deserializeJson(polledTask.arguments(), new TypeReference<>() {
                         }));
@@ -326,8 +326,8 @@ public final class WorkflowEngine implements Closeable {
         final WorkflowTaskContext.Factory<A, WorkflowActivityContext<A>> contextFactory =
                 polledTask -> new WorkflowActivityContext<>(
                         polledTask.id(),
-                        polledTask.queue(),
-                        polledTask.priority(),
+                        polledTask.workflowName(),
+                        polledTask.workflowVersion(),
                         polledTask.workflowRunId(),
                         polledTask.activityName(),
                         polledTask.activityInvocationId(),
@@ -698,6 +698,8 @@ public final class WorkflowEngine implements Closeable {
         //
         // If this condition occurs, assume completion to have happened a millisecond later.
         // Note that this would only ever happen if jobs are no-op and return immediately.
+        //
+        // TODO: Is there a cleaner way to solve this?
         if (Instant.now().toEpochMilli() == task.startedAt().toEpochMilli()) {
             eventBuilder.setTimestamp(Timestamps.fromMillis(task.startedAt().toEpochMilli() + 1));
             if (LOGGER.isDebugEnabled()) {
@@ -743,6 +745,8 @@ public final class WorkflowEngine implements Closeable {
         //
         // If this condition occurs, assume failure to have happened a millisecond later.
         // Note that this would only ever happen if jobs are no-op and return immediately.
+        //
+        // TODO: Is there a cleaner way to solve this?
         if (Instant.now().toEpochMilli() == task.startedAt().toEpochMilli()) {
             eventBuilder.setTimestamp(Timestamps.fromMillis(task.startedAt().toEpochMilli() + 1));
             if (LOGGER.isDebugEnabled()) {
@@ -787,11 +791,12 @@ public final class WorkflowEngine implements Closeable {
         return dispatchEvent(eventBuilder.build());
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     CompletableFuture<?> dispatchTaskSuspendedEvent(
             final PolledWorkflowTaskRow task,
             final WorkflowActivityCompletedResumeCondition resumeCondition) {
         if (task.activityName() != null) {
-            throw new IllegalStateException("");
+            throw new IllegalStateException("Activity tasks can not be suspended");
         }
 
         return dispatchEvent(newEventBuilder(task)

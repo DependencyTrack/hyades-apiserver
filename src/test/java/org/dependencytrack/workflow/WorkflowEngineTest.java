@@ -68,10 +68,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         environmentVariables.set("KAFKA_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
 
         try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
-            adminClient.createTopics(List.of(
-                            new NewTopic("dtrack.event.job", 3, (short) 1),
-                            new NewTopic("dtrack.event.workflow", 3, (short) 1)))
-                    .all().get();
+            adminClient.createTopics(List.of(new NewTopic("dtrack.event.workflow", 3, (short) 1))).all().get();
         }
     }
 
@@ -231,7 +228,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     throw new AssertionError("Technical Difficulties");
                 }
 
-                final Object ignoredXyzResult = ctx.callLocalActivity("xyz", "321", null, null, args -> null);
+                final Object ignoredXyzResult = ctx.callLocalActivity("xyz", "321", null, Void.class, args -> null);
 
                 return Optional.empty();
             });

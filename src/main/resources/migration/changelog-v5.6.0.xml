@@ -263,7 +263,7 @@
             , "CREATED_AT"
             , "STATUS"
             , "QUEUE"
-            ) INCLUDE ("ID")
+            ) INCLUDE ("ID", "STATUS", "WORKFLOW_RUN_ID")
               WHERE "STATUS" = ANY('{PENDING, PENDING_RETRY, PENDING_RESUME}'::WORKFLOW_TASK_STATUS[]);
         </sql>
 

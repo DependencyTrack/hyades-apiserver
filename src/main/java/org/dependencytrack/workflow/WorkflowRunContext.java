@@ -45,11 +45,11 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             final Class<?> runnerClass,
             final WorkflowEngine engine,
             final UUID taskId,
-            final String taskQueue,
-            final Integer taskPriority,
-            final UUID runId,
+            final String workflowName,
+            final int workflowVersion,
+            final UUID workflowRunId,
             final A arguments) {
-        super(taskId, taskQueue, taskPriority, runId, arguments);
+        super(taskId, workflowName, workflowVersion, workflowRunId, arguments);
         this.logger = Logger.getLogger(runnerClass);
         this.engine = engine;
     }
@@ -63,6 +63,8 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             final Duration timeout) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
+        requireNonNull(resultClass, "resultClass must not be null");
+        requireNonNull(timeout, "timeout must not be null");
 
         WorkflowRunLogEntryRow queuedEvent = null;
         WorkflowRunLogEntryRow completedEvent = null;
@@ -86,7 +88,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         if (queuedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(queuedEvent)) {
             logger.info("Activity completion not found in history; Triggering execution");
             final String functionResult = engine.callActivity(
-                    taskId(), runId(), activityName, invocationId, engine.serializeJson(arguments), timeout);
+                    taskId(), workflowRunId(), activityName, invocationId, engine.serializeJson(arguments), timeout);
             return engine.deserializeJson(functionResult, resultClass);
         }
 
@@ -104,6 +106,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             final Function<AA, AR> activityFunction) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
+        requireNonNull(resultClass, "resultClass must not be null");
         requireNonNull(activityFunction, "activityFunction must not be null");
 
         WorkflowRunLogEntryRow startedEvent = null;
@@ -125,7 +128,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         if (startedEvent == null || completedEvent == null || !argumentsMatch(arguments).test(startedEvent)) {
             logger.info("Completion of local activity %s#%s not found in history"
                     .formatted(activityName, invocationId));
-            return engine.callLocalActivity(taskId(), runId(), activityName, invocationId, arguments, activityFunction);
+            return engine.callLocalActivity(taskId(), workflowRunId(), activityName, invocationId, arguments, activityFunction);
         }
 
         logger.info("Completion of local activity %s#%s found in history event %s from %s".formatted(
@@ -171,7 +174,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
     private List<WorkflowRunLogEntryRow> getLog() {
         if (log == null) {
-            log = engine.getWorkflowRunLog(runId());
+            log = engine.getWorkflowRunLog(workflowRunId());
         }
 
         return log;

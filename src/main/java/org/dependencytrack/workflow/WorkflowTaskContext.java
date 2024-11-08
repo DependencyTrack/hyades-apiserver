@@ -21,7 +21,6 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -33,23 +32,22 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
     interface Factory<A, C extends WorkflowTaskContext<A>> extends Function<PolledWorkflowTaskRow, C> {
     }
 
-    // TODO: workflowName, workflowVersion
     private final UUID taskId;
-    private final String taskQueue;
-    private final Integer taskPriority;
-    private final UUID runId;
+    private final String workflowName;
+    private final int workflowVersion;
+    private final UUID workflowRunId;
     private final A arguments;
 
     WorkflowTaskContext(
             final UUID taskId,
-            final String taskQueue,
-            final Integer taskPriority,
-            final UUID runId,
+            final String workflowName,
+            final int workflowVersion,
+            final UUID workflowRunId,
             final A arguments) {
-        this.taskId = taskId;
-        this.taskQueue = requireNonNull(taskQueue);
-        this.taskPriority = taskPriority;
-        this.runId = requireNonNull(runId);
+        this.taskId = requireNonNull(taskId, "taskId must not be null");
+        this.workflowName = requireNonNull(workflowName, "workflowName must not be null");
+        this.workflowVersion = workflowVersion;
+        this.workflowRunId = requireNonNull(workflowRunId, "workflowRunId must not be null");
         this.arguments = arguments;
     }
 
@@ -57,20 +55,16 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
         return taskId;
     }
 
-    public String taskQueue() {
-        return taskQueue;
+    public String workflowName() {
+        return workflowName;
     }
 
-    public OptionalInt taskPriority() {
-        if (taskPriority == null) {
-            return OptionalInt.empty();
-        }
-
-        return OptionalInt.of(taskPriority);
+    public int workflowVersion() {
+        return workflowVersion;
     }
 
-    public UUID runId() {
-        return runId;
+    public UUID workflowRunId() {
+        return workflowRunId;
     }
 
     public Optional<A> arguments() {

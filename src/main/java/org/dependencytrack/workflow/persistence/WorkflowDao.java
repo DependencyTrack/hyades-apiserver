@@ -23,6 +23,7 @@ import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
+import org.jdbi.v3.core.statement.Update;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -205,7 +206,7 @@ public class WorkflowDao {
                 .one();
     }
 
-    public List<WorkflowTaskRow> enqueueAllTasks(final Collection<NewWorkflowTask> newTasks) {
+    public List<WorkflowTaskRow> createAllTasks(final Collection<NewWorkflowTask> newTasks) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_TASK" (
                   "ID"
@@ -290,34 +291,52 @@ public class WorkflowDao {
                 .list();
     }
 
-    public Optional<PolledWorkflowTaskRow> poll(final String queue) {
-        return jdbiHandle.createUpdate("""
-                        WITH "CTE_POLL" AS (
-                            SELECT "ID"
-                                 , "STATUS"
-                              FROM "WORKFLOW_TASK"
-                             WHERE "QUEUE" = :queue
-                               AND "STATUS" = ANY(CAST('{PENDING, PENDING_RETRY, PENDING_RESUME}' AS WORKFLOW_TASK_STATUS[]))
-                               AND "SCHEDULED_FOR" <= NOW()
-                             ORDER BY "PRIORITY" DESC NULLS LAST
-                                    , "SCHEDULED_FOR"
-                                    , "CREATED_AT"
-                               FOR UPDATE
-                              SKIP LOCKED
-                             LIMIT 1)
-                        UPDATE "WORKFLOW_TASK"
-                           SET "STATUS" = 'RUNNING'
-                             , "UPDATED_AT" = NOW()
-                             , "STARTED_AT" = NOW()
-                             , "ATTEMPT" = CASE WHEN "WORKFLOW_TASK"."STATUS" = 'PENDING_RESUME'
-                                                THEN "WORKFLOW_TASK"."ATTEMPT"
-                                                ELSE COALESCE("WORKFLOW_TASK"."ATTEMPT", 0) + 1
-                                             END
-                          FROM "CTE_POLL"
-                         WHERE "WORKFLOW_TASK"."ID" = "CTE_POLL"."ID"
-                        RETURNING "WORKFLOW_TASK".*
-                                , "CTE_POLL"."STATUS" AS "PREVIOUS_STATUS"
-                        """)
+    public Optional<PolledWorkflowTaskRow> pollTask(final String queue) {
+        final Update update = jdbiHandle.createUpdate("""
+                WITH "CTE_POLL" AS (
+                    SELECT "ID"
+                         , "STATUS"
+                         , "WORKFLOW_RUN_ID"
+                      FROM "WORKFLOW_TASK"
+                     WHERE "QUEUE" = :queue
+                       AND "STATUS" = ANY(CAST('{PENDING, PENDING_RETRY, PENDING_RESUME}' AS WORKFLOW_TASK_STATUS[]))
+                       AND "SCHEDULED_FOR" <= NOW()
+                     ORDER BY "PRIORITY" DESC NULLS LAST
+                            , "SCHEDULED_FOR"
+                            , "CREATED_AT"
+                       FOR UPDATE
+                      SKIP LOCKED
+                     LIMIT 1)
+                UPDATE "WORKFLOW_TASK"
+                   SET "STATUS" = 'RUNNING'
+                     , "UPDATED_AT" = NOW()
+                     , "STARTED_AT" = NOW()
+                     , "ATTEMPT" = CASE WHEN "WORKFLOW_TASK"."STATUS" = 'PENDING_RESUME'
+                                        THEN "WORKFLOW_TASK"."ATTEMPT"
+                                        ELSE COALESCE("WORKFLOW_TASK"."ATTEMPT", 0) + 1
+                                     END
+                  FROM "CTE_POLL"
+                 INNER JOIN "WORKFLOW_RUN"
+                    ON "WORKFLOW_RUN"."ID" = "CTE_POLL"."WORKFLOW_RUN_ID"
+                 WHERE "WORKFLOW_TASK"."ID" = "CTE_POLL"."ID"
+                RETURNING "WORKFLOW_TASK"."ID"
+                        , "WORKFLOW_TASK"."QUEUE"
+                        , "WORKFLOW_TASK"."PRIORITY"
+                        , "WORKFLOW_TASK"."STATUS"
+                        , "CTE_POLL"."STATUS" AS "PREVIOUS_STATUS"
+                        , "WORKFLOW_RUN"."WORKFLOW_NAME"
+                        , "WORKFLOW_RUN"."WORKFLOW_VERSION"
+                        , "WORKFLOW_TASK"."WORKFLOW_RUN_ID"
+                        , "WORKFLOW_TASK"."ACTIVITY_RUN_ID"
+                        , "WORKFLOW_TASK"."ACTIVITY_NAME"
+                        , "WORKFLOW_TASK"."ACTIVITY_INVOCATION_ID"
+                        , "WORKFLOW_TASK"."INVOKING_TASK_ID"
+                        , "WORKFLOW_TASK"."ARGUMENTS"
+                        , "WORKFLOW_TASK"."ATTEMPT"
+                        , "WORKFLOW_TASK"."STARTED_AT"
+                """);
+
+        return update
                 .bind("queue", queue)
                 .executeAndReturnGeneratedKeys("*")
                 .map(polledWorkflowTaskRowMapper)

@@ -34,9 +34,10 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
 
 class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements Runnable {
 
+    private static final Logger LOGGER = Logger.getLogger(WorkflowTaskCoordinator.class);
     private static final IntervalFunction POLL_BACKOFF_INTERVAL_FUNCTION =
             IntervalFunction.ofExponentialRandomBackoff(
-                    /* initialIntervalMillis */ 250,
+                    /* initialIntervalMillis */ 500,
                     /* multiplier */ 1.5,
                     /* randomizationFactor */ 0.3,
                     /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(5));
@@ -67,10 +68,12 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                 final PolledWorkflowTaskRow polledTask;
                 final Timer.Sample pollTimerSample = Timer.start();
                 try {
-                    polledTask = inJdbiTransaction(handle -> new WorkflowDao(handle).poll(queue)).orElse(null);
+                    polledTask = inJdbiTransaction(handle -> new WorkflowDao(handle).pollTask(queue)).orElse(null);
                 } finally {
                     pollTimerSample.stop(Timer
-                            .builder("job_engine_poll")
+                            .builder("dtrack.workflow.task.worker.poll")
+                            .tag("worker", taskWorker.getClass().getSimpleName())
+                            .tag("queue", queue)
                             .register(Metrics.getRegistry()));
                 }
                 if (polledTask == null) {
@@ -93,22 +96,32 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                      var ignoredMdcTaskQueue = MDC.putCloseable("taskQueue", polledTask.queue());
                      var ignoredMdcTaskPriority = MDC.putCloseable("taskPriority", String.valueOf(polledTask.priority()));
                      var ignoredMdcTaskAttempts = MDC.putCloseable("taskAttempt", String.valueOf(polledTask.attempt()))) {
-                    logger.debug("Processing");
+                    if (LOGGER.isDebugEnabled()) {
+                        logger.debug("Processing");
+                    }
 
                     final C context = contextFactory.apply(polledTask);
                     final Optional<R> result = taskWorker.run(context);
 
-                    workflowEngine.dispatchTaskCompletedEvent(polledTask, result.orElse(null));
-                    logger.debug("Job completed successfully");
+                    workflowEngine.dispatchTaskCompletedEvent(polledTask, result.orElse(null)) /* .join() */;
+                    if (LOGGER.isDebugEnabled()) {
+                        logger.debug("Task completed");
+                    }
                 } catch (WorkflowRunSuspendedException e) {
-                    workflowEngine.dispatchTaskSuspendedEvent(polledTask, e.getResumeCondition());
-                    logger.debug("Task suspended");
+                    workflowEngine.dispatchTaskSuspendedEvent(polledTask, e.getResumeCondition()) /* .join() */;
+                    if (LOGGER.isDebugEnabled()) {
+                        logger.debug("Task suspended", e);
+                    }
                 } catch (Exception | AssertionError e) {
-                    workflowEngine.dispatchTaskFailedEvent(polledTask, e);
-                    logger.debug("Task failed", e);
+                    workflowEngine.dispatchTaskFailedEvent(polledTask, e) /* .join() */;
+                    if (LOGGER.isDebugEnabled()) {
+                        logger.debug("Task failed", e);
+                    }
                 } finally {
                     processingTimerSample.stop(Timer
-                            .builder("job_worker_process")
+                            .builder("dtrack.workflow.task.worker.process")
+                            .tag("worker", taskWorker.getClass().getSimpleName())
+                            .tag("queue", queue)
                             .register(Metrics.getRegistry()));
                 }
             }

@@ -26,10 +26,12 @@ import java.util.UUID;
 
 public record PolledWorkflowTaskRow(
         UUID id,
-        WorkflowTaskStatus status,
-        WorkflowTaskStatus previousStatus,
         String queue,
         @Nullable Integer priority,
+        WorkflowTaskStatus status,
+        WorkflowTaskStatus previousStatus,
+        String workflowName,
+        int workflowVersion,
         UUID workflowRunId,
         @Nullable UUID activityRunId,
         @Nullable String activityName,
@@ -37,7 +39,5 @@ public record PolledWorkflowTaskRow(
         @Nullable UUID invokingTaskId,
         @Nullable String arguments,
         int attempt,
-        Instant createdAt,
-        Instant updatedAt,
         Instant startedAt) {
 }

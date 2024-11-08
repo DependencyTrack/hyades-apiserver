@@ -259,7 +259,7 @@ public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEven
             }
 
             if (!tasksToEnqueue.isEmpty()) {
-                final List<WorkflowTaskRow> createdTaskRows = dao.enqueueAllTasks(tasksToEnqueue);
+                final List<WorkflowTaskRow> createdTaskRows = dao.createAllTasks(tasksToEnqueue);
                 assert createdTaskRows.size() == tasksToEnqueue.size();
 
                 if (LOGGER.isDebugEnabled()) {
