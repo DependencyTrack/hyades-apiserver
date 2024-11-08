@@ -36,25 +36,23 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode
         }
 
         final ObjectNode arguments = ctx.arguments().get();
-        if (!arguments.has("projectUuid")) {
-            LOGGER.warn("No projectUuid argument provided");
-            return Optional.empty();
-        }
 
         try {
-            ctx.callActivity("ingest-bom", "123", null, Void.class, Duration.ZERO);
+            ctx.callActivity("ingest-bom", "123", arguments, Void.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to ingest BOM", e.getCause());
         }
 
         try {
-            ctx.callActivity("analyze-project-vulns", "456", arguments, Void.class, Duration.ZERO);
+            ctx.callActivity("scan-project-vulns", "456", arguments, Void.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
-            throw new IllegalStateException("Failed to analyze project for vulnerabilities", e.getCause());
+            throw new IllegalStateException("Failed to scan project for vulnerabilities", e.getCause());
         }
 
+        // TODO: Wait for vulnerability scan to complete.
+
         try {
-            ctx.callActivity("evaluate-project-policies", "789", null, Void.class, Duration.ZERO);
+            ctx.callActivity("evaluate-project-policies", "789", arguments, Void.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to evaluate project policies", e.getCause());
         }

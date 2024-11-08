@@ -20,12 +20,13 @@ package org.dependencytrack.tasks;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -39,7 +40,6 @@ import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.model.Bom;
@@ -64,6 +64,8 @@ import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
+import org.dependencytrack.workflow.WorkflowActivityContext;
+import org.dependencytrack.workflow.WorkflowActivityRunner;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -72,6 +74,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
@@ -84,6 +87,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -126,7 +130,7 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
  * @author Steve Springett
  * @since 3.0.0
  */
-public class BomUploadProcessingTask implements Subscriber {
+public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunner<ObjectNode, Void> {
 
     private static final class Context {
 
@@ -162,6 +166,37 @@ public class BomUploadProcessingTask implements Subscriber {
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
 
+    @Override
+    public Optional<Void> run(final WorkflowActivityContext<ObjectNode> ctx) throws Exception {
+        if (ctx.arguments().isEmpty()) {
+            throw new IllegalArgumentException("No arguments provided");
+        }
+
+        final ObjectNode arguments = ctx.arguments().get();
+        final UUID projectUuid = Optional.ofNullable(arguments.get("projectUuid"))
+                .map(JsonNode::asText)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new IllegalArgumentException("No projectUuid argument provided"));
+        final String projectName = Optional.ofNullable(arguments.get("projectName"))
+                .map(JsonNode::asText)
+                .orElse(null);
+        final String projectVersion = Optional.ofNullable(arguments.get("projectVersion"))
+                .map(JsonNode::asText)
+                .orElse(null);
+        final String bomFilePath = Optional.ofNullable(arguments.get("bomFilePath"))
+                .map(JsonNode::asText)
+                .orElseThrow(() -> new IllegalArgumentException("bomFilePath argument not provided"));
+
+        final var project = new Project();
+        project.setUuid(projectUuid);
+        project.setName(projectName);
+        project.setVersion(projectVersion);
+
+        inform(new BomUploadEvent(project, Path.of(bomFilePath).toFile()));
+
+        return Optional.empty();
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -180,7 +215,7 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void processEvent(final Context ctx, final BomUploadEvent event) {
-        startBomConsumptionWorkflowStep(ctx);
+        // startBomConsumptionWorkflowStep(ctx);
 
         final ConsumedBom consumedBom;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
@@ -199,13 +234,13 @@ public class BomUploadProcessingTask implements Subscriber {
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
-            failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
-            dispatchBomProcessingFailedNotification(ctx, e);
+            // failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
+            // dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
-        startBomProcessingWorkflowStep(ctx);
-        dispatchBomConsumedNotification(ctx);
+        // startBomProcessingWorkflowStep(ctx);
+        // dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
         try (var ignoredMdcBomFormat = MDC.putCloseable(MDC_BOM_FORMAT, ctx.bomFormat.getFormatShortName());
@@ -217,25 +252,25 @@ public class BomUploadProcessingTask implements Subscriber {
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
-            failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
-            dispatchBomProcessingFailedNotification(ctx, e);
+            // failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
+            // dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
-        completeBomProcessingWorkflowStep(ctx);
+        // completeBomProcessingWorkflowStep(ctx);
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {
-            dispatchBomProcessedNotification(ctx);
+            // dispatchBomProcessedNotification(ctx);
         }
 
-        final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
-        final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
+        // final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
+        // final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
 
-        final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
-        dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
-        dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
-        CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
+        // final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
+        // dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
+        // dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
+        // CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
     }
 
     private record ConsumedBom(
@@ -911,9 +946,9 @@ public class BomUploadProcessingTask implements Subscriber {
             }
 
             // Trigger project metrics update no matter if vuln analysis is applicable or not.
-            final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
-            metricsUpdateEvent.setChainIdentifier(ctx.token);
-            Event.dispatch(metricsUpdateEvent);
+            // final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
+            // metricsUpdateEvent.setChainIdentifier(ctx.token);
+            // Event.dispatch(metricsUpdateEvent);
 
             return Collections.emptyList();
         }

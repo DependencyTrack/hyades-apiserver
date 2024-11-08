@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.workflow.model;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 
 import java.time.Instant;
@@ -25,6 +28,7 @@ import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class WorkflowRun {
 
     private ModelState modelState;
@@ -86,22 +90,27 @@ public final class WorkflowRun {
         maybeMarkModified();
     }
 
+    @JsonIgnore
     public ModelState modelState() {
         return modelState;
     }
 
+    @JsonGetter("id")
     public UUID id() {
         return id;
     }
 
+    @JsonGetter("workflowName")
     public String workflowName() {
         return workflowName;
     }
 
+    @JsonGetter("workflowVersion")
     public int workflowVersion() {
         return workflowVersion;
     }
 
+    @JsonGetter("status")
     public WorkflowRunStatus status() {
         return status;
     }
@@ -117,6 +126,7 @@ public final class WorkflowRun {
         maybeMarkModified();
     }
 
+    @JsonGetter("priority")
     public Integer priority() {
         return priority;
     }
@@ -126,14 +136,17 @@ public final class WorkflowRun {
         maybeMarkModified();
     }
 
+    @JsonGetter("result")
     public String result() {
         return result;
     }
 
+    @JsonGetter("failureDetails")
     public String failureDetails() {
         return failureDetails;
     }
 
+    @JsonGetter("createdAt")
     public Instant createdAt() {
         return createdAt;
     }
@@ -143,14 +156,17 @@ public final class WorkflowRun {
         maybeMarkModified();
     }
 
+    @JsonGetter("updatedAt")
     public Instant updatedAt() {
         return updatedAt;
     }
 
+    @JsonGetter("startedAt")
     public Instant startedAt() {
         return startedAt;
     }
 
+    @JsonGetter("endedAt")
     public Instant endedAt() {
         return endedAt;
     }

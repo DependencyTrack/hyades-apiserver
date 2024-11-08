@@ -19,6 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,17 +30,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.workflow.WorkflowEngine;
+import org.dependencytrack.workflow.model.WorkflowRun;
+import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -85,4 +89,22 @@ public class WorkflowResource {
         }
         return Response.ok(workflowStates).build();
     }
+
+    public record WorkflowRunResponse(WorkflowRun workflowRun, List<WorkflowRunLogEntryRow> log) {
+    }
+
+    @GET
+    @Path("/run/{workflowRunId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired // TODO: For testing
+    public Response getWorkflowRun(@PathParam("workflowRunId") @ValidUuid String workflowRunId) {
+        final WorkflowRun run = WorkflowEngine.getInstance().getWorkflowRun(UUID.fromString(workflowRunId));
+        if (run == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        final List<WorkflowRunLogEntryRow> log = WorkflowEngine.getInstance().getWorkflowRunLog(UUID.fromString(workflowRunId));
+        return Response.ok(new WorkflowRunResponse(run, log)).build();
+    }
+
 }

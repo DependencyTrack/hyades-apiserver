@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_COMPLETED;
+import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_FAILED;
 import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_QUEUED;
 import static org.dependencytrack.workflow.model.WorkflowEventType.ACTIVITY_RUN_STARTED;
 
@@ -76,7 +77,9 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
             if (historyEntry.eventType() == ACTIVITY_RUN_QUEUED) {
                 queuedEvent = historyEntry;
-            } else if (historyEntry.eventType() == ACTIVITY_RUN_COMPLETED && queuedEvent != null) {
+            } else if ((historyEntry.eventType() == ACTIVITY_RUN_COMPLETED
+                        || historyEntry.eventType() == ACTIVITY_RUN_FAILED)
+                       && queuedEvent != null) {
                 completedEvent = historyEntry;
                 break;
             }
@@ -92,9 +95,14 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             return engine.deserializeJson(functionResult, resultClass);
         }
 
+        if (completedEvent.eventType() == ACTIVITY_RUN_FAILED) {
+            logger.debug("Failure of activity %s#%s found in history event %s from %s".formatted(
+                    activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
+            throw new WorkflowActivityFailedException(completedEvent.failureDetails());
+        }
+
         logger.debug("Completion of activity %s#%s found in history event %s from %s".formatted(
                 activityName, invocationId, completedEvent.eventId(), completedEvent.timestamp()));
-
         return engine.deserializeJson(completedEvent.result(), resultClass);
     }
 

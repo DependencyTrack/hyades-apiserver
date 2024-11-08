@@ -485,7 +485,8 @@ public class BomResource extends AlpineResource {
             final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
                     .put("projectUuid", project.getUuid().toString())
                     .put("projectName", project.getName())
-                    .put("projectVersion", project.getVersion());
+                    .put("projectVersion", project.getVersion())
+                    .put("bomFilePath", bomFile.getAbsolutePath());
             final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                     new StartWorkflowOptions<>("process-bom-upload", 1)
                             .withPriority(666)
@@ -526,7 +527,8 @@ public class BomResource extends AlpineResource {
                 final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
                         .put("projectUuid", project.getUuid().toString())
                         .put("projectName", project.getName())
-                        .put("projectVersion", project.getVersion());
+                        .put("projectVersion", project.getVersion())
+                        .put("bomFilePath", bomFile.getAbsolutePath());
                 final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                         new StartWorkflowOptions<>("process-bom-upload", 1)
                                 .withPriority(666)

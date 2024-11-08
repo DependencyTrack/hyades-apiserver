@@ -32,6 +32,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -72,7 +73,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -254,6 +254,8 @@ public final class WorkflowEngine implements Closeable {
         if (options.arguments() != null) {
             runRequestedBuilder.setArguments(serializeJson(options.arguments()));
         }
+
+        LOGGER.info("Starting workflow run %s".formatted(workflowRun.id()));
 
         return dispatchEvent(
                 WorkflowEvent.newBuilder()
@@ -778,15 +780,14 @@ public final class WorkflowEngine implements Closeable {
             }
         }
 
-        final String failureDetails = Optional.ofNullable(exception.getMessage())
-                .orElse(exception.getClass().getName());
-
         Timestamp nextAttempt = null;
         if (exception instanceof AssertionError && (task.attempt() + 1) <= 6) {
             final long retryDelay = taskRetryIntervalFunction.apply(task.attempt());
             final Instant nextAttemptInstant = Instant.now().plusMillis(retryDelay);
             nextAttempt = Timestamps.fromMillis(nextAttemptInstant.toEpochMilli());
         }
+
+        final String failureDetails = ExceptionUtils.getStackTrace(exception);
 
         if (task.activityName() == null) {
             final var subjectBuilder = WorkflowRunFailed.newBuilder()
