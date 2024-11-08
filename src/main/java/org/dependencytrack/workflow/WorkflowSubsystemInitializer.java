@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import org.dependencytrack.exception.TransientException;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -45,9 +46,11 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         workflowEngine.registerActivityRunner(
                 "ingest-bom", 5, new RandomlyFailingActivityRunner(random));
         workflowEngine.registerActivityRunner(
+                "analyze-project-vulns", 5, new RandomlyFailingActivityRunner(random));
+        workflowEngine.registerActivityRunner(
                 "evaluate-project-policies", 5, new RandomlyFailingActivityRunner(random));
         workflowEngine.registerActivityRunner(
-                "update-project-metrics", 5, new RandomlyFailingActivityRunner(random));
+                "update-project-metrics", 5, new ProjectMetricsUpdateTask());
     }
 
     @Override

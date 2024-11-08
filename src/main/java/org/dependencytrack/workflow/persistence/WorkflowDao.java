@@ -356,4 +356,76 @@ public class WorkflowDao {
                 .list();
     }
 
+    public List<WorkflowScheduleRow> createAllSchedules(final Collection<NewWorkflowSchedule> newSchedules) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                INSERT INTO "JOB_SCHEDULE" (
+                  "NAME"
+                , "CRON"
+                , "WORKFLOW_NAME"
+                , "WORKFLOW_VERSION"
+                , "PRIORITY"
+                , "ARGUMENTS"
+                , "CREATED_AT"
+                , "NEXT_TRIGGER"
+                ) VALUES (
+                  :name
+                , :cron
+                , :workflowName
+                , :workflowVersion
+                , :priority
+                , CAST(:arguments AS JSONB)
+                , NOW()
+                , :nextTrigger
+                )
+                RETURNING *
+                """);
+
+        for (final NewWorkflowSchedule newSchedule : newSchedules) {
+            preparedBatch
+                    .bindMethods(newSchedule)
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(ConstructorMapper.of(WorkflowScheduleRow.class))
+                .list();
+    }
+
+    public List<WorkflowScheduleRow> updateAllScheduleTriggers(
+            final Collection<WorkflowScheduleTriggerUpdate> triggerUpdates) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                UPDATE "WORKFLOW_SCHEDULE"
+                   SET "LAST_TRIGGER" = NOW()
+                     , "NEXT_TRIGGER" = :nextTrigger
+                     , "UPDATED_AT" = NOW()
+                 WHERE "ID" = :scheduleId
+                RETURNING *
+                """);
+
+        for (final WorkflowScheduleTriggerUpdate triggerUpdate : triggerUpdates) {
+            preparedBatch
+                    .bindMethods(triggerUpdate)
+                    .add();
+        }
+
+        return preparedBatch
+                .executePreparedBatch("*")
+                .map(ConstructorMapper.of(WorkflowScheduleRow.class))
+                .list();
+    }
+
+    public List<WorkflowScheduleRow> getAllDueSchedules() {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT *
+                  FROM "WORKFLOW_SCHEDULE"
+                 WHERE "NEXT_TRIGGER" <= NOW()
+                   FOR UPDATE
+                """);
+
+        return query
+                .map(ConstructorMapper.of(WorkflowScheduleRow.class))
+                .list();
+    }
+
 }

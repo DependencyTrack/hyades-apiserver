@@ -25,6 +25,8 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -333,7 +335,7 @@ public class BomResource extends AlpineResource {
                         final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
                         if (request.isLatestProjectVersion()) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
                                 return Response.status(Response.Status.FORBIDDEN)
                                         .entity("Cannot create latest version for project with this name. Access to current latest " +
                                                 "version is forbidden!")
@@ -439,7 +441,7 @@ public class BomResource extends AlpineResource {
                         }
                         if (isLatest) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
                                 return Response.status(Response.Status.FORBIDDEN)
                                         .entity("Cannot create latest version for project with this name. Access to current latest " +
                                                 "version is forbidden!")
@@ -480,10 +482,14 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
+            final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
+                    .put("projectUuid", project.getUuid().toString())
+                    .put("projectName", project.getName())
+                    .put("projectVersion", project.getVersion());
             final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                     new StartWorkflowOptions<>("process-bom-upload", 1)
                             .withPriority(666)
-                            .withArguments(/* TODO */null)).join();
+                            .withArguments(workflowArguments)).join();
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
@@ -517,10 +523,14 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
+                final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
+                        .put("projectUuid", project.getUuid().toString())
+                        .put("projectName", project.getName())
+                        .put("projectVersion", project.getVersion());
                 final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                         new StartWorkflowOptions<>("process-bom-upload", 1)
                                 .withPriority(666)
-                                .withArguments(/* TODO */null)).join();
+                                .withArguments(workflowArguments)).join();
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
@@ -646,7 +656,7 @@ public class BomResource extends AlpineResource {
                     .map(org.dependencytrack.model.Tag::getName)
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+                   || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
         }
     }
 }

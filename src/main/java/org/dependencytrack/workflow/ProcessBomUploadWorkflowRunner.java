@@ -30,6 +30,17 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode
 
     @Override
     public Optional<Void> run(final WorkflowRunContext<ObjectNode> ctx) throws Exception {
+        if (ctx.arguments().isEmpty()) {
+            LOGGER.warn("No arguments provided");
+            return Optional.empty();
+        }
+
+        final ObjectNode arguments = ctx.arguments().get();
+        if (!arguments.has("projectUuid")) {
+            LOGGER.warn("No projectUuid argument provided");
+            return Optional.empty();
+        }
+
         try {
             ctx.callActivity("ingest-bom", "123", null, Void.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
@@ -37,13 +48,19 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode
         }
 
         try {
-            ctx.callActivity("evaluate-project-policies", "456", null, Void.class, Duration.ZERO);
+            ctx.callActivity("analyze-project-vulns", "456", arguments, Void.class, Duration.ZERO);
+        } catch (WorkflowActivityFailedException e) {
+            throw new IllegalStateException("Failed to analyze project for vulnerabilities", e.getCause());
+        }
+
+        try {
+            ctx.callActivity("evaluate-project-policies", "789", null, Void.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to evaluate project policies", e.getCause());
         }
 
         try {
-            ctx.callActivity("update-project-metrics", "789", null, Void.class, Duration.ZERO);
+            ctx.callActivity("update-project-metrics", "666", arguments, ObjectNode.class, Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to update project metrics", e.getCause());
         }

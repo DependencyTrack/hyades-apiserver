@@ -19,44 +19,66 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import com.asahaf.javacron.InvalidExpressionException;
+import com.asahaf.javacron.Schedule;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.dependencytrack.workflow.model.StartWorkflowOptions;
+import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
+import org.dependencytrack.workflow.persistence.WorkflowScheduleTriggerUpdate;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 final class WorkflowScheduler implements Runnable {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowScheduler.class);
 
-    private final WorkflowEngine workflowEngine;
+    private final WorkflowEngine engine;
 
-    WorkflowScheduler(final WorkflowEngine workflowEngine) {
-        this.workflowEngine = workflowEngine;
+    WorkflowScheduler(final WorkflowEngine engine) {
+        this.engine = engine;
     }
 
     @Override
     public void run() {
-        /*final var queuedJobs = new ArrayList<WorkflowRun>();
+        if (engine.state().isStoppingOrStopped()) {
+            LOGGER.warn("Engine not running; Not scheduling workflows");
+            return;
+        }
+
+        final var startOptionsByScheduleName = new HashMap<String, StartWorkflowOptions<JsonNode>>();
 
         useJdbiTransaction(handle -> {
-            final var jobDao = new JobDao(handle);
-            final var jobScheduleDao = new JobScheduleDao(handle);
+            final var dao = new WorkflowDao(handle);
 
-            final List<JobSchedule> dueSchedules = jobScheduleDao.getAllDue();
+            final List<WorkflowScheduleRow> dueSchedules = dao.getAllDueSchedules();
             if (dueSchedules.isEmpty()) {
                 LOGGER.debug("No due schedules");
                 return;
             }
 
-            final var jobsToQueue = dueSchedules.stream()
-                    .map(schedule -> new NewJob(schedule.jobKind())
-                            .withPriority(schedule.jobPriority()))
-                    .toList();
-
-            queuedJobs.addAll(jobDao.enqueueAll(jobsToQueue));
-            if (LOGGER.isDebugEnabled()) {
-                for (final QueuedJob queuedJob : queuedJobs) {
-                    LOGGER.debug("Queued %s".formatted(queuedJob));
+            for (final WorkflowScheduleRow dueSchedule : dueSchedules) {
+                var startOptions = new StartWorkflowOptions<JsonNode>(
+                        dueSchedule.workflowName(), dueSchedule.workflowVersion());
+                if (dueSchedule.priority() != null) {
+                    startOptions = startOptions.withPriority(dueSchedule.priority());
                 }
+                if (dueSchedule.arguments() != null) {
+                    final var deserializedArguments = engine.deserializeJson(
+                            dueSchedule.arguments(), JsonNode.class);
+                    startOptions = startOptions.withArguments(deserializedArguments);
+                }
+
+                startOptionsByScheduleName.put(dueSchedule.name(), startOptions);
             }
 
-            final List<JobScheduleTriggerUpdate> triggerUpdates = dueSchedules.stream()
+            final List<WorkflowScheduleTriggerUpdate> triggerUpdates = dueSchedules.stream()
                     .map(schedule -> {
                         final Schedule cronSchedule;
                         try {
@@ -66,23 +88,26 @@ final class WorkflowScheduler implements Runnable {
                             return null;
                         }
                         final Instant nextTrigger = cronSchedule.next().toInstant();
-                        return new JobScheduleTriggerUpdate(schedule.id(), nextTrigger);
+                        return new WorkflowScheduleTriggerUpdate(schedule.id(), nextTrigger);
                     })
                     .filter(Objects::nonNull)
                     .toList();
-            final List<JobSchedule> updatedSchedules = jobScheduleDao.updateAllTriggers(triggerUpdates);
+
+            final List<WorkflowScheduleRow> updatedSchedules = dao.updateAllScheduleTriggers(triggerUpdates);
             if (LOGGER.isDebugEnabled()) {
-                for (final JobSchedule updatedSchedule : updatedSchedules) {
+                for (final WorkflowScheduleRow updatedSchedule : updatedSchedules) {
                     LOGGER.debug("Updated schedule: %s".formatted(updatedSchedule));
                 }
             }
         });
 
-        workflowEngine.dispatchEvents(queuedJobs);*/
-    }
+        final List<CompletableFuture<Void>> startWorkflowFutures = startOptionsByScheduleName.entrySet().stream()
+                .map(entry -> engine.startWorkflow(entry.getValue())
+                        .thenAccept(run -> LOGGER.info("Started run %s for workflow %s/%d from schedule %s".formatted(
+                                run.id(), run.workflowName(), run.workflowVersion(), entry.getKey()))))
+                .toList();
 
-    public void shutdown() {
-
+        CompletableFuture.allOf(startWorkflowFutures.toArray(new CompletableFuture[0])).join();
     }
 
 }

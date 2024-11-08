@@ -24,8 +24,11 @@ import java.time.Instant;
 public record WorkflowScheduleRow(
         long id,
         String name,
-        @Nullable Integer priority,
         String cron,
+        String workflowName,
+        int workflowVersion,
+        @Nullable Integer priority,
+        @Nullable String arguments,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant lastTrigger,

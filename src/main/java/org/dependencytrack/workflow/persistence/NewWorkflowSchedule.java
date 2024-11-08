@@ -18,13 +18,14 @@
  */
 package org.dependencytrack.workflow.persistence;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 
-public record NewWorkflowScheduleRow(
+public record NewWorkflowSchedule(
         String name,
         String cron,
-        String workflow,
-        @Nullable Integer priority,
+        String workflowName,
+        int workflowVersion,
+        Integer priority,
+        String arguments,
         Instant nextTrigger) {
 }

@@ -170,7 +170,10 @@
             <column name="CRON" type="TEXT">
                 <constraints nullable="false"/>
             </column>
-            <column name="WORKFLOW" type="TEXT">
+            <column name="WORKFLOW_NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="WORKFLOW_VERSION" type="SMALLINT">
                 <constraints nullable="false"/>
             </column>
             <column name="ARGUMENTS" type="JSONB"/>
@@ -179,7 +182,9 @@
             </column>
             <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
             <column name="LAST_TRIGGER" type="TIMESTAMPTZ(3)"/>
-            <column name="NEXT_TRIGGER" type="TIMESTAMPTZ(3)"/>
+            <column name="NEXT_TRIGGER" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <createTable tableName="WORKFLOW_RUN">

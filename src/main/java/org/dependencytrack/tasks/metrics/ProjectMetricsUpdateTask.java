@@ -21,30 +21,32 @@ package org.dependencytrack.tasks.metrics;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.workflow.WorkflowActivityContext;
+import org.dependencytrack.workflow.WorkflowActivityRunner;
 import org.slf4j.MDC;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
  *
  * @since 4.6.0
  */
-public class ProjectMetricsUpdateTask implements Subscriber {
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record JobArguments(UUID projectUuid, String projectName, String projectVersion) {
-    }
+public class ProjectMetricsUpdateTask implements Subscriber, WorkflowActivityRunner<ObjectNode, Void> {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
 
@@ -63,6 +65,35 @@ public class ProjectMetricsUpdateTask implements Subscriber {
                 }
             }
         }
+    }
+
+    @Override
+    public Optional<Void> run(final WorkflowActivityContext<ObjectNode> ctx) throws Exception {
+        if (ctx.arguments().isEmpty()) {
+            throw new IllegalArgumentException("No arguments provided");
+        }
+
+        final ObjectNode arguments = ctx.arguments().get();
+        final UUID projectUuid = Optional.ofNullable(arguments.get("projectUuid"))
+                .map(JsonNode::asText)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new IllegalArgumentException("No projectUuid argument provided"));
+
+        final String projectName = Optional.ofNullable(arguments.get("projectName"))
+                .map(JsonNode::asText)
+                .orElse(null);
+        final String projectVersion = Optional.ofNullable(arguments.get("projectVersion"))
+                .map(JsonNode::asText)
+                .orElse(null);
+
+        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, projectUuid.toString());
+             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, projectName);
+             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, projectVersion)) {
+            LOGGER.info("Updating project metrics");
+            Metrics.updateProjectMetrics(projectUuid);
+        }
+
+        return Optional.empty();
     }
 
     private static void updateMetrics(final UUID uuid) {

@@ -68,13 +68,13 @@ import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
-public class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent> {
+final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent> {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowEventConsumer.class);
 
     private final WorkflowEngine engine;
 
-    public WorkflowEventConsumer(
+    WorkflowEventConsumer(
             final WorkflowEngine engine,
             final KafkaConsumer<UUID, WorkflowEvent> kafkaConsumer,
             final Duration batchLingerDuration,

@@ -127,8 +127,12 @@ public final class WorkflowEngine implements Closeable {
             return equals(CREATED) || equals(STOPPED);
         }
 
+        boolean isStoppingOrStopped() {
+            return equals(STOPPING) || equals(STOPPED);
+        }
+
         boolean isNotStoppingOrStopped() {
-            return !equals(STOPPING) && !equals(STOPPED);
+            return !isStoppingOrStopped();
         }
 
         private void assertRunning() {
@@ -155,7 +159,6 @@ public final class WorkflowEngine implements Closeable {
     private KafkaClientMetrics eventKafkaProducerMetrics;
     private WorkflowActivityResultCompleter activityResultCompleter;
     private Thread activityResultCompleterThread;
-    private WorkflowScheduler scheduler;
     private ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> taskExecutorByQueue = new HashMap<>();
     private final IntervalFunction taskRetryIntervalFunction =
@@ -210,7 +213,7 @@ public final class WorkflowEngine implements Closeable {
         activityResultCompleterThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
         activityResultCompleterThread.start();
 
-        scheduler = new WorkflowScheduler(this);
+        final var scheduler = new WorkflowScheduler(this);
         schedulerExecutor = Executors.newSingleThreadScheduledExecutor(
                 new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
@@ -418,7 +421,6 @@ public final class WorkflowEngine implements Closeable {
         }
 
         LOGGER.info("Waiting for scheduler to stop");
-        scheduler.shutdown();
         schedulerExecutor.shutdown();
         try {
             final boolean terminated = schedulerExecutor.awaitTermination(30, TimeUnit.SECONDS);
