@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
-import org.dependencytrack.workflow.persistence.WorkflowScheduleTriggerUpdate;
+import org.dependencytrack.workflow.persistence.WorkflowScheduleRowTriggerUpdate;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -78,7 +78,7 @@ final class WorkflowScheduler implements Runnable {
                 startOptionsByScheduleName.put(dueSchedule.name(), startOptions);
             }
 
-            final List<WorkflowScheduleTriggerUpdate> triggerUpdates = dueSchedules.stream()
+            final List<WorkflowScheduleRowTriggerUpdate> triggerUpdates = dueSchedules.stream()
                     .map(schedule -> {
                         final Schedule cronSchedule;
                         try {
@@ -88,7 +88,7 @@ final class WorkflowScheduler implements Runnable {
                             return null;
                         }
                         final Instant nextTrigger = cronSchedule.next().toInstant();
-                        return new WorkflowScheduleTriggerUpdate(schedule.id(), nextTrigger);
+                        return new WorkflowScheduleRowTriggerUpdate(schedule.id(), nextTrigger);
                     })
                     .filter(Objects::nonNull)
                     .toList();

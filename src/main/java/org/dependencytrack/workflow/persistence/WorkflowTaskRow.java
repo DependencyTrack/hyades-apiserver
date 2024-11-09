@@ -36,8 +36,6 @@ public record WorkflowTaskRow(
         @Nullable String activityInvocationId,
         @Nullable UUID invokingTaskId,
         @Nullable String arguments,
-        @Nullable String result,
-        @Nullable String failureDetails,
         int attempt,
         Instant createdAt,
         @Nullable Instant updatedAt,

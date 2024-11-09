@@ -20,15 +20,15 @@ package org.dependencytrack.workflow;
 
 public class WorkflowActivityFailedException extends RuntimeException {
 
-    public WorkflowActivityFailedException(String message) {
+    public WorkflowActivityFailedException(final String message) {
         super(message);
     }
 
-    public WorkflowActivityFailedException(Throwable cause) {
+    public WorkflowActivityFailedException(final Throwable cause) {
         super(cause);
     }
 
-    public WorkflowActivityFailedException(String message, Throwable cause) {
+    public WorkflowActivityFailedException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

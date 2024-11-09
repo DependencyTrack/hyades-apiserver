@@ -21,9 +21,7 @@ package org.dependencytrack.workflow.model;
 public enum ModelState {
 
     NEW,
-
-    UNMODIFIED,
-
-    MODIFIED
+    CHANGED,
+    UNCHANGED
 
 }

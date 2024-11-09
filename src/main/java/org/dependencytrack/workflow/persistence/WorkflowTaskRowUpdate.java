@@ -16,23 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.model;
+package org.dependencytrack.workflow.persistence;
 
-public enum WorkflowEventType {
+import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 
-    RUN_REQUESTED,
-    RUN_QUEUED,
-    RUN_STARTED,
-    RUN_SUSPENDED,
-    RUN_RESUMED,
-    RUN_COMPLETED,
-    RUN_FAILED_TRANSIENT,
-    RUN_FAILED,
-    ACTIVITY_RUN_REQUESTED,
-    ACTIVITY_RUN_QUEUED,
-    ACTIVITY_RUN_STARTED,
-    ACTIVITY_RUN_COMPLETED,
-    ACTIVITY_RUN_FAILED_TRANSIENT,
-    ACTIVITY_RUN_FAILED
+import java.time.Instant;
+import java.util.UUID;
 
+public record WorkflowTaskRowUpdate(
+        UUID id,
+        WorkflowTaskStatus status,
+        Instant scheduledFor,
+        Instant updatedAt,
+        Instant endedAt) {
 }

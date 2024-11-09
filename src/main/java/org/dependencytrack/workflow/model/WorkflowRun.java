@@ -62,32 +62,35 @@ public final class WorkflowRun {
         this.updatedAt = runRow.updatedAt();
         this.startedAt = runRow.startedAt();
         this.endedAt = runRow.endedAt();
-        this.modelState = ModelState.UNMODIFIED;
+        this.modelState = ModelState.UNCHANGED;
     }
 
     public void start(final Instant timestamp) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.RUNNING);
         this.startedAt = timestamp;
         this.updatedAt = timestamp;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public void complete(final Instant timestamp, final String result) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.COMPLETED);
         this.result = result;
         this.failureDetails = null;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public void fail(final Instant timestamp, final String failureDetails) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.FAILED);
         this.result = null;
         this.failureDetails = failureDetails;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     @JsonIgnore
@@ -123,7 +126,7 @@ public final class WorkflowRun {
         }
 
         this.status = status;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     @JsonGetter("priority")
@@ -133,7 +136,7 @@ public final class WorkflowRun {
 
     public void setPriority(final Integer priority) {
         this.priority = priority;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     @JsonGetter("result")
@@ -153,7 +156,7 @@ public final class WorkflowRun {
 
     public void setCreatedAt(final Instant createdAt) {
         this.createdAt = createdAt;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     @JsonGetter("updatedAt")
@@ -171,9 +174,9 @@ public final class WorkflowRun {
         return endedAt;
     }
 
-    private void maybeMarkModified() {
-        if (this.modelState == ModelState.UNMODIFIED) {
-            this.modelState = ModelState.MODIFIED;
+    private void maybeMarkChanged() {
+        if (this.modelState == ModelState.UNCHANGED) {
+            this.modelState = ModelState.CHANGED;
         }
     }
 

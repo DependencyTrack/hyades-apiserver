@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.workflow.model;
 
-import org.dependencytrack.workflow.WorkflowEngine;
-
 import java.util.Set;
 
 public enum WorkflowRunStatus {

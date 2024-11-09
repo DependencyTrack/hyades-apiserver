@@ -18,14 +18,26 @@
  */
 package org.dependencytrack.workflow.serialization;
 
-public class SerializationException extends RuntimeException {
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.protobuf.util.JsonFormat;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-    public SerializationException(final Throwable cause) {
-        super(cause);
+import java.io.IOException;
+
+public class WorkflowEventJsonSerializer extends StdSerializer<WorkflowEvent> {
+
+    public WorkflowEventJsonSerializer() {
+        super(WorkflowEvent.class);
     }
 
-    public SerializationException(final String message, final Throwable cause) {
-        super(message, cause);
+    @Override
+    public void serialize(
+            final WorkflowEvent value,
+            final JsonGenerator jsonGenerator,
+            final SerializerProvider serializerProvider) throws IOException {
+        jsonGenerator.writeRawValue(JsonFormat.printer().print(value));
     }
 
 }

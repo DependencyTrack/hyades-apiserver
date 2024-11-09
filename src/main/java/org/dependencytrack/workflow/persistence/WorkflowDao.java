@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
@@ -43,7 +44,7 @@ public class WorkflowDao {
         this.queuedWorkflowTaskRowMapper = new WorkflowTaskRowMapper();
     }
 
-    public List<WorkflowRunRow> createAllRuns(final Collection<NewWorkflowRun> newRuns) {
+    public List<WorkflowRunRow> createAllRuns(final Collection<NewWorkflowRunRow> newRuns) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_RUN" (
                   "ID"
@@ -64,7 +65,7 @@ public class WorkflowDao {
                 RETURNING *
                 """);
 
-        for (final NewWorkflowRun newRun : newRuns) {
+        for (final NewWorkflowRunRow newRun : newRuns) {
             preparedBatch
                     .bindMethods(newRun)
                     .add();
@@ -76,7 +77,7 @@ public class WorkflowDao {
                 .list();
     }
 
-    public WorkflowRunRow createRun(final NewWorkflowRun newRun) {
+    public WorkflowRunRow createRun(final NewWorkflowRunRow newRun) {
         final List<WorkflowRunRow> createdRuns = createAllRuns(List.of(newRun));
         if (!createdRuns.isEmpty()) {
             return createdRuns.getFirst();
@@ -85,7 +86,7 @@ public class WorkflowDao {
         return null;
     }
 
-    public List<WorkflowRunRow> updateAllRuns(final Collection<WorkflowRunUpdate> runUpdates) {
+    public List<WorkflowRunRow> updateAllRuns(final Collection<WorkflowRunRowUpdate> runUpdates) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 WITH "CTE_RUN" AS (
                     SELECT "ID"
@@ -104,7 +105,7 @@ public class WorkflowDao {
                 RETURNING "WORKFLOW_RUN".*
                 """);
 
-        for (final WorkflowRunUpdate runUpdate : runUpdates) {
+        for (final WorkflowRunRowUpdate runUpdate : runUpdates) {
             preparedBatch
                     .bindMethods(runUpdate)
                     .add();
@@ -138,24 +139,14 @@ public class WorkflowDao {
                 , "TIMESTAMP"
                 , "EVENT_TYPE"
                 , "ACTIVITY_RUN_ID"
-                , "ACTIVITY_NAME"
-                , "ACTIVITY_INVOCATION_ID"
-                , "ACTIVITY_IS_LOCAL"
-                , "ARGUMENTS"
-                , "RESULT"
-                , "FAILURE_DETAILS"
+                , "EVENT"
                 ) VALUES (
                   :workflowRunId
                 , :eventId
                 , :timestamp
                 , CAST(:eventType AS WORKFLOW_EVENT_TYPE)
                 , :activityRunId
-                , :activityName
-                , :activityInvocationId
-                , :activityIsLocal
-                , CAST(:arguments AS JSONB)
-                , CAST(:result AS JSONB)
-                , :failureDetails
+                , :event
                 )
                 ON CONFLICT ("WORKFLOW_RUN_ID", "TIMESTAMP", "EVENT_ID") DO NOTHING
                 """);
@@ -167,14 +158,16 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerArgument(new WorkflowEventArgument.Factory())
+                .registerColumnMapper(new WorkflowEventColumnMapper())
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowRunLogEntryRow.class))
                 .list();
     }
 
-    public List<WorkflowRunLogEntryRow> getWorkflowRunLog(final UUID workflowRunId) {
+    public List<WorkflowEvent> getWorkflowRunLog(final UUID workflowRunId) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT *
+                SELECT "EVENT"
                   FROM "WORKFLOW_RUN_LOG"
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                  ORDER BY "TIMESTAMP"
@@ -182,7 +175,7 @@ public class WorkflowDao {
 
         return query
                 .bind("workflowRunId", workflowRunId)
-                .map(ConstructorMapper.of(WorkflowRunLogEntryRow.class))
+                .map(new WorkflowEventColumnMapper())
                 .list();
     }
 
@@ -206,7 +199,7 @@ public class WorkflowDao {
                 .one();
     }
 
-    public List<WorkflowTaskRow> createAllTasks(final Collection<NewWorkflowTask> newTasks) {
+    public List<WorkflowTaskRow> createAllTasks(final Collection<NewWorkflowTaskRow> newTasks) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_TASK" (
                   "ID"
@@ -237,7 +230,7 @@ public class WorkflowDao {
                 RETURNING *
                 """);
 
-        for (final NewWorkflowTask newTask : newTasks) {
+        for (final NewWorkflowTaskRow newTask : newTasks) {
             preparedBatch
                     .bind("id", newTask.id())
                     .bind("queue", newTask.queue())
@@ -258,7 +251,7 @@ public class WorkflowDao {
                 .list();
     }
 
-    public List<WorkflowTaskRow> updateAllTasks(final Collection<WorkflowTaskUpdate> taskUpdates) {
+    public List<WorkflowTaskRow> updateAllTasks(final Collection<WorkflowTaskRowUpdate> taskUpdates) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 WITH "CTE_TASK" AS (
                     SELECT "ID"
@@ -270,8 +263,6 @@ public class WorkflowDao {
                 UPDATE "WORKFLOW_TASK"
                    SET "STATUS" = :status
                      , "SCHEDULED_FOR" = :scheduledFor
-                     , "RESULT" = CAST(:result AS JSONB)
-                     , "FAILURE_DETAILS" = :failureDetails
                      , "UPDATED_AT" = :updatedAt
                      , "ENDED_AT" = :endedAt
                   FROM "CTE_TASK"
@@ -279,7 +270,7 @@ public class WorkflowDao {
                 RETURNING *
                 """);
 
-        for (final WorkflowTaskUpdate taskUpdate : taskUpdates) {
+        for (final WorkflowTaskRowUpdate taskUpdate : taskUpdates) {
             preparedBatch
                     .bindMethods(taskUpdate)
                     .add();
@@ -356,7 +347,7 @@ public class WorkflowDao {
                 .list();
     }
 
-    public List<WorkflowScheduleRow> createAllSchedules(final Collection<NewWorkflowSchedule> newSchedules) {
+    public List<WorkflowScheduleRow> createAllSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "JOB_SCHEDULE" (
                   "NAME"
@@ -380,7 +371,7 @@ public class WorkflowDao {
                 RETURNING *
                 """);
 
-        for (final NewWorkflowSchedule newSchedule : newSchedules) {
+        for (final NewWorkflowScheduleRow newSchedule : newSchedules) {
             preparedBatch
                     .bindMethods(newSchedule)
                     .add();
@@ -393,7 +384,7 @@ public class WorkflowDao {
     }
 
     public List<WorkflowScheduleRow> updateAllScheduleTriggers(
-            final Collection<WorkflowScheduleTriggerUpdate> triggerUpdates) {
+            final Collection<WorkflowScheduleRowTriggerUpdate> triggerUpdates) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 UPDATE "WORKFLOW_SCHEDULE"
                    SET "LAST_TRIGGER" = NOW()
@@ -403,7 +394,7 @@ public class WorkflowDao {
                 RETURNING *
                 """);
 
-        for (final WorkflowScheduleTriggerUpdate triggerUpdate : triggerUpdates) {
+        for (final WorkflowScheduleRowTriggerUpdate triggerUpdate : triggerUpdates) {
             preparedBatch
                     .bindMethods(triggerUpdate)
                     .add();

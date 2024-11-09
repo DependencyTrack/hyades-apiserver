@@ -37,20 +37,19 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
 import org.dependencytrack.workflow.model.ModelState;
 import org.dependencytrack.workflow.model.WorkflowActivityRunTask;
-import org.dependencytrack.workflow.model.WorkflowEventType;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowRunStatus;
 import org.dependencytrack.workflow.model.WorkflowRunTask;
 import org.dependencytrack.workflow.model.WorkflowTask;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 import org.dependencytrack.workflow.persistence.NewWorkflowRunLogEntryRow;
-import org.dependencytrack.workflow.persistence.NewWorkflowTask;
+import org.dependencytrack.workflow.persistence.NewWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
-import org.dependencytrack.workflow.persistence.WorkflowRunUpdate;
+import org.dependencytrack.workflow.persistence.WorkflowRunRowUpdate;
 import org.dependencytrack.workflow.persistence.WorkflowTaskRow;
-import org.dependencytrack.workflow.persistence.WorkflowTaskUpdate;
+import org.dependencytrack.workflow.persistence.WorkflowTaskRowUpdate;
 import org.slf4j.MDC;
 
 import java.time.Duration;
@@ -200,9 +199,9 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             // Runs must exist already. If we try to create them here, we did something wrong.
             assert runsByModelState.get(ModelState.NEW) == null;
 
-            final var runsToUpdate = new ArrayList<WorkflowRunUpdate>();
-            for (final WorkflowRun run : runsByModelState.getOrDefault(ModelState.MODIFIED, Collections.emptyList())) {
-                runsToUpdate.add(new WorkflowRunUpdate(
+            final var runsToUpdate = new ArrayList<WorkflowRunRowUpdate>();
+            for (final WorkflowRun run : runsByModelState.getOrDefault(ModelState.CHANGED, Collections.emptyList())) {
+                runsToUpdate.add(new WorkflowRunRowUpdate(
                         run.id(),
                         run.status(),
                         run.result(),
@@ -211,16 +210,16 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                         run.endedAt()));
             }
 
-            final var tasksToEnqueue = new ArrayList<NewWorkflowTask>();
+            final var tasksToEnqueue = new ArrayList<NewWorkflowTaskRow>();
             for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.NEW, Collections.emptyList())) {
                 tasksToEnqueue.add(switch (task) {
                     case WorkflowRunTask runTask ->
-                            new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
+                            new NewWorkflowTaskRow(runTask.id(), runTask.queue(), runTask.workflowRunId())
                                     .withPriority(runTask.priority())
                                     .withScheduledFor(runTask.scheduledFor())
                                     .withArguments(runTask.arguments());
                     case WorkflowActivityRunTask runTask ->
-                            new NewWorkflowTask(runTask.id(), runTask.queue(), runTask.workflowRunId())
+                            new NewWorkflowTaskRow(runTask.id(), runTask.queue(), runTask.workflowRunId())
                                     .withPriority(runTask.priority())
                                     .withScheduledFor(runTask.scheduledFor())
                                     .withArguments(runTask.arguments())
@@ -232,23 +231,21 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                 });
             }
 
-            final var tasksToUpdate = new ArrayList<WorkflowTaskUpdate>();
-            for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.MODIFIED, Collections.emptyList())) {
-                tasksToUpdate.add(new WorkflowTaskUpdate(
+            final var tasksToUpdate = new ArrayList<WorkflowTaskRowUpdate>();
+            for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.CHANGED, Collections.emptyList())) {
+                tasksToUpdate.add(new WorkflowTaskRowUpdate(
                         task.id(),
                         task.status(),
                         task.scheduledFor(),
-                        task.result(),
-                        task.failureDetails(),
                         task.updatedAt(),
                         task.endedAt()));
             }
 
             if (LOGGER.isDebugEnabled()) {
-                for (final WorkflowRun run : runsByModelState.getOrDefault(ModelState.UNMODIFIED, Collections.emptyList())) {
+                for (final WorkflowRun run : runsByModelState.getOrDefault(ModelState.UNCHANGED, Collections.emptyList())) {
                     LOGGER.debug("Workflow run unchanged: " + run.id());
                 }
-                for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.UNMODIFIED, Collections.emptyList())) {
+                for (final WorkflowTask task : taskByModelState.getOrDefault(ModelState.UNCHANGED, Collections.emptyList())) {
                     LOGGER.debug("Task unchanged: " + task.id());
                 }
             }
@@ -299,158 +296,53 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
     private static NewWorkflowRunLogEntryRow convertToHistoryEntry(final WorkflowEvent event) {
         final var workflowRunId = UUID.fromString(event.getWorkflowRunId());
         final var eventId = UUID.fromString(event.getId());
-        final var eventType = getEventType(event);
         final var eventTimestamp = Instant.ofEpochMilli(Timestamps.toMillis(event.getTimestamp()));
 
-        return switch (eventType) {
-            case RUN_REQUESTED -> new NewWorkflowRunLogEntryRow(
+        return switch (event.getSubjectCase()) {
+            case RUN_REQUESTED, RUN_QUEUED, RUN_STARTED, RUN_SUSPENDED, RUN_RESUMED,
+                 RUN_COMPLETED, RUN_FAILED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* activityIsLocal */ null,
-                    event.getRunRequested().hasArguments()
-                            ? event.getRunRequested().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
-            case RUN_STARTED -> new NewWorkflowRunLogEntryRow(
-                    workflowRunId,
-                    eventTimestamp,
-                    eventId,
-                    eventType,
-                    /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* activityIsLocal */ null,
-                    event.getRunStarted().hasArguments()
-                            ? event.getRunStarted().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
-            case RUN_QUEUED -> new NewWorkflowRunLogEntryRow(
-                    workflowRunId,
-                    eventTimestamp,
-                    eventId,
-                    eventType,
-                    /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* isLocal */ null,
-                    event.getRunQueued().hasArguments()
-                            ? event.getRunQueued().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
-            case RUN_COMPLETED -> new NewWorkflowRunLogEntryRow(
-                    workflowRunId,
-                    eventTimestamp,
-                    eventId,
-                    eventType,
-                    /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* isLocal */ null,
-                    /* arguments */ null,
-                    event.getRunCompleted().hasResult()
-                            ? event.getRunCompleted().getResult()
-                            : null,
-                    /* failureDetails */ null);
-            case RUN_FAILED, RUN_FAILED_TRANSIENT -> new NewWorkflowRunLogEntryRow(
-                    workflowRunId,
-                    eventTimestamp,
-                    eventId,
-                    eventType,
-                    /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* isLocal */ null,
-                    /* arguments */ null,
-                    /* result */ null,
-                    event.getRunFailed().getFailureDetails());
+                    event);
             case ACTIVITY_RUN_REQUESTED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     UUID.fromString(event.getActivityRunRequested().getRunId()),
-                    event.getActivityRunRequested().getActivityName(),
-                    event.getActivityRunRequested().getInvocationId(),
-                    /* isLocal */ false,
-                    event.getActivityRunRequested().hasArguments()
-                            ? event.getActivityRunRequested().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
+                    event);
             case ACTIVITY_RUN_QUEUED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     UUID.fromString(event.getActivityRunQueued().getRunId()),
-                    event.getActivityRunQueued().getActivityName(),
-                    event.getActivityRunQueued().getInvocationId(),
-                    /* isLocal */ false,
-                    event.getActivityRunQueued().hasArguments()
-                            ? event.getActivityRunQueued().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
+                    event);
             case ACTIVITY_RUN_STARTED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     UUID.fromString(event.getActivityRunStarted().getRunId()),
-                    event.getActivityRunStarted().getActivityName(),
-                    event.getActivityRunStarted().getInvocationId(),
-                    event.getActivityRunStarted().getIsLocal(),
-                    event.getActivityRunStarted().hasArguments()
-                            ? event.getActivityRunStarted().getArguments()
-                            : null,
-                    /* result */ null,
-                    /* failureDetails */ null);
+                    event);
             case ACTIVITY_RUN_COMPLETED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     UUID.fromString(event.getActivityRunCompleted().getRunId()),
-                    event.getActivityRunCompleted().getActivityName(),
-                    event.getActivityRunCompleted().getInvocationId(),
-                    event.getActivityRunCompleted().getIsLocal(),
-                    /* arguments */ null,
-                    event.getActivityRunCompleted().hasResult()
-                            ? event.getActivityRunCompleted().getResult()
-                            : null,
-                    /* failureDetails */ null);
-            case ACTIVITY_RUN_FAILED, ACTIVITY_RUN_FAILED_TRANSIENT -> new NewWorkflowRunLogEntryRow(
+                    event);
+            case ACTIVITY_RUN_FAILED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
-                    eventType,
+                    event.getSubjectCase(),
                     UUID.fromString(event.getActivityRunFailed().getRunId()),
-                    event.getActivityRunFailed().getActivityName(),
-                    event.getActivityRunFailed().getInvocationId(),
-                    event.getActivityRunFailed().getIsLocal(),
-                    /* arguments */ null,
-                    /* result */ null,
-                    event.getActivityRunFailed().getFailureDetails());
-            case RUN_SUSPENDED, RUN_RESUMED -> new NewWorkflowRunLogEntryRow(
-                    workflowRunId,
-                    eventTimestamp,
-                    eventId,
-                    eventType,
-                    /* activityRunId */ null,
-                    /* activityName */ null,
-                    /* activityInvocationId */ null,
-                    /* activityIsLocal */ null,
-                    /* arguments */ null,
-                    /* result */ null,
-                    /* failureDetails */ null);
+                    event);
+            case SUBJECT_NOT_SET -> throw new IllegalStateException("Subject not set");
         };
     }
 
@@ -537,7 +429,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             final WorkflowRunCompleted subject) {
         LOGGER.debug("Completing workflow run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
-        task.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
+        task.complete(ctx.eventTimestamp());
 
         LOGGER.debug("Completing workflow run");
         final WorkflowRun run = ctx.getRunById(ctx.workflowRunId());
@@ -553,7 +445,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         LOGGER.debug("Failing workflow run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
-        task.fail(ctx.eventTimestamp(), subject.getFailureDetails(), nextAttemptAt);
+        task.fail(ctx.eventTimestamp(), nextAttemptAt);
 
         if (task.status() == WorkflowTaskStatus.FAILED) {
             LOGGER.debug("Failing workflow run because task failure is not retryable");
@@ -629,7 +521,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         LOGGER.debug("Completing activity run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
-        task.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
+        task.complete(ctx.eventTimestamp());
 
         final var invokingTask = (WorkflowRunTask) ctx.getTaskById(subject.getInvokingTaskId());
         if (invokingTask.status() == WorkflowTaskStatus.SUSPENDED) {
@@ -652,7 +544,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         LOGGER.debug("Failing activity run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
-        task.fail(ctx.eventTimestamp(), subject.getFailureDetails(), nextAttemptAt);
+        task.fail(ctx.eventTimestamp(), nextAttemptAt);
 
         if (task.status() == WorkflowTaskStatus.FAILED) {
             final var invokingTask = (WorkflowRunTask) ctx.getTaskById(subject.getInvokingTaskId());
@@ -663,28 +555,6 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                 invokingTask.resume(ctx.eventTimestamp());
             }
         }
-    }
-
-    private static WorkflowEventType getEventType(final WorkflowEvent event) {
-        return switch (event.getSubjectCase()) {
-            case RUN_REQUESTED -> WorkflowEventType.RUN_REQUESTED;
-            case RUN_QUEUED -> WorkflowEventType.RUN_QUEUED;
-            case RUN_STARTED -> WorkflowEventType.RUN_STARTED;
-            case RUN_SUSPENDED -> WorkflowEventType.RUN_SUSPENDED;
-            case RUN_RESUMED -> WorkflowEventType.RUN_RESUMED;
-            case RUN_COMPLETED -> WorkflowEventType.RUN_COMPLETED;
-            case RUN_FAILED -> event.getRunFailed().hasNextAttemptAt()
-                    ? WorkflowEventType.RUN_FAILED_TRANSIENT
-                    : WorkflowEventType.RUN_FAILED;
-            case ACTIVITY_RUN_REQUESTED -> WorkflowEventType.ACTIVITY_RUN_REQUESTED;
-            case ACTIVITY_RUN_QUEUED -> WorkflowEventType.ACTIVITY_RUN_QUEUED;
-            case ACTIVITY_RUN_STARTED -> WorkflowEventType.ACTIVITY_RUN_STARTED;
-            case ACTIVITY_RUN_COMPLETED -> WorkflowEventType.ACTIVITY_RUN_COMPLETED;
-            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().hasNextAttemptAt()
-                    ? WorkflowEventType.ACTIVITY_RUN_FAILED_TRANSIENT
-                    : WorkflowEventType.ACTIVITY_RUN_FAILED;
-            case SUBJECT_NOT_SET -> throw new IllegalArgumentException("Subject not set");
-        };
     }
 
 }

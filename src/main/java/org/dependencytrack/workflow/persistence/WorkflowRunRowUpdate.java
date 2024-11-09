@@ -18,14 +18,16 @@
  */
 package org.dependencytrack.workflow.persistence;
 
-import java.time.Instant;
+import org.dependencytrack.workflow.model.WorkflowRunStatus;
 
-public record NewWorkflowSchedule(
-        String name,
-        String cron,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        String arguments,
-        Instant nextTrigger) {
+import java.time.Instant;
+import java.util.UUID;
+
+public record WorkflowRunRowUpdate(
+        UUID id,
+        WorkflowRunStatus status,
+        String result,
+        String failureDetails,
+        Instant updatedAt,
+        Instant endedAt) {
 }

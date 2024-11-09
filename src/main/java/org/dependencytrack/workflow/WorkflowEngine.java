@@ -56,11 +56,12 @@ import org.dependencytrack.workflow.WorkflowActivityResultCompleter.ActivityResu
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
-import org.dependencytrack.workflow.persistence.NewWorkflowRun;
+import org.dependencytrack.workflow.persistence.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
+import org.dependencytrack.workflow.serialization.SerializationException;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufSerializer;
 import org.jdbi.v3.core.generic.GenericTypes;
@@ -233,7 +234,7 @@ public final class WorkflowEngine implements Closeable {
 
         final WorkflowRun workflowRun = inJdbiTransaction(handle -> {
             final WorkflowRunRow workflowRunRow = new WorkflowDao(handle).createRun(
-                    new NewWorkflowRun(
+                    new NewWorkflowRunRow(
                             UUID.randomUUID(),
                             options.name(),
                             options.version(),
@@ -474,7 +475,7 @@ public final class WorkflowEngine implements Closeable {
         return null;
     }
 
-    public List<WorkflowRunLogEntryRow> getWorkflowRunLog(final UUID workflowRunId) {
+    public List<WorkflowEvent> getWorkflowRunLog(final UUID workflowRunId) {
         return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunLog(workflowRunId));
     }
 
@@ -519,7 +520,7 @@ public final class WorkflowEngine implements Closeable {
         }
 
         final ActivityResultWatch resultWatch =
-                activityResultCompleter.watchActivityResult(workflowRunId, activityName, invocationId);
+                activityResultCompleter.watchActivityResult(activityRunId);
         try {
             return resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
@@ -620,7 +621,7 @@ public final class WorkflowEngine implements Closeable {
         try {
             return jsonMapper.readValue(json, clazz);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new SerializationException(e);
         }
     }
 
@@ -632,7 +633,7 @@ public final class WorkflowEngine implements Closeable {
         try {
             return jsonMapper.readValue(json, type);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new SerializationException(e);
         }
     }
 
@@ -644,7 +645,7 @@ public final class WorkflowEngine implements Closeable {
         try {
             return jsonMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new SerializationException(e);
         }
     }
 

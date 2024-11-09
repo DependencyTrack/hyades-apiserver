@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,9 +35,10 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.model.WorkflowRun;
-import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
+import org.dependencytrack.workflow.serialization.WorkflowEventJsonSerializer;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -90,20 +92,22 @@ public class WorkflowResource {
         return Response.ok(workflowStates).build();
     }
 
-    public record WorkflowRunResponse(WorkflowRun workflowRun, List<WorkflowRunLogEntryRow> log) {
+    public record WorkflowRunResponse(
+            WorkflowRun run,
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> log) {
     }
 
     @GET
-    @Path("/run/{workflowRunId}")
+    @Path("/run/{runId}")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired // TODO: For testing
-    public Response getWorkflowRun(@PathParam("workflowRunId") @ValidUuid String workflowRunId) {
-        final WorkflowRun run = WorkflowEngine.getInstance().getWorkflowRun(UUID.fromString(workflowRunId));
+    public Response getWorkflowRun(@PathParam("runId") @ValidUuid String runId) {
+        final WorkflowRun run = WorkflowEngine.getInstance().getWorkflowRun(UUID.fromString(runId));
         if (run == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        final List<WorkflowRunLogEntryRow> log = WorkflowEngine.getInstance().getWorkflowRunLog(UUID.fromString(workflowRunId));
+        final List<WorkflowEvent> log = WorkflowEngine.getInstance().getWorkflowRunLog(UUID.fromString(runId));
         return Response.ok(new WorkflowRunResponse(run, log)).build();
     }
 

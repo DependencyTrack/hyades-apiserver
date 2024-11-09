@@ -19,21 +19,8 @@
 package org.dependencytrack.workflow.persistence;
 
 import java.time.Instant;
-import java.util.UUID;
 
-import static java.util.Objects.requireNonNull;
-
-public record NewWorkflowRun(
-        UUID id,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        Instant createdAt) {
-
-    public NewWorkflowRun {
-        requireNonNull(id, "id must not be null");
-        requireNonNull(workflowName, "workflowName must not be null");
-        requireNonNull(createdAt, "createdAt must not be null");
-    }
-
+public record WorkflowScheduleRowTriggerUpdate(
+        long scheduleId,
+        Instant nextTrigger) {
 }

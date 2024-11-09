@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
-import org.dependencytrack.workflow.model.WorkflowEventType;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,12 +27,7 @@ public record NewWorkflowRunLogEntryRow(
         UUID workflowRunId,
         Instant timestamp,
         UUID eventId,
-        WorkflowEventType eventType,
+        WorkflowEvent.SubjectCase eventType,
         UUID activityRunId,
-        String activityName,
-        String activityInvocationId,
-        Boolean activityIsLocal,
-        String arguments,
-        String result,
-        String failureDetails) {
+        WorkflowEvent event) {
 }

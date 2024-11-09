@@ -52,13 +52,11 @@ public final class WorkflowActivityRunTask extends WorkflowTask {
         setPriority(taskRow.priority());
         setScheduledFor(taskRow.scheduledFor());
         setArguments(taskRow.arguments());
-        setResult(taskRow.result());
-        setFailureDetails(taskRow.failureDetails());
         setCreatedAt(taskRow.createdAt());
         setUpdatedAt(taskRow.updatedAt());
         setStartedAt(taskRow.startedAt());
         setEndedAt(/* TODO */ null);
-        setModelState(ModelState.UNMODIFIED);
+        setModelState(ModelState.UNCHANGED);
     }
 
     public UUID activityRunId() {

@@ -23,6 +23,8 @@ import org.dependencytrack.workflow.persistence.WorkflowTaskRow;
 import java.time.Instant;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 public final class WorkflowRunTask extends WorkflowTask {
 
     public WorkflowRunTask(final UUID workflowRunId, final String queue) {
@@ -36,25 +38,25 @@ public final class WorkflowRunTask extends WorkflowTask {
         setPriority(taskRow.priority());
         setScheduledFor(taskRow.scheduledFor());
         setArguments(taskRow.arguments());
-        setResult(taskRow.result());
-        setFailureDetails(taskRow.failureDetails());
         setCreatedAt(taskRow.createdAt());
         setUpdatedAt(taskRow.updatedAt());
         setStartedAt(taskRow.startedAt());
         setEndedAt(/* TODO */ null);
-        setModelState(ModelState.UNMODIFIED);
+        setModelState(ModelState.UNCHANGED);
     }
 
     public void suspend(final Instant timestamp) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.SUSPENDED);
         setUpdatedAt(timestamp);
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public void resume(final Instant timestamp) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.PENDING_RESUME);
         setUpdatedAt(timestamp);
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
 }

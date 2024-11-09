@@ -19,10 +19,9 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.workflow.model.WorkflowEventType;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.persistence.WorkflowEventColumnMapper;
 
-import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static net.logstash.logback.util.StringUtils.trimToNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class WorkflowActivityResultCompleter implements Runnable {
@@ -39,18 +39,6 @@ public class WorkflowActivityResultCompleter implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(WorkflowActivityResultCompleter.class);
 
     private final AtomicBoolean isStopped = new AtomicBoolean(false);
-
-    public record Bar(
-            UUID workflowRunId,
-            String activityName,
-            String activityInvocationId,
-            WorkflowEventType eventType,
-            @Nullable String result,
-            @Nullable String failureDetails) {
-    }
-
-    private record ActivityId(UUID workflowRunId, String functionName, String invocationId) {
-    }
 
     static final class ActivityResultWatch {
 
@@ -76,14 +64,14 @@ public class WorkflowActivityResultCompleter implements Runnable {
 
     }
 
-    private final Map<ActivityId, ActivityResultWatch> watchByActivityId = new ConcurrentHashMap<>();
+    private final Map<UUID, ActivityResultWatch> watchByActivityRunId = new ConcurrentHashMap<>();
 
     @Override
     public void run() {
         while (!isStopped.get()) {
-            watchByActivityId.values().removeIf(ActivityResultWatch::isCancelled);
+            watchByActivityRunId.values().removeIf(ActivityResultWatch::isCancelled);
 
-            if (watchByActivityId.isEmpty()) {
+            if (watchByActivityRunId.isEmpty()) {
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
@@ -97,53 +85,43 @@ public class WorkflowActivityResultCompleter implements Runnable {
             var filterParams = new HashMap<String, Object>();
 
             var i = 0;
-            for (final ActivityId activityId : watchByActivityId.keySet()) {
+            for (final UUID activityRunId : watchByActivityRunId.keySet()) {
                 i++;
 
-                filterParts.add("""
-                        "WORKFLOW_RUN_ID" = :workflowRunId%d \
-                        AND "ACTIVITY_NAME" = :activityName%d \
-                        AND "ACTIVITY_INVOCATION_ID" = :activityInvocationId%d \
-                        """.formatted(i, i, i));
-                filterParams.put("workflowRunId" + i, activityId.workflowRunId());
-                filterParams.put("activityName" + i, activityId.functionName());
-                filterParams.put("activityInvocationId" + i, activityId.invocationId());
+                filterParts.add("\"ACTIVITY_RUN_ID\" = :activityRunId%d".formatted(i));
+                filterParams.put("activityRunId" + i, activityRunId);
             }
 
             final var subQueries = new ArrayList<String>();
             for (final String filterPart : filterParts) {
                 subQueries.add("""
-                                       SELECT "WORKFLOW_RUN_ID"
-                                            , "ACTIVITY_NAME"
-                                            , "ACTIVITY_INVOCATION_ID"
-                                            , "EVENT_TYPE"
-                                            , "RESULT"
-                                            , "FAILURE_DETAILS"
+                                       SELECT "EVENT"
                                          FROM "WORKFLOW_RUN_LOG"
                                         WHERE "EVENT_TYPE" IN ('ACTIVITY_RUN_COMPLETED', 'ACTIVITY_RUN_FAILED')
                                         AND \
                                        """ + filterPart);
             }
 
-            final List<Bar> results = withJdbiHandle(handle -> handle
+            final List<WorkflowEvent> events = withJdbiHandle(handle -> handle
                     .createQuery(String.join(" UNION ALL ", subQueries))
                     .bindMap(filterParams)
-                    .map(ConstructorMapper.of(Bar.class))
+                    .map(new WorkflowEventColumnMapper())
                     .list());
-            for (final Bar bar : results) {
-                final var functionId = new ActivityId(
-                        bar.workflowRunId(), bar.activityName(), bar.activityInvocationId());
-                final ActivityResultWatch watch = watchByActivityId.get(functionId);
+            for (final WorkflowEvent event : events) {
+                final UUID activityRunId = extractActivityRunId(event);
+                final ActivityResultWatch watch = watchByActivityRunId.get(activityRunId);
                 if (watch != null) {
-                    if (bar.eventType() == WorkflowEventType.ACTIVITY_RUN_COMPLETED) {
-                        watch.result().complete(bar.result());
-                        LOGGER.info("Completed %s: %s".formatted(functionId, bar.result()));
-                        watchByActivityId.remove(functionId);
-                    } else if (bar.eventType() == WorkflowEventType.ACTIVITY_RUN_FAILED) {
-                        final var exception = new WorkflowActivityFailedException(bar.failureDetails());
+                    if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED) {
+                        watch.result().complete(trimToNull(event.getActivityRunCompleted().getResult()));
+                        LOGGER.debug("Completed %s".formatted(activityRunId));
+                        watchByActivityRunId.remove(activityRunId);
+                    } else if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_FAILED
+                               && !event.getActivityRunFailed().hasNextAttemptAt()) {
+                        final var exception = new WorkflowActivityFailedException(
+                                event.getActivityRunFailed().getFailureDetails());
                         watch.result().completeExceptionally(exception);
-                        LOGGER.warn("Completed %s exceptionally".formatted(functionId), exception);
-                        watchByActivityId.remove(functionId);
+                        LOGGER.debug("Completed %s exceptionally".formatted(activityRunId));
+                        watchByActivityRunId.remove(activityRunId);
                     } else {
                         assert false;
                     }
@@ -162,15 +140,23 @@ public class WorkflowActivityResultCompleter implements Runnable {
         isStopped.set(true);
     }
 
-    ActivityResultWatch watchActivityResult(
-            final UUID workflowRunId,
-            final String activityName,
-            final String invocationId) {
-        final var functionId = new ActivityId(workflowRunId, activityName, invocationId);
+    ActivityResultWatch watchActivityResult(final UUID activityRunId) {
         final var watch = new ActivityResultWatch();
-
-        final ActivityResultWatch existingWatch = watchByActivityId.putIfAbsent(functionId, watch);
+        final ActivityResultWatch existingWatch = watchByActivityRunId.putIfAbsent(activityRunId, watch);
         return existingWatch != null ? existingWatch : watch;
+    }
+
+    private static UUID extractActivityRunId(final WorkflowEvent event) {
+        final String activityRunId = switch (event.getSubjectCase()) {
+            case ACTIVITY_RUN_REQUESTED -> event.getActivityRunRequested().getRunId();
+            case ACTIVITY_RUN_QUEUED -> event.getActivityRunQueued().getRunId();
+            case ACTIVITY_RUN_STARTED -> event.getActivityRunStarted().getRunId();
+            case ACTIVITY_RUN_COMPLETED -> event.getActivityRunCompleted().getRunId();
+            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().getRunId();
+            default -> throw new IllegalStateException("Not an activity run event");
+        };
+
+        return UUID.fromString(activityRunId);
     }
 
 }

@@ -16,16 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.serialization;
+package org.dependencytrack.workflow.persistence;
 
-public class SerializationException extends RuntimeException {
+import java.time.Instant;
+import java.util.UUID;
 
-    public SerializationException(final Throwable cause) {
-        super(cause);
-    }
+import static java.util.Objects.requireNonNull;
 
-    public SerializationException(final String message, final Throwable cause) {
-        super(message, cause);
+public record NewWorkflowRunRow(
+        UUID id,
+        String workflowName,
+        int workflowVersion,
+        Integer priority,
+        Instant createdAt) {
+
+    public NewWorkflowRunRow {
+        requireNonNull(id, "id must not be null");
+        requireNonNull(workflowName, "workflowName must not be null");
+        requireNonNull(createdAt, "createdAt must not be null");
     }
 
 }

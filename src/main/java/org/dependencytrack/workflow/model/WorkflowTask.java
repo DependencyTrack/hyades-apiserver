@@ -33,8 +33,6 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     private Integer priority;
     private Instant scheduledFor;
     private String arguments;
-    private String result;
-    private String failureDetails;
     private int attempt;
     private Instant createdAt;
     private Instant updatedAt;
@@ -44,25 +42,23 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     public WorkflowTask(final UUID workflowRunId, final String queue) {
         this.workflowRunId = requireNonNull(workflowRunId, "workflowRunId must not be null");
         this.id = UUID.randomUUID();
-        this.queue = queue;
+        this.queue = requireNonNull(queue, "queue must not be null");
         this.modelState = ModelState.NEW;
     }
 
-    public void complete(final Instant timestamp, final String result) {
+    public void complete(final Instant timestamp) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.COMPLETED);
-        this.result = result;
-        this.failureDetails = null;
         this.updatedAt = timestamp;
         this.endedAt = timestamp;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
-    public void fail(final Instant timestamp, final String failureDetails, final Instant nextAttemptAt) {
+    public void fail(final Instant timestamp, final Instant nextAttemptAt) {
+        requireNonNull(timestamp, "timestamp must not be null");
         setStatus(nextAttemptAt != null
                 ? WorkflowTaskStatus.PENDING_RETRY
                 : WorkflowTaskStatus.FAILED);
-        this.result = null;
-        this.failureDetails = failureDetails;
         if (nextAttemptAt != null) {
             this.scheduledFor = nextAttemptAt;
         }
@@ -70,7 +66,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         if (this.status == WorkflowTaskStatus.FAILED) {
             this.endedAt = timestamp;
         }
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public ModelState modelState() {
@@ -109,7 +105,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         }
 
         this.status = status;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     void setStatusInternal(final WorkflowTaskStatus status) {
@@ -122,7 +118,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
 
     public void setPriority(final Integer priority) {
         this.priority = priority;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public Instant scheduledFor() {
@@ -131,7 +127,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
 
     public void setScheduledFor(final Instant scheduledFor) {
         this.scheduledFor = scheduledFor;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public String arguments() {
@@ -140,23 +136,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
 
     public void setArguments(final String arguments) {
         this.arguments = arguments;
-        maybeMarkModified();
-    }
-
-    public String result() {
-        return result;
-    }
-
-    void setResult(final String result) {
-        this.result = result;
-    }
-
-    public String failureDetails() {
-        return failureDetails;
-    }
-
-    void setFailureDetails(final String failureDetails) {
-        this.failureDetails = failureDetails;
+        maybeMarkChanged();
     }
 
     public int attempt() {
@@ -165,7 +145,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
 
     public void setAttempt(final int attempt) {
         this.attempt = attempt;
-        maybeMarkModified();
+        maybeMarkChanged();
     }
 
     public Instant createdAt() {
@@ -200,9 +180,9 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         this.endedAt = endedAt;
     }
 
-    void maybeMarkModified() {
-        if (this.modelState == ModelState.UNMODIFIED) {
-            this.modelState = ModelState.MODIFIED;
+    void maybeMarkChanged() {
+        if (this.modelState == ModelState.UNCHANGED) {
+            this.modelState = ModelState.CHANGED;
         }
     }
 
