@@ -27,6 +27,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowRunStatus;
+import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,11 +39,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.workflow.serialization.Serdes.jsonSerde;
@@ -301,6 +304,33 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_FAILED));
+    }
+
+    @Test
+    public void shouldNotAllowMultiplePendingWorkflowsWithSameUniqueKey() {
+        final var uniqueKey = UUID.fromString("04146bb6-233c-4957-98b5-c4b394b1fbd4");
+
+        final WorkflowRun workflowRun = engine.startWorkflow(
+                new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join();
+
+        // TODO: Use a proper exception.
+        assertThatExceptionOfType(UnableToExecuteStatementException.class)
+                .isThrownBy(() -> engine.startWorkflow(
+                        new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join());
+
+        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> Optional.empty());
+
+        await("Workflow run completion")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
+                    assertThat(currentWorkflowRun).isNotNull();
+                    assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                });
+
+        assertThatNoException()
+                .isThrownBy(() -> engine.startWorkflow(
+                        new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join());
     }
 
 }

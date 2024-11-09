@@ -52,6 +52,7 @@ public class WorkflowDao {
                 , "WORKFLOW_VERSION"
                 , "STATUS"
                 , "PRIORITY"
+                , "UNIQUE_KEY"
                 , "CREATED_AT"
                 ) VALUES (
                   :id
@@ -59,6 +60,7 @@ public class WorkflowDao {
                 , :workflowVersion
                 , 'PENDING'
                 , :priority
+                , :uniqueKey
                 , :createdAt
                 )
                 ON CONFLICT ("ID") DO NOTHING
@@ -355,6 +357,7 @@ public class WorkflowDao {
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
                 , "PRIORITY"
+                , "UNIQUE_KEY"
                 , "ARGUMENTS"
                 , "CREATED_AT"
                 , "NEXT_TRIGGER"
@@ -364,6 +367,7 @@ public class WorkflowDao {
                 , :workflowName
                 , :workflowVersion
                 , :priority
+                , :uniqueKey
                 , :arguments
                 , NOW()
                 , :nextTrigger

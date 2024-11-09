@@ -28,6 +28,7 @@ public record NewWorkflowRunRow(
         String workflowName,
         int workflowVersion,
         Integer priority,
+        UUID uniqueKey,
         Instant createdAt) {
 
     public NewWorkflowRunRow {

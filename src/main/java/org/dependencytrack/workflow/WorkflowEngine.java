@@ -241,6 +241,7 @@ public final class WorkflowEngine implements Closeable {
                             options.name(),
                             options.version(),
                             options.priority(),
+                            options.uniqueKey(),
                             Instant.now()
                     ));
 
@@ -295,6 +296,7 @@ public final class WorkflowEngine implements Closeable {
                                 options.workflowName(),
                                 options.workflowVersion(),
                                 options.priority(),
+                                options.uniqueKey(),
                                 options.arguments(),
                                 nextTrigger)));
     }

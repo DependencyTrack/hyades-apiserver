@@ -36,10 +36,11 @@ public final class WorkflowRun {
     private final String workflowName;
     private final int workflowVersion;
     private WorkflowRunStatus status;
-    private Integer priority;
+    private final Integer priority;
+    private final UUID uniqueKey;
     private byte[] result;
     private String failureDetails;
-    private Instant createdAt;
+    private final Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
     private Instant endedAt;
@@ -49,6 +50,8 @@ public final class WorkflowRun {
         this.workflowName = runRow.workflowName();
         this.workflowVersion = runRow.workflowVersion();
         this.status = runRow.status();
+        this.priority = runRow.priority();
+        this.uniqueKey = runRow.uniqueKey();
         this.result = runRow.result();
         this.failureDetails = runRow.failureDetails();
         this.createdAt = runRow.createdAt();
@@ -127,9 +130,9 @@ public final class WorkflowRun {
         return priority;
     }
 
-    public void setPriority(final Integer priority) {
-        this.priority = priority;
-        maybeMarkChanged();
+    @JsonGetter("uniqueKey")
+    public UUID uniqueKey() {
+        return uniqueKey;
     }
 
     @JsonIgnore
@@ -145,11 +148,6 @@ public final class WorkflowRun {
     @JsonGetter("createdAt")
     public Instant createdAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(final Instant createdAt) {
-        this.createdAt = createdAt;
-        maybeMarkChanged();
     }
 
     @JsonGetter("updatedAt")

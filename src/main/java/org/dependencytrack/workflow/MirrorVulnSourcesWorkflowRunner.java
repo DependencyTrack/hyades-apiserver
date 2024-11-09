@@ -24,10 +24,13 @@ import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.NistMirrorTask;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
 public class MirrorVulnSourcesWorkflowRunner implements WorkflowRunner<Void, Void> {
+
+    public static final UUID UNIQUE_KEY = UUID.fromString("7c078ec3-cd93-4b84-ba47-1854fe9da0e4");
 
     @Override
     public Optional<Void> run(final WorkflowRunContext<Void> ctx) throws Exception {

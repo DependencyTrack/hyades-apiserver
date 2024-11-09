@@ -82,10 +82,11 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
                 "Vulnerability Sources Mirroring",
                 "0 4 * * *",
-                "mirror-vuln-sources",
-                1,
-                null,
-                null));
+                /* workflowName */ "mirror-vuln-sources",
+                /* workflowVersion */ 1,
+                /* priority */ null,
+                MirrorVulnSourcesWorkflowRunner.UNIQUE_KEY,
+                /* arguments */ null));
     }
 
     @Override

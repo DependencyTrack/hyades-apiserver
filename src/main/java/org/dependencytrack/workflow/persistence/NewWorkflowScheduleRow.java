@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.persistence;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record NewWorkflowScheduleRow(
         String name,
@@ -26,6 +27,7 @@ public record NewWorkflowScheduleRow(
         String workflowName,
         int workflowVersion,
         Integer priority,
+        UUID uniqueKey,
         byte[] arguments,
         Instant nextTrigger) {
 }

@@ -20,22 +20,28 @@ package org.dependencytrack.workflow.model;
 
 import org.dependencytrack.workflow.serialization.Serde;
 
-public record StartWorkflowOptions(String name, int version, Integer priority, byte[] arguments) {
+import java.util.UUID;
+
+public record StartWorkflowOptions(String name, int version, Integer priority, UUID uniqueKey, byte[] arguments) {
 
     public StartWorkflowOptions(final String name, final int version) {
-        this(name, version, null, null);
+        this(name, version, null, null, null);
     }
 
     public StartWorkflowOptions withPriority(final Integer priority) {
-        return new StartWorkflowOptions(this.name, this.version, priority, this.arguments);
+        return new StartWorkflowOptions(this.name, this.version, priority, this.uniqueKey, this.arguments);
+    }
+
+    public StartWorkflowOptions withUniqueKey(final UUID uniqueKey) {
+        return new StartWorkflowOptions(this.name, this.version, this.priority, uniqueKey, this.arguments);
     }
 
     public StartWorkflowOptions withArguments(final byte[] arguments) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, arguments);
+        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey, arguments);
     }
 
     public <T> StartWorkflowOptions withArguments(final T arguments, final Serde<T> argumentsSerde) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, argumentsSerde.serialize(arguments));
+        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey, argumentsSerde.serialize(arguments));
     }
 
 }

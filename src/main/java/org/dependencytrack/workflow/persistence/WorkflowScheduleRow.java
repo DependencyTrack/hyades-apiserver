@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.persistence;
 
 import jakarta.annotation.Nullable;
 import java.time.Instant;
+import java.util.UUID;
 
 public record WorkflowScheduleRow(
         long id,
@@ -28,6 +29,7 @@ public record WorkflowScheduleRow(
         String workflowName,
         int workflowVersion,
         @Nullable Integer priority,
+        @Nullable UUID uniqueKey,
         @Nullable byte[] arguments,
         Instant createdAt,
         @Nullable Instant updatedAt,
