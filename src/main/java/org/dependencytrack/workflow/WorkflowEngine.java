@@ -59,7 +59,6 @@ import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 import org.dependencytrack.workflow.persistence.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
-import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 import org.dependencytrack.workflow.serialization.SerializationException;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
@@ -74,6 +73,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -209,7 +209,7 @@ public final class WorkflowEngine implements Closeable {
         eventConsumerThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
         eventConsumerThread.start();
 
-        activityResultCompleter = new WorkflowActivityResultCompleter();
+        activityResultCompleter = new WorkflowActivityResultCompleter(this);
         activityResultCompleterThread = new Thread(activityResultCompleter, "WorkflowEngine-FutureResolver");
         activityResultCompleterThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
         activityResultCompleterThread.start();
@@ -411,7 +411,6 @@ public final class WorkflowEngine implements Closeable {
         }
 
         LOGGER.info("Waiting for future resolver to stop");
-        activityResultCompleter.shutdown();
         activityResultCompleterThread.interrupt();
         try {
             final boolean terminated = activityResultCompleterThread.join(Duration.ofSeconds(30));
@@ -839,6 +838,19 @@ public final class WorkflowEngine implements Closeable {
                 .setId(UUID.randomUUID().toString())
                 .setTimestamp(Timestamps.now())
                 .setWorkflowRunId(task.workflowRunId().toString());
+    }
+
+    static Optional<UUID> extractActivityRunId(final WorkflowEvent event) {
+        final String activityRunId = switch (event.getSubjectCase()) {
+            case ACTIVITY_RUN_REQUESTED -> event.getActivityRunRequested().getRunId();
+            case ACTIVITY_RUN_QUEUED -> event.getActivityRunQueued().getRunId();
+            case ACTIVITY_RUN_STARTED -> event.getActivityRunStarted().getRunId();
+            case ACTIVITY_RUN_COMPLETED -> event.getActivityRunCompleted().getRunId();
+            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().getRunId();
+            default -> null;
+        };
+
+        return Optional.ofNullable(activityRunId).map(UUID::fromString);
     }
 
 }

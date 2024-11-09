@@ -43,6 +43,13 @@ public final class MdcKeys {
     public static final String MDC_PROJECT_UUID = "projectUuid";
     public static final String MDC_PROJECT_VERSION = "projectVersion";
     public static final String MDC_SCAN_TOKEN = "scanToken";
+    public static final String MDC_WORKFLOW_ACTIVITY_RUN_ID = "workflowActivityRunId";
+    public static final String MDC_WORKFLOW_EVENT_TYPE = "workflowEventType";
+    public static final String MDC_WORKFLOW_RUN_ID = "workflowRunId";
+    public static final String MDC_WORKFLOW_TASK_ATTEMPT = "workflowTaskAttempt";
+    public static final String MDC_WORKFLOW_TASK_ID = "workflowTaskId";
+    public static final String MDC_WORKFLOW_TASK_PRIORITY = "workflowTaskPriority";
+    public static final String MDC_WORKFLOW_TASK_QUEUE = "workflowTaskQueue";
 
     private MdcKeys() {
     }

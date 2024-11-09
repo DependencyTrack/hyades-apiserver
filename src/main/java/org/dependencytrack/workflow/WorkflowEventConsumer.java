@@ -65,6 +65,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_ACTIVITY_RUN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_EVENT_TYPE;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_RUN_ID;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent> {
@@ -155,6 +158,8 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             }
 
             // Fetch workflow runs relevant to the actionable events.
+            // TODO: Cache these? Since events are partitioned by run ID, the cache can be local.
+            //  Need to invalidate entries in onPartitionsRevoked and onPartitionsLost though.
             final List<WorkflowRunRow> runRows = dao.getWorkflowRunsById(
                     workflowRunIds.stream().map(UUID::fromString).toList());
             final Map<UUID, WorkflowRun> runById = runRows.stream()
@@ -172,12 +177,14 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
             for (final WorkflowEvent event : actionableEvents) {
                 final UUID workflowRunId = UUID.fromString(event.getWorkflowRunId());
+                final UUID activityRunId = WorkflowEngine.extractActivityRunId(event).orElse(null);
                 final var eventTimestamp = Instant.ofEpochMilli(Timestamps.toMillis(event.getTimestamp()));
                 final var ctx = new EventProcessingContext(
                         dao, eventTimestamp, workflowRunId, runById, taskById, eventsToSend);
 
-                try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", workflowRunId.toString());
-                     var ignoredMdcEventType = MDC.putCloseable("workflowEventType", event.getSubjectCase().name())) {
+                try (var ignoredMdcRunId = MDC.putCloseable(MDC_WORKFLOW_RUN_ID, String.valueOf(workflowRunId.toString()));
+                     var ignoredMdcActivityRunId = MDC.putCloseable(MDC_WORKFLOW_ACTIVITY_RUN_ID, String.valueOf(activityRunId));
+                     var ignoredMdcEventType = MDC.putCloseable(MDC_WORKFLOW_EVENT_TYPE, event.getSubjectCase().name())) {
                     switch (event.getSubjectCase()) {
                         case RUN_REQUESTED -> onRunRequested(ctx, event.getRunRequested());
                         case RUN_STARTED -> onRunStarted(ctx, event.getRunStarted());

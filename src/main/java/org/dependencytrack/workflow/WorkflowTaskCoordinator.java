@@ -30,6 +30,12 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_ACTIVITY_RUN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_RUN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_ATTEMPT;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_PRIORITY;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_QUEUE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements Runnable {
@@ -62,12 +68,14 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
 
     @Override
     public void run() {
-        try (var ignoredMdcTaskWorker = MDC.putCloseable("taskWorker", taskWorker.getClass().getSimpleName())) {
+        try (var ignoredMdcTaskWorker = MDC.putCloseable(MDC_WORKFLOW_TASK_QUEUE, queue)) {
             final var pollMisses = new AtomicInteger(0);
+
             while (workflowEngine.state().isNotStoppingOrStopped()) {
                 final PolledWorkflowTaskRow polledTask;
                 final Timer.Sample pollTimerSample = Timer.start();
                 try {
+                    // TODO: Add retries & circuit breaker?
                     polledTask = inJdbiTransaction(handle -> new WorkflowDao(handle).pollTask(queue)).orElse(null);
                 } finally {
                     pollTimerSample.stop(Timer
@@ -92,10 +100,11 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                 workflowEngine.dispatchTaskStartedEvent(polledTask) /* .join() */;
 
                 final Timer.Sample processingTimerSample = Timer.start();
-                try (var ignoredMdcTaskId = MDC.putCloseable("taskId", String.valueOf(polledTask.id()));
-                     var ignoredMdcTaskQueue = MDC.putCloseable("taskQueue", polledTask.queue());
-                     var ignoredMdcTaskPriority = MDC.putCloseable("taskPriority", String.valueOf(polledTask.priority()));
-                     var ignoredMdcTaskAttempts = MDC.putCloseable("taskAttempt", String.valueOf(polledTask.attempt()))) {
+                try (var ignoredMdcRunId = MDC.putCloseable(MDC_WORKFLOW_RUN_ID, String.valueOf(polledTask.workflowRunId()));
+                     var ignoredMdcActivityRunId = MDC.putCloseable(MDC_WORKFLOW_ACTIVITY_RUN_ID, String.valueOf(polledTask.activityRunId()));
+                     var ignoredMdcTaskId = MDC.putCloseable(MDC_WORKFLOW_TASK_ID, String.valueOf(polledTask.id()));
+                     var ignoredMdcTaskPriority = MDC.putCloseable(MDC_WORKFLOW_TASK_PRIORITY, String.valueOf(polledTask.priority()));
+                     var ignoredMdcTaskAttempts = MDC.putCloseable(MDC_WORKFLOW_TASK_ATTEMPT, String.valueOf(polledTask.attempt()))) {
                     if (LOGGER.isDebugEnabled()) {
                         logger.debug("Processing");
                     }

@@ -36,10 +36,6 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class WorkflowActivityResultCompleter implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(WorkflowActivityResultCompleter.class);
-
-    private final AtomicBoolean isStopped = new AtomicBoolean(false);
-
     static final class ActivityResultWatch {
 
         private final CompletableFuture<String> result;
@@ -64,11 +60,18 @@ public class WorkflowActivityResultCompleter implements Runnable {
 
     }
 
+    private static final Logger LOGGER = Logger.getLogger(WorkflowActivityResultCompleter.class);
+
+    private final WorkflowEngine engine;
     private final Map<UUID, ActivityResultWatch> watchByActivityRunId = new ConcurrentHashMap<>();
+
+    WorkflowActivityResultCompleter(final WorkflowEngine engine) {
+        this.engine = engine;
+    }
 
     @Override
     public void run() {
-        while (!isStopped.get()) {
+        while (engine.state().isNotStoppingOrStopped()) {
             watchByActivityRunId.values().removeIf(ActivityResultWatch::isCancelled);
 
             if (watchByActivityRunId.isEmpty()) {
@@ -108,7 +111,8 @@ public class WorkflowActivityResultCompleter implements Runnable {
                     .map(new WorkflowEventColumnMapper())
                     .list());
             for (final WorkflowEvent event : events) {
-                final UUID activityRunId = extractActivityRunId(event);
+                final UUID activityRunId = WorkflowEngine.extractActivityRunId(event)
+                        .orElseThrow(() -> new IllegalStateException("Failed to extract activityRunId from event"));
                 final ActivityResultWatch watch = watchByActivityRunId.get(activityRunId);
                 if (watch != null) {
                     if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED) {
@@ -136,27 +140,10 @@ public class WorkflowActivityResultCompleter implements Runnable {
         }
     }
 
-    void shutdown() {
-        isStopped.set(true);
-    }
-
     ActivityResultWatch watchActivityResult(final UUID activityRunId) {
         final var watch = new ActivityResultWatch();
         final ActivityResultWatch existingWatch = watchByActivityRunId.putIfAbsent(activityRunId, watch);
         return existingWatch != null ? existingWatch : watch;
-    }
-
-    private static UUID extractActivityRunId(final WorkflowEvent event) {
-        final String activityRunId = switch (event.getSubjectCase()) {
-            case ACTIVITY_RUN_REQUESTED -> event.getActivityRunRequested().getRunId();
-            case ACTIVITY_RUN_QUEUED -> event.getActivityRunQueued().getRunId();
-            case ACTIVITY_RUN_STARTED -> event.getActivityRunStarted().getRunId();
-            case ACTIVITY_RUN_COMPLETED -> event.getActivityRunCompleted().getRunId();
-            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().getRunId();
-            default -> throw new IllegalStateException("Not an activity run event");
-        };
-
-        return UUID.fromString(activityRunId);
     }
 
 }
