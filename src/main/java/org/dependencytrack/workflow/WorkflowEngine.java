@@ -65,9 +65,11 @@ import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
 import org.dependencytrack.workflow.serialization.Serde;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufSerializer;
+import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.sql.BatchUpdateException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -105,6 +107,7 @@ import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.util.PersistenceUtil.getViolatedConstraint;
 
 // TODO: Metrics instrumentation
 public final class WorkflowEngine implements Closeable {
@@ -164,6 +167,7 @@ public final class WorkflowEngine implements Closeable {
     private Thread activityResultCompleterThread;
     private ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> taskExecutorByQueue = new HashMap<>();
+    private final int taskRetryMaxAttempts = 6;
     private final IntervalFunction taskRetryIntervalFunction =
             IntervalFunction.ofExponentialRandomBackoff(1_000, 1.5, 0.3, 30_000);
 
@@ -234,19 +238,31 @@ public final class WorkflowEngine implements Closeable {
     public CompletableFuture<WorkflowRun> startWorkflow(final StartWorkflowOptions options) {
         state.assertRunning();
 
-        final WorkflowRun workflowRun = inJdbiTransaction(handle -> {
-            final WorkflowRunRow workflowRunRow = new WorkflowDao(handle).createRun(
-                    new NewWorkflowRunRow(
-                            UUID.randomUUID(),
-                            options.name(),
-                            options.version(),
-                            options.priority(),
-                            options.uniqueKey(),
-                            Instant.now()
-                    ));
+        final WorkflowRun workflowRun;
+        try {
+            workflowRun = inJdbiTransaction(handle -> {
+                final WorkflowRunRow workflowRunRow =
+                        new WorkflowDao(handle).createRun(
+                                new NewWorkflowRunRow(
+                                        UUID.randomUUID(),
+                                        options.name(),
+                                        options.version(),
+                                        options.priority(),
+                                        options.uniqueKey(),
+                                        Instant.now()));
 
-            return new WorkflowRun(workflowRunRow);
-        });
+                return new WorkflowRun(workflowRunRow);
+            });
+        } catch (UnableToExecuteStatementException e) {
+            if (e.getCause() instanceof final BatchUpdateException be
+                && "WORKFLOW_RUN_UNIQUE_KEY_IDX".equals(
+                    getViolatedConstraint(be.getNextException()))) {
+                throw new IllegalStateException(
+                        "Another workflow with unique key %s is already running".formatted(options.uniqueKey()));
+            }
+
+            throw e;
+        }
 
         final WorkflowRunRequested.Builder runRequestedBuilder =
                 WorkflowRunRequested.newBuilder()
@@ -781,7 +797,7 @@ public final class WorkflowEngine implements Closeable {
         }
 
         Timestamp nextAttempt = null;
-        if (exception instanceof AssertionError && (task.attempt() + 1) <= 6) {
+        if (exception instanceof AssertionError && (task.attempt() + 1) <= taskRetryMaxAttempts) {
             final long retryDelay = taskRetryIntervalFunction.apply(task.attempt());
             final Instant nextAttemptInstant = Instant.now().plusMillis(retryDelay);
             nextAttempt = Timestamps.fromMillis(nextAttemptInstant.toEpochMilli());

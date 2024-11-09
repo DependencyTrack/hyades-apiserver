@@ -27,7 +27,6 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowRunStatus;
-import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -139,7 +138,8 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         engine.registerWorkflowRunner("foo", 1, voidSerde(), jsonSerde(ObjectNode.class), ctx -> {
             final ObjectNode activityArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
             final ObjectNode activityResult = ctx.callActivity("abc", "123",
-                    activityArguments, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class), Duration.ofSeconds(15)).orElseThrow();
+                    activityArguments, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class),
+                    Duration.ofSeconds(10)).orElseThrow();
 
             activityResult.put("execution", "done");
             return Optional.of(activityResult);
@@ -313,10 +313,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final WorkflowRun workflowRun = engine.startWorkflow(
                 new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join();
 
-        // TODO: Use a proper exception.
-        assertThatExceptionOfType(UnableToExecuteStatementException.class)
+        assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> engine.startWorkflow(
-                        new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join());
+                        new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join())
+                .withMessage("""
+                        Another workflow with unique key 04146bb6-233c-4957-98b5-c4b394b1fbd4 \
+                        is already running""");
 
         engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> Optional.empty());
 

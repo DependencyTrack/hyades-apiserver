@@ -19,7 +19,9 @@
 package org.dependencytrack.util;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.postgresql.util.PSQLException;
 import org.postgresql.util.PSQLState;
+import org.postgresql.util.ServerErrorMessage;
 
 import javax.jdo.JDOHelper;
 import javax.jdo.ObjectState;
@@ -109,6 +111,23 @@ public final class PersistenceUtil {
         //   tell us what happened.
         return ExceptionUtils.getRootCause(throwable) instanceof final SQLException se
                 && PSQLState.UNIQUE_VIOLATION.getState().equals(se.getSQLState());
+    }
+
+    public static String getViolatedConstraint(final SQLException exception) {
+        if (!(exception instanceof final PSQLException pgException)) {
+            return null;
+        }
+
+        if (!PSQLState.UNIQUE_VIOLATION.getState().equals(pgException.getSQLState())) {
+            return null;
+        }
+
+        final ServerErrorMessage errorMessage = pgException.getServerErrorMessage();
+        if (errorMessage == null) {
+            return null;
+        }
+
+        return errorMessage.getConstraint();
     }
 
     /**

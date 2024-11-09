@@ -256,13 +256,14 @@
         <sql splitStatements="true" stripComments="true">
             -- Covering(!) index that serves the WHERE, as well as the ORDER BY
             -- clause of the poll query.
-            CREATE INDEX "WORKFLOW_TASK_POLL_IDX" ON "WORKFLOW_TASK" (
-              "PRIORITY" DESC NULLS LAST
-            , "SCHEDULED_FOR"
-            , "CREATED_AT"
-            , "STATUS"
-            , "QUEUE"
-            ) INCLUDE ("ID", "STATUS", "WORKFLOW_RUN_ID")
+             CREATE INDEX "WORKFLOW_TASK_POLL_IDX"
+                 ON "WORKFLOW_TASK" (
+                      "PRIORITY" DESC NULLS LAST
+                    , "SCHEDULED_FOR"
+                    , "CREATED_AT"
+                    , "STATUS"
+                    , "QUEUE")
+            INCLUDE ("ID", "STATUS", "WORKFLOW_RUN_ID")
               WHERE "STATUS" = ANY('{PENDING, PENDING_RETRY, PENDING_RESUME}'::WORKFLOW_TASK_STATUS[]);
 
             -- Supporting index for workflows that should not execute concurrently.
