@@ -25,8 +25,6 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -62,6 +60,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.dependencytrack.workflow.WorkflowActivityContext;
@@ -130,7 +129,7 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
  * @author Steve Springett
  * @since 3.0.0
  */
-public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunner<ObjectNode, Void> {
+public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunner<IngestBomActivityArgs, Void> {
 
     private static final class Context {
 
@@ -167,32 +166,17 @@ public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunn
     }
 
     @Override
-    public Optional<Void> run(final WorkflowActivityContext<ObjectNode> ctx) throws Exception {
-        if (ctx.arguments().isEmpty()) {
-            throw new IllegalArgumentException("No arguments provided");
-        }
-
-        final ObjectNode arguments = ctx.arguments().get();
-        final UUID projectUuid = Optional.ofNullable(arguments.get("projectUuid"))
-                .map(JsonNode::asText)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new IllegalArgumentException("No projectUuid argument provided"));
-        final String projectName = Optional.ofNullable(arguments.get("projectName"))
-                .map(JsonNode::asText)
-                .orElse(null);
-        final String projectVersion = Optional.ofNullable(arguments.get("projectVersion"))
-                .map(JsonNode::asText)
-                .orElse(null);
-        final String bomFilePath = Optional.ofNullable(arguments.get("bomFilePath"))
-                .map(JsonNode::asText)
-                .orElseThrow(() -> new IllegalArgumentException("bomFilePath argument not provided"));
+    public Optional<Void> run(final WorkflowActivityContext<IngestBomActivityArgs> ctx) throws Exception {
+        final IngestBomActivityArgs arguments = ctx.arguments().orElseThrow();
 
         final var project = new Project();
-        project.setUuid(projectUuid);
-        project.setName(projectName);
-        project.setVersion(projectVersion);
+        project.setUuid(UUID.fromString(arguments.getProject().getUuid()));
+        project.setName(arguments.getProject().getName());
+        project.setVersion(arguments.getProject().hasVersion()
+                ? arguments.getProject().getVersion()
+                : null);
 
-        inform(new BomUploadEvent(project, Path.of(bomFilePath).toFile()));
+        inform(new BomUploadEvent(project, Path.of(arguments.getBomFilePath()).toFile()));
 
         return Optional.empty();
     }
@@ -1097,8 +1081,8 @@ public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunn
             qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurlCoordinates().toString()));
             return true;
         } else if (integrityMetaComponent.getStatus() == null
-                || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
-                && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+                   || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
+                       && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             return true;
         } else if (integrityMetaComponent.getStatus() == FetchStatus.PROCESSED || integrityMetaComponent.getStatus() == FetchStatus.NOT_AVAILABLE) {

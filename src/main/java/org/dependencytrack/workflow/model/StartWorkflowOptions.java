@@ -18,18 +18,24 @@
  */
 package org.dependencytrack.workflow.model;
 
-public record StartWorkflowOptions<T>(String name, int version, Integer priority, T arguments) {
+import org.dependencytrack.workflow.serialization.Serde;
+
+public record StartWorkflowOptions(String name, int version, Integer priority, byte[] arguments) {
 
     public StartWorkflowOptions(final String name, final int version) {
         this(name, version, null, null);
     }
 
-    public StartWorkflowOptions<T> withPriority(final Integer priority) {
-        return new StartWorkflowOptions<>(this.name, this.version, priority, this.arguments);
+    public StartWorkflowOptions withPriority(final Integer priority) {
+        return new StartWorkflowOptions(this.name, this.version, priority, this.arguments);
     }
 
-    public StartWorkflowOptions<T> withArguments(final T arguments) {
-        return new StartWorkflowOptions<>(this.name, this.version, this.priority, arguments);
+    public StartWorkflowOptions withArguments(final byte[] arguments) {
+        return new StartWorkflowOptions(this.name, this.version, this.priority, arguments);
+    }
+
+    public <T> StartWorkflowOptions withArguments(final T arguments, final Serde<T> argumentsSerde) {
+        return new StartWorkflowOptions(this.name, this.version, this.priority, argumentsSerde.serialize(arguments));
     }
 
 }

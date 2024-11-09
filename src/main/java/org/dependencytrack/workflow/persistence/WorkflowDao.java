@@ -96,7 +96,7 @@ public class WorkflowDao {
                      LIMIT 1)
                 UPDATE "WORKFLOW_RUN"
                    SET "STATUS" = :status
-                     , "RESULT" = CAST(:result AS JSONB)
+                     , "RESULT" = :result
                      , "FAILURE_DETAILS" = :failureDetails
                      , "UPDATED_AT" = :updatedAt
                      , "ENDED_AT" = :endedAt
@@ -220,7 +220,7 @@ public class WorkflowDao {
                 , :queue
                 , :priority
                 , COALESCE(:scheduledFor, NOW())
-                , CAST(:arguments AS JSONB)
+                , :arguments
                 , :workflowRunId
                 , :activityRunId
                 , :activityName
@@ -364,7 +364,7 @@ public class WorkflowDao {
                 , :workflowName
                 , :workflowVersion
                 , :priority
-                , CAST(:arguments AS JSONB)
+                , :arguments
                 , NOW()
                 , :nextTrigger
                 )
@@ -381,6 +381,15 @@ public class WorkflowDao {
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowScheduleRow.class))
                 .list();
+    }
+
+    public WorkflowScheduleRow createSchedule(final NewWorkflowScheduleRow newSchedule) {
+        final List<WorkflowScheduleRow> createdSchedules = createAllSchedules(List.of(newSchedule));
+        if (!createdSchedules.isEmpty()) {
+            return createdSchedules.getFirst();
+        }
+
+        return null;
     }
 
     public List<WorkflowScheduleRow> updateAllScheduleTriggers(

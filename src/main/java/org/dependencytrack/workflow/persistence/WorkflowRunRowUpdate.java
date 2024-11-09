@@ -26,7 +26,7 @@ import java.util.UUID;
 public record WorkflowRunRowUpdate(
         UUID id,
         WorkflowRunStatus status,
-        String result,
+        byte[] result,
         String failureDetails,
         Instant updatedAt,
         Instant endedAt) {

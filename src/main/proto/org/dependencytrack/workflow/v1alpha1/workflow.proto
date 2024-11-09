@@ -43,7 +43,7 @@ message WorkflowRunRequested {
 
   optional int32 priority = 3;
 
-  optional string arguments = 4;
+  optional bytes arguments = 4;
 }
 
 message WorkflowRunQueued {
@@ -52,7 +52,7 @@ message WorkflowRunQueued {
 
   int32 priority = 2;
 
-  optional string arguments = 3;
+  optional bytes arguments = 3;
 }
 
 message WorkflowRunStarted {
@@ -61,7 +61,7 @@ message WorkflowRunStarted {
 
   int32 attempt = 2;
 
-  optional string arguments = 3;
+  optional bytes arguments = 3;
 }
 
 message WorkflowRunSuspended {
@@ -88,7 +88,7 @@ message WorkflowRunCompleted {
 
   int32 attempt = 2;
 
-  optional string result = 3;
+  optional bytes result = 3;
 }
 
 message WorkflowRunFailed {
@@ -115,7 +115,7 @@ message WorkflowActivityRunRequested {
   string invocation_id = 3;
 
   // Arguments in JSON format.
-  optional string arguments = 4;
+  optional bytes arguments = 4;
 
   // ID of the task that invoked this activity.
   string invoking_task_id = 5;
@@ -135,7 +135,7 @@ message WorkflowActivityRunQueued {
   string invocation_id = 5;
 
   // Arguments in JSON format.
-  optional string arguments = 6;
+  optional bytes arguments = 6;
 
   // ID of the task that invoked this activity.
   string invoking_task_id = 7;
@@ -158,7 +158,7 @@ message WorkflowActivityRunStarted {
   int32 attempt = 6;
 
   // Arguments in JSON format.
-  optional string arguments = 7;
+  optional bytes arguments = 7;
 
   // Whether the activity is executed locally.
   bool is_local = 8;
@@ -184,7 +184,7 @@ message WorkflowActivityRunCompleted {
   int32 attempt = 6;
 
   // Result in JSON format.
-  optional string result = 7;
+  optional bytes result = 7;
 
   // Whether the activity was executed locally.
   bool is_local = 8;

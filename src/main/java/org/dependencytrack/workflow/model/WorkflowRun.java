@@ -37,19 +37,12 @@ public final class WorkflowRun {
     private final int workflowVersion;
     private WorkflowRunStatus status;
     private Integer priority;
-    private String result;
+    private byte[] result;
     private String failureDetails;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
     private Instant endedAt;
-
-    public WorkflowRun(final String workflowName, final int workflowVersion, final UUID runId) {
-        this.id = runId;
-        this.workflowName = workflowName;
-        this.workflowVersion = workflowVersion;
-        this.modelState = ModelState.NEW;
-    }
 
     public WorkflowRun(final WorkflowRunRow runRow) {
         this.id = runRow.id();
@@ -73,7 +66,7 @@ public final class WorkflowRun {
         maybeMarkChanged();
     }
 
-    public void complete(final Instant timestamp, final String result) {
+    public void complete(final Instant timestamp, final byte[] result) {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.COMPLETED);
         this.result = result;
@@ -139,8 +132,8 @@ public final class WorkflowRun {
         maybeMarkChanged();
     }
 
-    @JsonGetter("result")
-    public String result() {
+    @JsonIgnore
+    public byte[] result() {
         return result;
     }
 

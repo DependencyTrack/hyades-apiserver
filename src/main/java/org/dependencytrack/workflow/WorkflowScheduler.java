@@ -21,7 +21,6 @@ package org.dependencytrack.workflow;
 import alpine.common.logging.Logger;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
@@ -52,7 +51,7 @@ final class WorkflowScheduler implements Runnable {
             return;
         }
 
-        final var startOptionsByScheduleName = new HashMap<String, StartWorkflowOptions<JsonNode>>();
+        final var startOptionsByScheduleName = new HashMap<String, StartWorkflowOptions>();
 
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -64,15 +63,13 @@ final class WorkflowScheduler implements Runnable {
             }
 
             for (final WorkflowScheduleRow dueSchedule : dueSchedules) {
-                var startOptions = new StartWorkflowOptions<JsonNode>(
+                var startOptions = new StartWorkflowOptions(
                         dueSchedule.workflowName(), dueSchedule.workflowVersion());
                 if (dueSchedule.priority() != null) {
                     startOptions = startOptions.withPriority(dueSchedule.priority());
                 }
                 if (dueSchedule.arguments() != null) {
-                    final var deserializedArguments = engine.deserializeJson(
-                            dueSchedule.arguments(), JsonNode.class);
-                    startOptions = startOptions.withArguments(deserializedArguments);
+                    startOptions = startOptions.withArguments(dueSchedule.arguments());
                 }
 
                 startOptionsByScheduleName.put(dueSchedule.name(), startOptions);

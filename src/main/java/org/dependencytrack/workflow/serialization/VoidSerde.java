@@ -16,16 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.persistence;
+package org.dependencytrack.workflow.serialization;
 
-import java.time.Instant;
+public class VoidSerde implements Serde<Void> {
 
-public record NewWorkflowScheduleRow(
-        String name,
-        String cron,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        byte[] arguments,
-        Instant nextTrigger) {
+    @Override
+    public byte[] serialize(final Void value) {
+        return null;
+    }
+
+    @Override
+    public Void deserialize(final byte[] bytes) {
+        return null;
+    }
+
 }

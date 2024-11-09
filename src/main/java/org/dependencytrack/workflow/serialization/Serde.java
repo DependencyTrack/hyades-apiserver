@@ -16,16 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.persistence;
+package org.dependencytrack.workflow.serialization;
 
-import java.time.Instant;
+public interface Serde<T> {
 
-public record NewWorkflowScheduleRow(
-        String name,
-        String cron,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        byte[] arguments,
-        Instant nextTrigger) {
+    byte[] serialize(final T value);
+
+    T deserialize(final byte[] bytes);
+
 }

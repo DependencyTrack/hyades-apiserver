@@ -47,7 +47,7 @@ public class PolledWorkflowTaskRowMapper implements RowMapper<PolledWorkflowTask
                 rs.getString("ACTIVITY_NAME"),
                 rs.getString("ACTIVITY_INVOCATION_ID"),
                 nullableUuid(rs, "INVOKING_TASK_ID"),
-                rs.getString("ARGUMENTS"),
+                rs.getBytes("ARGUMENTS"),
                 rs.getInt("ATTEMPT"),
                 Instant.ofEpochMilli(rs.getTimestamp("STARTED_AT").getTime()));
     }

@@ -396,7 +396,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
         if (subject.hasPriority()) {
             newTask.setPriority(subject.getPriority());
         }
-        newTask.setArguments(subject.hasArguments() ? subject.getArguments() : null);
+        newTask.setArguments(subject.hasArguments() ? subject.getArguments().toByteArray() : null);
         newTask.setCreatedAt(now);
         ctx.enqueueTask(newTask);
 
@@ -440,7 +440,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         LOGGER.debug("Completing workflow run");
         final WorkflowRun run = ctx.getRunById(ctx.workflowRunId());
-        run.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult() : null);
+        run.complete(ctx.eventTimestamp(), subject.hasResult() ? subject.getResult().toByteArray() : null);
     }
 
     private void onRunFailed(
@@ -494,7 +494,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                 activityName,
                 invocationId,
                 invokingTaskId);
-        newTask.setArguments(subject.hasArguments() ? subject.getArguments() : null);
+        newTask.setArguments(subject.hasArguments() ? subject.getArguments().toByteArray() : null);
         newTask.setCreatedAt(Instant.now());
         ctx.enqueueTask(newTask);
 

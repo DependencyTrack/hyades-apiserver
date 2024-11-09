@@ -31,14 +31,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static net.logstash.logback.util.StringUtils.trimToNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class WorkflowActivityResultCompleter implements Runnable {
 
     static final class ActivityResultWatch {
 
-        private final CompletableFuture<String> result;
+        private final CompletableFuture<byte[]> result;
         private final AtomicBoolean cancelled;
 
         ActivityResultWatch() {
@@ -46,7 +45,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
             this.cancelled = new AtomicBoolean(false);
         }
 
-        CompletableFuture<String> result() {
+        CompletableFuture<byte[]> result() {
             return result;
         }
 
@@ -116,7 +115,9 @@ public class WorkflowActivityResultCompleter implements Runnable {
                 final ActivityResultWatch watch = watchByActivityRunId.get(activityRunId);
                 if (watch != null) {
                     if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED) {
-                        watch.result().complete(trimToNull(event.getActivityRunCompleted().getResult()));
+                        watch.result().complete(event.getActivityRunCompleted().hasResult()
+                                ? event.getActivityRunCompleted().getResult().toByteArray()
+                                : null);
                         LOGGER.debug("Completed %s".formatted(activityRunId));
                         watchByActivityRunId.remove(activityRunId);
                     } else if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_FAILED

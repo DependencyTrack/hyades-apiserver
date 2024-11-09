@@ -24,6 +24,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.serialization.Serde;
 import org.slf4j.MDC;
 
 import java.util.Optional;
@@ -51,6 +52,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
     private final WorkflowEngine workflowEngine;
     private final WorkflowTaskRunner<A, R, C> taskWorker;
     private final WorkflowTaskContext.Factory<A, C> contextFactory;
+    private final Serde<R> resultSerde;
     private final String queue;
     private final Logger logger;
 
@@ -58,10 +60,12 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
             final WorkflowEngine workflowEngine,
             final WorkflowTaskRunner<A, R, C> executor,
             final WorkflowTaskContext.Factory<A, C> contextFactory,
+            final Serde<R> resultSerde,
             final String queue) {
         this.workflowEngine = workflowEngine;
         this.taskWorker = executor;
         this.contextFactory = contextFactory;
+        this.resultSerde = resultSerde;
         this.queue = queue;
         this.logger = Logger.getLogger(executor.getClass());
     }
@@ -79,7 +83,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                     polledTask = inJdbiTransaction(handle -> new WorkflowDao(handle).pollTask(queue)).orElse(null);
                 } finally {
                     pollTimerSample.stop(Timer
-                            .builder("dtrack.workflow.task.worker.poll")
+                            .builder("dtrack.workflow.task.worker.poll.latency")
                             .tag("worker", taskWorker.getClass().getSimpleName())
                             .tag("queue", queue)
                             .register(Metrics.getRegistry()));
@@ -112,7 +116,8 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                     final C context = contextFactory.apply(polledTask);
                     final Optional<R> result = taskWorker.run(context);
 
-                    workflowEngine.dispatchTaskCompletedEvent(polledTask, result.orElse(null)) /* .join() */;
+                    workflowEngine.dispatchTaskCompletedEvent(polledTask,
+                            result.map(resultSerde::serialize).orElse(null)) /* .join() */;
                     if (LOGGER.isDebugEnabled()) {
                         logger.debug("Task completed");
                     }
@@ -128,7 +133,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                     }
                 } finally {
                     processingTimerSample.stop(Timer
-                            .builder("dtrack.workflow.task.worker.process")
+                            .builder("dtrack.workflow.task.worker.process.latency")
                             .tag("worker", taskWorker.getClass().getSimpleName())
                             .tag("queue", queue)
                             .register(Metrics.getRegistry()));

@@ -1,0 +1,158 @@
+package org.dependencytrack.workflow;
+
+import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.search.MeterNotFoundException;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.workflow.model.StartWorkflowOptions;
+import org.dependencytrack.workflow.serialization.VoidSerde;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.testcontainers.kafka.KafkaContainer;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+
+public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
+
+    private static final Logger LOGGER = Logger.getLogger(WorkflowEngineBenchmarkTest.class);
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    @Rule
+    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
+
+    private WorkflowEngine engine;
+    private ScheduledExecutorService statsPrinterExecutor;
+
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
+
+        environmentVariables.set("KAFKA_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
+        environmentVariables.set("ALPINE_METRICS_ENABLED", "true");
+
+        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
+            adminClient.createTopics(List.of(new NewTopic("dtrack.event.workflow", 3, (short) 1))).all().get();
+        }
+
+        statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
+        statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 1, 5, TimeUnit.SECONDS);
+
+        engine = new WorkflowEngine();
+        engine.start();
+
+        final var voidSerde = new VoidSerde();
+
+        engine.registerWorkflowRunner("test", 10, voidSerde, voidSerde, ctx -> {
+            ctx.callActivity("foo", "1", null, voidSerde, voidSerde, Duration.ZERO);
+            ctx.callActivity("bar", "2", null, voidSerde, voidSerde, Duration.ZERO);
+            ctx.callActivity("baz", "3", null, voidSerde, voidSerde, Duration.ZERO);
+            return Optional.empty();
+        });
+
+        engine.registerActivityRunner("foo", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+    }
+
+    @After
+    @Override
+    public void after() {
+        if (engine != null) {
+            try {
+                engine.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (statsPrinterExecutor != null) {
+            statsPrinterExecutor.shutdown();
+            try {
+                statsPrinterExecutor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        super.after();
+    }
+
+    @Test
+    public void test() {
+        for (int i = 0; i < 10_000; i++) {
+            engine.startWorkflow(new StartWorkflowOptions("test", 1));
+        }
+        LOGGER.info("All workflows started");
+
+        await("Workflow completion")
+                .atMost(Duration.ofMinutes(5))
+                .pollInterval(Duration.ofSeconds(3))
+                .untilAsserted(() -> {
+                    final long completedWorkflows = withJdbiHandle(
+                            handle -> handle.createQuery("""
+                                            SELECT COUNT(*) FROM "WORKFLOW_RUN" WHERE "STATUS" = 'COMPLETED'
+                                            """)
+                                    .mapTo(Long.class)
+                                    .one());
+                    LOGGER.info("Completed workflows: " + completedWorkflows);
+                    assertThat(completedWorkflows).isEqualTo(10_000);
+                });
+    }
+
+    private static class StatsReporter implements Runnable {
+
+        private static final Logger LOGGER = Logger.getLogger(StatsReporter.class);
+
+        @Override
+        public void run() {
+            try {
+                final MeterRegistry meterRegistry = Metrics.getRegistry();
+                final Collection<Timer> runnerPollLatencies = meterRegistry.get(
+                        "dtrack.workflow.task.worker.poll.latency").timers();
+                final Collection<Timer> runnerProcessLatencies = meterRegistry.get(
+                        "dtrack.workflow.task.worker.process.latency").timers();
+                final Timer eventFlushLatency = meterRegistry.get(
+                        "dtrack.kafka.batch.consumer.flush.latency").timer();
+
+                for (final Timer timer : runnerPollLatencies) {
+                    LOGGER.info("Runner Poll Latency: queue=%s mean=%.2fms, max=%.2fms".formatted(
+                            timer.getId().getTag("queue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                }
+
+                for (final Timer timer : runnerProcessLatencies) {
+                    LOGGER.info("Runner Process Latency: queue=%s mean=%.2fms, max=%.2fms".formatted(
+                            timer.getId().getTag("queue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                }
+
+                LOGGER.info("Event Flush Latency: mean=%.2fms, max=%.2fms".formatted(
+                        eventFlushLatency.mean(TimeUnit.MILLISECONDS), eventFlushLatency.max(TimeUnit.MILLISECONDS)));
+            } catch (MeterNotFoundException e) {
+                LOGGER.warn("Meters not ready yet");
+            }
+        }
+    }
+
+}

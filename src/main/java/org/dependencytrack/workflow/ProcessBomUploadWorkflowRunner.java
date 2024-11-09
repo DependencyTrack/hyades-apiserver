@@ -18,33 +18,36 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.common.logging.Logger;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 
 import java.time.Duration;
 import java.util.Optional;
 
-public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode, Void> {
+import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
+import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
-    private static final Logger LOGGER = Logger.getLogger(ProcessBomUploadWorkflowRunner.class);
+public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBomUploadWorkflowArgs, Void> {
 
     @Override
-    public Optional<Void> run(final WorkflowRunContext<ObjectNode> ctx) throws Exception {
-        if (ctx.arguments().isEmpty()) {
-            LOGGER.warn("No arguments provided");
-            return Optional.empty();
-        }
-
-        final ObjectNode arguments = ctx.arguments().get();
+    public Optional<Void> run(final WorkflowRunContext<ProcessBomUploadWorkflowArgs> ctx) throws Exception {
+        final ProcessBomUploadWorkflowArgs workflowArgs = ctx.arguments().orElseThrow();
 
         try {
-            ctx.callActivity("ingest-bom", "123", arguments, Void.class, Duration.ZERO);
+            final var activityArgs = IngestBomActivityArgs.newBuilder()
+                    .setProject(workflowArgs.getProject())
+                    .setBomFilePath(workflowArgs.getBomFilePath())
+                    .build();
+            ctx.callActivity("ingest-bom", "123",
+                    activityArgs, protobufSerde(IngestBomActivityArgs.class), voidSerde(), Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to ingest BOM", e.getCause());
         }
 
         try {
-            ctx.callActivity("scan-project-vulns", "456", arguments, Void.class, Duration.ZERO);
+            ctx.callActivity("scan-project-vulns", "456", null, voidSerde(), voidSerde(), Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to scan project for vulnerabilities", e.getCause());
         }
@@ -52,13 +55,20 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ObjectNode
         // TODO: Wait for vulnerability scan to complete.
 
         try {
-            ctx.callActivity("evaluate-project-policies", "789", arguments, Void.class, Duration.ZERO);
+            final var activityArgs = EvaluateProjectPoliciesActivityArgs.newBuilder()
+                    .setProject(workflowArgs.getProject())
+                    .build();
+            ctx.callActivity("evaluate-project-policies", "789",
+                    activityArgs, protobufSerde(EvaluateProjectPoliciesActivityArgs.class), voidSerde(), Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to evaluate project policies", e.getCause());
         }
 
         try {
-            ctx.callActivity("update-project-metrics", "666", arguments, ObjectNode.class, Duration.ZERO);
+            final var activityArgs = UpdateProjectMetricsActivityArgs.newBuilder()
+                    .setProject(workflowArgs.getProject())
+                    .build();
+            ctx.callActivity("update-project-metrics", "666", null, voidSerde(), voidSerde(), Duration.ZERO);
         } catch (WorkflowActivityFailedException e) {
             throw new IllegalStateException("Failed to update project metrics", e.getCause());
         }

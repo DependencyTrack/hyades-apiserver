@@ -30,7 +30,7 @@ public record WorkflowRunRow(
         int workflowVersion,
         WorkflowRunStatus status,
         @Nullable Integer priority,
-        @Nullable String result,
+        @Nullable byte[] result,
         @Nullable String failureDetails,
         Instant createdAt,
         @Nullable Instant updatedAt,

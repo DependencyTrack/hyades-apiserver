@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.payload.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.payload.v1alpha1";
+
+message ProcessBomUploadWorkflowArgs {
+  Project project = 1;
+  string bom_file_path = 2;
+}
+
+message IngestBomActivityArgs {
+  Project project = 1;
+  string bom_file_path = 2;
+}
+
+message EvaluateProjectPoliciesActivityArgs {
+  Project project = 1;
+}
+
+message UpdateProjectMetricsActivityArgs {
+  Project project = 1;
+}
+
+message Project {
+  string uuid = 1;
+  string name = 2;
+  optional string version = 3;
+}

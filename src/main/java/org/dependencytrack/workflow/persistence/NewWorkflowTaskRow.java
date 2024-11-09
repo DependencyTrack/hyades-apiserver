@@ -33,7 +33,7 @@ public record NewWorkflowTaskRow(
         String activityName,
         String activityInvocationId,
         UUID invokingTaskId,
-        String arguments) {
+        byte[] arguments) {
 
     public NewWorkflowTaskRow(final UUID id, final String queue, final UUID workflowRunId) {
         this(requireNonNull(id, "id must not be null"), requireNonNull(queue, "queue must not be null"),
@@ -60,7 +60,7 @@ public record NewWorkflowTaskRow(
                 activityRunId, activityName, activityInvocationId, invokingTaskId, this.arguments);
     }
 
-    public NewWorkflowTaskRow withArguments(final String arguments) {
+    public NewWorkflowTaskRow withArguments(final byte[] arguments) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, this.scheduledFor,
                 this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, arguments);
     }

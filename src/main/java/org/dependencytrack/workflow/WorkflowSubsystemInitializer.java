@@ -19,16 +19,24 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.exception.TransientException;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
+import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Optional;
+
+import static org.dependencytrack.workflow.serialization.Serdes.jsonSerde;
+import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
+import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
 public class WorkflowSubsystemInitializer implements ServletContextListener {
 
@@ -43,16 +51,41 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
         workflowEngine.start();
 
         final var random = new SecureRandom();
-        workflowEngine.registerWorkflowRunner(
-                "process-bom-upload", 5, new ProcessBomUploadWorkflowRunner());
-        workflowEngine.registerActivityRunner(
-                "ingest-bom", 5, new BomUploadProcessingTask());
-        workflowEngine.registerActivityRunner(
-                "scan-project-vulns", 5, new RandomlyFailingActivityRunner(random));
-        workflowEngine.registerActivityRunner(
-                "evaluate-project-policies", 5, new PolicyEvaluationTask());
-        workflowEngine.registerActivityRunner(
-                "update-project-metrics", 5, new ProjectMetricsUpdateTask());
+
+        workflowEngine.registerWorkflowRunner("mirror-vuln-sources", 1,
+                /* argumentsSerde */ voidSerde(),
+                /* resultSerde */ voidSerde(),
+                new MirrorVulnSourcesWorkflowRunner());
+
+        workflowEngine.registerWorkflowRunner("process-bom-upload", 5,
+                /* argumentsSerde */ protobufSerde(ProcessBomUploadWorkflowArgs.class),
+                /* resultSerde */ voidSerde(),
+                new ProcessBomUploadWorkflowRunner());
+
+        workflowEngine.registerActivityRunner("ingest-bom", 5,
+                /* argumentsSerde */ protobufSerde(IngestBomActivityArgs.class),
+                /* resultSerde */ voidSerde(),
+                new BomUploadProcessingTask());
+        workflowEngine.registerActivityRunner("scan-project-vulns", 5,
+                /* argumentsSerde */ voidSerde(),
+                /* resultSerde */ voidSerde(),
+                new RandomlyFailingActivityRunner(random));
+        workflowEngine.registerActivityRunner("evaluate-project-policies", 5,
+                /* argumentsSerde */ jsonSerde(ObjectNode.class),
+                /* resultSerde */ voidSerde(),
+                new PolicyEvaluationTask());
+        workflowEngine.registerActivityRunner("update-project-metrics", 5,
+                /* argumentsSerde */ jsonSerde(ObjectNode.class),
+                /* resultSerde */ voidSerde(),
+                new ProjectMetricsUpdateTask());
+
+        workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
+                "Vulnerability Sources Mirroring",
+                "0 4 * * *",
+                "mirror-vuln-sources",
+                1,
+                null,
+                null));
     }
 
     @Override

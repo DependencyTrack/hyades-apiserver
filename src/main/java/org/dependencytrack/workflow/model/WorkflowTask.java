@@ -32,7 +32,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     private WorkflowTaskStatus status;
     private Integer priority;
     private Instant scheduledFor;
-    private String arguments;
+    private byte[] arguments;
     private int attempt;
     private Instant createdAt;
     private Instant updatedAt;
@@ -130,11 +130,11 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         maybeMarkChanged();
     }
 
-    public String arguments() {
+    public byte[] arguments() {
         return arguments;
     }
 
-    public void setArguments(final String arguments) {
+    public void setArguments(final byte[] arguments) {
         this.arguments = arguments;
         maybeMarkChanged();
     }

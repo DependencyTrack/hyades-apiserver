@@ -22,10 +22,9 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.asahaf.javacron.InvalidExpressionException;
+import com.asahaf.javacron.Schedule;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
@@ -53,23 +52,26 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
 import org.dependencytrack.workflow.WorkflowActivityResultCompleter.ActivityResultWatch;
+import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 import org.dependencytrack.workflow.persistence.NewWorkflowRunRow;
+import org.dependencytrack.workflow.persistence.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
-import org.dependencytrack.workflow.serialization.SerializationException;
+import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
+import org.dependencytrack.workflow.serialization.Serde;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufSerializer;
-import org.jdbi.v3.core.generic.GenericTypes;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +88,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG;
@@ -151,7 +154,6 @@ public final class WorkflowEngine implements Closeable {
     private final UUID instanceId = UUID.randomUUID();
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
-    final JsonMapper jsonMapper = new JsonMapper();
     private WorkflowEventConsumer eventConsumer;
     private Thread eventConsumerThread;
     private KafkaConsumer<UUID, WorkflowEvent> eventKafkaConsumer;
@@ -229,7 +231,7 @@ public final class WorkflowEngine implements Closeable {
         setState(State.RUNNING);
     }
 
-    public <T> CompletableFuture<WorkflowRun> startWorkflow(final StartWorkflowOptions<T> options) {
+    public CompletableFuture<WorkflowRun> startWorkflow(final StartWorkflowOptions options) {
         state.assertRunning();
 
         final WorkflowRun workflowRun = inJdbiTransaction(handle -> {
@@ -253,10 +255,12 @@ public final class WorkflowEngine implements Closeable {
             runRequestedBuilder.setPriority(options.priority());
         }
         if (options.arguments() != null) {
-            runRequestedBuilder.setArguments(serializeJson(options.arguments()));
+            runRequestedBuilder.setArguments(ByteString.copyFrom(options.arguments()));
         }
 
-        LOGGER.info("Starting workflow run %s".formatted(workflowRun.id()));
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Starting workflow run %s".formatted(workflowRun.id()));
+        }
 
         return dispatchEvent(
                 WorkflowEvent.newBuilder()
@@ -268,17 +272,44 @@ public final class WorkflowEngine implements Closeable {
                 .thenApply(ignored -> workflowRun);
     }
 
+    public void scheduleWorkflow(final ScheduleWorkflowOptions options) {
+        state.assertRunning();
+        requireNonNull(options, "options must not be null");
+        requireNonNull(options.name(), "name must not be null");
+        requireNonNull(options.cron(), "cron must not be null");
+        requireNonNull(options.workflowName(), "workflowName must not be null");
+
+        final Instant nextTrigger;
+        try {
+            final Schedule cronSchedule = Schedule.create(options.cron());
+            nextTrigger = cronSchedule.next(new Date()).toInstant();
+        } catch (InvalidExpressionException e) {
+            throw new IllegalArgumentException(e);
+        }
+
+        final WorkflowScheduleRow ignoredForNow = inJdbiTransaction(
+                handle -> new WorkflowDao(handle).createSchedule(
+                        new NewWorkflowScheduleRow(
+                                options.name(),
+                                options.cron(),
+                                options.workflowName(),
+                                options.workflowVersion(),
+                                options.priority(),
+                                options.arguments(),
+                                nextTrigger)));
+    }
+
     public <A, R> void registerWorkflowRunner(
             final String workflowName,
             final int concurrency,
+            final Serde<A> argumentsSerde,
+            final Serde<R> resultSerde,
             final WorkflowRunner<A, R> runner) {
         state.assertRunning();
-
-        // NB: This doesn't work if runner is a lambda, see https://stackoverflow.com/a/61667278.
-        // For now, this is a reasonable tradeoff since lambdas will only be used in tests anyway.
-        final JavaType argumentType = GenericTypes.findGenericParameter(runner.getClass(), WorkflowTaskRunner.class, 0)
-                .map(TypeFactory.defaultInstance()::constructType)
-                .orElseThrow(() -> new IllegalStateException("Unable to determine argument type"));
+        requireNonNull(workflowName, "workflowName must not be null");
+        requireNonNull(argumentsSerde, "argumentsSerde must not be null");
+        requireNonNull(resultSerde, "resultSerde must not be null");
+        requireNonNull(runner, "runner must not be null");
 
         final String queue = "workflow-" + workflowName;
         if (taskExecutorByQueue.containsKey(queue)) {
@@ -305,24 +336,25 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowName(),
                         polledTask.workflowVersion(),
                         polledTask.workflowRunId(),
-                        deserializeJson(polledTask.arguments(), argumentType));
+                        argumentsSerde.deserialize(polledTask.arguments()));
 
         for (int i = 0; i < concurrency; i++) {
-            executorService.execute(new WorkflowTaskCoordinator<>(this, runner, contextFactory, queue));
+            executorService.execute(new WorkflowTaskCoordinator<>(
+                    this, runner, contextFactory, resultSerde, queue));
         }
     }
 
     public <A, R> void registerActivityRunner(
             final String activityName,
             final int concurrency,
+            final Serde<A> argumentsSerde,
+            final Serde<R> resultSerde,
             final WorkflowActivityRunner<A, R> runner) {
         state.assertRunning();
-
-        // NB: This doesn't work if runner is a lambda, see https://stackoverflow.com/a/61667278
-        // For now, this is a reasonable tradeoff since lambdas will only be used in tests anyway.
-        final JavaType argumentType = GenericTypes.findGenericParameter(runner.getClass(), WorkflowTaskRunner.class, 0)
-                .map(TypeFactory.defaultInstance()::constructType)
-                .orElseThrow(() -> new IllegalStateException("Unable to determine argument type"));
+        requireNonNull(activityName, "activityName must not be null");
+        requireNonNull(argumentsSerde, "argumentsSerde must not be null");
+        requireNonNull(resultSerde, "resultSerde must not be null");
+        requireNonNull(runner, "runner must not be null");
 
         final String queue = "activity-" + activityName;
         if (taskExecutorByQueue.containsKey(queue)) {
@@ -350,11 +382,12 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowRunId(),
                         polledTask.activityName(),
                         polledTask.activityInvocationId(),
-                        deserializeJson(polledTask.arguments(), argumentType));
+                        argumentsSerde.deserialize(polledTask.arguments()));
 
 
         for (int i = 0; i < concurrency; i++) {
-            executorService.execute(new WorkflowTaskCoordinator<>(this, runner, contextFactory, queue));
+            executorService.execute(new WorkflowTaskCoordinator<>(
+                    this, runner, contextFactory, resultSerde, queue));
         }
     }
 
@@ -460,10 +493,6 @@ public final class WorkflowEngine implements Closeable {
         }
     }
 
-    JsonMapper jsonMapper() {
-        return jsonMapper;
-    }
-
     public WorkflowRun getWorkflowRun(final UUID workflowRunId) {
         final List<WorkflowRunRow> runRows = withJdbiHandle(
                 handle -> new WorkflowDao(handle).getWorkflowRunsById(List.of(workflowRunId)));
@@ -478,12 +507,13 @@ public final class WorkflowEngine implements Closeable {
         return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunLog(workflowRunId));
     }
 
-    String callActivity(
+    <R> Optional<R> callActivity(
             final UUID invokingTaskId,
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final String arguments,
+            final byte[] serializedArguments,
+            final Serde<R> resultSerde,
             final Duration timeout) {
         state.assertRunning();
 
@@ -493,8 +523,8 @@ public final class WorkflowEngine implements Closeable {
                 .setActivityName(activityName)
                 .setInvocationId(invocationId)
                 .setInvokingTaskId(invokingTaskId.toString());
-        if (arguments != null) {
-            subjectBuilder.setArguments(arguments);
+        if (serializedArguments != null) {
+            subjectBuilder.setArguments(ByteString.copyFrom(serializedArguments));
         }
 
         final var eventId = UUID.randomUUID();
@@ -521,7 +551,8 @@ public final class WorkflowEngine implements Closeable {
         final ActivityResultWatch resultWatch =
                 activityResultCompleter.watchActivityResult(activityRunId);
         try {
-            return resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            final byte[] serializedResult = resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return Optional.ofNullable(serializedResult).map(resultSerde::deserialize);
         } catch (TimeoutException e) {
             LOGGER.warn("Timed out while waiting for activity result; Suspending workflow run");
             resultWatch.cancel();
@@ -537,12 +568,14 @@ public final class WorkflowEngine implements Closeable {
         }
     }
 
-    <A, R> R callLocalActivity(
+    <A, R> Optional<R> callLocalActivity(
             final UUID invokingTaskId,
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
             final A arguments,
+            final byte[] serializedArguments,
+            final Serde<R> resultSerde,
             final Function<A, R> activityFunction) {
         state.assertRunning();
 
@@ -555,8 +588,8 @@ public final class WorkflowEngine implements Closeable {
                 .setInvocationId(invocationId)
                 .setIsLocal(true)
                 .setInvokingTaskId(invokingTaskId.toString());
-        if (arguments != null) {
-            executionStartedBuilder.setArguments(serializeJson(arguments));
+        if (serializedArguments != null) {
+            executionStartedBuilder.setArguments(ByteString.copyFrom(serializedArguments));
         }
         eventsToDispatch.add(WorkflowEvent.newBuilder()
                 .setId(UUID.randomUUID().toString())
@@ -575,7 +608,8 @@ public final class WorkflowEngine implements Closeable {
                     .setIsLocal(true)
                     .setInvokingTaskId(invokingTaskId.toString());
             if (result != null) {
-                executionCompletedBuilder.setResult(serializeJson(result));
+                final byte[] serializedResult = resultSerde.serialize(result);
+                executionCompletedBuilder.setResult(ByteString.copyFrom(serializedResult));
             }
 
             eventsToDispatch.add(WorkflowEvent.newBuilder()
@@ -586,7 +620,7 @@ public final class WorkflowEngine implements Closeable {
                     .build());
 
             dispatchEvents(eventsToDispatch);
-            return result;
+            return Optional.ofNullable(result);
         } catch (RuntimeException e) {
             eventsToDispatch.add(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())
@@ -609,42 +643,6 @@ public final class WorkflowEngine implements Closeable {
             dispatchEvents(eventsToDispatch).join();
 
             throw new WorkflowActivityFailedException(e);
-        }
-    }
-
-    <T> T deserializeJson(final String json, final Class<T> clazz) {
-        if (json == null || clazz == null) {
-            return null;
-        }
-
-        try {
-            return jsonMapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new SerializationException(e);
-        }
-    }
-
-    <T> T deserializeJson(final String json, JavaType type) {
-        if (json == null || type == null) {
-            return null;
-        }
-
-        try {
-            return jsonMapper.readValue(json, type);
-        } catch (JsonProcessingException e) {
-            throw new SerializationException(e);
-        }
-    }
-
-    <T> String serializeJson(final T object) {
-        if (object == null) {
-            return null;
-        }
-
-        try {
-            return jsonMapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
-            throw new SerializationException(e);
         }
     }
 
@@ -704,7 +702,7 @@ public final class WorkflowEngine implements Closeable {
                     .setAttempt(task.attempt())
                     .setInvokingTaskId(task.invokingTaskId().toString());
             if (task.arguments() != null) {
-                subjectBuilder.setArguments(task.arguments());
+                subjectBuilder.setArguments(ByteString.copyFrom(task.arguments()));
             }
             eventBuilder.setActivityRunStarted(subjectBuilder.build());
         }
@@ -713,7 +711,7 @@ public final class WorkflowEngine implements Closeable {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    <R> CompletableFuture<?> dispatchTaskCompletedEvent(final PolledWorkflowTaskRow task, final R result) {
+    <R> CompletableFuture<?> dispatchTaskCompletedEvent(final PolledWorkflowTaskRow task, final byte[] result) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
 
         // We only persist timestamps in millisecond resolution,
@@ -738,7 +736,7 @@ public final class WorkflowEngine implements Closeable {
                     .setTaskId(task.id().toString())
                     .setAttempt(task.attempt());
             if (result != null) {
-                subjectBuilder.setResult(serializeJson(result));
+                subjectBuilder.setResult(ByteString.copyFrom(result));
             }
             eventBuilder.setRunCompleted(subjectBuilder.build());
         } else {
@@ -750,7 +748,7 @@ public final class WorkflowEngine implements Closeable {
                     .setAttempt(task.attempt())
                     .setInvokingTaskId(task.invokingTaskId().toString());
             if (result != null) {
-                subjectBuilder.setResult(serializeJson(result));
+                subjectBuilder.setResult(ByteString.copyFrom(result));
             }
 
             eventBuilder.setActivityRunCompleted(subjectBuilder.build());

@@ -64,6 +64,7 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
+import org.dependencytrack.workflow.serialization.JsonSerde;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -488,9 +489,9 @@ public class BomResource extends AlpineResource {
                     .put("projectVersion", project.getVersion())
                     .put("bomFilePath", bomFile.getAbsolutePath());
             final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
-                    new StartWorkflowOptions<>("process-bom-upload", 1)
+                    new StartWorkflowOptions("process-bom-upload", 1)
                             .withPriority(666)
-                            .withArguments(workflowArguments)).join();
+                            .withArguments(workflowArguments, new JsonSerde<>(ObjectNode.class))).join();
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
@@ -530,9 +531,9 @@ public class BomResource extends AlpineResource {
                         .put("projectVersion", project.getVersion())
                         .put("bomFilePath", bomFile.getAbsolutePath());
                 final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
-                        new StartWorkflowOptions<>("process-bom-upload", 1)
+                        new StartWorkflowOptions("process-bom-upload", 1)
                                 .withPriority(666)
-                                .withArguments(workflowArguments)).join();
+                                .withArguments(workflowArguments, new JsonSerde<>(ObjectNode.class))).join();
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130

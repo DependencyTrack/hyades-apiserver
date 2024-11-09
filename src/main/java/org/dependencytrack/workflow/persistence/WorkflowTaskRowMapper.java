@@ -46,7 +46,7 @@ public class WorkflowTaskRowMapper implements RowMapper<WorkflowTaskRow> {
                 rs.getString("ACTIVITY_NAME"),
                 rs.getString("ACTIVITY_INVOCATION_ID"),
                 nullableUuid(rs, "INVOKING_TASK_ID"),
-                rs.getString("ARGUMENTS"),
+                rs.getBytes("ARGUMENTS"),
                 rs.getInt("ATTEMPT"),
                 Instant.ofEpochMilli(rs.getDate("CREATED_AT").getTime()),
                 nullableInstant(rs, "UPDATED_AT"),

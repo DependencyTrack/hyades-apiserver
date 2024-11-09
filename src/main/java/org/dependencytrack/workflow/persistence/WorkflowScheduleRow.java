@@ -28,7 +28,7 @@ public record WorkflowScheduleRow(
         String workflowName,
         int workflowVersion,
         @Nullable Integer priority,
-        @Nullable String arguments,
+        @Nullable byte[] arguments,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant lastTrigger,

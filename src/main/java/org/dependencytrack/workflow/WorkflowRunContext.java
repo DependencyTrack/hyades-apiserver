@@ -19,25 +19,26 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.util.Timestamps;
+import org.apache.commons.lang3.ArrayUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.workflow.serialization.SerializationException;
+import org.dependencytrack.workflow.serialization.Serde;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.StringUtils.trimToNull;
 
 public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
@@ -58,22 +59,25 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         this.engine = engine;
     }
 
+    // TODO: Accept a Class<? extends WorkflowActivityRunner> instead of activityName
+    //  such that we can ensure that argument and result types of the activity
+    //  match the given serdes.
     // TODO: Retry policy
-    public <AA, AR> AR callActivity(
+    public <AA, AR> Optional<AR> callActivity(
             final String activityName,
             final String invocationId,
             final AA arguments,
-            final Class<AR> resultClass,
+            final Serde<AA> argumentsSerde,
+            final Serde<AR> resultSerde,
             final Duration timeout) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
-        requireNonNull(resultClass, "resultClass must not be null");
         requireNonNull(timeout, "timeout must not be null");
 
         WorkflowActivityRunQueued queuedEvent = null;
         WorkflowActivityRunCompleted completedEvent = null;
         WorkflowActivityRunFailed failedEvent = null;
-        for (final WorkflowEvent logEvent : getLog()) {
+        for (final WorkflowEvent logEvent : getEventLog()) {
             if (logEvent.hasActivityRunQueued()
                 && logEvent.getActivityRunQueued().getActivityName().equals(activityName)
                 && logEvent.getActivityRunQueued().getInvocationId().equals(invocationId)) {
@@ -81,9 +85,9 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 continue;
             }
 
-            if (logEvent.hasActivityRunCompleted()
-                && logEvent.getActivityRunCompleted().getActivityName().equals(activityName)
-                && logEvent.getActivityRunCompleted().getInvocationId().equals(invocationId)) {
+            if (queuedEvent != null
+                && logEvent.hasActivityRunCompleted()
+                && logEvent.getActivityRunCompleted().getRunId().equals(queuedEvent.getRunId())) {
                 logger.debug("Completion of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
@@ -91,9 +95,9 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 break;
             }
 
-            if (logEvent.hasActivityRunFailed()
-                && logEvent.getActivityRunFailed().getActivityName().equals(activityName)
-                && logEvent.getActivityRunFailed().getInvocationId().equals(invocationId)) {
+            if (queuedEvent != null
+                && logEvent.hasActivityRunFailed()
+                && logEvent.getActivityRunFailed().getRunId().equals(queuedEvent.getRunId())) {
                 logger.debug("Failure of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
@@ -105,37 +109,44 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         // TODO: If there is a pending execution already in the history,
         //  don't request a new one. Register a future for its result instead.
 
-        final String serializedArguments = engine.serializeJson(arguments);
+        final byte[] serializedArguments = argumentsSerde.serialize(arguments);
         if (queuedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(serializedArguments).test(trimToNull(queuedEvent.getArguments()))) {
+            || !argumentsMatch(serializedArguments).test(
+                queuedEvent.hasArguments() ? queuedEvent.getArguments().toByteArray() : null)) {
             logger.debug("Activity completion not found in history; Triggering execution");
-            final String activityResult = engine.callActivity(
-                    taskId(), workflowRunId(), activityName, invocationId, serializedArguments, timeout);
-            return engine.deserializeJson(activityResult, resultClass);
+            return engine.callActivity(taskId(), workflowRunId(),
+                    activityName, invocationId, serializedArguments, resultSerde, timeout);
         }
 
         if (failedEvent != null) {
+            // TODO: Reconstruct exception from event (incl. Stacktrace), such that
+            //  try-catch logic behaves as expected when replaying.
             throw new WorkflowActivityFailedException(failedEvent.getFailureDetails());
         }
 
-        return engine.deserializeJson(trimToNull(completedEvent.getResult()), resultClass);
+        return completedEvent.hasResult()
+                ? Optional.of(completedEvent.getResult().toByteArray()).map(resultSerde::deserialize)
+                : Optional.empty();
     }
 
-    public <AA, AR> AR callLocalActivity(
+    // TODO: Accept a Class<? extends WorkflowActivityRunner> instead of activityName
+    //  such that we can ensure that argument and result types of the activity
+    //  match the given serdes.
+    public <AA, AR> Optional<AR> callLocalActivity(
             final String activityName,
             final String invocationId,
             final AA arguments,
-            final Class<AR> resultClass,
+            final Serde<AA> argumentsSerde,
+            final Serde<AR> resultSerde,
             final Function<AA, AR> activityFunction) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
-        requireNonNull(resultClass, "resultClass must not be null");
         requireNonNull(activityFunction, "activityFunction must not be null");
 
         WorkflowActivityRunStarted startedEvent = null;
         WorkflowActivityRunCompleted completedEvent = null;
         WorkflowActivityRunFailed failedEvent = null;
-        for (final WorkflowEvent logEvent : getLog()) {
+        for (final WorkflowEvent logEvent : getEventLog()) {
             if (logEvent.hasActivityRunStarted()
                 && logEvent.getActivityRunStarted().getActivityName().equals(activityName)
                 && logEvent.getActivityRunStarted().getInvocationId().equals(invocationId)
@@ -144,10 +155,9 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 continue;
             }
 
-            if (logEvent.hasActivityRunCompleted()
-                && logEvent.getActivityRunCompleted().getActivityName().equals(activityName)
-                && logEvent.getActivityRunCompleted().getInvocationId().equals(invocationId)
-                && logEvent.getActivityRunCompleted().getIsLocal()) {
+            if (startedEvent != null
+                && logEvent.hasActivityRunCompleted()
+                && logEvent.getActivityRunCompleted().getRunId().equals(startedEvent.getRunId())) {
                 logger.debug("Completion of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
@@ -155,10 +165,9 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 break;
             }
 
-            if (logEvent.hasActivityRunFailed()
-                && logEvent.getActivityRunFailed().getActivityName().equals(activityName)
-                && logEvent.getActivityRunFailed().getInvocationId().equals(invocationId)
-                && logEvent.getActivityRunFailed().getIsLocal()) {
+            if (startedEvent != null
+                && logEvent.hasActivityRunFailed()
+                && logEvent.getActivityRunFailed().getRunId().equals(startedEvent.getRunId())) {
                 logger.debug("Failure of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
@@ -167,24 +176,32 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             }
         }
 
-        final String serializedArguments = engine.serializeJson(arguments);
+        final byte[] serializedArguments = argumentsSerde.serialize(arguments);
         if (startedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(serializedArguments).test(trimToNull(startedEvent.getArguments()))) {
-            return engine.callLocalActivity(taskId(), workflowRunId(), activityName, invocationId, arguments, activityFunction);
+            || !argumentsMatch(serializedArguments).test(
+                startedEvent.hasArguments() ? startedEvent.getArguments().toByteArray() : null)) {
+            return engine.callLocalActivity(taskId(), workflowRunId(),
+                    activityName, invocationId, arguments, serializedArguments, resultSerde, activityFunction);
         }
 
         if (failedEvent != null) {
+            // TODO: Reconstruct exception from event (incl. Stacktrace), such that
+            //  try-catch logic behaves as expected when replaying.
             throw new WorkflowActivityFailedException(failedEvent.getFailureDetails());
         }
 
-        return engine.deserializeJson(trimToNull(completedEvent.getResult()), resultClass);
+        return completedEvent.hasResult()
+                ? Optional.of(completedEvent.getResult().toByteArray()).map(resultSerde::deserialize)
+                : Optional.empty();
     }
 
-    private <T> Predicate<String> argumentsMatch(final String arguments) {
-        if (arguments == null) {
-            return logEntryArguments -> {
-                if (logEntryArguments != null) {
-                    logger.warn("Argument mismatch: null -> %s".formatted(logEntryArguments));
+    private Predicate<byte[]> argumentsMatch(final byte[] argumentsBytes) {
+        if (argumentsBytes == null) {
+            return logEntryArgumentsBytes -> {
+                if (logEntryArgumentsBytes != null) {
+                    final String logEntryArgumentsPrefixB64 = Base64.getEncoder().encodeToString(
+                            ArrayUtils.subarray(logEntryArgumentsBytes, 0, 32));
+                    logger.warn("Argument mismatch: %s... -> null".formatted(logEntryArgumentsPrefixB64));
                     return false;
                 }
 
@@ -192,22 +209,20 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             };
         }
 
-        return logEntryArguments -> {
-            if (logEntryArguments == null) {
-                logger.warn("Arguments mismatch: %s -> null".formatted(arguments));
+        return logEntryArgumentsBytes -> {
+            if (logEntryArgumentsBytes == null) {
+                final String argumentsPrefixB64 = Base64.getEncoder().encodeToString(
+                        ArrayUtils.subarray(argumentsBytes, 0, 32));
+                logger.warn("Arguments mismatch: null -> %s...".formatted(argumentsPrefixB64));
                 return false;
             }
 
-            final JsonNode argumentsJson;
-            final JsonNode logEntryArgumentsJson;
-            try {
-                argumentsJson = engine.jsonMapper().readTree(arguments);
-                logEntryArgumentsJson = engine.jsonMapper().readTree(logEntryArguments);
-            } catch (JsonProcessingException e) {
-                throw new SerializationException("Failed to deserialize arguments", e);
-            }
-            if (!argumentsJson.equals(logEntryArgumentsJson)) {
-                logger.warn("Arguments mismatch: %s -> %s".formatted(logEntryArgumentsJson, argumentsJson));
+            if (!Arrays.equals(logEntryArgumentsBytes, argumentsBytes)) {
+                final String argumentsPrefixB64 = Base64.getEncoder().encodeToString(
+                        ArrayUtils.subarray(argumentsBytes, 0, 32));
+                final String logEntryArgumentsPrefixB64 = Base64.getEncoder().encodeToString(
+                        ArrayUtils.subarray(logEntryArgumentsBytes, 0, 32));
+                logger.warn("Arguments mismatch: %s... -> %s...".formatted(logEntryArgumentsPrefixB64, argumentsPrefixB64));
                 return false;
             }
 
@@ -215,8 +230,11 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         };
     }
 
-    private List<WorkflowEvent> getLog() {
+    private List<WorkflowEvent> getEventLog() {
         if (log == null) {
+            // TODO: Any realistic chance of caching this?
+            //  Ideally this query would skip log records where:
+            //      timestamp <= log.getLast().getTimestamp()
             log = engine.getWorkflowRunLog(workflowRunId());
         }
 

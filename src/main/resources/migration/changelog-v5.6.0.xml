@@ -174,7 +174,7 @@
             <column name="WORKFLOW_VERSION" type="SMALLINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="ARGUMENTS" type="JSONB"/>
+            <column name="ARGUMENTS" type="BYTEA"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
@@ -199,7 +199,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="PRIORITY" type="SMALLINT"/>
-            <column name="RESULT" type="JSONB"/>
+            <column name="RESULT" type="BYTEA"/>
             <column name="FAILURE_DETAILS" type="TEXT"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
@@ -242,7 +242,7 @@
             <column name="ACTIVITY_NAME" type="TEXT"/>
             <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
             <column name="INVOKING_TASK_ID" type="UUID"/>
-            <column name="ARGUMENTS" type="JSONB"/>
+            <column name="ARGUMENTS" type="BYTEA"/>
             <column name="ATTEMPT" type="INT"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
