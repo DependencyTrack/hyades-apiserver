@@ -335,4 +335,42 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         new StartWorkflowOptions("foo", 1).withUniqueKey(uniqueKey)).join());
     }
 
+    @Test
+    public void shouldAwaitExternalEvent() {
+        final UUID externalEventId = UUID.fromString("b0f44d1c-1545-44cc-a6f5-795098bd6da7");
+
+        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
+            final ObjectNode externalEventContent = ctx.awaitExternalEvent(
+                    externalEventId, jsonSerde(ObjectNode.class)).orElseThrow();
+            if (!externalEventContent.has("success")) {
+                throw new IllegalStateException();
+            }
+
+            return Optional.empty();
+        });
+
+        final WorkflowRun workflowRun = engine.startWorkflow(
+                new StartWorkflowOptions("foo", 1)).join();
+
+        await("Workflow run suspension")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    final List<WorkflowEvent> eventLog = engine.getWorkflowRunLog(workflowRun.id());
+                    assertThat(eventLog).anySatisfy(event ->
+                            assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SUSPENDED));
+                });
+
+        final var externalEventContent = JsonNodeFactory.instance.objectNode().put("success", true);
+        engine.sendExternalEvent(workflowRun.id(), externalEventId,
+                externalEventContent, jsonSerde(ObjectNode.class)).join();
+
+        await("Workflow run completion")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
+                    assertThat(currentWorkflowRun).isNotNull();
+                    assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                });
+    }
+
 }

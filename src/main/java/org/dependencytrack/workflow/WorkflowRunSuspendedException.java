@@ -18,24 +18,32 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityCompletedResumeCondition;
 
 class WorkflowRunSuspendedException extends RuntimeException {
 
-    private final WorkflowActivityCompletedResumeCondition resumeCondition;
+    private final WorkflowActivityCompletedResumeCondition activityCompletedResumeCondition;
+    private final ExternalEventResumeCondition externalEventResumeCondition;
 
-    WorkflowRunSuspendedException(final Throwable cause, final WorkflowActivityCompletedResumeCondition resumeCondition) {
-        super(cause);
-        this.resumeCondition = resumeCondition;
-    }
-
-    WorkflowRunSuspendedException(final WorkflowActivityCompletedResumeCondition resumeCondition) {
+    WorkflowRunSuspendedException(final WorkflowActivityCompletedResumeCondition activityCompletedResumeCondition) {
         super();
-        this.resumeCondition = resumeCondition;
+        this.activityCompletedResumeCondition = activityCompletedResumeCondition;
+        this.externalEventResumeCondition = null;
     }
 
-    public WorkflowActivityCompletedResumeCondition getResumeCondition() {
-        return resumeCondition;
+    WorkflowRunSuspendedException(final ExternalEventResumeCondition externalEventResumeCondition) {
+        super();
+        this.externalEventResumeCondition = externalEventResumeCondition;
+        this.activityCompletedResumeCondition = null;
+    }
+
+    public WorkflowActivityCompletedResumeCondition getActivityCompletedResumeCondition() {
+        return activityCompletedResumeCondition;
+    }
+
+    public ExternalEventResumeCondition getExternalEventResumeCondition() {
+        return externalEventResumeCondition;
     }
 
 }

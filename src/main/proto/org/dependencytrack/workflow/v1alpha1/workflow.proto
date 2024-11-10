@@ -31,6 +31,8 @@ message WorkflowEvent {
     WorkflowActivityRunStarted activity_run_started = 202;
     WorkflowActivityRunCompleted activity_run_completed = 203;
     WorkflowActivityRunFailed activity_run_failed = 204;
+
+    ExternalEventReceived external_event_received = 300;
   }
 }
 
@@ -72,6 +74,7 @@ message WorkflowRunSuspended {
 
   oneof resume_condition {
     WorkflowActivityCompletedResumeCondition activity_completed_resume_condition = 100;
+    ExternalEventResumeCondition external_event_received_condition = 101;
   }
 }
 
@@ -224,4 +227,17 @@ message WorkflowActivityRunFailed {
 
 message WorkflowActivityCompletedResumeCondition {
   string run_id = 1;
+}
+
+message ExternalEventResumeCondition {
+  // ID of the external event to wait for.
+  string external_event_id = 1;
+}
+
+message ExternalEventReceived {
+  // ID of the external event.
+  string id = 1;
+
+  // Content of the external event.
+  optional bytes content = 2;
 }

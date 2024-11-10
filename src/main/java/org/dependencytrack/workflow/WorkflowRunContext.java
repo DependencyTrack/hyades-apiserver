@@ -21,6 +21,8 @@ package org.dependencytrack.workflow;
 import alpine.common.logging.Logger;
 import com.google.protobuf.util.Timestamps;
 import org.apache.commons.lang3.ArrayUtils;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
@@ -192,6 +194,33 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
         return completedEvent.hasResult()
                 ? Optional.of(completedEvent.getResult().toByteArray()).map(resultSerde::deserialize)
+                : Optional.empty();
+    }
+
+    public <T> Optional<T> awaitExternalEvent(final UUID externalEventId, final Serde<T> contentSerde) {
+        requireNonNull(externalEventId, "externalEventId must not be null");
+
+        ExternalEventReceived event = null;
+        for (final WorkflowEvent logEvent : getEventLog()) {
+            if (logEvent.getSubjectCase() == WorkflowEvent.SubjectCase.EXTERNAL_EVENT_RECEIVED
+                && externalEventId.toString().equals(logEvent.getExternalEventReceived().getId())) {
+                logger.debug("Awaited external event %s found in history event %s from %s".formatted(
+                        logEvent.getExternalEventReceived().getId(), logEvent.getId(),
+                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                event = logEvent.getExternalEventReceived();
+                break;
+            }
+        }
+
+        if (event == null) {
+            throw new WorkflowRunSuspendedException(
+                    ExternalEventResumeCondition.newBuilder()
+                            .setExternalEventId(externalEventId.toString())
+                            .build());
+        }
+
+        return event.hasContent()
+                ? Optional.ofNullable(event.getContent().toByteArray()).map(contentSerde::deserialize)
                 : Optional.empty();
     }
 

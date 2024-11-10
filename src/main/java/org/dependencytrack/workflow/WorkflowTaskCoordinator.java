@@ -122,7 +122,16 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                         logger.debug("Task completed");
                     }
                 } catch (WorkflowRunSuspendedException e) {
-                    workflowEngine.dispatchTaskSuspendedEvent(polledTask, e.getResumeCondition()) /* .join() */;
+                    if (e.getActivityCompletedResumeCondition() != null) {
+                        workflowEngine.dispatchTaskSuspendedEvent(
+                                polledTask, e.getActivityCompletedResumeCondition()) /* .join() */;
+                    } else if (e.getExternalEventResumeCondition() != null) {
+                        workflowEngine.dispatchTaskSuspendedEvent(
+                                polledTask, e.getExternalEventResumeCondition()) /* .join() */;
+                    } else {
+                        throw new IllegalStateException("No resume condition provided", e);
+                    }
+
                     if (LOGGER.isDebugEnabled()) {
                         logger.debug("Task suspended", e);
                     }

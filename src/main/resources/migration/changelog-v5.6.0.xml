@@ -155,7 +155,8 @@
             , 'ACTIVITY_RUN_QUEUED'
             , 'ACTIVITY_RUN_STARTED'
             , 'ACTIVITY_RUN_COMPLETED'
-            , 'ACTIVITY_RUN_FAILED');
+            , 'ACTIVITY_RUN_FAILED'
+            , 'EXTERNAL_EVENT_RECEIVED');
         </sql>
 
         <createTable tableName="WORKFLOW_SCHEDULE">

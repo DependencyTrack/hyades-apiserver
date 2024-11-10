@@ -23,6 +23,7 @@ import com.google.protobuf.util.Timestamps;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.dependencytrack.event.kafka.consumer.KafkaBatchConsumer;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityCompletedResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
@@ -194,6 +195,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                         case ACTIVITY_RUN_REQUESTED -> onActivityRunRequested(ctx, event.getActivityRunRequested());
                         case ACTIVITY_RUN_COMPLETED -> onActivityRunCompleted(ctx, event.getActivityRunCompleted());
                         case ACTIVITY_RUN_FAILED -> onActivityRunFailed(ctx, event.getActivityRunFailed());
+                        case EXTERNAL_EVENT_RECEIVED -> onExternalEventReceived(ctx, event.getExternalEventReceived());
                     }
                 }
             }
@@ -307,7 +309,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         return switch (event.getSubjectCase()) {
             case RUN_REQUESTED, RUN_QUEUED, RUN_STARTED, RUN_SUSPENDED, RUN_RESUMED,
-                 RUN_COMPLETED, RUN_FAILED -> new NewWorkflowRunLogEntryRow(
+                 RUN_COMPLETED, RUN_FAILED, EXTERNAL_EVENT_RECEIVED -> new NewWorkflowRunLogEntryRow(
                     workflowRunId,
                     eventTimestamp,
                     eventId,
@@ -373,7 +375,22 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
         }
 
         private WorkflowTask getTaskById(final String taskId) {
-            return taskById.get(UUID.fromString(taskId));
+            // NB: Processing of certain events (i.e. EXTERNAL_EVENT_RECEIVED) can
+            // necessitate accessing of tasks that are not directly referenced by any event.
+            // Unless many EXTERNAL_EVENT_RECEIVED events are processed, this should be rare.
+            return taskById.computeIfAbsent(UUID.fromString(taskId), taskIdUuid -> {
+                final List<WorkflowTaskRow> taskRows = dao.getQueuedTasksById(List.of(taskIdUuid));
+                if (!taskRows.isEmpty()) {
+                    final WorkflowTaskRow taskRow = taskRows.getFirst();
+                    if (taskRow.activityRunId() == null) {
+                        return new WorkflowRunTask(taskRow);
+                    }
+
+                    return new WorkflowActivityRunTask(taskRow);
+                }
+
+                return null;
+            });
         }
 
         private void enqueueEvent(final WorkflowEvent event) {
@@ -382,6 +399,12 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         private boolean hasActivityCompleted(final String activityRunId) {
             return dao.hasActivityCompletionLog(workflowRunId, UUID.fromString(activityRunId), eventTimestamp);
+        }
+
+        private List<WorkflowEvent> getEventLog() {
+            // TODO: Utilize some basic caching to make this less impactful.
+            LOGGER.info("Loading event log for " + workflowRunId);
+            return dao.getWorkflowRunLog(workflowRunId);
         }
 
     }
@@ -561,6 +584,33 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                         activity task failure is not retryable""".formatted(invokingTask.id()));
                 invokingTask.resume(ctx.eventTimestamp());
             }
+        }
+    }
+
+    private void onExternalEventReceived(
+            final EventProcessingContext ctx,
+            final ExternalEventReceived subject) {
+        WorkflowRunSuspended runSuspendedEvent = null;
+        for (final WorkflowEvent event : ctx.getEventLog()) {
+            if (event.getSubjectCase() == WorkflowEvent.SubjectCase.RUN_SUSPENDED
+                && event.getRunSuspended().hasExternalEventReceivedCondition()
+                && subject.getId().equals(event.getRunSuspended().getExternalEventReceivedCondition().getExternalEventId())) {
+                runSuspendedEvent = event.getRunSuspended();
+                break;
+            }
+
+            // TODO: Verify the run wasn't resumed and suspended for another condition in the meantime.
+        }
+
+        if (runSuspendedEvent == null) {
+            LOGGER.debug("No run suspended event found");
+            return;
+        }
+
+        final var task = (WorkflowRunTask) ctx.getTaskById(runSuspendedEvent.getTaskId());
+        if (task.status() == WorkflowTaskStatus.SUSPENDED) {
+            LOGGER.debug("Resuming suspended workflow run task");
+            task.resume(ctx.eventTimestamp());
         }
     }
 

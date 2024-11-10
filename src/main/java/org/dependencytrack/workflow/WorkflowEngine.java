@@ -39,6 +39,8 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityCompletedResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
@@ -409,6 +411,29 @@ public final class WorkflowEngine implements Closeable {
         }
     }
 
+    public <T> CompletableFuture<?> sendExternalEvent(
+            final UUID workflowRunId,
+            final UUID externalEventId,
+            final T content,
+            final Serde<T> contentSerde) {
+        requireNonNull(workflowRunId, "workflowRunId must not be null");
+        requireNonNull(externalEventId, "externalEventId must not be null");
+
+        final var subjectBuilder = ExternalEventReceived.newBuilder()
+                .setId(externalEventId.toString());
+        if (content != null) {
+            final byte[] serializedContent = contentSerde.serialize(content);
+            subjectBuilder.setContent(ByteString.copyFrom(serializedContent));
+        }
+
+        return dispatchEvent(WorkflowEvent.newBuilder()
+                .setId(UUID.randomUUID().toString())
+                .setWorkflowRunId(workflowRunId.toString())
+                .setTimestamp(Timestamps.now())
+                .setExternalEventReceived(subjectBuilder.build())
+                .build());
+    }
+
     @Override
     public void close() throws IOException {
         if (state.isCreatedOrStopped()) {
@@ -574,7 +599,7 @@ public final class WorkflowEngine implements Closeable {
         } catch (TimeoutException e) {
             LOGGER.warn("Timed out while waiting for activity result; Suspending workflow run");
             resultWatch.cancel();
-            throw new WorkflowRunSuspendedException(e,
+            throw new WorkflowRunSuspendedException(
                     WorkflowActivityCompletedResumeCondition.newBuilder()
                             .setRunId(activityRunId.toString())
                             .build());
@@ -845,6 +870,23 @@ public final class WorkflowEngine implements Closeable {
                         .setTaskId(task.id().toString())
                         .setAttempt(task.attempt())
                         .setActivityCompletedResumeCondition(resumeCondition)
+                        .build())
+                .build());
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    CompletableFuture<?> dispatchTaskSuspendedEvent(
+            final PolledWorkflowTaskRow task,
+            final ExternalEventResumeCondition resumeCondition) {
+        if (task.activityName() != null) {
+            throw new IllegalStateException("Activity tasks can not be suspended");
+        }
+
+        return dispatchEvent(newEventBuilder(task)
+                .setRunSuspended(WorkflowRunSuspended.newBuilder()
+                        .setTaskId(task.id().toString())
+                        .setAttempt(task.attempt())
+                        .setExternalEventReceivedCondition(resumeCondition)
                         .build())
                 .build());
     }
