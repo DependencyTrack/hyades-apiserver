@@ -245,7 +245,7 @@
             <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
             <column name="INVOKING_TASK_ID" type="UUID"/>
             <column name="ARGUMENTS" type="BYTEA"/>
-            <column name="ATTEMPT" type="INT"/>
+            <column name="ATTEMPT" type="SMALLINT"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
@@ -272,6 +272,10 @@
                 ON "WORKFLOW_RUN" ("UNIQUE_KEY")
              WHERE "UNIQUE_KEY" IS NOT NULL
                AND "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[]);
+
+            -- Supporting index for retrieving the log for a workflow run in chronological order.
+            CREATE INDEX "WORKFLOW_RUN_LOG_WORKFLOW_RUN_ID_TIMESTAMP_IDX"
+                ON "WORKFLOW_RUN_LOG" ("WORKFLOW_RUN_ID", "TIMESTAMP");
 
             -- Supporting index for activity result completer.
             CREATE INDEX "WORKFLOW_RUN_LOG_ACTIVITY_RUN_ID_IDX"

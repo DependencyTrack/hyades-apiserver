@@ -46,7 +46,6 @@ import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 import org.dependencytrack.workflow.persistence.NewWorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.NewWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
-import org.dependencytrack.workflow.persistence.WorkflowRunLogEntryRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.WorkflowRunRowUpdate;
 import org.dependencytrack.workflow.persistence.WorkflowTaskRow;
@@ -107,20 +106,16 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             //  If we consume historical data here, the insert will fail and we won't be able
             //  to make progress. Probably need a preflight check to filter out records that
             //  have no corresponding workflow run (anymore).
-            final List<WorkflowRunLogEntryRow> createdLogEntries =
+            final Set<UUID> createdLogEntryEventIds =
                     dao.createWorkflowRunLogEntries(logEntriesToCreate);
-            if (createdLogEntries.isEmpty()) {
+            if (createdLogEntryEventIds.isEmpty()) {
                 LOGGER.info("No log entries created");
                 return;
             }
 
-            final Set<String> actionableEventIds = createdLogEntries.stream()
-                    .map(WorkflowRunLogEntryRow::eventId)
-                    .map(UUID::toString)
-                    .collect(Collectors.toSet());
             final List<WorkflowEvent> actionableEvents = records.stream()
                     .map(ConsumerRecord::value)
-                    .filter(event -> actionableEventIds.contains(event.getId()))
+                    .filter(event -> createdLogEntryEventIds.contains(UUID.fromString(event.getId())))
                     .sorted(Comparator.comparing(WorkflowEvent::getTimestamp, Timestamps::compare))
                     .toList();
 
@@ -260,34 +255,34 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             }
 
             if (!runsToUpdate.isEmpty()) {
-                final List<WorkflowRunRow> updatedRunRows = dao.updateAllRuns(runsToUpdate);
-                assert updatedRunRows.size() == runsToUpdate.size();
+                final List<UUID> updatedRunIds = dao.updateAllRuns(runsToUpdate);
+                assert updatedRunIds.size() == runsToUpdate.size();
 
                 if (LOGGER.isDebugEnabled()) {
-                    for (final WorkflowRunRow runRow : updatedRunRows) {
-                        LOGGER.debug("Updated workflow run: " + runRow.id());
+                    for (final UUID updatedRunId : updatedRunIds) {
+                        LOGGER.debug("Updated workflow run: " + updatedRunId);
                     }
                 }
             }
 
             if (!tasksToEnqueue.isEmpty()) {
-                final List<WorkflowTaskRow> createdTaskRows = dao.createAllTasks(tasksToEnqueue);
-                assert createdTaskRows.size() == tasksToEnqueue.size();
+                final List<UUID> createdTaskIds = dao.createAllTasks(tasksToEnqueue);
+                assert createdTaskIds.size() == tasksToEnqueue.size();
 
                 if (LOGGER.isDebugEnabled()) {
-                    for (final WorkflowTaskRow taskRow : createdTaskRows) {
-                        LOGGER.debug("Created task: " + taskRow.id());
+                    for (final UUID taskId : createdTaskIds) {
+                        LOGGER.debug("Created task: " + taskId);
                     }
                 }
             }
 
             if (!tasksToUpdate.isEmpty()) {
-                final List<WorkflowTaskRow> updatedTaskRows = dao.updateAllTasks(tasksToUpdate);
-                assert updatedTaskRows.size() == tasksToUpdate.size();
+                final List<UUID> updatedTaskIds = dao.updateAllTasks(tasksToUpdate);
+                assert updatedTaskIds.size() == tasksToUpdate.size();
 
                 if (LOGGER.isDebugEnabled()) {
-                    for (final WorkflowTaskRow taskRow : updatedTaskRows) {
-                        LOGGER.debug("Updated task: " + taskRow.id());
+                    for (final UUID updatedTaskId : updatedTaskIds) {
+                        LOGGER.debug("Updated task: " + updatedTaskId);
                     }
                 }
             }
@@ -404,6 +399,8 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         private List<WorkflowEvent> getEventLog() {
             // TODO: Utilize some basic caching to make this less impactful.
+            // TODO: Only return log entries that the current event should be able to see.
+            //  i.e. processing the current event shouldn't be able to see in the future.
             LOGGER.debug("Loading event log for run " + workflowRunId);
             return dao.getWorkflowRunLog(workflowRunId);
         }

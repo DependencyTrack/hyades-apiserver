@@ -25,7 +25,7 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsA
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
-import org.dependencytrack.workflow.WorkflowSubsystemInitializer.RandomlyFailingActivityRunner;
+import org.dependencytrack.workflow.WorkflowEngineInitializer.RandomlyFailingActivityRunner;
 import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.time.Duration;

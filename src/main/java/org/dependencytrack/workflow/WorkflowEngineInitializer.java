@@ -38,9 +38,9 @@ import java.util.Optional;
 import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
 import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
-public class WorkflowSubsystemInitializer implements ServletContextListener {
+public class WorkflowEngineInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(WorkflowSubsystemInitializer.class);
+    private static final Logger LOGGER = Logger.getLogger(WorkflowEngineInitializer.class);
 
     private WorkflowEngine workflowEngine;
 
@@ -57,7 +57,6 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
                 /* concurrency */ 1,
                 /* argumentsSerde */ voidSerde(),
                 /* resultSerde */ voidSerde());
-
         workflowEngine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflowRunner(),
                 /* concurrency */ 5,

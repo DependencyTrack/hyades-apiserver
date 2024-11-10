@@ -23,24 +23,24 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
 
 @Liveness
-public class WorkflowSubsystemHealthCheck implements HealthCheck {
+public class WorkflowEngineHealthCheck implements HealthCheck {
 
     private final WorkflowEngine workflowEngine;
 
-    WorkflowSubsystemHealthCheck(final WorkflowEngine workflowEngine) {
+    WorkflowEngineHealthCheck(final WorkflowEngine workflowEngine) {
         this.workflowEngine = workflowEngine;
     }
 
-    public WorkflowSubsystemHealthCheck() {
+    public WorkflowEngineHealthCheck() {
         this(WorkflowEngine.getInstance());
     }
 
     @Override
     public HealthCheckResponse call() {
-        final WorkflowEngine.State workflowEngineState = workflowEngine.state();
-        return HealthCheckResponse.named("workflow-subsystem")
-                .status(workflowEngineState == WorkflowEngine.State.RUNNING)
-                .withData("workflowEngineState", workflowEngineState.name())
+        final WorkflowEngine.State engineState = workflowEngine.state();
+        return HealthCheckResponse.named("workflow-engine")
+                .status(engineState == WorkflowEngine.State.RUNNING)
+                .withData("state", engineState.name())
                 .build();
     }
 

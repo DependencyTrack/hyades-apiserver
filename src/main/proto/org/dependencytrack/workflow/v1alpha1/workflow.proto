@@ -43,8 +43,10 @@ message WorkflowRunRequested {
   // Version of the workflow to run.
   int32 version = 2;
 
+  // Priority of this run.
   optional int32 priority = 3;
 
+  // Arguments of this run.
   optional bytes arguments = 4;
 }
 
@@ -52,8 +54,10 @@ message WorkflowRunQueued {
   // ID of the task executing the workflow.
   string task_id = 1;
 
-  int32 priority = 2;
+  // Priority of this run.
+  optional int32 priority = 2;
 
+  // Arguments of this run.
   optional bytes arguments = 3;
 }
 
@@ -61,6 +65,7 @@ message WorkflowRunStarted {
   // ID of the task executing the workflow.
   string task_id = 1;
 
+  // Attempt that was started.
   int32 attempt = 2;
 
   optional bytes arguments = 3;
@@ -70,6 +75,7 @@ message WorkflowRunSuspended {
   // ID of the task executing the workflow.
   string task_id = 1;
 
+  // Attempt that was suspended.
   int32 attempt = 2;
 
   oneof resume_condition {
@@ -82,6 +88,7 @@ message WorkflowRunResumed {
   // ID of the task executing the workflow.
   string task_id = 1;
 
+  // Attempt that was resumed.
   int32 attempt = 2;
 }
 
@@ -89,8 +96,10 @@ message WorkflowRunCompleted {
   // ID of the task executing the workflow.
   string task_id = 1;
 
+  // Attempt that completed.
   int32 attempt = 2;
 
+  // Result of the run.
   optional bytes result = 3;
 }
 
@@ -158,6 +167,7 @@ message WorkflowActivityRunStarted {
   // ID of the invocation.
   string invocation_id = 5;
 
+  // Attempt that was started.
   int32 attempt = 6;
 
   // Arguments in JSON format.
@@ -184,6 +194,7 @@ message WorkflowActivityRunCompleted {
   // ID of the invocation.
   string invocation_id = 5;
 
+  // Attempt that completed.
   int32 attempt = 6;
 
   // Result in JSON format.
@@ -210,6 +221,7 @@ message WorkflowActivityRunFailed {
   // ID of the invocation.
   string invocation_id = 5;
 
+  // Attempt that failed.
   int32 attempt = 6;
 
   // Details about the failure.
@@ -226,6 +238,7 @@ message WorkflowActivityRunFailed {
 }
 
 message WorkflowActivityCompletedResumeCondition {
+  // ID of the activity run to wait for.
   string run_id = 1;
 }
 

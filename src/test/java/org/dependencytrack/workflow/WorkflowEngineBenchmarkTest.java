@@ -2,6 +2,8 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
@@ -72,9 +74,9 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("foo", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
-        engine.registerActivityRunner("bar", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
-        engine.registerActivityRunner("baz", 10, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("foo", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
     }
 
     @After
@@ -136,6 +138,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                         "dtrack.workflow.task.worker.process.latency").timers();
                 final Timer eventFlushLatency = meterRegistry.get(
                         "dtrack.kafka.batch.consumer.flush.latency").timer();
+                final DistributionSummary eventBatchSize = meterRegistry.get(
+                        "dtrack.kafka.batch.consumer.flush.batch.size").summary();
+                final Gauge kafkaProducerBatchSizeAvg = meterRegistry.get(
+                        "kafka.producer.batch.size.avg").gauge();
+                final Gauge kafkaProducerBatchSizeMax = meterRegistry.get(
+                        "kafka.producer.batch.size.max").gauge();
+                final Gauge kafkaProducerQueueTimeAvg = meterRegistry.get(
+                        "kafka.producer.record.queue.time.avg").gauge();
+                final Gauge kafkaProducerQueueTimeMax = meterRegistry.get(
+                        "kafka.producer.record.queue.time.max").gauge();
 
                 for (final Timer timer : runnerPollLatencies) {
                     LOGGER.info("Runner Poll Latency: queue=%s mean=%.2fms, max=%.2fms".formatted(
@@ -147,8 +159,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                             timer.getId().getTag("queue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
                 }
 
+                LOGGER.info("Event Batch Size: mean=%.2f, max=%.2f".formatted(
+                        eventBatchSize.mean(), eventBatchSize.max()));
+
                 LOGGER.info("Event Flush Latency: mean=%.2fms, max=%.2fms".formatted(
                         eventFlushLatency.mean(TimeUnit.MILLISECONDS), eventFlushLatency.max(TimeUnit.MILLISECONDS)));
+
+                LOGGER.info("Kafka Producer Batch Size: avg=%.2fKiB, max=%.2fKiB".formatted(
+                        (kafkaProducerBatchSizeAvg.value() / 1024), (kafkaProducerBatchSizeMax.value() / 1024)));
+                LOGGER.info("Kafka Producer Queue Time: avg=%.2fms, max=%.2fms".formatted(
+                        kafkaProducerQueueTimeAvg.value(), kafkaProducerQueueTimeMax.value()));
             } catch (MeterNotFoundException e) {
                 LOGGER.warn("Meters not ready yet");
             }

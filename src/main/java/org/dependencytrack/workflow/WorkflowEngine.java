@@ -196,7 +196,7 @@ public final class WorkflowEngine implements Closeable {
                 Map.entry(KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class.getName()),
                 Map.entry(VALUE_SERIALIZER_CLASS_CONFIG, WorkflowEventKafkaProtobufSerializer.class.getName()),
                 Map.entry(COMPRESSION_TYPE_CONFIG, CompressionType.SNAPPY.name),
-                Map.entry(LINGER_MS_CONFIG, "100"),
+                Map.entry(LINGER_MS_CONFIG, "5"),
                 Map.entry(ENABLE_IDEMPOTENCE_CONFIG, "true"),
                 Map.entry(ACKS_CONFIG, "all")));
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
