@@ -21,8 +21,6 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.event.ComponentPolicyEvaluationEvent;
 import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.model.Component;
@@ -30,8 +28,10 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.workflow.WorkflowActivityContext;
 import org.dependencytrack.workflow.WorkflowActivityRunner;
+import org.dependencytrack.workflow.annotation.WorkflowActivity;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -43,7 +43,8 @@ import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
  *
  * @since 5.0.0
  */
-public class PolicyEvaluationTask implements Subscriber, WorkflowActivityRunner<ObjectNode, Void> {
+@WorkflowActivity(name = "evaluate-project-policies")
+public class PolicyEvaluationTask implements Subscriber, WorkflowActivityRunner<EvaluateProjectPoliciesActivityArgs, Void> {
 
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 
@@ -82,18 +83,9 @@ public class PolicyEvaluationTask implements Subscriber, WorkflowActivityRunner<
     }
 
     @Override
-    public Optional<Void> run(final WorkflowActivityContext<ObjectNode> ctx) throws Exception {
-        if (ctx.arguments().isEmpty()) {
-            throw new IllegalArgumentException("No arguments provided");
-        }
-
-        final ObjectNode arguments = ctx.arguments().get();
-        final UUID projectUuid = Optional.ofNullable(arguments.get("projectUuid"))
-                .map(JsonNode::asText)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new IllegalArgumentException("No projectUuid argument provided"));
-
-        evaluateProject(projectUuid);
+    public Optional<Void> run(final WorkflowActivityContext<EvaluateProjectPoliciesActivityArgs> ctx) throws Exception {
+        final EvaluateProjectPoliciesActivityArgs arguments = ctx.arguments().orElseThrow();
+        evaluateProject(UUID.fromString(arguments.getProject().getUuid()));
 
         return Optional.empty();
     }

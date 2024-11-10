@@ -22,12 +22,14 @@ import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.NistMirrorTask;
+import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
+@Workflow(name = "mirror-vuln-sources")
 public class MirrorVulnSourcesWorkflowRunner implements WorkflowRunner<Void, Void> {
 
     public static final UUID UNIQUE_KEY = UUID.fromString("7c078ec3-cd93-4b84-ba47-1854fe9da0e4");
@@ -36,14 +38,14 @@ public class MirrorVulnSourcesWorkflowRunner implements WorkflowRunner<Void, Voi
     public Optional<Void> run(final WorkflowRunContext<Void> ctx) throws Exception {
         ctx.callLocalActivity("trigger-nist-mirror", "1", null, voidSerde(), voidSerde(), ignored -> {
             new NistMirrorTask().inform(new NistMirrorEvent());
-            return null;
+            return Optional.empty();
         });
 
         // TODO: Wait for NIST mirroring to complete.
 
         ctx.callLocalActivity("trigger-epss-mirror", "1", null, voidSerde(), voidSerde(), ignored -> {
             new EpssMirrorTask().inform(new EpssMirrorEvent());
-            return null;
+            return Optional.empty();
         });
 
         // TODO: Wait for EPSS mirroring to complete.

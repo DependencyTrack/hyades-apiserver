@@ -56,6 +56,8 @@ final class WorkflowEventArgument implements Argument {
             return;
         }
 
+        // TODO: Test if compressing this with zstd has a positive
+        //  impact on storage requirements and DB latencies.
         final byte[] eventBytes = workflowEvent.toByteArray();
         ps.setBytes(position, eventBytes);
     }

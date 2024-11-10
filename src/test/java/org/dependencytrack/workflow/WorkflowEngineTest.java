@@ -239,13 +239,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final var workflowAttempts = new AtomicInteger(0);
 
         engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
-            ctx.callLocalActivity("abc", "123", null, voidSerde(), voidSerde(), ignored -> null);
+            ctx.callLocalActivity("abc", "123", null, voidSerde(), voidSerde(), ignored -> Optional.empty());
 
             if (workflowAttempts.incrementAndGet() < 2) {
                 throw new AssertionError("Technical Difficulties");
             }
 
-            ctx.callLocalActivity("xyz", "321", null, voidSerde(), voidSerde(), ignored -> null);
+            ctx.callLocalActivity("xyz", "321", null, voidSerde(), voidSerde(), ignored -> Optional.empty());
 
             return Optional.empty();
         });

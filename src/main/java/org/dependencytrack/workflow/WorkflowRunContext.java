@@ -28,6 +28,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.dependencytrack.workflow.serialization.Serde;
 
 import java.time.Duration;
@@ -61,9 +62,21 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         this.engine = engine;
     }
 
-    // TODO: Accept a Class<? extends WorkflowActivityRunner> instead of activityName
-    //  such that we can ensure that argument and result types of the activity
-    //  match the given serdes.
+    public <AA, AR> Optional<AR> callActivity(
+            final Class<? extends WorkflowActivityRunner<AA, AR>> activityClass,
+            final String invocationId,
+            final AA arguments,
+            final Serde<AA> argumentsSerde,
+            final Serde<AR> resultSerde,
+            final Duration timeout) {
+        final var activityAnnotation = activityClass.getAnnotation(WorkflowActivity.class);
+        if (activityAnnotation == null) {
+            throw new IllegalArgumentException();
+        }
+
+        return callActivity(activityAnnotation.name(), invocationId, arguments, argumentsSerde, resultSerde, timeout);
+    }
+
     // TODO: Retry policy
     public <AA, AR> Optional<AR> callActivity(
             final String activityName,
@@ -131,16 +144,13 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 : Optional.empty();
     }
 
-    // TODO: Accept a Class<? extends WorkflowActivityRunner> instead of activityName
-    //  such that we can ensure that argument and result types of the activity
-    //  match the given serdes.
     public <AA, AR> Optional<AR> callLocalActivity(
             final String activityName,
             final String invocationId,
             final AA arguments,
             final Serde<AA> argumentsSerde,
             final Serde<AR> resultSerde,
-            final Function<AA, AR> activityFunction) {
+            final Function<AA, Optional<AR>> activityFunction) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
         requireNonNull(activityFunction, "activityFunction must not be null");

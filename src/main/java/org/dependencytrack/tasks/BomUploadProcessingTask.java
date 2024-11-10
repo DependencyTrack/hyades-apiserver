@@ -65,6 +65,7 @@ import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.dependencytrack.workflow.WorkflowActivityContext;
 import org.dependencytrack.workflow.WorkflowActivityRunner;
+import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -129,6 +130,7 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
  * @author Steve Springett
  * @since 3.0.0
  */
+@WorkflowActivity(name = "ingest-bom")
 public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunner<IngestBomActivityArgs, Void> {
 
     private static final class Context {

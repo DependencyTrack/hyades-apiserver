@@ -54,6 +54,8 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
 import org.dependencytrack.workflow.WorkflowActivityResultCompleter.ActivityResultWatch;
+import org.dependencytrack.workflow.annotation.Workflow;
+import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
@@ -320,6 +322,21 @@ public final class WorkflowEngine implements Closeable {
     }
 
     public <A, R> void registerWorkflowRunner(
+            final WorkflowRunner<A, R> runner,
+            final int concurrency,
+            final Serde<A> argumentsSerde,
+            final Serde<R> resultSerde) {
+        requireNonNull(runner, "runner must not be null");
+
+        final var workflowAnnotation = runner.getClass().getAnnotation(Workflow.class);
+        if (workflowAnnotation == null) {
+            throw new IllegalArgumentException();
+        }
+
+        registerWorkflowRunner(workflowAnnotation.name(), concurrency, argumentsSerde, resultSerde, runner);
+    }
+
+    <A, R> void registerWorkflowRunner(
             final String workflowName,
             final int concurrency,
             final Serde<A> argumentsSerde,
@@ -365,6 +382,21 @@ public final class WorkflowEngine implements Closeable {
     }
 
     public <A, R> void registerActivityRunner(
+            final WorkflowActivityRunner<A, R> runner,
+            final int concurrency,
+            final Serde<A> argumentsSerde,
+            final Serde<R> resultSerde) {
+        requireNonNull(runner, "runner must not be null");
+
+        final var activityAnnotation = runner.getClass().getAnnotation(WorkflowActivity.class);
+        if (activityAnnotation == null) {
+            throw new IllegalArgumentException();
+        }
+
+        registerActivityRunner(activityAnnotation.name(), concurrency, argumentsSerde, resultSerde, runner);
+    }
+
+    <A, R> void registerActivityRunner(
             final String activityName,
             final int concurrency,
             final Serde<A> argumentsSerde,
@@ -624,7 +656,7 @@ public final class WorkflowEngine implements Closeable {
             final A arguments,
             final byte[] serializedArguments,
             final Serde<R> resultSerde,
-            final Function<A, R> activityFunction) {
+            final Function<A, Optional<R>> activityFunction) {
         state.assertRunning();
 
         final var eventsToDispatch = new ArrayList<WorkflowEvent>(2);
@@ -647,7 +679,7 @@ public final class WorkflowEngine implements Closeable {
                 .build());
 
         try {
-            final R result = activityFunction.apply(arguments);
+            final Optional<R> optionalResult = activityFunction.apply(arguments);
 
             final var executionCompletedBuilder = WorkflowActivityRunCompleted.newBuilder()
                     .setRunId(activityRunId.toString())
@@ -655,8 +687,8 @@ public final class WorkflowEngine implements Closeable {
                     .setInvocationId(invocationId)
                     .setIsLocal(true)
                     .setInvokingTaskId(invokingTaskId.toString());
-            if (result != null) {
-                final byte[] serializedResult = resultSerde.serialize(result);
+            if (optionalResult.isPresent()) {
+                final byte[] serializedResult = resultSerde.serialize(optionalResult.get());
                 executionCompletedBuilder.setResult(ByteString.copyFrom(serializedResult));
             }
 
@@ -668,7 +700,7 @@ public final class WorkflowEngine implements Closeable {
                     .build());
 
             dispatchEvents(eventsToDispatch);
-            return Optional.ofNullable(result);
+            return optionalResult;
         } catch (RuntimeException e) {
             eventsToDispatch.add(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())

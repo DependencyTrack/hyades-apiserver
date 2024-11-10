@@ -19,10 +19,11 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.exception.TransientException;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
@@ -34,7 +35,6 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.serialization.Serdes.jsonSerde;
 import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
 import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
 
@@ -52,32 +52,39 @@ public class WorkflowSubsystemInitializer implements ServletContextListener {
 
         final var random = new SecureRandom();
 
-        workflowEngine.registerWorkflowRunner("mirror-vuln-sources", 1,
+        workflowEngine.registerWorkflowRunner(
+                new MirrorVulnSourcesWorkflowRunner(),
+                /* concurrency */ 1,
                 /* argumentsSerde */ voidSerde(),
-                /* resultSerde */ voidSerde(),
-                new MirrorVulnSourcesWorkflowRunner());
+                /* resultSerde */ voidSerde());
 
-        workflowEngine.registerWorkflowRunner("process-bom-upload", 5,
+        workflowEngine.registerWorkflowRunner(
+                new ProcessBomUploadWorkflowRunner(),
+                /* concurrency */ 5,
                 /* argumentsSerde */ protobufSerde(ProcessBomUploadWorkflowArgs.class),
-                /* resultSerde */ voidSerde(),
-                new ProcessBomUploadWorkflowRunner());
+                /* resultSerde */ voidSerde());
 
-        workflowEngine.registerActivityRunner("ingest-bom", 5,
+        workflowEngine.registerActivityRunner(
+                new BomUploadProcessingTask(),
+                /* concurrency */ 5,
                 /* argumentsSerde */ protobufSerde(IngestBomActivityArgs.class),
-                /* resultSerde */ voidSerde(),
-                new BomUploadProcessingTask());
-        workflowEngine.registerActivityRunner("scan-project-vulns", 5,
+                /* resultSerde */ voidSerde());
+        workflowEngine.registerActivityRunner(
+                "scan-project-vulns",
+                /* concurrency */ 5,
                 /* argumentsSerde */ voidSerde(),
                 /* resultSerde */ voidSerde(),
                 new RandomlyFailingActivityRunner(random));
-        workflowEngine.registerActivityRunner("evaluate-project-policies", 5,
-                /* argumentsSerde */ jsonSerde(ObjectNode.class),
-                /* resultSerde */ voidSerde(),
-                new PolicyEvaluationTask());
-        workflowEngine.registerActivityRunner("update-project-metrics", 5,
-                /* argumentsSerde */ jsonSerde(ObjectNode.class),
-                /* resultSerde */ voidSerde(),
-                new ProjectMetricsUpdateTask());
+        workflowEngine.registerActivityRunner(
+                new PolicyEvaluationTask(),
+                /* concurrency */ 5,
+                /* argumentsSerde */ protobufSerde(EvaluateProjectPoliciesActivityArgs.class),
+                /* resultSerde */ voidSerde());
+        workflowEngine.registerActivityRunner(
+                new ProjectMetricsUpdateTask(),
+                /* concurrency */ 5,
+                /* argumentsSerde */ protobufSerde(UpdateProjectMetricsActivityArgs.class),
+                /* resultSerde */ voidSerde());
 
         workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
                 "Vulnerability Sources Mirroring",
