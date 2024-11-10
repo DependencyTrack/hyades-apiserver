@@ -28,6 +28,6 @@ public record WorkflowRunRowUpdate(
         WorkflowRunStatus status,
         byte[] result,
         String failureDetails,
-        Instant updatedAt,
+        Instant startedAt,
         Instant endedAt) {
 }

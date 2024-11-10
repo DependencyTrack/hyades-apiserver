@@ -308,17 +308,28 @@ public final class WorkflowEngine implements Closeable {
             throw new IllegalArgumentException(e);
         }
 
-        final WorkflowScheduleRow ignoredForNow = inJdbiTransaction(
-                handle -> new WorkflowDao(handle).createSchedule(
-                        new NewWorkflowScheduleRow(
-                                options.name(),
-                                options.cron(),
-                                options.workflowName(),
-                                options.workflowVersion(),
-                                options.priority(),
-                                options.uniqueKey(),
-                                options.arguments(),
-                                nextTrigger)));
+        try {
+            final WorkflowScheduleRow ignoredForNow = inJdbiTransaction(
+                    handle -> new WorkflowDao(handle).createSchedule(
+                            new NewWorkflowScheduleRow(
+                                    options.name(),
+                                    options.cron(),
+                                    options.workflowName(),
+                                    options.workflowVersion(),
+                                    options.priority(),
+                                    options.uniqueKey(),
+                                    options.arguments(),
+                                    nextTrigger)));
+        } catch (UnableToExecuteStatementException e) {
+            if (e.getCause() instanceof final BatchUpdateException be
+                && "WORKFLOW_SCHEDULE_NAME_IDX".equals(
+                    getViolatedConstraint(be.getNextException()))) {
+                throw new IllegalStateException(
+                        "Another schedule with name %s already exists".formatted(options.name()));
+            }
+
+            throw e;
+        }
     }
 
     public <A, R> void registerWorkflowRunner(

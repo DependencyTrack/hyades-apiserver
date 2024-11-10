@@ -48,14 +48,12 @@ public final class WorkflowRunTask extends WorkflowTask {
     public void suspend(final Instant timestamp) {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.SUSPENDED);
-        setUpdatedAt(timestamp);
         maybeMarkChanged();
     }
 
     public void resume(final Instant timestamp) {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.PENDING_RESUME);
-        setUpdatedAt(timestamp);
         maybeMarkChanged();
     }
 

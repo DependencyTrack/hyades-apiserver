@@ -210,7 +210,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                         run.status(),
                         run.result(),
                         run.failureDetails(),
-                        run.updatedAt(),
+                        run.startedAt(),
                         run.endedAt()));
             }
 
@@ -241,7 +241,6 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                         task.id(),
                         task.status(),
                         task.scheduledFor(),
-                        task.updatedAt(),
                         task.endedAt()));
             }
 

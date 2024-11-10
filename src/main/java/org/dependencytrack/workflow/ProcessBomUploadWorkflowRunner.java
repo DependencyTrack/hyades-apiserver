@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.common.logging.Logger;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
@@ -25,7 +26,6 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsA
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
-import org.dependencytrack.workflow.WorkflowEngineInitializer.RandomlyFailingActivityRunner;
 import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.time.Duration;
@@ -49,7 +49,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                 ingestBomArgs, protobufSerde(IngestBomActivityArgs.class), voidSerde(), Duration.ZERO);
 
         /* final UUID vulnScanCompletionEventId = */
-        ctx.callActivity(RandomlyFailingActivityRunner.class, "456", null, voidSerde(), voidSerde(), Duration.ZERO);
+        ctx.callActivity("scan-project-vulns", "456", null, voidSerde(), voidSerde(), Duration.ZERO);
 
         // TODO: ctx.awaitExternalEvent(vulnScanCompletionEventId, voidSerde());
 
@@ -65,6 +65,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.callActivity(ProjectMetricsUpdateTask.class, "666",
                 updateMetricsArgs, protobufSerde(UpdateProjectMetricsActivityArgs.class), voidSerde(), Duration.ZERO);
 
+        Logger.getLogger(getClass()).info("Workflow completed");
         return Optional.empty();
     }
 

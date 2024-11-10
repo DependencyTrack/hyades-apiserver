@@ -49,7 +49,6 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     public void complete(final Instant timestamp) {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowTaskStatus.COMPLETED);
-        this.updatedAt = timestamp;
         this.endedAt = timestamp;
         maybeMarkChanged();
     }
@@ -62,7 +61,6 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         if (nextAttemptAt != null) {
             this.scheduledFor = nextAttemptAt;
         }
-        this.updatedAt = timestamp;
         if (this.status == WorkflowTaskStatus.FAILED) {
             this.endedAt = timestamp;
         }

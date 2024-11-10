@@ -175,6 +175,8 @@
             <column name="WORKFLOW_VERSION" type="SMALLINT">
                 <constraints nullable="false"/>
             </column>
+            <column name="PRIORITY" type="SMALLINT"/>
+            <column name="UNIQUE_KEY" type="TEXT"/>
             <column name="ARGUMENTS" type="BYTEA"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>

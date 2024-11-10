@@ -85,14 +85,18 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* argumentsSerde */ protobufSerde(UpdateProjectMetricsActivityArgs.class),
                 /* resultSerde */ voidSerde());
 
-        workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
-                "Vulnerability Sources Mirroring",
-                "0 4 * * *",
-                /* workflowName */ "mirror-vuln-sources",
-                /* workflowVersion */ 1,
-                /* priority */ null,
-                MirrorVulnSourcesWorkflowRunner.UNIQUE_KEY,
-                /* arguments */ null));
+        try {
+            workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
+                    "Vulnerability Sources Mirroring",
+                    "0 4 * * *",
+                    /* workflowName */ "mirror-vuln-sources",
+                    /* workflowVersion */ 1,
+                    /* priority */ null,
+                    MirrorVulnSourcesWorkflowRunner.UNIQUE_KEY,
+                    /* arguments */ null));
+        } catch (IllegalStateException e) {
+            LOGGER.debug("Schedule already exists", e);
+        }
     }
 
     @Override

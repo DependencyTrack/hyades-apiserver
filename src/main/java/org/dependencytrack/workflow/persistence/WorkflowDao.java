@@ -101,7 +101,8 @@ public class WorkflowDao {
                    SET "STATUS" = :status
                      , "RESULT" = :result
                      , "FAILURE_DETAILS" = :failureDetails
-                     , "UPDATED_AT" = :updatedAt
+                     , "UPDATED_AT" = NOW()
+                     , "STARTED_AT" = :startedAt
                      , "ENDED_AT" = :endedAt
                   FROM "CTE_RUN"
                  WHERE "WORKFLOW_RUN"."ID" = "CTE_RUN"."ID"
@@ -280,7 +281,7 @@ public class WorkflowDao {
                 UPDATE "WORKFLOW_TASK"
                    SET "STATUS" = :status
                      , "SCHEDULED_FOR" = :scheduledFor
-                     , "UPDATED_AT" = :updatedAt
+                     , "UPDATED_AT" = NOW()
                      , "ENDED_AT" = :endedAt
                   FROM "CTE_TASK"
                  WHERE "WORKFLOW_TASK"."ID" = "CTE_TASK"."ID"
@@ -366,7 +367,7 @@ public class WorkflowDao {
 
     public List<WorkflowScheduleRow> createAllSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                INSERT INTO "JOB_SCHEDULE" (
+                INSERT INTO "WORKFLOW_SCHEDULE" (
                   "NAME"
                 , "CRON"
                 , "WORKFLOW_NAME"

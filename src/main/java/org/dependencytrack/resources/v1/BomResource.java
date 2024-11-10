@@ -25,8 +25,6 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -57,6 +55,7 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -64,7 +63,6 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
-import org.dependencytrack.workflow.serialization.JsonSerde;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -103,6 +101,7 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -483,15 +482,18 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
-                    .put("projectUuid", project.getUuid().toString())
-                    .put("projectName", project.getName())
-                    .put("projectVersion", project.getVersion())
-                    .put("bomFilePath", bomFile.getAbsolutePath());
+            final var workflowArgs = ProcessBomUploadWorkflowArgs.newBuilder()
+                    .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                            .setUuid(project.getUuid().toString())
+                            .setName(project.getName())
+                            .setVersion(project.getVersion())
+                            .build())
+                    .setBomFilePath(bomFile.getAbsolutePath())
+                    .build();
             final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                     new StartWorkflowOptions("process-bom-upload", 1)
                             .withPriority(666)
-                            .withArguments(workflowArguments, new JsonSerde<>(ObjectNode.class))).join();
+                            .withArguments(workflowArgs, protobufSerde(ProcessBomUploadWorkflowArgs.class))).join();
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
@@ -525,15 +527,18 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
-                final ObjectNode workflowArguments = JsonNodeFactory.instance.objectNode()
-                        .put("projectUuid", project.getUuid().toString())
-                        .put("projectName", project.getName())
-                        .put("projectVersion", project.getVersion())
-                        .put("bomFilePath", bomFile.getAbsolutePath());
+                final var workflowArgs = ProcessBomUploadWorkflowArgs.newBuilder()
+                        .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                .setUuid(project.getUuid().toString())
+                                .setName(project.getName())
+                                .setVersion(project.getVersion())
+                                .build())
+                        .setBomFilePath(bomFile.getAbsolutePath())
+                        .build();
                 final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                         new StartWorkflowOptions("process-bom-upload", 1)
                                 .withPriority(666)
-                                .withArguments(workflowArguments, new JsonSerde<>(ObjectNode.class))).join();
+                                .withArguments(workflowArgs, protobufSerde(ProcessBomUploadWorkflowArgs.class))).join();
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130

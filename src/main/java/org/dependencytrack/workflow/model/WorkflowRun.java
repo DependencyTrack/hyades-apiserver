@@ -65,7 +65,6 @@ public final class WorkflowRun {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.RUNNING);
         this.startedAt = timestamp;
-        this.updatedAt = timestamp;
         maybeMarkChanged();
     }
 
@@ -74,7 +73,6 @@ public final class WorkflowRun {
         setStatus(WorkflowRunStatus.COMPLETED);
         this.result = result;
         this.failureDetails = null;
-        this.updatedAt = timestamp;
         this.endedAt = timestamp;
         maybeMarkChanged();
     }
@@ -84,7 +82,6 @@ public final class WorkflowRun {
         setStatus(WorkflowRunStatus.FAILED);
         this.result = null;
         this.failureDetails = failureDetails;
-        this.updatedAt = timestamp;
         this.endedAt = timestamp;
         maybeMarkChanged();
     }

@@ -27,6 +27,5 @@ public record WorkflowTaskRowUpdate(
         UUID id,
         WorkflowTaskStatus status,
         Instant scheduledFor,
-        Instant updatedAt,
         Instant endedAt) {
 }
