@@ -132,6 +132,20 @@ public class WorkflowDao {
                 .list();
     }
 
+    public boolean doesRunExist(final UUID runId) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT EXISTS(
+                    SELECT 1
+                      FROM "WORKFLOW_RUN"
+                     WHERE "ID" = :id)
+                """);
+
+        return query
+                .bind("id", runId)
+                .mapTo(Boolean.class)
+                .one();
+    }
+
     public List<WorkflowRunLogEntryRow> createWorkflowRunLogEntries(
             final Collection<NewWorkflowRunLogEntryRow> entries) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""

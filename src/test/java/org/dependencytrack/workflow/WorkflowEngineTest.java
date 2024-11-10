@@ -356,8 +356,8 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
                     final List<WorkflowEvent> eventLog = engine.getWorkflowRunLog(workflowRun.id());
-                    assertThat(eventLog).anySatisfy(event ->
-                            assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SUSPENDED));
+                    assertThat(eventLog).anySatisfy(event -> assertThat(
+                            event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SUSPENDED));
                 });
 
         final var externalEventContent = JsonNodeFactory.instance.objectNode().put("success", true);
@@ -371,6 +371,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(currentWorkflowRun).isNotNull();
                     assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
                 });
+    }
+
+    @Test
+    public void shouldThrowWhenSendingExternalEventToNonExistentWorkflowRun() {
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.sendExternalEvent(
+                        UUID.randomUUID(), UUID.randomUUID(), null, voidSerde()).join());
     }
 
 }

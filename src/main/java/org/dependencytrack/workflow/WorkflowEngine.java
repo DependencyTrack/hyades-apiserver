@@ -419,6 +419,11 @@ public final class WorkflowEngine implements Closeable {
         requireNonNull(workflowRunId, "workflowRunId must not be null");
         requireNonNull(externalEventId, "externalEventId must not be null");
 
+        if (!withJdbiHandle(handle -> new WorkflowDao(handle).doesRunExist(workflowRunId))) {
+            throw new IllegalStateException(
+                    "A workflow run with ID %s does not exist".formatted(workflowRunId));
+        }
+
         final var subjectBuilder = ExternalEventReceived.newBuilder()
                 .setId(externalEventId.toString());
         if (content != null) {

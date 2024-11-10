@@ -379,6 +379,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             // necessitate accessing of tasks that are not directly referenced by any event.
             // Unless many EXTERNAL_EVENT_RECEIVED events are processed, this should be rare.
             return taskById.computeIfAbsent(UUID.fromString(taskId), taskIdUuid -> {
+                LOGGER.debug("Loading task " + taskId);
                 final List<WorkflowTaskRow> taskRows = dao.getQueuedTasksById(List.of(taskIdUuid));
                 if (!taskRows.isEmpty()) {
                     final WorkflowTaskRow taskRow = taskRows.getFirst();
@@ -403,7 +404,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
 
         private List<WorkflowEvent> getEventLog() {
             // TODO: Utilize some basic caching to make this less impactful.
-            LOGGER.info("Loading event log for " + workflowRunId);
+            LOGGER.debug("Loading event log for run " + workflowRunId);
             return dao.getWorkflowRunLog(workflowRunId);
         }
 
