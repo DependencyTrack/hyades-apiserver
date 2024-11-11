@@ -302,6 +302,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             }
         });
 
+        // TODO: Write to outbox table instead to avoid dual writes?
         if (!eventsToSend.isEmpty()) {
             // Ensure records are dispatched in chronological order.
             eventsToSend.sort(Comparator.comparing(WorkflowEvent::getTimestamp, Timestamps::compare));
@@ -520,6 +521,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
         final var invokingTaskId = UUID.fromString(subject.getInvokingTaskId());
         final String activityName = subject.getActivityName();
         final String invocationId = subject.getInvocationId();
+        final WorkflowRun run = ctx.getRunById(ctx.workflowRunId());
 
         LOGGER.debug("Enqueuing activity run task");
         final var newTask = new WorkflowActivityRunTask(
@@ -529,6 +531,7 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
                 activityName,
                 invocationId,
                 invokingTaskId);
+        newTask.setPriority(run.priority());
         newTask.setArgument(subject.hasArgument() ? subject.getArgument() : null);
         newTask.setCreatedAt(Instant.now());
         ctx.enqueueTask(newTask);

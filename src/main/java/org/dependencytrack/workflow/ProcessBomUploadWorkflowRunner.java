@@ -19,23 +19,31 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 
+import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.uuidConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBomUploadWorkflowArgs, Void> {
+
+    private static final Logger LOGGER = Logger.getLogger(ProcessBomUploadWorkflowRunner.class);
 
     @Override
     public Optional<Void> run(final WorkflowRunContext<ProcessBomUploadWorkflowArgs> ctx) throws Exception {
@@ -48,10 +56,14 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.callActivity(BomUploadProcessingTask.class, "123",
                 ingestBomArgs, protobufConverter(IngestBomActivityArgs.class), voidConverter(), Duration.ZERO);
 
-        /* final UUID vulnScanCompletionEventId = */
-        ctx.callActivity("scan-project-vulns", "456", null, voidConverter(), voidConverter(), Duration.ZERO);
+        // TODO: Make this Protobuf.
+        final var scanVulnsArgs = JsonNodeFactory.instance.objectNode()
+                .put("projectUuid", workflowArgs.getProject().getUuid());
+        final Optional<UUID> vulnScanToken = ctx.callActivity(VulnerabilityAnalysisTask.class, "456",
+                scanVulnsArgs, jsonConverter(ObjectNode.class), uuidConverter(), Duration.ZERO);
 
-        // TODO: ctx.awaitExternalEvent(vulnScanCompletionEventId, voidConverter());
+        // TODO: Read scan outcome from event.
+        vulnScanToken.ifPresent(uuid -> ctx.awaitExternalEvent(uuid, voidConverter()));
 
         final var evalPoliciesArgs = EvaluateProjectPoliciesActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
@@ -65,7 +77,6 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.callActivity(ProjectMetricsUpdateTask.class, "666",
                 updateMetricsArgs, protobufConverter(UpdateProjectMetricsActivityArgs.class), voidConverter(), Duration.ZERO);
 
-        Logger.getLogger(getClass()).info("Workflow completed");
         return Optional.empty();
     }
 

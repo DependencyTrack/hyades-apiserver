@@ -23,34 +23,27 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.protobuf.Message;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 public final class PayloadConverters {
 
     private static final Supplier<JsonMapper> JSON_MAPPER_SUPPLIER = Suppliers.memoize(JsonMapper::new);
-    private static final Map<Class<?>, JsonPayloadConverter<?>> JSON_CONVERTERS = new ConcurrentHashMap<>(1);
-    private static final Map<Class<?>, ProtobufPayloadConverter<?>> PROTO_CONVERTERS = new ConcurrentHashMap<>(1);
-    private static final VoidPayloadConverter VOID_CONVERTER = new VoidPayloadConverter();
 
     private PayloadConverters() {
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> PayloadConverter<T> jsonConverter(final Class<T> clazz) {
-        final JsonMapper jsonMapper = JSON_MAPPER_SUPPLIER.get();
-        return (PayloadConverter<T>) JSON_CONVERTERS.computeIfAbsent(
-                clazz, ignored -> new JsonPayloadConverter<>(jsonMapper, clazz));
+        return new JsonPayloadConverter<>(JSON_MAPPER_SUPPLIER.get(), clazz);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T extends Message> ProtobufPayloadConverter<T> protobufConverter(final Class<T> clazz) {
-        return (ProtobufPayloadConverter<T>) PROTO_CONVERTERS.computeIfAbsent(clazz,
-                ignored -> new ProtobufPayloadConverter<>(clazz));
+        return new ProtobufPayloadConverter<>(clazz);
+    }
+
+    public static UuidPayloadConverter uuidConverter() {
+        return new UuidPayloadConverter();
     }
 
     public static VoidPayloadConverter voidConverter() {
-        return VOID_CONVERTER;
+        return new VoidPayloadConverter();
     }
 
 }

@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.exception.TransientException;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
@@ -26,6 +27,7 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkf
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
 
@@ -35,7 +37,9 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Optional;
 
+import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.uuidConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
@@ -69,11 +73,10 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* argumentConverter */ protobufConverter(IngestBomActivityArgs.class),
                 /* resultConverter */ voidConverter());
         workflowEngine.registerActivityRunner(
-                "scan-project-vulns",
+                new VulnerabilityAnalysisTask(),
                 /* concurrency */ 5,
-                /* argumentConverter */ voidConverter(),
-                /* resultConverter */ voidConverter(),
-                new RandomlyFailingActivityRunner(random));
+                /* argumentConverter */ jsonConverter(ObjectNode.class),
+                /* resultConverter */ uuidConverter());
         workflowEngine.registerActivityRunner(
                 new PolicyEvaluationTask(),
                 /* concurrency */ 5,

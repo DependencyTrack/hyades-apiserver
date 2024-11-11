@@ -48,13 +48,13 @@
         <listener-class>org.dependencytrack.persistence.DefaultObjectGenerator</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.workflow.WorkflowEngineInitializer</listener-class>
-    </listener>
-    <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.workflow.WorkflowEngineInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>

@@ -495,6 +495,9 @@ public class BomResource extends AlpineResource {
                             .withPriority(666)
                             .withArgument(workflowArgs, protobufConverter(ProcessBomUploadWorkflowArgs.class))).join();
 
+            // TODO: Associate the workflow run with the project.
+            //  Have to assume that workflows are stored in another DB, can't use FKs.
+
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             Event.dispatch(bomUploadEvent);
@@ -539,6 +542,9 @@ public class BomResource extends AlpineResource {
                         new StartWorkflowOptions("process-bom-upload", 1)
                                 .withPriority(666)
                                 .withArgument(workflowArgs, protobufConverter(ProcessBomUploadWorkflowArgs.class))).join();
+
+                // TODO: Associate the workflow run with the project.
+                //  Have to assume that workflows are stored in another DB, can't use FKs.
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130
