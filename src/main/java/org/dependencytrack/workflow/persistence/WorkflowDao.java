@@ -304,7 +304,7 @@ public class WorkflowDao {
                 .list();
     }
 
-    public Optional<PolledWorkflowTaskRow> pollTask(final String queue) {
+    public List<PolledWorkflowTaskRow> pollTasks(final String queue, final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 WITH "CTE_POLL" AS (
                     SELECT "ID"
@@ -319,7 +319,7 @@ public class WorkflowDao {
                             , "CREATED_AT"
                        FOR UPDATE
                       SKIP LOCKED
-                     LIMIT 1)
+                     LIMIT :limit)
                 UPDATE "WORKFLOW_TASK"
                    SET "STATUS" = 'RUNNING'
                      , "UPDATED_AT" = NOW()
@@ -351,10 +351,15 @@ public class WorkflowDao {
 
         return update
                 .bind("queue", queue)
+                .bind("limit", limit)
                 .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executeAndReturnGeneratedKeys("*")
                 .map(polledWorkflowTaskRowMapper)
-                .findOne();
+                .list();
+    }
+
+    public Optional<PolledWorkflowTaskRow> pollTask(final String queue) {
+        return pollTasks(queue, 1).stream().findFirst();
     }
 
     public List<WorkflowTaskRow> getQueuedTasksById(final Collection<UUID> taskIds) {

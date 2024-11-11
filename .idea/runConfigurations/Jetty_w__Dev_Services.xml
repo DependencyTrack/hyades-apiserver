@@ -15,7 +15,7 @@
           <option name="passParentEnv" value="true" />
           <option name="runMavenInBackground" value="true" />
           <option name="skipTests" value="false" />
-          <option name="vmOptions" value="" />
+          <option name="vmOptions" value="-ea:org.dependencytrack..." />
         </MavenRunnerSettings>
       </option>
       <option name="myRunnerParameters">
@@ -29,7 +29,6 @@
               <option value="jetty:run" />
               <option value="-Dcheckstyle.skip" />
               <option value="-Dlogback.configurationFile=src/main/docker/logback.xml" />
-              <option value="-ea:org.dependencytrack..." />
             </list>
           </option>
           <option name="multimoduleDir" />

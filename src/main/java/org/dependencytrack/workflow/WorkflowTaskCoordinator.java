@@ -29,7 +29,6 @@ import org.slf4j.MDC;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_ACTIVITY_RUN_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_RUN_ID;
@@ -73,7 +72,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
     @Override
     public void run() {
         try (var ignoredMdcTaskWorker = MDC.putCloseable(MDC_WORKFLOW_TASK_QUEUE, queue)) {
-            final var pollMisses = new AtomicInteger(0);
+            int pollMisses = 0;
 
             while (workflowEngine.state().isNotStoppingOrStopped()) {
                 final PolledWorkflowTaskRow polledTask;
@@ -89,7 +88,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                             .register(Metrics.getRegistry()));
                 }
                 if (polledTask == null) {
-                    final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(pollMisses.incrementAndGet());
+                    final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++pollMisses);
                     logger.debug("Backing off for %dms".formatted(backoffMs));
                     try {
                         Thread.sleep(backoffMs);
@@ -100,7 +99,7 @@ class WorkflowTaskCoordinator<A, R, C extends WorkflowTaskContext<A>> implements
                     }
                 }
 
-                pollMisses.set(0);
+                pollMisses = 0;
                 workflowEngine.dispatchTaskStartedEvent(polledTask) /* .join() */;
 
                 final Timer.Sample processingTimerSample = Timer.start();
