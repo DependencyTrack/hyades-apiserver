@@ -104,7 +104,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 && logEvent.getActivityRunCompleted().getRunId().equals(queuedEvent.getRunId())) {
                 logger.debug("Completion of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
-                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                        Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
                 completedEvent = logEvent.getActivityRunCompleted();
                 break;
             }
@@ -114,7 +114,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 && logEvent.getActivityRunFailed().getRunId().equals(queuedEvent.getRunId())) {
                 logger.debug("Failure of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
-                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                        Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
                 failedEvent = logEvent.getActivityRunFailed();
                 break;
             }
@@ -171,7 +171,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 && logEvent.getActivityRunCompleted().getRunId().equals(startedEvent.getRunId())) {
                 logger.debug("Completion of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
-                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                        Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
                 completedEvent = logEvent.getActivityRunCompleted();
                 break;
             }
@@ -181,7 +181,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 && logEvent.getActivityRunFailed().getRunId().equals(startedEvent.getRunId())) {
                 logger.debug("Failure of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
-                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                        Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
                 failedEvent = logEvent.getActivityRunFailed();
                 break;
             }
@@ -217,7 +217,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 && externalEventId.toString().equals(logEvent.getExternalEventReceived().getId())) {
                 logger.debug("Awaited external event %s found in history event %s from %s".formatted(
                         logEvent.getExternalEventReceived().getId(), logEvent.getId(),
-                        Instant.ofEpochMilli(Timestamps.toMillis(logEvent.getTimestamp()))));
+                        Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
                 event = logEvent.getExternalEventReceived();
                 break;
             }
@@ -270,7 +270,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             // TODO: Any realistic chance of caching this?
             //  Ideally this query would skip log records where:
             //      timestamp <= log.getLast().getTimestamp()
-            log = engine.getWorkflowRunLog(workflowRunId());
+            log = engine.getWorkflowRunEventLog(workflowRunId());
         }
 
         return log;

@@ -93,12 +93,6 @@ public class WorkflowDao {
 
     public List<UUID> updateAllRuns(final Collection<WorkflowRunRowUpdate> runUpdates) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                WITH "CTE_RUN" AS (
-                    SELECT "ID"
-                      FROM "WORKFLOW_RUN"
-                     WHERE "ID" = :id
-                       FOR UPDATE
-                     LIMIT 1)
                 UPDATE "WORKFLOW_RUN"
                    SET "STATUS" = :status
                      , "RESULT" = :result
@@ -106,9 +100,8 @@ public class WorkflowDao {
                      , "UPDATED_AT" = NOW()
                      , "STARTED_AT" = :startedAt
                      , "ENDED_AT" = :endedAt
-                  FROM "CTE_RUN"
-                 WHERE "WORKFLOW_RUN"."ID" = "CTE_RUN"."ID"
-                RETURNING "WORKFLOW_RUN"."ID"
+                 WHERE "ID" = :id
+                RETURNING "ID"
                 """);
 
         for (final WorkflowRunRowUpdate runUpdate : runUpdates) {
@@ -119,7 +112,7 @@ public class WorkflowDao {
 
         return preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
-                .executePreparedBatch("*")
+                .executePreparedBatch("ID")
                 .mapTo(UUID.class)
                 .list();
     }
@@ -152,10 +145,10 @@ public class WorkflowDao {
                 .one();
     }
 
-    public Set<UUID> createWorkflowRunLogEntries(
-            final Collection<NewWorkflowRunLogEntryRow> entries) {
+    public Set<UUID> createWorkflowRunEventLogEntries(
+            final Collection<NewWorkflowRunEventLogEntryRow> entries) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                INSERT INTO "WORKFLOW_RUN_LOG" (
+                INSERT INTO "WORKFLOW_RUN_EVENT_LOG" (
                   "WORKFLOW_RUN_ID"
                 , "EVENT_ID"
                 , "TIMESTAMP"
@@ -174,7 +167,7 @@ public class WorkflowDao {
                 RETURNING "EVENT_ID"
                 """);
 
-        for (final NewWorkflowRunLogEntryRow entry : entries) {
+        for (final NewWorkflowRunEventLogEntryRow entry : entries) {
             preparedBatch
                     .bindMethods(entry)
                     .add();
@@ -182,15 +175,15 @@ public class WorkflowDao {
 
         return preparedBatch
                 .registerArgument(new WorkflowEventArgumentFactory())
-                .executePreparedBatch("*")
+                .executePreparedBatch("EVENT_ID")
                 .mapTo(UUID.class)
                 .set();
     }
 
-    public List<WorkflowEvent> getWorkflowRunLog(final UUID workflowRunId) {
+    public List<WorkflowEvent> getWorkflowRunEventLog(final UUID workflowRunId) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT "EVENT"
-                  FROM "WORKFLOW_RUN_LOG"
+                  FROM "WORKFLOW_RUN_EVENT_LOG"
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                  ORDER BY "TIMESTAMP"
                 """);
@@ -201,14 +194,14 @@ public class WorkflowDao {
                 .list();
     }
 
-    public boolean hasActivityCompletionLog(
+    public boolean hasActivityCompletionEventLog(
             final UUID workflowRunId,
             final UUID activityRunId,
             final Instant upToTimestamp) {
         return jdbiHandle.createQuery("""
                         SELECT EXISTS(
                             SELECT 1
-                              FROM "WORKFLOW_RUN_LOG"
+                              FROM "WORKFLOW_RUN_EVENT_LOG"
                              WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                                AND "ACTIVITY_RUN_ID" = :activityRunId
                                AND "EVENT_TYPE" = ANY(CAST('{ACTIVITY_RUN_COMPLETED, ACTIVITY_RUN_FAILED}' AS WORKFLOW_EVENT_TYPE[]))
@@ -269,28 +262,19 @@ public class WorkflowDao {
 
         return preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
-                .executePreparedBatch("*")
+                .executePreparedBatch("ID")
                 .mapTo(UUID.class)
                 .list();
     }
 
     public List<UUID> updateAllTasks(final Collection<WorkflowTaskRowUpdate> taskUpdates) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                WITH "CTE_TASK" AS (
-                    SELECT "ID"
-                      FROM "WORKFLOW_TASK"
-                     WHERE "ID" = :id
-                       FOR UPDATE
-                      SKIP LOCKED
-                     LIMIT 1)
                 UPDATE "WORKFLOW_TASK"
                    SET "STATUS" = :status
                      , "SCHEDULED_FOR" = :scheduledFor
                      , "UPDATED_AT" = NOW()
-                     , "ENDED_AT" = :endedAt
-                  FROM "CTE_TASK"
-                 WHERE "WORKFLOW_TASK"."ID" = "CTE_TASK"."ID"
-                RETURNING "WORKFLOW_TASK"."ID"
+                 WHERE "ID" = :id
+                RETURNING "ID"
                 """);
 
         for (final WorkflowTaskRowUpdate taskUpdate : taskUpdates) {
@@ -300,7 +284,22 @@ public class WorkflowDao {
         }
 
         return preparedBatch
-                .executePreparedBatch("*")
+                .executePreparedBatch("ID")
+                .mapTo(UUID.class)
+                .list();
+    }
+
+    public List<UUID> deleteAllTasks(final Collection<UUID> taskIds) {
+        final Update update = jdbiHandle.createUpdate("""
+                DELETE
+                  FROM "WORKFLOW_TASK"
+                 WHERE "ID" = ANY(:ids)
+                RETURNING "ID"
+                """);
+
+        return update
+                .bindArray("ids", UUID.class, taskIds)
+                .executeAndReturnGeneratedKeys("ID")
                 .mapTo(UUID.class)
                 .list();
     }

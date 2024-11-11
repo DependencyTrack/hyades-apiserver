@@ -26,6 +26,5 @@ import java.util.UUID;
 public record WorkflowTaskRowUpdate(
         UUID id,
         WorkflowTaskStatus status,
-        Instant scheduledFor,
-        Instant endedAt) {
+        Instant scheduledFor) {
 }

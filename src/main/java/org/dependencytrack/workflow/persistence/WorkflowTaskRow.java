@@ -40,8 +40,7 @@ public record WorkflowTaskRow(
         int attempt,
         Instant createdAt,
         @Nullable Instant updatedAt,
-        @Nullable Instant startedAt,
-        @Nullable Instant endedAt) {
+        @Nullable Instant startedAt) {
 
     // TODO: Tenant?
     // TODO: Owner?

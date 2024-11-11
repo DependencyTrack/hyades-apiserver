@@ -23,7 +23,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-public record NewWorkflowRunLogEntryRow(
+public record NewWorkflowRunEventLogEntryRow(
         UUID workflowRunId,
         Instant timestamp,
         UUID eventId,

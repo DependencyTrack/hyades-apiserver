@@ -122,7 +122,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                             """);
                 });
 
-        assertThat(engine.getWorkflowRunLog(workflowRun.id())).satisfiesExactly(
+        assertThat(engine.getWorkflowRunEventLog(workflowRun.id())).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -172,7 +172,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                             """);
                 });
 
-        assertThat(engine.getWorkflowRunLog(workflowRun.id())).satisfiesExactly(
+        assertThat(engine.getWorkflowRunEventLog(workflowRun.id())).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -213,7 +213,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
                 });
 
-        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunLog(workflowRun.id());
+        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunEventLog(workflowRun.id());
         assertThat(workflowRunLog).satisfiesExactly(
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
@@ -265,7 +265,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
                 });
 
-        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunLog(workflowRun.id());
+        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunEventLog(workflowRun.id());
         assertThat(workflowRunLog).satisfiesExactly(
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
@@ -302,7 +302,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(currentWorkflowRun.endedAt()).isEqualTo(currentWorkflowRun.updatedAt());
                 });
 
-        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunLog(workflowRun.id());
+        final List<WorkflowEvent> workflowRunLog = engine.getWorkflowRunEventLog(workflowRun.id());
         assertThat(workflowRunLog).satisfiesExactly(
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
@@ -359,7 +359,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         await("Workflow run suspension")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
-                    final List<WorkflowEvent> eventLog = engine.getWorkflowRunLog(workflowRun.id());
+                    final List<WorkflowEvent> eventLog = engine.getWorkflowRunEventLog(workflowRun.id());
                     assertThat(eventLog).anySatisfy(event -> assertThat(
                             event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SUSPENDED));
                 });

@@ -52,8 +52,7 @@ public class WorkflowTaskRowMapper implements RowMapper<WorkflowTaskRow> {
                 rs.getInt("ATTEMPT"),
                 Instant.ofEpochMilli(rs.getDate("CREATED_AT").getTime()),
                 nullableInstant(rs, "UPDATED_AT"),
-                nullableInstant(rs, "STARTED_AT"),
-                nullableInstant(rs, "ENDED_AT"));
+                nullableInstant(rs, "STARTED_AT"));
     }
 
 }

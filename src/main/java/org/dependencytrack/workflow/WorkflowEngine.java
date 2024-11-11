@@ -596,8 +596,8 @@ public final class WorkflowEngine implements Closeable {
         return null;
     }
 
-    public List<WorkflowEvent> getWorkflowRunLog(final UUID workflowRunId) {
-        return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunLog(workflowRunId));
+    public List<WorkflowEvent> getWorkflowRunEventLog(final UUID workflowRunId) {
+        return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunEventLog(workflowRunId));
     }
 
     <R> Optional<R> callActivity(
@@ -808,23 +808,6 @@ public final class WorkflowEngine implements Closeable {
             final WorkflowPayload result) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
 
-        // We only persist timestamps in millisecond resolution,
-        // but we also use them to achieve idempotency in event consumers.
-        //
-        // When start and completion of a job happened in the same millisecond,
-        // event consumers would be unable to tell what happened first.
-        //
-        // If this condition occurs, assume completion to have happened a millisecond later.
-        // Note that this would only ever happen if jobs are no-op and return immediately.
-        //
-        // TODO: Is there a cleaner way to solve this?
-        if (Instant.now().toEpochMilli() == task.startedAt().toEpochMilli()) {
-            eventBuilder.setTimestamp(Timestamps.fromMillis(task.startedAt().toEpochMilli() + 1));
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Corrected timestamp for completion event");
-            }
-        }
-
         if (task.activityName() == null) {
             final var subjectBuilder = WorkflowRunCompleted.newBuilder()
                     .setTaskId(task.id().toString())
@@ -854,23 +837,6 @@ public final class WorkflowEngine implements Closeable {
     @SuppressWarnings("UnusedReturnValue")
     CompletableFuture<?> dispatchTaskFailedEvent(final PolledWorkflowTaskRow task, final Throwable exception) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
-
-        // We only persist timestamps in millisecond resolution,
-        // but we also use them to achieve idempotency in event consumers.
-        //
-        // When start and failure of a job happened in the same millisecond,
-        // event consumers would be unable to tell what happened first.
-        //
-        // If this condition occurs, assume failure to have happened a millisecond later.
-        // Note that this would only ever happen if jobs are no-op and return immediately.
-        //
-        // TODO: Is there a cleaner way to solve this?
-        if (Instant.now().toEpochMilli() == task.startedAt().toEpochMilli()) {
-            eventBuilder.setTimestamp(Timestamps.fromMillis(task.startedAt().toEpochMilli() + 1));
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Corrected timestamp for failure event");
-            }
-        }
 
         Timestamp nextAttempt = null;
         if (exception instanceof AssertionError && (task.attempt() + 1) <= taskRetryMaxAttempts) {

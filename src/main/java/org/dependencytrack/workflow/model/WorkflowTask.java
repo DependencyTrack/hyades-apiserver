@@ -39,34 +39,27 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     private Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
-    private Instant endedAt;
 
     public WorkflowTask(final UUID workflowRunId, final String queue) {
         this.workflowRunId = requireNonNull(workflowRunId, "workflowRunId must not be null");
         this.id = UUID.randomUUID();
         this.queue = requireNonNull(queue, "queue must not be null");
-        this.modelState = ModelState.NEW;
     }
 
-    public void complete(final Instant timestamp) {
-        requireNonNull(timestamp, "timestamp must not be null");
+    public void complete() {
         setStatus(WorkflowTaskStatus.COMPLETED);
-        this.endedAt = timestamp;
-        maybeMarkChanged();
+        setModelState(ModelState.DELETED);
     }
 
-    public void fail(final Instant timestamp, final Instant nextAttemptAt) {
-        requireNonNull(timestamp, "timestamp must not be null");
-        setStatus(nextAttemptAt != null
-                ? WorkflowTaskStatus.PENDING_RETRY
-                : WorkflowTaskStatus.FAILED);
-        if (nextAttemptAt != null) {
-            this.scheduledFor = nextAttemptAt;
+    public void fail(final Instant nextAttemptAt) {
+        if (nextAttemptAt == null) {
+            setStatus(WorkflowTaskStatus.FAILED);
+            setModelState(ModelState.DELETED);
+        } else {
+            setStatus(WorkflowTaskStatus.PENDING_RETRY);
+            setScheduledFor(nextAttemptAt);
+            maybeMarkChanged();
         }
-        if (this.status == WorkflowTaskStatus.FAILED) {
-            this.endedAt = timestamp;
-        }
-        maybeMarkChanged();
     }
 
     public ModelState modelState() {
@@ -74,7 +67,13 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     }
 
     void setModelState(final ModelState modelState) {
-        this.modelState = requireNonNull(modelState, "state must not be null");
+        if (this.modelState != null && !this.modelState.canTransitionTo(modelState)) {
+            throw new IllegalStateException(
+                    "Can not transition from model state %s to %s".formatted(
+                            this.modelState, modelState));
+        }
+
+        this.modelState = modelState;
     }
 
     public UUID id() {
@@ -101,7 +100,9 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         requireNonNull(status, "status must not be null");
 
         if (!this.status.canTransitionTo(status)) {
-            throw new IllegalStateException("Can not transition from status %s to %s".formatted(this.status, status));
+            throw new IllegalStateException(
+                    "Can not transition from status %s to %s".formatted(
+                            this.status, status));
         }
 
         this.status = status;
@@ -172,17 +173,9 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         this.startedAt = startedAt;
     }
 
-    public Instant endedAt() {
-        return endedAt;
-    }
-
-    void setEndedAt(final Instant endedAt) {
-        this.endedAt = endedAt;
-    }
-
     void maybeMarkChanged() {
         if (this.modelState == ModelState.UNCHANGED) {
-            this.modelState = ModelState.CHANGED;
+            setModelState(ModelState.CHANGED);
         }
     }
 

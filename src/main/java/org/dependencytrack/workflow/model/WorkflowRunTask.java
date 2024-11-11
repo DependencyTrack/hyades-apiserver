@@ -20,15 +20,13 @@ package org.dependencytrack.workflow.model;
 
 import org.dependencytrack.workflow.persistence.WorkflowTaskRow;
 
-import java.time.Instant;
 import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 public final class WorkflowRunTask extends WorkflowTask {
 
     public WorkflowRunTask(final UUID workflowRunId, final String queue) {
         super(workflowRunId, queue);
+        setModelState(ModelState.NEW);
     }
 
     public WorkflowRunTask(final WorkflowTaskRow taskRow) {
@@ -41,18 +39,15 @@ public final class WorkflowRunTask extends WorkflowTask {
         setCreatedAt(taskRow.createdAt());
         setUpdatedAt(taskRow.updatedAt());
         setStartedAt(taskRow.startedAt());
-        setEndedAt(/* TODO */ null);
         setModelState(ModelState.UNCHANGED);
     }
 
-    public void suspend(final Instant timestamp) {
-        requireNonNull(timestamp, "timestamp must not be null");
+    public void suspend() {
         setStatus(WorkflowTaskStatus.SUSPENDED);
         maybeMarkChanged();
     }
 
-    public void resume(final Instant timestamp) {
-        requireNonNull(timestamp, "timestamp must not be null");
+    public void resume() {
         setStatus(WorkflowTaskStatus.PENDING_RESUME);
         maybeMarkChanged();
     }

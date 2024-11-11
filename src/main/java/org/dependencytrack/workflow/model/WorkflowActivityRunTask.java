@@ -43,6 +43,7 @@ public final class WorkflowActivityRunTask extends WorkflowTask {
         this.activityName = requireNonNull(activityName, "activityName must not be null");
         this.activityInvocationId = requireNonNull(activityInvocationId, "activityInvocationId must not be null");
         this.invokingTaskId = requireNonNull(invokingTaskId, "invokingTaskId must not be null");
+        setModelState(ModelState.NEW);
     }
 
     public WorkflowActivityRunTask(final WorkflowTaskRow taskRow) {
@@ -55,7 +56,6 @@ public final class WorkflowActivityRunTask extends WorkflowTask {
         setCreatedAt(taskRow.createdAt());
         setUpdatedAt(taskRow.updatedAt());
         setStartedAt(taskRow.startedAt());
-        setEndedAt(/* TODO */ null);
         setModelState(ModelState.UNCHANGED);
     }
 

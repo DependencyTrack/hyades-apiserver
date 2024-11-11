@@ -99,7 +99,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
             for (final String filterPart : filterParts) {
                 subQueries.add("""
                                        SELECT "EVENT"
-                                         FROM "WORKFLOW_RUN_LOG"
+                                         FROM "WORKFLOW_RUN_EVENT_LOG"
                                         WHERE "EVENT_TYPE" IN ('ACTIVITY_RUN_COMPLETED', 'ACTIVITY_RUN_FAILED')
                                         AND \
                                        """ + filterPart);

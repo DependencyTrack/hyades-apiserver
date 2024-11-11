@@ -18,10 +18,23 @@
  */
 package org.dependencytrack.workflow.model;
 
+import java.util.Set;
+
 public enum ModelState {
 
-    NEW,
-    CHANGED,
-    UNCHANGED
+    NEW,             // 0
+    UNCHANGED(2, 3), // 1
+    CHANGED(3),      // 2
+    DELETED;         // 3
+
+    private final Set<Integer> allowedTransitions;
+
+    ModelState(final Integer... allowedTransitions) {
+        this.allowedTransitions = Set.of(allowedTransitions);
+    }
+
+    boolean canTransitionTo(final ModelState newState) {
+        return allowedTransitions.contains(newState.ordinal());
+    }
 
 }

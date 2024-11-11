@@ -136,9 +136,7 @@
             , 'PENDING'
             , 'RUNNING');
             CREATE TYPE WORKFLOW_TASK_STATUS AS ENUM (
-              'COMPLETED'
-            , 'FAILED'
-            , 'PENDING'
+              'PENDING'
             , 'PENDING_RESUME'
             , 'PENDING_RETRY'
             , 'RUNNING'
@@ -178,12 +176,12 @@
             <column name="PRIORITY" type="SMALLINT"/>
             <column name="UNIQUE_KEY" type="TEXT"/>
             <column name="ARGUMENT" type="BYTEA"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="LAST_TRIGGER" type="TIMESTAMPTZ(3)"/>
-            <column name="NEXT_TRIGGER" type="TIMESTAMPTZ(3)">
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="LAST_TRIGGER" type="TIMESTAMPTZ(6)"/>
+            <column name="NEXT_TRIGGER" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -205,17 +203,17 @@
             <column name="UNIQUE_KEY" type="UUID"/>
             <column name="RESULT" type="BYTEA"/>
             <column name="FAILURE_DETAILS" type="TEXT"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="STARTED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="ENDED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="STARTED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="ENDED_AT" type="TIMESTAMPTZ(6)"/>
         </createTable>
 
-        <createTable tableName="WORKFLOW_RUN_LOG">
+        <createTable tableName="WORKFLOW_RUN_EVENT_LOG">
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
-            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)"/>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(6)"/>
             <column name="EVENT_ID" type="UUID"/>
             <column name="EVENT_TYPE" type="WORKFLOW_EVENT_TYPE">
                 <constraints nullable="false"/>
@@ -238,7 +236,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="PRIORITY" type="SMALLINT"/>
-            <column name="SCHEDULED_FOR" type="TIMESTAMPTZ(3)">
+            <column name="SCHEDULED_FOR" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
@@ -248,12 +246,11 @@
             <column name="INVOKING_TASK_ID" type="UUID"/>
             <column name="ARGUMENT" type="BYTEA"/>
             <column name="ATTEMPT" type="SMALLINT"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="STARTED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="ENDED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="STARTED_AT" type="TIMESTAMPTZ(6)"/>
         </createTable>
 
         <sql splitStatements="true" stripComments="true">
@@ -276,23 +273,23 @@
                AND "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[]);
 
             -- Supporting index for retrieving the log for a workflow run in chronological order.
-            CREATE INDEX "WORKFLOW_RUN_LOG_WORKFLOW_RUN_ID_TIMESTAMP_IDX"
-                ON "WORKFLOW_RUN_LOG" ("WORKFLOW_RUN_ID", "TIMESTAMP");
+            CREATE INDEX "WORKFLOW_RUN_EVENT_LOG_WORKFLOW_RUN_ID_TIMESTAMP_IDX"
+                ON "WORKFLOW_RUN_EVENT_LOG" ("WORKFLOW_RUN_ID", "TIMESTAMP");
 
             -- Supporting index for activity result completer.
-            CREATE INDEX "WORKFLOW_RUN_LOG_ACTIVITY_RUN_ID_IDX"
-                ON "WORKFLOW_RUN_LOG" ("ACTIVITY_RUN_ID")
+            CREATE INDEX "WORKFLOW_RUN_EVENT_LOG_ACTIVITY_RUN_ID_IDX"
+                ON "WORKFLOW_RUN_EVENT_LOG" ("ACTIVITY_RUN_ID")
                 WHERE "ACTIVITY_RUN_ID" IS NOT NULL;
         </sql>
 
         <addPrimaryKey
-                tableName="WORKFLOW_RUN_LOG"
+                tableName="WORKFLOW_RUN_EVENT_LOG"
                 columnNames="WORKFLOW_RUN_ID, TIMESTAMP, EVENT_ID"/>
 
         <addForeignKeyConstraint
-                baseTableName="WORKFLOW_RUN_LOG"
+                baseTableName="WORKFLOW_RUN_EVENT_LOG"
                 baseColumnNames="WORKFLOW_RUN_ID"
-                constraintName="WORKFLOW_RUN_LOG_WORKFLOW_RUN_FK"
+                constraintName="WORKFLOW_RUN_EVENT_LOG_WORKFLOW_RUN_FK"
                 referencedTableName="WORKFLOW_RUN"
                 referencedColumnNames="ID"
                 onDelete="CASCADE"/>

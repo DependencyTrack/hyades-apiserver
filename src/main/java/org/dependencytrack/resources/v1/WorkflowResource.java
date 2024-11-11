@@ -107,7 +107,7 @@ public class WorkflowResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        final List<WorkflowEvent> log = WorkflowEngine.getInstance().getWorkflowRunLog(UUID.fromString(runId));
+        final List<WorkflowEvent> log = WorkflowEngine.getInstance().getWorkflowRunEventLog(UUID.fromString(runId));
         return Response.ok(new WorkflowRunResponse(run, log)).build();
     }
 
