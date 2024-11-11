@@ -19,11 +19,11 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProjectVulnScanCompletedExternalEvent;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ScanProjectVulnsActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
@@ -35,7 +35,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.uuidConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
@@ -56,14 +55,16 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.callActivity(BomUploadProcessingTask.class, "123",
                 ingestBomArgs, protobufConverter(IngestBomActivityArgs.class), voidConverter(), Duration.ZERO);
 
-        // TODO: Make this Protobuf.
-        final var scanVulnsArgs = JsonNodeFactory.instance.objectNode()
-                .put("projectUuid", workflowArgs.getProject().getUuid());
+        final var scanVulnsArgs = ScanProjectVulnsActivityArgs.newBuilder()
+                .setProject(workflowArgs.getProject())
+                .build();
         final Optional<UUID> vulnScanToken = ctx.callActivity(VulnerabilityAnalysisTask.class, "456",
-                scanVulnsArgs, jsonConverter(ObjectNode.class), uuidConverter(), Duration.ZERO);
+                scanVulnsArgs, protobufConverter(ScanProjectVulnsActivityArgs.class), uuidConverter(), Duration.ZERO);
 
         // TODO: Read scan outcome from event.
-        vulnScanToken.ifPresent(uuid -> ctx.awaitExternalEvent(uuid, voidConverter()));
+        final var vulnScanCompletedEvent = vulnScanToken.flatMap(uuid -> ctx.awaitExternalEvent(
+                uuid, protobufConverter(ProjectVulnScanCompletedExternalEvent.class)));
+        LOGGER.info("Vulnerability scan " + vulnScanCompletedEvent.orElseThrow().getStatus());
 
         final var evalPoliciesArgs = EvaluateProjectPoliciesActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())

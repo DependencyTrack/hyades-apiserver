@@ -90,18 +90,17 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
     }
 
     private void runInternal() {
-        int missedPolls = 0;
+        int pollsWithoutResults = 0;
 
         while (engine.state().isNotStoppingOrStopped()) {
             // Attempt to acquire a permit from the semaphore, blocking for up to 5 seconds.
             // If acquisition was successful, immediately release the permit again.
-            //
             // This is a poor-man's alternative to busy-waiting on taskSemaphore.availablePermits() > 0.
             try {
                 boolean acquired = taskSemaphore.tryAcquire(5, TimeUnit.SECONDS);
                 if (!acquired) {
                     LOGGER.debug("All task executors busy, nothing to poll");
-                    missedPolls = 0; // Already waited longer than the max poll backoff.
+                    pollsWithoutResults = 0; // Already waited longer than the max poll backoff.
                     continue;
                 }
 
@@ -136,9 +135,10 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
                         .register(Metrics.getRegistry()));
             }
             if (polledTasks.isEmpty()) {
-                final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++missedPolls);
+                final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++pollsWithoutResults);
                 LOGGER.debug("Backing off for %dms".formatted(backoffMs));
                 try {
+                    //noinspection BusyWait
                     Thread.sleep(backoffMs);
                     continue;
                 } catch (InterruptedException e) {
@@ -148,7 +148,7 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
                 }
             }
 
-            missedPolls = 0;
+            pollsWithoutResults = 0;
 
             // Prevent race conditions where the next dispatcher iteration acquires a semaphore
             // permit before the dispatched tasks acquired theirs.
@@ -205,7 +205,7 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Task suspended", e);
             }
-        } catch (Exception | AssertionError e) {
+        } catch (Throwable e) {
             engine.dispatchTaskFailedEvent(polledTask, e) /* .join() */;
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Task failed", e);

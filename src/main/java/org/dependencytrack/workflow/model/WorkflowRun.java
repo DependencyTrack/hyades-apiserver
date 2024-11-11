@@ -42,7 +42,7 @@ public final class WorkflowRun {
     private WorkflowPayload result;
     private String failureDetails;
     private final Instant createdAt;
-    private Instant updatedAt;
+    private final Instant updatedAt;
     private Instant startedAt;
     private Instant endedAt;
 

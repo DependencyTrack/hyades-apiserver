@@ -19,11 +19,11 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.dependencytrack.exception.TransientException;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvaluateProjectPoliciesActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadWorkflowArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ScanProjectVulnsActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsActivityArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.uuidConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
@@ -75,7 +74,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         workflowEngine.registerActivityRunner(
                 new VulnerabilityAnalysisTask(),
                 /* concurrency */ 5,
-                /* argumentConverter */ jsonConverter(ObjectNode.class),
+                /* argumentConverter */ protobufConverter(ScanProjectVulnsActivityArgs.class),
                 /* resultConverter */ uuidConverter());
         workflowEngine.registerActivityRunner(
                 new PolicyEvaluationTask(),

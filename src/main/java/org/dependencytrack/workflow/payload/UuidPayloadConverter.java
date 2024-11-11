@@ -43,6 +43,8 @@ public class UuidPayloadConverter implements PayloadConverter<UUID> {
             return Optional.empty();
         }
 
+        // TODO: Check metadata for content type.
+
         return Optional.of(UUID.fromString(payload.getBinaryContent().toStringUtf8()));
     }
 

@@ -17,12 +17,20 @@ message IngestBomActivityArgs {
   string bom_file_path = 2;
 }
 
+message ScanProjectVulnsActivityArgs {
+  Project project = 1;
+}
+
 message EvaluateProjectPoliciesActivityArgs {
   Project project = 1;
 }
 
 message UpdateProjectMetricsActivityArgs {
   Project project = 1;
+}
+
+message ProjectVulnScanCompletedExternalEvent {
+  string status = 1;
 }
 
 message Project {

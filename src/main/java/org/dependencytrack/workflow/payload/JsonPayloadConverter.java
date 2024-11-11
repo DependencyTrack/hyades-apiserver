@@ -59,6 +59,8 @@ public class JsonPayloadConverter<T> implements PayloadConverter<T> {
             return Optional.empty();
         }
 
+        // TODO: Check metadata for content type.
+
         if (!payload.hasBinaryContent()) {
             throw new PayloadConversionException("Payload has no binary content");
         }
