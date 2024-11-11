@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.model.WorkflowRunStatus;
 
 import java.time.Instant;
@@ -26,7 +27,7 @@ import java.util.UUID;
 public record WorkflowRunRowUpdate(
         UUID id,
         WorkflowRunStatus status,
-        byte[] result,
+        WorkflowPayload result,
         String failureDetails,
         Instant startedAt,
         Instant endedAt) {

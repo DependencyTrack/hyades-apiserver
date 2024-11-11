@@ -47,8 +47,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.workflow.serialization.Serdes.jsonSerde;
-import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
+import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineTest extends PersistenceCapableTest {
 
@@ -88,17 +88,17 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldSuspendWhileWaitingForActivityResult() {
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), jsonSerde(ObjectNode.class), ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), jsonConverter(ObjectNode.class), ctx -> {
             final ObjectNode activityArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
             final ObjectNode activityResult = ctx.callActivity("abc", "123",
-                    activityArguments, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class), Duration.ZERO).orElseThrow();
+                    activityArguments, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class), Duration.ZERO).orElseThrow();
 
             activityResult.put("execution", "done");
             return Optional.of(activityResult);
         });
 
-        engine.registerActivityRunner("abc", 1, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class), ctx -> {
-            final ObjectNode argObject = ctx.arguments().orElseThrow();
+        engine.registerActivityRunner("abc", 1, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class), ctx -> {
+            final ObjectNode argObject = ctx.argument().orElseThrow();
             argObject.put("hello", "dlrow");
             return Optional.of(argObject);
         });
@@ -112,7 +112,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
                     assertThat(currentWorkflowRun).isNotNull();
                     assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
-                    assertThatJson(new String(currentWorkflowRun.result())).isEqualTo(/* language=JSON */ """
+                    final ObjectNode result = jsonConverter(ObjectNode.class)
+                            .convertFromPayload(currentWorkflowRun.result()).orElseThrow();
+                    assertThatJson(result).isEqualTo(/* language=JSON */ """
                             {
                               "hello": "dlrow",
                               "execution": "done"
@@ -135,18 +137,18 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldWaitForActivityResultWhenWithinTimeout() {
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), jsonSerde(ObjectNode.class), ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), jsonConverter(ObjectNode.class), ctx -> {
             final ObjectNode activityArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
             final ObjectNode activityResult = ctx.callActivity("abc", "123",
-                    activityArguments, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class),
+                    activityArguments, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class),
                     Duration.ofSeconds(10)).orElseThrow();
 
             activityResult.put("execution", "done");
             return Optional.of(activityResult);
         });
 
-        engine.registerActivityRunner("abc", 1, jsonSerde(ObjectNode.class), jsonSerde(ObjectNode.class), ctx -> {
-            final var argObject = ctx.arguments().orElseThrow();
+        engine.registerActivityRunner("abc", 1, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class), ctx -> {
+            final var argObject = ctx.argument().orElseThrow();
             argObject.put("hello", "dlrow");
             return Optional.of(argObject);
         });
@@ -160,7 +162,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
                     assertThat(currentWorkflowRun).isNotNull();
                     assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
-                    assertThatJson(new String(currentWorkflowRun.result())).isEqualTo(/* language=JSON */ """
+                    final ObjectNode result = jsonConverter(ObjectNode.class)
+                            .convertFromPayload(currentWorkflowRun.result()).orElseThrow();
+                    assertThatJson(result).isEqualTo(/* language=JSON */ """
                             {
                               "hello": "dlrow",
                               "execution": "done"
@@ -183,20 +187,20 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldReplayActivityResultsOnWorkflowRetry() {
         final var workflowAttempts = new AtomicInteger(0);
 
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
-            ctx.callActivity("abc", "123", null, voidSerde(), voidSerde(), Duration.ZERO);
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+            ctx.callActivity("abc", "123", null, voidConverter(), voidConverter(), Duration.ZERO);
 
             if (workflowAttempts.incrementAndGet() < 2) {
                 throw new AssertionError("Technical Difficulties");
             }
 
-            ctx.callActivity("xyz", "321", null, voidSerde(), voidSerde(), Duration.ZERO);
+            ctx.callActivity("xyz", "321", null, voidConverter(), voidConverter(), Duration.ZERO);
 
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("abc", 1, voidSerde(), voidSerde(), ctx -> Optional.empty());
-        engine.registerActivityRunner("xyz", 1, voidSerde(), voidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("abc", 1, voidConverter(), voidConverter(), ctx -> Optional.empty());
+        engine.registerActivityRunner("xyz", 1, voidConverter(), voidConverter(), ctx -> Optional.empty());
 
         final WorkflowRun workflowRun = engine.startWorkflow(
                 new StartWorkflowOptions("foo", 1)).join();
@@ -238,14 +242,14 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldReplayLocalActivityResultsOnWorkflowRetry() {
         final var workflowAttempts = new AtomicInteger(0);
 
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
-            ctx.callLocalActivity("abc", "123", null, voidSerde(), voidSerde(), ignored -> Optional.empty());
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+            ctx.callLocalActivity("abc", "123", null, voidConverter(), voidConverter(), ignored -> Optional.empty());
 
             if (workflowAttempts.incrementAndGet() < 2) {
                 throw new AssertionError("Technical Difficulties");
             }
 
-            ctx.callLocalActivity("xyz", "321", null, voidSerde(), voidSerde(), ignored -> Optional.empty());
+            ctx.callLocalActivity("xyz", "321", null, voidConverter(), voidConverter(), ignored -> Optional.empty());
 
             return Optional.empty();
         });
@@ -280,7 +284,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldRecordWorkflowAsFailedWhenRunFails() {
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             throw new IllegalStateException("Broken beyond repair");
         });
 
@@ -320,7 +324,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         Another workflow with unique key 04146bb6-233c-4957-98b5-c4b394b1fbd4 \
                         is already running""");
 
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> Optional.empty());
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> Optional.empty());
 
         await("Workflow run completion")
                 .atMost(Duration.ofSeconds(5))
@@ -339,9 +343,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldAwaitExternalEvent() {
         final UUID externalEventId = UUID.fromString("b0f44d1c-1545-44cc-a6f5-795098bd6da7");
 
-        engine.registerWorkflowRunner("foo", 1, voidSerde(), voidSerde(), ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             final ObjectNode externalEventContent = ctx.awaitExternalEvent(
-                    externalEventId, jsonSerde(ObjectNode.class)).orElseThrow();
+                    externalEventId, jsonConverter(ObjectNode.class)).orElseThrow();
             if (!externalEventContent.has("success")) {
                 throw new IllegalStateException();
             }
@@ -362,7 +366,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
         final var externalEventContent = JsonNodeFactory.instance.objectNode().put("success", true);
         engine.sendExternalEvent(workflowRun.id(), externalEventId,
-                externalEventContent, jsonSerde(ObjectNode.class)).join();
+                externalEventContent, jsonConverter(ObjectNode.class)).join();
 
         await("Workflow run completion")
                 .atMost(Duration.ofSeconds(5))
@@ -377,7 +381,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldThrowWhenSendingExternalEventToNonExistentWorkflowRun() {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> engine.sendExternalEvent(
-                        UUID.randomUUID(), UUID.randomUUID(), null, voidSerde()).join());
+                        UUID.randomUUID(), UUID.randomUUID(), null, voidConverter()).join());
     }
 
 }

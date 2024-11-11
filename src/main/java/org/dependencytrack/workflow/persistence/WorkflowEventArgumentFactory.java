@@ -16,18 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.serialization;
+package org.dependencytrack.workflow.persistence;
 
-public class VoidSerde implements Serde<Void> {
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-    @Override
-    public byte[] serialize(final Void value) {
-        return null;
-    }
-
-    @Override
-    public Void deserialize(final byte[] bytes) {
-        return null;
-    }
-
+final class WorkflowEventArgumentFactory extends ProtobufArgumentFactory<WorkflowEvent> {
 }

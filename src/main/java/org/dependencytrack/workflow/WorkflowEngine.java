@@ -24,7 +24,6 @@ import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
@@ -47,6 +46,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunRequested;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunRequested;
@@ -60,13 +60,13 @@ import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
 import org.dependencytrack.workflow.model.WorkflowRun;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
+import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.WorkflowScheduleRow;
-import org.dependencytrack.workflow.serialization.Serde;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufDeserializer;
 import org.dependencytrack.workflow.serialization.WorkflowEventKafkaProtobufSerializer;
 import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
@@ -275,8 +275,8 @@ public final class WorkflowEngine implements Closeable {
         if (options.priority() != null) {
             runRequestedBuilder.setPriority(options.priority());
         }
-        if (options.arguments() != null) {
-            runRequestedBuilder.setArguments(ByteString.copyFrom(options.arguments()));
+        if (options.argument() != null) {
+            runRequestedBuilder.setArgument(options.argument());
         }
 
         if (LOGGER.isDebugEnabled()) {
@@ -318,7 +318,7 @@ public final class WorkflowEngine implements Closeable {
                                     options.workflowVersion(),
                                     options.priority(),
                                     options.uniqueKey(),
-                                    options.arguments(),
+                                    options.argument(),
                                     nextTrigger)));
         } catch (UnableToExecuteStatementException e) {
             if (e.getCause() instanceof final BatchUpdateException be
@@ -335,8 +335,8 @@ public final class WorkflowEngine implements Closeable {
     public <A, R> void registerWorkflowRunner(
             final WorkflowRunner<A, R> runner,
             final int concurrency,
-            final Serde<A> argumentsSerde,
-            final Serde<R> resultSerde) {
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter) {
         requireNonNull(runner, "runner must not be null");
 
         final var workflowAnnotation = runner.getClass().getAnnotation(Workflow.class);
@@ -344,19 +344,19 @@ public final class WorkflowEngine implements Closeable {
             throw new IllegalArgumentException();
         }
 
-        registerWorkflowRunner(workflowAnnotation.name(), concurrency, argumentsSerde, resultSerde, runner);
+        registerWorkflowRunner(workflowAnnotation.name(), concurrency, argumentConverter, resultConverter, runner);
     }
 
     <A, R> void registerWorkflowRunner(
             final String workflowName,
             final int concurrency,
-            final Serde<A> argumentsSerde,
-            final Serde<R> resultSerde,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter,
             final WorkflowRunner<A, R> runner) {
         state.assertRunning();
         requireNonNull(workflowName, "workflowName must not be null");
-        requireNonNull(argumentsSerde, "argumentsSerde must not be null");
-        requireNonNull(resultSerde, "resultSerde must not be null");
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
         requireNonNull(runner, "runner must not be null");
 
         final String queue = "workflow-" + workflowName;
@@ -384,19 +384,20 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowName(),
                         polledTask.workflowVersion(),
                         polledTask.workflowRunId(),
-                        argumentsSerde.deserialize(polledTask.arguments()));
+                        argumentConverter.convertFromPayload(
+                                polledTask.argument()).orElse(null));
 
         for (int i = 0; i < concurrency; i++) {
             executorService.execute(new WorkflowTaskCoordinator<>(
-                    this, runner, contextFactory, resultSerde, queue));
+                    this, runner, contextFactory, resultConverter, queue));
         }
     }
 
     public <A, R> void registerActivityRunner(
             final WorkflowActivityRunner<A, R> runner,
             final int concurrency,
-            final Serde<A> argumentsSerde,
-            final Serde<R> resultSerde) {
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter) {
         requireNonNull(runner, "runner must not be null");
 
         final var activityAnnotation = runner.getClass().getAnnotation(WorkflowActivity.class);
@@ -404,19 +405,19 @@ public final class WorkflowEngine implements Closeable {
             throw new IllegalArgumentException();
         }
 
-        registerActivityRunner(activityAnnotation.name(), concurrency, argumentsSerde, resultSerde, runner);
+        registerActivityRunner(activityAnnotation.name(), concurrency, argumentConverter, resultConverter, runner);
     }
 
     <A, R> void registerActivityRunner(
             final String activityName,
             final int concurrency,
-            final Serde<A> argumentsSerde,
-            final Serde<R> resultSerde,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter,
             final WorkflowActivityRunner<A, R> runner) {
         state.assertRunning();
         requireNonNull(activityName, "activityName must not be null");
-        requireNonNull(argumentsSerde, "argumentsSerde must not be null");
-        requireNonNull(resultSerde, "resultSerde must not be null");
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
         requireNonNull(runner, "runner must not be null");
 
         final String queue = "activity-" + activityName;
@@ -445,12 +446,13 @@ public final class WorkflowEngine implements Closeable {
                         polledTask.workflowRunId(),
                         polledTask.activityName(),
                         polledTask.activityInvocationId(),
-                        argumentsSerde.deserialize(polledTask.arguments()));
+                        argumentConverter.convertFromPayload(
+                                polledTask.argument()).orElse(null));
 
 
         for (int i = 0; i < concurrency; i++) {
             executorService.execute(new WorkflowTaskCoordinator<>(
-                    this, runner, contextFactory, resultSerde, queue));
+                    this, runner, contextFactory, resultConverter, queue));
         }
     }
 
@@ -458,7 +460,7 @@ public final class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final UUID externalEventId,
             final T content,
-            final Serde<T> contentSerde) {
+            final PayloadConverter<T> contentConverter) {
         requireNonNull(workflowRunId, "workflowRunId must not be null");
         requireNonNull(externalEventId, "externalEventId must not be null");
 
@@ -470,8 +472,8 @@ public final class WorkflowEngine implements Closeable {
         final var subjectBuilder = ExternalEventReceived.newBuilder()
                 .setId(externalEventId.toString());
         if (content != null) {
-            final byte[] serializedContent = contentSerde.serialize(content);
-            subjectBuilder.setContent(ByteString.copyFrom(serializedContent));
+            contentConverter.convertToPayload(content)
+                    .ifPresent(subjectBuilder::setPayload);
         }
 
         return dispatchEvent(WorkflowEvent.newBuilder()
@@ -603,8 +605,8 @@ public final class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final byte[] serializedArguments,
-            final Serde<R> resultSerde,
+            final WorkflowPayload argumentPayload,
+            final PayloadConverter<R> resultConverter,
             final Duration timeout) {
         state.assertRunning();
 
@@ -614,8 +616,8 @@ public final class WorkflowEngine implements Closeable {
                 .setActivityName(activityName)
                 .setInvocationId(invocationId)
                 .setInvokingTaskId(invokingTaskId.toString());
-        if (serializedArguments != null) {
-            subjectBuilder.setArguments(ByteString.copyFrom(serializedArguments));
+        if (argumentPayload != null) {
+            subjectBuilder.setArgument(argumentPayload);
         }
 
         final var eventId = UUID.randomUUID();
@@ -642,8 +644,8 @@ public final class WorkflowEngine implements Closeable {
         final ActivityResultWatch resultWatch =
                 activityResultCompleter.watchActivityResult(activityRunId);
         try {
-            final byte[] serializedResult = resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            return Optional.ofNullable(serializedResult).map(resultSerde::deserialize);
+            final WorkflowPayload resultPayload = resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return resultConverter.convertFromPayload(resultPayload);
         } catch (TimeoutException e) {
             LOGGER.warn("Timed out while waiting for activity result; Suspending workflow run");
             resultWatch.cancel();
@@ -664,9 +666,9 @@ public final class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final A arguments,
-            final byte[] serializedArguments,
-            final Serde<R> resultSerde,
+            final A argument,
+            final WorkflowPayload argumentPayload,
+            final PayloadConverter<R> resultConverter,
             final Function<A, Optional<R>> activityFunction) {
         state.assertRunning();
 
@@ -679,8 +681,8 @@ public final class WorkflowEngine implements Closeable {
                 .setInvocationId(invocationId)
                 .setIsLocal(true)
                 .setInvokingTaskId(invokingTaskId.toString());
-        if (serializedArguments != null) {
-            executionStartedBuilder.setArguments(ByteString.copyFrom(serializedArguments));
+        if (argumentPayload != null) {
+            executionStartedBuilder.setArgument(argumentPayload);
         }
         eventsToDispatch.add(WorkflowEvent.newBuilder()
                 .setId(UUID.randomUUID().toString())
@@ -690,7 +692,7 @@ public final class WorkflowEngine implements Closeable {
                 .build());
 
         try {
-            final Optional<R> optionalResult = activityFunction.apply(arguments);
+            final Optional<R> optionalResult = activityFunction.apply(argument);
 
             final var executionCompletedBuilder = WorkflowActivityRunCompleted.newBuilder()
                     .setRunId(activityRunId.toString())
@@ -698,10 +700,9 @@ public final class WorkflowEngine implements Closeable {
                     .setInvocationId(invocationId)
                     .setIsLocal(true)
                     .setInvokingTaskId(invokingTaskId.toString());
-            if (optionalResult.isPresent()) {
-                final byte[] serializedResult = resultSerde.serialize(optionalResult.get());
-                executionCompletedBuilder.setResult(ByteString.copyFrom(serializedResult));
-            }
+            optionalResult
+                    .flatMap(resultConverter::convertToPayload)
+                    .ifPresent(executionCompletedBuilder::setResult);
 
             eventsToDispatch.add(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())
@@ -792,8 +793,8 @@ public final class WorkflowEngine implements Closeable {
                     .setInvocationId(task.activityInvocationId())
                     .setAttempt(task.attempt())
                     .setInvokingTaskId(task.invokingTaskId().toString());
-            if (task.arguments() != null) {
-                subjectBuilder.setArguments(ByteString.copyFrom(task.arguments()));
+            if (task.argument() != null) {
+                subjectBuilder.setArgument(task.argument());
             }
             eventBuilder.setActivityRunStarted(subjectBuilder.build());
         }
@@ -802,7 +803,9 @@ public final class WorkflowEngine implements Closeable {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    <R> CompletableFuture<?> dispatchTaskCompletedEvent(final PolledWorkflowTaskRow task, final byte[] result) {
+    <R> CompletableFuture<?> dispatchTaskCompletedEvent(
+            final PolledWorkflowTaskRow task,
+            final WorkflowPayload result) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
 
         // We only persist timestamps in millisecond resolution,
@@ -827,7 +830,7 @@ public final class WorkflowEngine implements Closeable {
                     .setTaskId(task.id().toString())
                     .setAttempt(task.attempt());
             if (result != null) {
-                subjectBuilder.setResult(ByteString.copyFrom(result));
+                subjectBuilder.setResult(result);
             }
             eventBuilder.setRunCompleted(subjectBuilder.build());
         } else {
@@ -839,7 +842,7 @@ public final class WorkflowEngine implements Closeable {
                     .setAttempt(task.attempt())
                     .setInvokingTaskId(task.invokingTaskId().toString());
             if (result != null) {
-                subjectBuilder.setResult(ByteString.copyFrom(result));
+                subjectBuilder.setResult(result);
             }
 
             eventBuilder.setActivityRunCompleted(subjectBuilder.build());

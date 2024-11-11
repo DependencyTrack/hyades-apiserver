@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 
 import jakarta.annotation.Nullable;
@@ -37,7 +38,7 @@ public record PolledWorkflowTaskRow(
         @Nullable String activityName,
         @Nullable String activityInvocationId,
         @Nullable UUID invokingTaskId,
-        @Nullable byte[] arguments,
+        @Nullable WorkflowPayload argument,
         int attempt,
         Instant startedAt) {
 }

@@ -68,8 +68,8 @@ final class WorkflowScheduler implements Runnable {
                 if (dueSchedule.priority() != null) {
                     startOptions = startOptions.withPriority(dueSchedule.priority());
                 }
-                if (dueSchedule.arguments() != null) {
-                    startOptions = startOptions.withArguments(dueSchedule.arguments());
+                if (dueSchedule.argument() != null) {
+                    startOptions = startOptions.withArgument(dueSchedule.argument());
                 }
 
                 startOptionsByScheduleName.put(dueSchedule.name(), startOptions);

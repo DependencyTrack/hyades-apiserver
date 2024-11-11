@@ -16,18 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.model;
+package org.dependencytrack.workflow.payload;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-import java.util.UUID;
+import java.util.Optional;
 
-public record ScheduleWorkflowOptions(
-        String name,
-        String cron,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        UUID uniqueKey,
-        WorkflowPayload argument) {
+public interface PayloadConverter<T> {
+
+    Optional<WorkflowPayload> convertToPayload(final T value);
+
+    Optional<T> convertFromPayload(final WorkflowPayload payload);
+
 }

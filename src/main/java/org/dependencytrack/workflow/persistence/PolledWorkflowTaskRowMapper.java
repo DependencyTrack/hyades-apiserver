@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.model.WorkflowTaskStatus;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -47,7 +48,8 @@ public class PolledWorkflowTaskRowMapper implements RowMapper<PolledWorkflowTask
                 rs.getString("ACTIVITY_NAME"),
                 rs.getString("ACTIVITY_INVOCATION_ID"),
                 nullableUuid(rs, "INVOKING_TASK_ID"),
-                rs.getBytes("ARGUMENTS"),
+                ctx.findColumnMapperFor(WorkflowPayload.class)
+                        .orElseThrow().map(rs, "ARGUMENT", ctx),
                 rs.getInt("ATTEMPT"),
                 Instant.ofEpochMilli(rs.getTimestamp("STARTED_AT").getTime()));
     }

@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.model.WorkflowRunStatus;
 
 import jakarta.annotation.Nullable;
@@ -31,7 +32,7 @@ public record WorkflowRunRow(
         WorkflowRunStatus status,
         @Nullable Integer priority,
         @Nullable UUID uniqueKey,
-        @Nullable byte[] result,
+        @Nullable WorkflowPayload result,
         @Nullable String failureDetails,
         Instant createdAt,
         @Nullable Instant updatedAt,

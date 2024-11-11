@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.model;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.persistence.WorkflowRunRow;
 
 import java.time.Instant;
@@ -38,7 +39,7 @@ public final class WorkflowRun {
     private WorkflowRunStatus status;
     private final Integer priority;
     private final UUID uniqueKey;
-    private byte[] result;
+    private WorkflowPayload result;
     private String failureDetails;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -68,7 +69,7 @@ public final class WorkflowRun {
         maybeMarkChanged();
     }
 
-    public void complete(final Instant timestamp, final byte[] result) {
+    public void complete(final Instant timestamp, final WorkflowPayload result) {
         requireNonNull(timestamp, "timestamp must not be null");
         setStatus(WorkflowRunStatus.COMPLETED);
         this.result = result;
@@ -133,7 +134,7 @@ public final class WorkflowRun {
     }
 
     @JsonIgnore
-    public byte[] result() {
+    public WorkflowPayload result() {
         return result;
     }
 

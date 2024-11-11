@@ -84,7 +84,7 @@ public class PolicyEvaluationTask implements Subscriber, WorkflowActivityRunner<
 
     @Override
     public Optional<Void> run(final WorkflowActivityContext<EvaluateProjectPoliciesActivityArgs> ctx) throws Exception {
-        final EvaluateProjectPoliciesActivityArgs arguments = ctx.arguments().orElseThrow();
+        final EvaluateProjectPoliciesActivityArgs arguments = ctx.argument().orElseThrow();
         evaluateProject(UUID.fromString(arguments.getProject().getUuid()));
 
         return Optional.empty();

@@ -20,7 +20,8 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.workflow.persistence.WorkflowEventColumnMapper;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.persistence.ProtobufColumnMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,7 +38,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
 
     static final class ActivityResultWatch {
 
-        private final CompletableFuture<byte[]> result;
+        private final CompletableFuture<WorkflowPayload> result;
         private final AtomicBoolean cancelled;
 
         ActivityResultWatch() {
@@ -45,7 +46,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
             this.cancelled = new AtomicBoolean(false);
         }
 
-        CompletableFuture<byte[]> result() {
+        CompletableFuture<WorkflowPayload> result() {
             return result;
         }
 
@@ -107,7 +108,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
             final List<WorkflowEvent> events = withJdbiHandle(handle -> handle
                     .createQuery(String.join(" UNION ALL ", subQueries))
                     .bindMap(filterParams)
-                    .map(new WorkflowEventColumnMapper())
+                    .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                     .list());
             for (final WorkflowEvent event : events) {
                 final UUID activityRunId = WorkflowEngine.extractActivityRunId(event)
@@ -116,7 +117,7 @@ public class WorkflowActivityResultCompleter implements Runnable {
                 if (watch != null) {
                     if (event.getSubjectCase() == WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED) {
                         watch.result().complete(event.getActivityRunCompleted().hasResult()
-                                ? event.getActivityRunCompleted().getResult().toByteArray()
+                                ? event.getActivityRunCompleted().getResult()
                                 : null);
                         LOGGER.debug("Completed %s".formatted(activityRunId));
                         watchByActivityRunId.remove(activityRunId);

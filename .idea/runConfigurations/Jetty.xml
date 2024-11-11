@@ -34,6 +34,7 @@
               <option value="jetty:run" />
               <option value="-Dcheckstyle.skip" />
               <option value="-Dlogback.configurationFile=src/main/docker/logback.xml" />
+              <option value="-ea:org.dependencytrack..." />
             </list>
           </option>
           <option name="multimoduleDir" />

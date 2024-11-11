@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.model;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -32,7 +34,7 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
     private WorkflowTaskStatus status;
     private Integer priority;
     private Instant scheduledFor;
-    private byte[] arguments;
+    private WorkflowPayload argument;
     private int attempt;
     private Instant createdAt;
     private Instant updatedAt;
@@ -128,12 +130,12 @@ public abstract sealed class WorkflowTask permits WorkflowRunTask, WorkflowActiv
         maybeMarkChanged();
     }
 
-    public byte[] arguments() {
-        return arguments;
+    public WorkflowPayload argument() {
+        return argument;
     }
 
-    public void setArguments(final byte[] arguments) {
-        this.arguments = arguments;
+    public void setArgument(final WorkflowPayload argument) {
+        this.argument = argument;
         maybeMarkChanged();
     }
 

@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.persistence;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
@@ -75,6 +76,7 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowRunRow.class))
                 .list();
@@ -116,6 +118,7 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerArgument(new WorkflowPayloadArgumentFactory())
                 .executePreparedBatch("*")
                 .mapTo(UUID.class)
                 .list();
@@ -130,6 +133,7 @@ public class WorkflowDao {
 
         return query
                 .bindArray("ids", UUID.class, ids)
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .map(ConstructorMapper.of(WorkflowRunRow.class))
                 .list();
     }
@@ -177,7 +181,7 @@ public class WorkflowDao {
         }
 
         return preparedBatch
-                .registerArgument(new WorkflowEventArgument.Factory())
+                .registerArgument(new WorkflowEventArgumentFactory())
                 .executePreparedBatch("*")
                 .mapTo(UUID.class)
                 .set();
@@ -193,7 +197,7 @@ public class WorkflowDao {
 
         return query
                 .bind("workflowRunId", workflowRunId)
-                .map(new WorkflowEventColumnMapper())
+                .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .list();
     }
 
@@ -225,7 +229,7 @@ public class WorkflowDao {
                 , "QUEUE"
                 , "PRIORITY"
                 , "SCHEDULED_FOR"
-                , "ARGUMENTS"
+                , "ARGUMENT"
                 , "WORKFLOW_RUN_ID"
                 , "ACTIVITY_RUN_ID"
                 , "ACTIVITY_NAME"
@@ -238,7 +242,7 @@ public class WorkflowDao {
                 , :queue
                 , :priority
                 , COALESCE(:scheduledFor, NOW())
-                , :arguments
+                , :argument
                 , :workflowRunId
                 , :activityRunId
                 , :activityName
@@ -254,7 +258,7 @@ public class WorkflowDao {
                     .bind("queue", newTask.queue())
                     .bind("priority", newTask.priority())
                     .bind("scheduledFor", newTask.scheduledFor())
-                    .bind("arguments", newTask.arguments())
+                    .bind("argument", newTask.argument())
                     .bind("workflowRunId", newTask.workflowRunId())
                     .bind("activityRunId", newTask.activityRunId())
                     .bind("activityName", newTask.activityName())
@@ -264,6 +268,7 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerArgument(new WorkflowPayloadArgumentFactory())
                 .executePreparedBatch("*")
                 .mapTo(UUID.class)
                 .list();
@@ -340,13 +345,14 @@ public class WorkflowDao {
                         , "WORKFLOW_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_TASK"."ACTIVITY_INVOCATION_ID"
                         , "WORKFLOW_TASK"."INVOKING_TASK_ID"
-                        , "WORKFLOW_TASK"."ARGUMENTS"
+                        , "WORKFLOW_TASK"."ARGUMENT"
                         , "WORKFLOW_TASK"."ATTEMPT"
                         , "WORKFLOW_TASK"."STARTED_AT"
                 """);
 
         return update
                 .bind("queue", queue)
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executeAndReturnGeneratedKeys("*")
                 .map(polledWorkflowTaskRowMapper)
                 .findOne();
@@ -361,6 +367,7 @@ public class WorkflowDao {
 
         return query
                 .bindArray("taskIds", UUID.class, taskIds)
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .map(queuedWorkflowTaskRowMapper)
                 .list();
     }
@@ -374,7 +381,7 @@ public class WorkflowDao {
                 , "WORKFLOW_VERSION"
                 , "PRIORITY"
                 , "UNIQUE_KEY"
-                , "ARGUMENTS"
+                , "ARGUMENT"
                 , "CREATED_AT"
                 , "NEXT_TRIGGER"
                 ) VALUES (
@@ -384,7 +391,7 @@ public class WorkflowDao {
                 , :workflowVersion
                 , :priority
                 , :uniqueKey
-                , :arguments
+                , :argument
                 , NOW()
                 , :nextTrigger
                 )
@@ -398,6 +405,8 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerArgument(new WorkflowPayloadArgumentFactory())
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowScheduleRow.class))
                 .list();
@@ -430,6 +439,7 @@ public class WorkflowDao {
         }
 
         return preparedBatch
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowScheduleRow.class))
                 .list();
@@ -444,6 +454,7 @@ public class WorkflowDao {
                 """);
 
         return query
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .map(ConstructorMapper.of(WorkflowScheduleRow.class))
                 .list();
     }

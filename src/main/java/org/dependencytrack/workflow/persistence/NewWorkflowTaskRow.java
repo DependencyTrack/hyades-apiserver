@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -33,7 +35,7 @@ public record NewWorkflowTaskRow(
         String activityName,
         String activityInvocationId,
         UUID invokingTaskId,
-        byte[] arguments) {
+        WorkflowPayload argument) {
 
     public NewWorkflowTaskRow(final UUID id, final String queue, final UUID workflowRunId) {
         this(requireNonNull(id, "id must not be null"), requireNonNull(queue, "queue must not be null"),
@@ -43,12 +45,12 @@ public record NewWorkflowTaskRow(
 
     public NewWorkflowTaskRow withPriority(final Integer priority) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, priority, this.scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.arguments);
+                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
     }
 
     public NewWorkflowTaskRow withScheduledFor(final Instant scheduledFor) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.arguments);
+                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
     }
 
     public NewWorkflowTaskRow withActivityRun(
@@ -57,12 +59,12 @@ public record NewWorkflowTaskRow(
             final String activityInvocationId,
             final UUID invokingTaskId) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, this.scheduledFor,
-                activityRunId, activityName, activityInvocationId, invokingTaskId, this.arguments);
+                activityRunId, activityName, activityInvocationId, invokingTaskId, this.argument);
     }
 
-    public NewWorkflowTaskRow withArguments(final byte[] arguments) {
+    public NewWorkflowTaskRow withArgument(final WorkflowPayload argument) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, this.scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, arguments);
+                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, argument);
     }
 
 }

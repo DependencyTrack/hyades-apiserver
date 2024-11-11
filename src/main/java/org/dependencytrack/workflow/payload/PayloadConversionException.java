@@ -16,15 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.serialization;
+package org.dependencytrack.workflow.payload;
 
-public class SerializationException extends RuntimeException {
+public class PayloadConversionException extends RuntimeException {
 
-    public SerializationException(final Throwable cause) {
-        super(cause);
+    public PayloadConversionException(final String message) {
+        super(message);
     }
 
-    public SerializationException(final String message, final Throwable cause) {
+    public PayloadConversionException(final String message, final Throwable cause) {
         super(message, cause);
     }
 

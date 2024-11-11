@@ -37,7 +37,7 @@ public final class WorkflowRunTask extends WorkflowTask {
         setStatusInternal(taskRow.status());
         setPriority(taskRow.priority());
         setScheduledFor(taskRow.scheduledFor());
-        setArguments(taskRow.arguments());
+        setArgument(taskRow.argument());
         setCreatedAt(taskRow.createdAt());
         setUpdatedAt(taskRow.updatedAt());
         setStartedAt(taskRow.startedAt());

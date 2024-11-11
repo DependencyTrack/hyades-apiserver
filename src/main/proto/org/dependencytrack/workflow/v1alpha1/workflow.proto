@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package org.dependencytrack.workflow.v1alpha1;
 
+import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
@@ -36,6 +37,16 @@ message WorkflowEvent {
   }
 }
 
+message WorkflowPayload {
+  // Metadata describing the payload.
+  map<string, bytes> metadata = 1;
+
+  oneof content {
+    bytes binary_content = 10;
+    google.protobuf.Any proto_content = 11;
+  }
+}
+
 message WorkflowRunRequested {
   // Name of the workflow to run.
   string name = 1;
@@ -46,8 +57,8 @@ message WorkflowRunRequested {
   // Priority of this run.
   optional int32 priority = 3;
 
-  // Arguments of this run.
-  optional bytes arguments = 4;
+  // Argument of the run.
+  optional WorkflowPayload argument = 4;
 }
 
 message WorkflowRunQueued {
@@ -57,8 +68,8 @@ message WorkflowRunQueued {
   // Priority of this run.
   optional int32 priority = 2;
 
-  // Arguments of this run.
-  optional bytes arguments = 3;
+  // Argument of the run.
+  optional WorkflowPayload argument = 3;
 }
 
 message WorkflowRunStarted {
@@ -68,7 +79,8 @@ message WorkflowRunStarted {
   // Attempt that was started.
   int32 attempt = 2;
 
-  optional bytes arguments = 3;
+  // Argument of the run.
+  optional WorkflowPayload argument = 3;
 }
 
 message WorkflowRunSuspended {
@@ -100,7 +112,7 @@ message WorkflowRunCompleted {
   int32 attempt = 2;
 
   // Result of the run.
-  optional bytes result = 3;
+  optional WorkflowPayload result = 3;
 }
 
 message WorkflowRunFailed {
@@ -126,8 +138,8 @@ message WorkflowActivityRunRequested {
   // ID of the invocation.
   string invocation_id = 3;
 
-  // Arguments in JSON format.
-  optional bytes arguments = 4;
+  // Argument of the activity run.
+  optional WorkflowPayload argument = 4;
 
   // ID of the task that invoked this activity.
   string invoking_task_id = 5;
@@ -146,8 +158,8 @@ message WorkflowActivityRunQueued {
   // ID of the invocation.
   string invocation_id = 5;
 
-  // Arguments in JSON format.
-  optional bytes arguments = 6;
+  // Argument of the activity run.
+  optional WorkflowPayload argument = 6;
 
   // ID of the task that invoked this activity.
   string invoking_task_id = 7;
@@ -170,8 +182,8 @@ message WorkflowActivityRunStarted {
   // Attempt that was started.
   int32 attempt = 6;
 
-  // Arguments in JSON format.
-  optional bytes arguments = 7;
+  // Argument of the activity run.
+  optional WorkflowPayload argument = 7;
 
   // Whether the activity is executed locally.
   bool is_local = 8;
@@ -197,8 +209,8 @@ message WorkflowActivityRunCompleted {
   // Attempt that completed.
   int32 attempt = 6;
 
-  // Result in JSON format.
-  optional bytes result = 7;
+  // Result of the activity run.
+  optional WorkflowPayload result = 7;
 
   // Whether the activity was executed locally.
   bool is_local = 8;
@@ -252,5 +264,5 @@ message ExternalEventReceived {
   string id = 1;
 
   // Content of the external event.
-  optional bytes content = 2;
+  optional WorkflowPayload payload = 2;
 }

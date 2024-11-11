@@ -31,39 +31,39 @@ import org.dependencytrack.workflow.annotation.Workflow;
 import java.time.Duration;
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
-import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
+import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBomUploadWorkflowArgs, Void> {
 
     @Override
     public Optional<Void> run(final WorkflowRunContext<ProcessBomUploadWorkflowArgs> ctx) throws Exception {
-        final ProcessBomUploadWorkflowArgs workflowArgs = ctx.arguments().orElseThrow();
+        final ProcessBomUploadWorkflowArgs workflowArgs = ctx.argument().orElseThrow();
 
         final var ingestBomArgs = IngestBomActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .setBomFilePath(workflowArgs.getBomFilePath())
                 .build();
         ctx.callActivity(BomUploadProcessingTask.class, "123",
-                ingestBomArgs, protobufSerde(IngestBomActivityArgs.class), voidSerde(), Duration.ZERO);
+                ingestBomArgs, protobufConverter(IngestBomActivityArgs.class), voidConverter(), Duration.ZERO);
 
         /* final UUID vulnScanCompletionEventId = */
-        ctx.callActivity("scan-project-vulns", "456", null, voidSerde(), voidSerde(), Duration.ZERO);
+        ctx.callActivity("scan-project-vulns", "456", null, voidConverter(), voidConverter(), Duration.ZERO);
 
-        // TODO: ctx.awaitExternalEvent(vulnScanCompletionEventId, voidSerde());
+        // TODO: ctx.awaitExternalEvent(vulnScanCompletionEventId, voidConverter());
 
         final var evalPoliciesArgs = EvaluateProjectPoliciesActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .build();
         ctx.callActivity(PolicyEvaluationTask.class, "789",
-                evalPoliciesArgs, protobufSerde(EvaluateProjectPoliciesActivityArgs.class), voidSerde(), Duration.ZERO);
+                evalPoliciesArgs, protobufConverter(EvaluateProjectPoliciesActivityArgs.class), voidConverter(), Duration.ZERO);
 
         final var updateMetricsArgs = UpdateProjectMetricsActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .build();
         ctx.callActivity(ProjectMetricsUpdateTask.class, "666",
-                updateMetricsArgs, protobufSerde(UpdateProjectMetricsActivityArgs.class), voidSerde(), Duration.ZERO);
+                updateMetricsArgs, protobufConverter(UpdateProjectMetricsActivityArgs.class), voidConverter(), Duration.ZERO);
 
         Logger.getLogger(getClass()).info("Workflow completed");
         return Optional.empty();

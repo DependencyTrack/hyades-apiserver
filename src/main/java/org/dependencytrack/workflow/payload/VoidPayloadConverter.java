@@ -16,12 +16,22 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.serialization;
+package org.dependencytrack.workflow.payload;
 
-public interface Serde<T> {
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-    byte[] serialize(final T value);
+import java.util.Optional;
 
-    T deserialize(final byte[] bytes);
+public class VoidPayloadConverter implements PayloadConverter<Void> {
+
+    @Override
+    public Optional<WorkflowPayload> convertToPayload(final Void value) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<Void> convertFromPayload(final WorkflowPayload payload) {
+        return Optional.empty();
+    }
 
 }

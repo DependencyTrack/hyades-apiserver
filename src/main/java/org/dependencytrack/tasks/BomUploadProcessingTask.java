@@ -169,7 +169,7 @@ public class BomUploadProcessingTask implements Subscriber, WorkflowActivityRunn
 
     @Override
     public Optional<Void> run(final WorkflowActivityContext<IngestBomActivityArgs> ctx) throws Exception {
-        final IngestBomActivityArgs arguments = ctx.arguments().orElseThrow();
+        final IngestBomActivityArgs arguments = ctx.argument().orElseThrow();
 
         final var project = new Project();
         project.setUuid(UUID.fromString(arguments.getProject().getUuid()));

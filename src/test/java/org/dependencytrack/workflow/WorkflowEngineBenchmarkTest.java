@@ -29,7 +29,6 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.workflow.model.StartWorkflowOptions;
-import org.dependencytrack.workflow.serialization.VoidSerde;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -51,6 +50,7 @@ import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CON
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
@@ -83,18 +83,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         engine = new WorkflowEngine();
         engine.start();
 
-        final var voidSerde = new VoidSerde();
-
-        engine.registerWorkflowRunner("test", 10, voidSerde, voidSerde, ctx -> {
-            ctx.callActivity("foo", "1", null, voidSerde, voidSerde, Duration.ZERO);
-            ctx.callActivity("bar", "2", null, voidSerde, voidSerde, Duration.ZERO);
-            ctx.callActivity("baz", "3", null, voidSerde, voidSerde, Duration.ZERO);
+        engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), ctx -> {
+            ctx.callActivity("foo", "1", null, voidConverter(), voidConverter(), Duration.ZERO);
+            ctx.callActivity("bar", "2", null, voidConverter(), voidConverter(), Duration.ZERO);
+            ctx.callActivity("baz", "3", null, voidConverter(), voidConverter(), Duration.ZERO);
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("foo", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
-        engine.registerActivityRunner("bar", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
-        engine.registerActivityRunner("baz", 5, new VoidSerde(), new VoidSerde(), ctx -> Optional.empty());
+        engine.registerActivityRunner("foo", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
     }
 
     @After

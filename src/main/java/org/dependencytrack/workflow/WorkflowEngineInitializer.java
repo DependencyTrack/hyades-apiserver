@@ -35,8 +35,8 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
-import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
+import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
 
@@ -55,35 +55,35 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         workflowEngine.registerWorkflowRunner(
                 new MirrorVulnSourcesWorkflowRunner(),
                 /* concurrency */ 1,
-                /* argumentsSerde */ voidSerde(),
-                /* resultSerde */ voidSerde());
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter());
         workflowEngine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflowRunner(),
                 /* concurrency */ 5,
-                /* argumentsSerde */ protobufSerde(ProcessBomUploadWorkflowArgs.class),
-                /* resultSerde */ voidSerde());
+                /* argumentConverter */ protobufConverter(ProcessBomUploadWorkflowArgs.class),
+                /* resultConverter */ voidConverter());
 
         workflowEngine.registerActivityRunner(
                 new BomUploadProcessingTask(),
                 /* concurrency */ 5,
-                /* argumentsSerde */ protobufSerde(IngestBomActivityArgs.class),
-                /* resultSerde */ voidSerde());
+                /* argumentConverter */ protobufConverter(IngestBomActivityArgs.class),
+                /* resultConverter */ voidConverter());
         workflowEngine.registerActivityRunner(
                 "scan-project-vulns",
                 /* concurrency */ 5,
-                /* argumentsSerde */ voidSerde(),
-                /* resultSerde */ voidSerde(),
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter(),
                 new RandomlyFailingActivityRunner(random));
         workflowEngine.registerActivityRunner(
                 new PolicyEvaluationTask(),
                 /* concurrency */ 5,
-                /* argumentsSerde */ protobufSerde(EvaluateProjectPoliciesActivityArgs.class),
-                /* resultSerde */ voidSerde());
+                /* argumentConverter */ protobufConverter(EvaluateProjectPoliciesActivityArgs.class),
+                /* resultConverter */ voidConverter());
         workflowEngine.registerActivityRunner(
                 new ProjectMetricsUpdateTask(),
                 /* concurrency */ 5,
-                /* argumentsSerde */ protobufSerde(UpdateProjectMetricsActivityArgs.class),
-                /* resultSerde */ voidSerde());
+                /* argumentConverter */ protobufConverter(UpdateProjectMetricsActivityArgs.class),
+                /* resultConverter */ voidConverter());
 
         try {
             workflowEngine.scheduleWorkflow(new ScheduleWorkflowOptions(
@@ -93,7 +93,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                     /* workflowVersion */ 1,
                     /* priority */ null,
                     MirrorVulnSourcesWorkflowRunner.UNIQUE_KEY,
-                    /* arguments */ null));
+                    /* argument */ null));
         } catch (IllegalStateException e) {
             LOGGER.debug("Schedule already exists", e);
         }

@@ -177,7 +177,7 @@
             </column>
             <column name="PRIORITY" type="SMALLINT"/>
             <column name="UNIQUE_KEY" type="TEXT"/>
-            <column name="ARGUMENTS" type="BYTEA"/>
+            <column name="ARGUMENT" type="BYTEA"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
@@ -246,7 +246,7 @@
             <column name="ACTIVITY_NAME" type="TEXT"/>
             <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
             <column name="INVOKING_TASK_ID" type="UUID"/>
-            <column name="ARGUMENTS" type="BYTEA"/>
+            <column name="ARGUMENT" type="BYTEA"/>
             <column name="ATTEMPT" type="SMALLINT"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>

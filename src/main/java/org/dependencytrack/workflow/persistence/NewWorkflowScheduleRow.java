@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,6 +30,6 @@ public record NewWorkflowScheduleRow(
         int workflowVersion,
         Integer priority,
         UUID uniqueKey,
-        byte[] arguments,
+        WorkflowPayload argument,
         Instant nextTrigger) {
 }

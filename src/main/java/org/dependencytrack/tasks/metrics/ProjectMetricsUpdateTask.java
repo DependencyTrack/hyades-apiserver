@@ -70,7 +70,7 @@ public class ProjectMetricsUpdateTask implements Subscriber, WorkflowActivityRun
 
     @Override
     public Optional<Void> run(final WorkflowActivityContext<UpdateProjectMetricsActivityArgs> ctx) throws Exception {
-        final UpdateProjectMetricsActivityArgs arguments = ctx.arguments().orElseThrow();
+        final UpdateProjectMetricsActivityArgs arguments = ctx.argument().orElseThrow();
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, arguments.getProject().getUuid());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, arguments.getProject().getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, arguments.getProject().getVersion())) {

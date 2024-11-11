@@ -18,30 +18,39 @@
  */
 package org.dependencytrack.workflow.model;
 
-import org.dependencytrack.workflow.serialization.Serde;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.payload.PayloadConverter;
 
 import java.util.UUID;
 
-public record StartWorkflowOptions(String name, int version, Integer priority, UUID uniqueKey, byte[] arguments) {
+public record StartWorkflowOptions(
+        String name,
+        int version,
+        Integer priority,
+        UUID uniqueKey,
+        WorkflowPayload argument) {
 
     public StartWorkflowOptions(final String name, final int version) {
         this(name, version, null, null, null);
     }
 
     public StartWorkflowOptions withPriority(final Integer priority) {
-        return new StartWorkflowOptions(this.name, this.version, priority, this.uniqueKey, this.arguments);
+        return new StartWorkflowOptions(this.name, this.version, priority, this.uniqueKey, this.argument);
     }
 
     public StartWorkflowOptions withUniqueKey(final UUID uniqueKey) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, uniqueKey, this.arguments);
+        return new StartWorkflowOptions(this.name, this.version, this.priority, uniqueKey, this.argument);
     }
 
-    public StartWorkflowOptions withArguments(final byte[] arguments) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey, arguments);
+    public StartWorkflowOptions withArgument(final WorkflowPayload argument) {
+        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey, argument);
     }
 
-    public <T> StartWorkflowOptions withArguments(final T arguments, final Serde<T> argumentsSerde) {
-        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey, argumentsSerde.serialize(arguments));
+    public <T> StartWorkflowOptions withArgument(
+            final T argument,
+            final PayloadConverter<T> argumentConverter) {
+        return new StartWorkflowOptions(this.name, this.version, this.priority, this.uniqueKey,
+                argumentConverter.convertToPayload(argument).orElse(null));
     }
 
 }

@@ -101,7 +101,7 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.workflow.serialization.Serdes.protobufSerde;
+import static org.dependencytrack.workflow.payload.PayloadConverters.protobufConverter;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -493,7 +493,7 @@ public class BomResource extends AlpineResource {
             final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                     new StartWorkflowOptions("process-bom-upload", 1)
                             .withPriority(666)
-                            .withArguments(workflowArgs, protobufSerde(ProcessBomUploadWorkflowArgs.class))).join();
+                            .withArgument(workflowArgs, protobufConverter(ProcessBomUploadWorkflowArgs.class))).join();
 
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
@@ -538,7 +538,7 @@ public class BomResource extends AlpineResource {
                 final WorkflowRun workflowRun = WorkflowEngine.getInstance().startWorkflow(
                         new StartWorkflowOptions("process-bom-upload", 1)
                                 .withPriority(666)
-                                .withArguments(workflowArgs, protobufSerde(ProcessBomUploadWorkflowArgs.class))).join();
+                                .withArgument(workflowArgs, protobufConverter(ProcessBomUploadWorkflowArgs.class))).join();
 
                 // todo: make option to combine all the bom data so components are reconciled in a single pass.
                 // todo: https://github.com/DependencyTrack/dependency-track/issues/130

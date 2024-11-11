@@ -32,8 +32,8 @@ public final class WorkflowActivityContext<A> extends WorkflowTaskContext<A> {
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final A arguments) {
-        super(taskId, workflowName, workflowVersion, workflowRunId, arguments);
+            final A argument) {
+        super(taskId, workflowName, workflowVersion, workflowRunId, argument);
         this.activityName = activityName;
         this.invocationId = invocationId;
     }

@@ -36,19 +36,19 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
     private final String workflowName;
     private final int workflowVersion;
     private final UUID workflowRunId;
-    private final A arguments;
+    private final A argument;
 
     WorkflowTaskContext(
             final UUID taskId,
             final String workflowName,
             final int workflowVersion,
             final UUID workflowRunId,
-            final A arguments) {
+            final A argument) {
         this.taskId = requireNonNull(taskId, "taskId must not be null");
         this.workflowName = requireNonNull(workflowName, "workflowName must not be null");
         this.workflowVersion = workflowVersion;
         this.workflowRunId = requireNonNull(workflowRunId, "workflowRunId must not be null");
-        this.arguments = arguments;
+        this.argument = argument;
     }
 
     public UUID taskId() {
@@ -67,8 +67,8 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
         return workflowRunId;
     }
 
-    public Optional<A> arguments() {
-        return Optional.ofNullable(arguments);
+    public Optional<A> argument() {
+        return Optional.ofNullable(argument);
     }
 
 }

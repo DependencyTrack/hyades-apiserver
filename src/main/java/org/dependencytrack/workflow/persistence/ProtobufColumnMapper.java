@@ -19,27 +19,33 @@
 package org.dependencytrack.workflow.persistence;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.workflow.serialization.SerializationException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public final class WorkflowEventColumnMapper implements ColumnMapper<WorkflowEvent> {
+public class ProtobufColumnMapper <T extends Message> implements ColumnMapper<T> {
+
+    private final Parser<T> parser;
+
+    public ProtobufColumnMapper(final Parser<T> parser) {
+        this.parser = parser;
+    }
 
     @Override
-    public WorkflowEvent map(final ResultSet rs, final int columnNumber, final StatementContext ctx) throws SQLException {
-        final byte[] eventBytes = rs.getBytes(columnNumber);
+    public T map(final ResultSet rs, final int columnNumber, final StatementContext ctx) throws SQLException {
+        final byte[] valueBytes = rs.getBytes(columnNumber);
         if (rs.wasNull()) {
             return null;
         }
 
         try {
-            return WorkflowEvent.parseFrom(eventBytes);
+            return parser.parseFrom(valueBytes);
         } catch (InvalidProtocolBufferException e) {
-            throw new SerializationException("Failed to parse workflow event", e);
+            throw new SQLException("Failed to parse workflow event", e);
         }
     }
 

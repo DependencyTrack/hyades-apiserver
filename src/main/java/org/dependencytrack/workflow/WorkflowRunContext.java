@@ -20,7 +20,6 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import com.google.protobuf.util.Timestamps;
-import org.apache.commons.lang3.ArrayUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
@@ -28,14 +27,14 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.annotation.WorkflowActivity;
-import org.dependencytrack.workflow.serialization.Serde;
+import org.dependencytrack.workflow.payload.PayloadConverter;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -56,8 +55,8 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             final String workflowName,
             final int workflowVersion,
             final UUID workflowRunId,
-            final A arguments) {
-        super(taskId, workflowName, workflowVersion, workflowRunId, arguments);
+            final A argument) {
+        super(taskId, workflowName, workflowVersion, workflowRunId, argument);
         this.logger = Logger.getLogger(runnerClass);
         this.engine = engine;
     }
@@ -65,25 +64,25 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
     public <AA, AR> Optional<AR> callActivity(
             final Class<? extends WorkflowActivityRunner<AA, AR>> activityClass,
             final String invocationId,
-            final AA arguments,
-            final Serde<AA> argumentsSerde,
-            final Serde<AR> resultSerde,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter,
             final Duration timeout) {
         final var activityAnnotation = activityClass.getAnnotation(WorkflowActivity.class);
         if (activityAnnotation == null) {
             throw new IllegalArgumentException();
         }
 
-        return callActivity(activityAnnotation.name(), invocationId, arguments, argumentsSerde, resultSerde, timeout);
+        return callActivity(activityAnnotation.name(), invocationId, argument, argumentConverter, resultConverter, timeout);
     }
 
     // TODO: Retry policy
     public <AA, AR> Optional<AR> callActivity(
             final String activityName,
             final String invocationId,
-            final AA arguments,
-            final Serde<AA> argumentsSerde,
-            final Serde<AR> resultSerde,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter,
             final Duration timeout) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
@@ -124,13 +123,13 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         // TODO: If there is a pending execution already in the history,
         //  don't request a new one. Register a future for its result instead.
 
-        final byte[] serializedArguments = argumentsSerde.serialize(arguments);
+        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
         if (queuedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(serializedArguments).test(
-                queuedEvent.hasArguments() ? queuedEvent.getArguments().toByteArray() : null)) {
+            || !argumentsMatch(argumentPayload).test(
+                queuedEvent.hasArgument() ? queuedEvent.getArgument() : null)) {
             logger.debug("Activity completion not found in history; Triggering execution");
             return engine.callActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, serializedArguments, resultSerde, timeout);
+                    activityName, invocationId, argumentPayload, resultConverter, timeout);
         }
 
         if (failedEvent != null) {
@@ -140,16 +139,16 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         }
 
         return completedEvent.hasResult()
-                ? Optional.of(completedEvent.getResult().toByteArray()).map(resultSerde::deserialize)
+                ? resultConverter.convertFromPayload(completedEvent.getResult())
                 : Optional.empty();
     }
 
     public <AA, AR> Optional<AR> callLocalActivity(
             final String activityName,
             final String invocationId,
-            final AA arguments,
-            final Serde<AA> argumentsSerde,
-            final Serde<AR> resultSerde,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter,
             final Function<AA, Optional<AR>> activityFunction) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
@@ -188,12 +187,12 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             }
         }
 
-        final byte[] serializedArguments = argumentsSerde.serialize(arguments);
+        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
         if (startedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(serializedArguments).test(
-                startedEvent.hasArguments() ? startedEvent.getArguments().toByteArray() : null)) {
+            || !argumentsMatch(argumentPayload).test(
+                startedEvent.hasArgument() ? startedEvent.getArgument() : null)) {
             return engine.callLocalActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, arguments, serializedArguments, resultSerde, activityFunction);
+                    activityName, invocationId, argument, argumentPayload, resultConverter, activityFunction);
         }
 
         if (failedEvent != null) {
@@ -203,11 +202,13 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         }
 
         return completedEvent.hasResult()
-                ? Optional.of(completedEvent.getResult().toByteArray()).map(resultSerde::deserialize)
+                ? resultConverter.convertFromPayload(completedEvent.getResult())
                 : Optional.empty();
     }
 
-    public <T> Optional<T> awaitExternalEvent(final UUID externalEventId, final Serde<T> contentSerde) {
+    public <T> Optional<T> awaitExternalEvent(
+            final UUID externalEventId,
+            final PayloadConverter<T> payloadConverter) {
         requireNonNull(externalEventId, "externalEventId must not be null");
 
         ExternalEventReceived event = null;
@@ -229,18 +230,16 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                             .build());
         }
 
-        return event.hasContent()
-                ? Optional.ofNullable(event.getContent().toByteArray()).map(contentSerde::deserialize)
+        return event.hasPayload()
+                ? payloadConverter.convertFromPayload(event.getPayload())
                 : Optional.empty();
     }
 
-    private Predicate<byte[]> argumentsMatch(final byte[] argumentsBytes) {
-        if (argumentsBytes == null) {
-            return logEntryArgumentsBytes -> {
-                if (logEntryArgumentsBytes != null) {
-                    final String logEntryArgumentsPrefixB64 = Base64.getEncoder().encodeToString(
-                            ArrayUtils.subarray(logEntryArgumentsBytes, 0, 32));
-                    logger.warn("Argument mismatch: %s... -> null".formatted(logEntryArgumentsPrefixB64));
+    private Predicate<WorkflowPayload> argumentsMatch(final WorkflowPayload argumentPayload) {
+        if (argumentPayload == null) {
+            return logEntryArgumentPayload -> {
+                if (logEntryArgumentPayload != null) {
+                    logger.warn("Argument mismatch: %s... -> null".formatted(logEntryArgumentPayload));
                     return false;
                 }
 
@@ -248,20 +247,17 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             };
         }
 
-        return logEntryArgumentsBytes -> {
-            if (logEntryArgumentsBytes == null) {
-                final String argumentsPrefixB64 = Base64.getEncoder().encodeToString(
-                        ArrayUtils.subarray(argumentsBytes, 0, 32));
-                logger.warn("Arguments mismatch: null -> %s...".formatted(argumentsPrefixB64));
+        return logEntryArgumentPayload -> {
+            if (logEntryArgumentPayload == null) {
+                logger.warn("Arguments mismatch: null -> %s...".formatted(argumentPayload));
                 return false;
             }
 
-            if (!Arrays.equals(logEntryArgumentsBytes, argumentsBytes)) {
-                final String argumentsPrefixB64 = Base64.getEncoder().encodeToString(
-                        ArrayUtils.subarray(argumentsBytes, 0, 32));
-                final String logEntryArgumentsPrefixB64 = Base64.getEncoder().encodeToString(
-                        ArrayUtils.subarray(logEntryArgumentsBytes, 0, 32));
-                logger.warn("Arguments mismatch: %s... -> %s...".formatted(logEntryArgumentsPrefixB64, argumentsPrefixB64));
+            if (!Objects.equals(logEntryArgumentPayload, argumentPayload)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Arguments mismatch: %s... -> %s...".formatted(
+                            logEntryArgumentPayload, argumentPayload));
+                }
                 return false;
             }
 

@@ -27,7 +27,7 @@ import org.dependencytrack.workflow.annotation.Workflow;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.serialization.Serdes.voidSerde;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "mirror-vuln-sources")
 public class MirrorVulnSourcesWorkflowRunner implements WorkflowRunner<Void, Void> {
@@ -36,14 +36,14 @@ public class MirrorVulnSourcesWorkflowRunner implements WorkflowRunner<Void, Voi
 
     @Override
     public Optional<Void> run(final WorkflowRunContext<Void> ctx) throws Exception {
-        ctx.callLocalActivity("trigger-nist-mirror", "1", null, voidSerde(), voidSerde(), ignored -> {
+        ctx.callLocalActivity("trigger-nist-mirror", "1", null, voidConverter(), voidConverter(), ignored -> {
             new NistMirrorTask().inform(new NistMirrorEvent());
             return Optional.empty();
         });
 
         // TODO: Wait for NIST mirroring to complete.
 
-        ctx.callLocalActivity("trigger-epss-mirror", "1", null, voidSerde(), voidSerde(), ignored -> {
+        ctx.callLocalActivity("trigger-epss-mirror", "1", null, voidConverter(), voidConverter(), ignored -> {
             new EpssMirrorTask().inform(new EpssMirrorEvent());
             return Optional.empty();
         });
