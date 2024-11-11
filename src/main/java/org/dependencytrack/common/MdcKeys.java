@@ -50,6 +50,7 @@ public final class MdcKeys {
     public static final String MDC_WORKFLOW_TASK_ID = "workflowTaskId";
     public static final String MDC_WORKFLOW_TASK_PRIORITY = "workflowTaskPriority";
     public static final String MDC_WORKFLOW_TASK_QUEUE = "workflowTaskQueue";
+    public static final String MDC_WORKFLOW_TASK_RUNNER = "workflowTaskRunner";
 
     private MdcKeys() {
     }

@@ -148,10 +148,12 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         public void run() {
             try {
                 final MeterRegistry meterRegistry = Metrics.getRegistry();
-                final Collection<Timer> runnerPollLatencies = meterRegistry.get(
-                        "dtrack.workflow.task.worker.poll.latency").timers();
+                final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
+                        "dtrack.workflow.task.dispatcher.poll.latency").timers();
+                final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(
+                        "dtrack.workflow.task.dispatcher.poll.tasks").summaries();
                 final Collection<Timer> runnerProcessLatencies = meterRegistry.get(
-                        "dtrack.workflow.task.worker.process.latency").timers();
+                        "dtrack.workflow.task.runner.process.latency").timers();
                 final Timer eventFlushLatency = meterRegistry.get(
                         "dtrack.kafka.batch.consumer.flush.latency").timer();
                 final DistributionSummary eventBatchSize = meterRegistry.get(
@@ -165,14 +167,18 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 final Gauge kafkaProducerQueueTimeMax = meterRegistry.get(
                         "kafka.producer.record.queue.time.max").gauge();
 
-                for (final Timer timer : runnerPollLatencies) {
-                    LOGGER.info("Runner Poll Latency: queue=%s mean=%.2fms, max=%.2fms".formatted(
-                            timer.getId().getTag("queue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                for (final Timer timer : taskDispatcherPollLatencies) {
+                    LOGGER.info("Dispatcher Poll Latency: queue=%s, mean=%.2fms, max=%.2fms".formatted(
+                            timer.getId().getTag("taskQueue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                }
+                for (final DistributionSummary summary : taskDispatcherPollTasks) {
+                    LOGGER.info("Dispatcher Poll Tasks: queue=%s, mean=%.2f, max=%.2f".formatted(
+                            summary.getId().getTag("taskQueue"), summary.mean(), summary.max()));
                 }
 
                 for (final Timer timer : runnerProcessLatencies) {
-                    LOGGER.info("Runner Process Latency: queue=%s mean=%.2fms, max=%.2fms".formatted(
-                            timer.getId().getTag("queue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                    LOGGER.info("Runner Process Latency: queue=%s, mean=%.2fms, max=%.2fms".formatted(
+                            timer.getId().getTag("taskQueue"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
                 }
 
                 LOGGER.info("Event Batch Size: mean=%.2f, max=%.2f".formatted(

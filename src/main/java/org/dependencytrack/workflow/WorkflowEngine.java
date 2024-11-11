@@ -167,6 +167,7 @@ public final class WorkflowEngine implements Closeable {
     private KafkaProducer<UUID, WorkflowEvent> eventKafkaProducer;
     private KafkaClientMetrics eventKafkaConsumerMetrics;
     private KafkaClientMetrics eventKafkaProducerMetrics;
+    private ExecutorService taskDispatcherExecutor;
     private WorkflowActivityResultCompleter activityResultCompleter;
     private Thread activityResultCompleterThread;
     private ScheduledExecutorService schedulerExecutor;
@@ -219,6 +220,16 @@ public final class WorkflowEngine implements Closeable {
         eventConsumerThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
         eventConsumerThread.start();
 
+        taskDispatcherExecutor = Executors.newThreadPerTaskExecutor(
+                new BasicThreadFactory.Builder()
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .namingPattern("WorkflowEngine-TaskDispatcher-%d")
+                        .build());
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            new ExecutorServiceMetrics(taskDispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
+                    .bindTo(Metrics.getRegistry());
+        }
+
         activityResultCompleter = new WorkflowActivityResultCompleter(this);
         activityResultCompleterThread = new Thread(activityResultCompleter, "WorkflowEngine-FutureResolver");
         activityResultCompleterThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
@@ -230,6 +241,10 @@ public final class WorkflowEngine implements Closeable {
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .namingPattern("WorkflowEngine-Scheduler")
                         .build());
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            new ExecutorServiceMetrics(schedulerExecutor, "WorkflowEngine-Scheduler", null)
+                    .bindTo(Metrics.getRegistry());
+        }
         schedulerExecutor.scheduleAtFixedRate(
                 /* command */ scheduler,
                 /* initialDelay */ 1,
@@ -334,7 +349,7 @@ public final class WorkflowEngine implements Closeable {
 
     public <A, R> void registerWorkflowRunner(
             final WorkflowRunner<A, R> runner,
-            final int concurrency,
+            final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
         requireNonNull(runner, "runner must not be null");
@@ -344,12 +359,12 @@ public final class WorkflowEngine implements Closeable {
             throw new IllegalArgumentException();
         }
 
-        registerWorkflowRunner(workflowAnnotation.name(), concurrency, argumentConverter, resultConverter, runner);
+        registerWorkflowRunner(workflowAnnotation.name(), maxConcurrency, argumentConverter, resultConverter, runner);
     }
 
     <A, R> void registerWorkflowRunner(
             final String workflowName,
-            final int concurrency,
+            final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final WorkflowRunner<A, R> runner) {
@@ -365,7 +380,7 @@ public final class WorkflowEngine implements Closeable {
         }
 
         // TODO: (Optionally) use virtual threads with semaphore?
-        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency,
+        final ExecutorService executorService = Executors.newFixedThreadPool(maxConcurrency,
                 new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .namingPattern("WorkflowEngine-WorkflowRunner-" + workflowName + "-%d")
@@ -387,15 +402,19 @@ public final class WorkflowEngine implements Closeable {
                         argumentConverter.convertFromPayload(
                                 polledTask.argument()).orElse(null));
 
-        for (int i = 0; i < concurrency; i++) {
-            executorService.execute(new WorkflowTaskCoordinator<>(
-                    this, runner, contextFactory, resultConverter, queue));
-        }
+        taskDispatcherExecutor.execute(new WorkflowTaskDispatcher<>(
+                /* engine */ this,
+                executorService,
+                runner,
+                contextFactory,
+                resultConverter,
+                queue,
+                maxConcurrency));
     }
 
     public <A, R> void registerActivityRunner(
             final WorkflowActivityRunner<A, R> runner,
-            final int concurrency,
+            final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
         requireNonNull(runner, "runner must not be null");
@@ -405,12 +424,12 @@ public final class WorkflowEngine implements Closeable {
             throw new IllegalArgumentException();
         }
 
-        registerActivityRunner(activityAnnotation.name(), concurrency, argumentConverter, resultConverter, runner);
+        registerActivityRunner(activityAnnotation.name(), maxConcurrency, argumentConverter, resultConverter, runner);
     }
 
     <A, R> void registerActivityRunner(
             final String activityName,
-            final int concurrency,
+            final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final WorkflowActivityRunner<A, R> runner) {
@@ -427,7 +446,7 @@ public final class WorkflowEngine implements Closeable {
         }
 
         // TODO: (Optionally) use virtual threads with semaphore?
-        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency,
+        final ExecutorService executorService = Executors.newFixedThreadPool(maxConcurrency,
                 new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .namingPattern("WorkflowEngine-ActivityRunner-" + activityName + "-%d")
@@ -450,10 +469,14 @@ public final class WorkflowEngine implements Closeable {
                                 polledTask.argument()).orElse(null));
 
 
-        for (int i = 0; i < concurrency; i++) {
-            executorService.execute(new WorkflowTaskCoordinator<>(
-                    this, runner, contextFactory, resultConverter, queue));
-        }
+        taskDispatcherExecutor.execute(new WorkflowTaskDispatcher<>(
+                /* engine */ this,
+                executorService,
+                runner,
+                contextFactory,
+                resultConverter,
+                queue,
+                maxConcurrency));
     }
 
     public <T> CompletableFuture<?> sendExternalEvent(
@@ -495,6 +518,18 @@ public final class WorkflowEngine implements Closeable {
 
         // TODO: Ensure the shutdown timeout is enforced across all activities,
         //  i.e. the entire process should take no more than 30sec.
+
+        LOGGER.info("Waiting for task dispatchers to stop");
+        taskDispatcherExecutor.shutdown();
+        try {
+            final boolean terminated = taskDispatcherExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            if (!terminated) {
+                LOGGER.warn("Task dispatchers did not stop in time");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for task dispatchers to stop", e);
+        }
 
         LOGGER.info("Waiting for executors to stop");
         for (final Map.Entry<String, ExecutorService> entry : taskExecutorByQueue.entrySet()) {
