@@ -25,7 +25,6 @@ import org.jdbi.v3.core.statement.StatementContext;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class OrganizationalContactMapper implements ColumnMapper<List<OrganizationalContact>> {
