@@ -23,6 +23,8 @@ import alpine.common.metrics.Metrics;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
@@ -168,6 +170,7 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
 
     private void executeTask(final PolledWorkflowTaskRow polledTask, final CountDownLatch permitAcquiredLatch) {
         final Timer.Sample processingTimerSample = Timer.start();
+        final C taskContext = taskContextFactory.apply(polledTask);
         try (var ignoredMdcRunId = MDC.putCloseable(MDC_WORKFLOW_RUN_ID, String.valueOf(polledTask.workflowRunId()));
              var ignoredMdcActivityRunId = MDC.putCloseable(MDC_WORKFLOW_ACTIVITY_RUN_ID, String.valueOf(polledTask.activityRunId()));
              var ignoredMdcTaskId = MDC.putCloseable(MDC_WORKFLOW_TASK_ID, String.valueOf(polledTask.id()));
@@ -178,26 +181,27 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
             taskSemaphore.acquire();
             permitAcquiredLatch.countDown();
 
-            engine.dispatchTaskStartedEvent(polledTask) /* .join() */;
+            taskContext.addToEventBuffer(engine.createTaskStartedEvent(polledTask));
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Processing");
             }
 
-            final C context = taskContextFactory.apply(polledTask);
-            final Optional<R> result = taskRunner.run(context);
+            final Optional<R> result = taskRunner.run(taskContext);
+            final Optional<WorkflowPayload> resultPayload =
+                    result.flatMap(taskResultConverter::convertToPayload);
 
-            engine.dispatchTaskCompletedEvent(polledTask,
-                    result.flatMap(taskResultConverter::convertToPayload).orElse(null)) /* .join() */;
+            taskContext.addToEventBuffer(engine.createTaskCompletedEvent(polledTask, resultPayload.orElse(null)));
+
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Task completed");
             }
         } catch (WorkflowRunSuspendedException e) {
             if (e.getActivityCompletedResumeCondition() != null) {
-                engine.dispatchTaskSuspendedEvent(
-                        polledTask, e.getActivityCompletedResumeCondition()) /* .join() */;
+                taskContext.addToEventBuffer(engine.createTaskSuspendedEvent(
+                        polledTask, e.getActivityCompletedResumeCondition()));
             } else if (e.getExternalEventResumeCondition() != null) {
-                engine.dispatchTaskSuspendedEvent(
-                        polledTask, e.getExternalEventResumeCondition()) /* .join() */;
+                taskContext.addToEventBuffer(engine.createTaskSuspendedEvent(
+                        polledTask, e.getExternalEventResumeCondition()));
             } else {
                 throw new IllegalStateException("No resume condition provided", e);
             }
@@ -206,11 +210,19 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
                 taskRunnerLogger.debug("Task suspended", e);
             }
         } catch (Throwable e) {
-            engine.dispatchTaskFailedEvent(polledTask, e) /* .join() */;
+            taskContext.addToEventBuffer(engine.createTaskFailedEvent(polledTask, e));
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Task failed", e);
             }
         } finally {
+            try {
+                final List<WorkflowEvent> eventsToDispatch = taskContext.eventBuffer();
+                LOGGER.debug("Dispatching %d buffered events".formatted(eventsToDispatch.size()));
+                engine.dispatchEvents(eventsToDispatch).join();
+            } catch (Throwable e) {
+                LOGGER.error("Failed to dispatch events", e);
+            }
+
             processingTimerSample.stop(Timer
                     .builder("dtrack.workflow.task.runner.process.latency")
                     .tag("taskRunner", taskRunner.getClass().getSimpleName())

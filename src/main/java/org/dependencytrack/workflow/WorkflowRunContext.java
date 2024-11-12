@@ -129,7 +129,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 queuedEvent.hasArgument() ? queuedEvent.getArgument() : null)) {
             logger.debug("Activity completion not found in history; Triggering execution");
             return engine.callActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, argumentPayload);
+                    activityName, invocationId, argumentPayload, this::addToEventBuffer);
         }
 
         if (failedEvent != null) {
@@ -192,7 +192,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             || !argumentsMatch(argumentPayload).test(
                 startedEvent.hasArgument() ? startedEvent.getArgument() : null)) {
             return engine.callLocalActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, argument, argumentPayload, resultConverter, activityFunction);
+                    activityName, invocationId, argument, argumentPayload, resultConverter, activityFunction, this::addToEventBuffer);
         }
 
         if (failedEvent != null) {

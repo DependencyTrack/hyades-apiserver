@@ -18,8 +18,11 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -32,6 +35,7 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
     interface Factory<A, C extends WorkflowTaskContext<A>> extends Function<PolledWorkflowTaskRow, C> {
     }
 
+    private final List<WorkflowEvent> eventBuffer = new ArrayList<>();
     private final UUID taskId;
     private final String workflowName;
     private final int workflowVersion;
@@ -69,6 +73,14 @@ public abstract sealed class WorkflowTaskContext<A> permits WorkflowRunContext, 
 
     public Optional<A> argument() {
         return Optional.ofNullable(argument);
+    }
+
+    List<WorkflowEvent> eventBuffer() {
+        return List.copyOf(eventBuffer);
+    }
+
+    void addToEventBuffer(final WorkflowEvent event) {
+        eventBuffer.add(event);
     }
 
 }

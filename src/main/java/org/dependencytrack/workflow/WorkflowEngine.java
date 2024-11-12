@@ -88,6 +88,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -619,7 +620,8 @@ public final class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final WorkflowPayload argumentPayload) {
+            final WorkflowPayload argumentPayload,
+            final Consumer<WorkflowEvent> eventConsumer) {
         state.assertRunning();
 
         final var activityRunId = UUID.randomUUID();
@@ -632,15 +634,15 @@ public final class WorkflowEngine implements Closeable {
             subjectBuilder.setArgument(argumentPayload);
         }
 
-        dispatchEvent(
+        eventConsumer.accept(
                 WorkflowEvent.newBuilder()
                         .setId(UUID.randomUUID().toString())
                         .setTimestamp(Timestamps.now())
                         .setWorkflowRunId(workflowRunId.toString())
                         .setActivityRunRequested(subjectBuilder.build())
-                        .build())
-                .join();
+                        .build());
 
+        // TODO: Return an awaitable instead.
         throw new WorkflowRunSuspendedException(
                 WorkflowActivityCompletedResumeCondition.newBuilder()
                         .setRunId(activityRunId.toString())
@@ -655,10 +657,9 @@ public final class WorkflowEngine implements Closeable {
             final A argument,
             final WorkflowPayload argumentPayload,
             final PayloadConverter<R> resultConverter,
-            final Function<A, Optional<R>> activityFunction) {
+            final Function<A, Optional<R>> activityFunction,
+            final Consumer<WorkflowEvent> eventConsumer) {
         state.assertRunning();
-
-        final var eventsToDispatch = new ArrayList<WorkflowEvent>(2);
 
         final var activityRunId = UUID.randomUUID();
         final var executionStartedBuilder = WorkflowActivityRunStarted.newBuilder()
@@ -670,7 +671,7 @@ public final class WorkflowEngine implements Closeable {
         if (argumentPayload != null) {
             executionStartedBuilder.setArgument(argumentPayload);
         }
-        eventsToDispatch.add(WorkflowEvent.newBuilder()
+        eventConsumer.accept(WorkflowEvent.newBuilder()
                 .setId(UUID.randomUUID().toString())
                 .setWorkflowRunId(workflowRunId.toString())
                 .setTimestamp(Timestamps.now())
@@ -690,17 +691,16 @@ public final class WorkflowEngine implements Closeable {
                     .flatMap(resultConverter::convertToPayload)
                     .ifPresent(executionCompletedBuilder::setResult);
 
-            eventsToDispatch.add(WorkflowEvent.newBuilder()
+            eventConsumer.accept(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())
                     .setWorkflowRunId(workflowRunId.toString())
                     .setTimestamp(Timestamps.now())
                     .setActivityRunCompleted(executionCompletedBuilder.build())
                     .build());
 
-            dispatchEvents(eventsToDispatch);
             return optionalResult;
         } catch (RuntimeException e) {
-            eventsToDispatch.add(WorkflowEvent.newBuilder()
+            eventConsumer.accept(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())
                     .setWorkflowRunId(workflowRunId.toString())
                     .setTimestamp(Timestamps.now())
@@ -716,15 +716,15 @@ public final class WorkflowEngine implements Closeable {
                             .build())
                     .build());
 
-            // NB: Dispatch can also fail, but since the activityFunction execution
-            // already failed there's no need to obstruct the original failure.
-            dispatchEvents(eventsToDispatch).join();
-
             throw new WorkflowActivityFailedException(e);
         }
     }
 
     CompletableFuture<?> dispatchEvents(final List<WorkflowEvent> events) {
+        if (events.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
         final List<CompletableFuture<?>> futures = new ArrayList<>(events.size());
 
         for (final WorkflowEvent event : events) {
@@ -749,8 +749,7 @@ public final class WorkflowEngine implements Closeable {
         return dispatchEvents(List.of(event));
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    CompletableFuture<?> dispatchTaskStartedEvent(final PolledWorkflowTaskRow task) {
+    WorkflowEvent createTaskStartedEvent(final PolledWorkflowTaskRow task) {
         final var eventBuilder = WorkflowEvent.newBuilder()
                 .setId(UUID.randomUUID().toString())
                 .setWorkflowRunId(task.workflowRunId().toString())
@@ -785,11 +784,10 @@ public final class WorkflowEngine implements Closeable {
             eventBuilder.setActivityRunStarted(subjectBuilder.build());
         }
 
-        return dispatchEvent(eventBuilder.build());
+        return eventBuilder.build();
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    <R> CompletableFuture<?> dispatchTaskCompletedEvent(
+    WorkflowEvent createTaskCompletedEvent(
             final PolledWorkflowTaskRow task,
             final WorkflowPayload result) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
@@ -817,11 +815,10 @@ public final class WorkflowEngine implements Closeable {
             eventBuilder.setActivityRunCompleted(subjectBuilder.build());
         }
 
-        return dispatchEvent(eventBuilder.build());
+        return eventBuilder.build();
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    CompletableFuture<?> dispatchTaskFailedEvent(final PolledWorkflowTaskRow task, final Throwable exception) {
+    WorkflowEvent createTaskFailedEvent(final PolledWorkflowTaskRow task, final Throwable exception) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
 
         final boolean isTerminal = exception instanceof TerminalWorkflowException;
@@ -847,41 +844,39 @@ public final class WorkflowEngine implements Closeable {
                     .build());
         }
 
-        return dispatchEvent(eventBuilder.build());
+        return eventBuilder.build();
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    CompletableFuture<?> dispatchTaskSuspendedEvent(
+    WorkflowEvent createTaskSuspendedEvent(
             final PolledWorkflowTaskRow task,
             final WorkflowActivityCompletedResumeCondition resumeCondition) {
         if (task.activityName() != null) {
             throw new IllegalStateException("Activity tasks can not be suspended");
         }
 
-        return dispatchEvent(newEventBuilder(task)
+        return newEventBuilder(task)
                 .setRunSuspended(WorkflowRunSuspended.newBuilder()
                         .setTaskId(task.id().toString())
                         .setAttempt(task.attempt())
                         .setActivityCompletedResumeCondition(resumeCondition)
                         .build())
-                .build());
+                .build();
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    CompletableFuture<?> dispatchTaskSuspendedEvent(
+    WorkflowEvent createTaskSuspendedEvent(
             final PolledWorkflowTaskRow task,
             final ExternalEventResumeCondition resumeCondition) {
         if (task.activityName() != null) {
             throw new IllegalStateException("Activity tasks can not be suspended");
         }
 
-        return dispatchEvent(newEventBuilder(task)
+        return newEventBuilder(task)
                 .setRunSuspended(WorkflowRunSuspended.newBuilder()
                         .setTaskId(task.id().toString())
                         .setAttempt(task.attempt())
                         .setExternalEventReceivedCondition(resumeCondition)
                         .build())
-                .build());
+                .build();
     }
 
     private static WorkflowEvent.Builder newEventBuilder(final PolledWorkflowTaskRow task) {
