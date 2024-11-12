@@ -129,7 +129,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 queuedEvent.hasArgument() ? queuedEvent.getArgument() : null)) {
             logger.debug("Activity completion not found in history; Triggering execution");
             return engine.callActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, argumentPayload, resultConverter, timeout);
+                    activityName, invocationId, argumentPayload);
         }
 
         if (failedEvent != null) {

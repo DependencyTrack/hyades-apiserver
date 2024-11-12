@@ -121,11 +121,11 @@ message WorkflowRunFailed {
 
   int32 attempt = 2;
 
-  // Details about the failure.
-  string failure_details = 3;
+  // Whether the failure is terminal and can't be retried.
+  bool is_terminal_failure = 3;
 
-  // When the next attempt is scheduled for at the earliest.
-  optional google.protobuf.Timestamp next_attempt_at = 4;
+  // Details about the failure.
+  string failure_details = 4;
 }
 
 message WorkflowActivityRunRequested {
@@ -236,11 +236,11 @@ message WorkflowActivityRunFailed {
   // Attempt that failed.
   int32 attempt = 6;
 
-  // Details about the failure.
-  string failure_details = 7;
+  // Whether the failure is terminal and can't be retried.
+  bool is_terminal_failure = 7;
 
-  // When the next attempt is scheduled for at the earliest.
-  optional google.protobuf.Timestamp next_attempt_at = 8;
+  // Details about the failure.
+  string failure_details = 8;
 
   // Whether the activity is executed locally.
   bool is_local = 9;

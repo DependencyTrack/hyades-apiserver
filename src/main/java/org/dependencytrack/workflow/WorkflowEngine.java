@@ -24,7 +24,6 @@ import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
-import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -53,7 +52,6 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunRequested;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
-import org.dependencytrack.workflow.WorkflowActivityResultCompleter.ActivityResultWatch;
 import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
@@ -85,12 +83,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
@@ -158,6 +154,11 @@ public final class WorkflowEngine implements Closeable {
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngine.class);
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
+    static final int DEFAULT_TASK_RETRY_MAX_ATTEMPTS = 6;
+    static final IntervalFunction DEFAULT_TASK_RETRY_INTERVAL_FUNCTION =
+            IntervalFunction.ofExponentialRandomBackoff(
+                    TimeUnit.SECONDS.toMillis(1), 1.5, 0.3, TimeUnit.SECONDS.toMillis(30));
+
     private final UUID instanceId = UUID.randomUUID();
     private volatile State state = State.CREATED;
     private final ReentrantLock stateLock = new ReentrantLock();
@@ -168,13 +169,8 @@ public final class WorkflowEngine implements Closeable {
     private KafkaClientMetrics eventKafkaConsumerMetrics;
     private KafkaClientMetrics eventKafkaProducerMetrics;
     private ExecutorService taskDispatcherExecutor;
-    private WorkflowActivityResultCompleter activityResultCompleter;
-    private Thread activityResultCompleterThread;
     private ScheduledExecutorService schedulerExecutor;
     private final Map<String, ExecutorService> taskExecutorByQueue = new HashMap<>();
-    private final int taskRetryMaxAttempts = 6;
-    private final IntervalFunction taskRetryIntervalFunction =
-            IntervalFunction.ofExponentialRandomBackoff(1_000, 1.5, 0.3, 30_000);
 
     public static WorkflowEngine getInstance() {
         return INSTANCE;
@@ -229,11 +225,6 @@ public final class WorkflowEngine implements Closeable {
             new ExecutorServiceMetrics(taskDispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
                     .bindTo(Metrics.getRegistry());
         }
-
-        activityResultCompleter = new WorkflowActivityResultCompleter(this);
-        activityResultCompleterThread = new Thread(activityResultCompleter, "WorkflowEngine-FutureResolver");
-        activityResultCompleterThread.setUncaughtExceptionHandler(new LoggableUncaughtExceptionHandler());
-        activityResultCompleterThread.start();
 
         final var scheduler = new WorkflowScheduler(this);
         schedulerExecutor = Executors.newSingleThreadScheduledExecutor(
@@ -571,18 +562,6 @@ public final class WorkflowEngine implements Closeable {
             eventKafkaProducerMetrics.close();
         }
 
-        LOGGER.info("Waiting for future resolver to stop");
-        activityResultCompleterThread.interrupt();
-        try {
-            final boolean terminated = activityResultCompleterThread.join(Duration.ofSeconds(30));
-            if (!terminated) {
-                LOGGER.warn("Future resolver did not stop in time");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-
         LOGGER.info("Waiting for scheduler to stop");
         schedulerExecutor.shutdown();
         try {
@@ -640,9 +619,7 @@ public final class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final String activityName,
             final String invocationId,
-            final WorkflowPayload argumentPayload,
-            final PayloadConverter<R> resultConverter,
-            final Duration timeout) {
+            final WorkflowPayload argumentPayload) {
         state.assertRunning();
 
         final var activityRunId = UUID.randomUUID();
@@ -655,45 +632,19 @@ public final class WorkflowEngine implements Closeable {
             subjectBuilder.setArgument(argumentPayload);
         }
 
-        final var eventId = UUID.randomUUID();
-
         dispatchEvent(
                 WorkflowEvent.newBuilder()
-                        .setId(eventId.toString())
+                        .setId(UUID.randomUUID().toString())
                         .setTimestamp(Timestamps.now())
                         .setWorkflowRunId(workflowRunId.toString())
                         .setActivityRunRequested(subjectBuilder.build())
                         .build())
                 .join();
 
-        // The "suspend -> resume" cycle takes at least a second.
-        // Blocking for a second or less is pointless.
-        if (timeout.compareTo(Duration.ofSeconds(1)) <= 0) {
-            LOGGER.debug("Timeout %s is too small; Suspending immediately".formatted(timeout));
-            throw new WorkflowRunSuspendedException(
-                    WorkflowActivityCompletedResumeCondition.newBuilder()
-                            .setRunId(activityRunId.toString())
-                            .build());
-        }
-
-        final ActivityResultWatch resultWatch =
-                activityResultCompleter.watchActivityResult(activityRunId);
-        try {
-            final WorkflowPayload resultPayload = resultWatch.result().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            return resultConverter.convertFromPayload(resultPayload);
-        } catch (TimeoutException e) {
-            LOGGER.warn("Timed out while waiting for activity result; Suspending workflow run");
-            resultWatch.cancel();
-            throw new WorkflowRunSuspendedException(
-                    WorkflowActivityCompletedResumeCondition.newBuilder()
-                            .setRunId(activityRunId.toString())
-                            .build());
-        } catch (ExecutionException e) {
-            throw new WorkflowActivityFailedException(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new WorkflowActivityFailedException(e);
-        }
+        throw new WorkflowRunSuspendedException(
+                WorkflowActivityCompletedResumeCondition.newBuilder()
+                        .setRunId(activityRunId.toString())
+                        .build());
     }
 
     <A, R> Optional<R> callLocalActivity(
@@ -873,37 +824,27 @@ public final class WorkflowEngine implements Closeable {
     CompletableFuture<?> dispatchTaskFailedEvent(final PolledWorkflowTaskRow task, final Throwable exception) {
         final WorkflowEvent.Builder eventBuilder = newEventBuilder(task);
 
-        Timestamp nextAttempt = null;
-        if (exception instanceof AssertionError && (task.attempt() + 1) <= taskRetryMaxAttempts) {
-            final long retryDelay = taskRetryIntervalFunction.apply(task.attempt());
-            final Instant nextAttemptInstant = Instant.now().plusMillis(retryDelay);
-            nextAttempt = Timestamps.fromMillis(nextAttemptInstant.toEpochMilli());
-        }
-
+        final boolean isTerminal = exception instanceof TerminalWorkflowException;
         final String failureDetails = ExceptionUtils.getStackTrace(exception);
 
         if (task.activityName() == null) {
-            final var subjectBuilder = WorkflowRunFailed.newBuilder()
+            eventBuilder.setRunFailed(WorkflowRunFailed.newBuilder()
                     .setTaskId(task.id().toString())
                     .setAttempt(task.attempt())
-                    .setFailureDetails(failureDetails);
-            if (nextAttempt != null) {
-                subjectBuilder.setNextAttemptAt(nextAttempt);
-            }
-            eventBuilder.setRunFailed(subjectBuilder.build());
+                    .setIsTerminalFailure(isTerminal)
+                    .setFailureDetails(failureDetails)
+                    .build());
         } else {
-            final var subjectBuilder = WorkflowActivityRunFailed.newBuilder()
+            eventBuilder.setActivityRunFailed(WorkflowActivityRunFailed.newBuilder()
                     .setRunId(task.activityRunId().toString())
                     .setTaskId(task.id().toString())
                     .setActivityName(task.activityName())
                     .setInvocationId(task.activityInvocationId())
                     .setAttempt(task.attempt())
+                    .setIsTerminalFailure(isTerminal)
                     .setFailureDetails(failureDetails)
-                    .setInvokingTaskId(task.invokingTaskId().toString());
-            if (nextAttempt != null) {
-                subjectBuilder.setNextAttemptAt(nextAttempt);
-            }
-            eventBuilder.setActivityRunFailed(subjectBuilder.build());
+                    .setInvokingTaskId(task.invokingTaskId().toString())
+                    .build());
         }
 
         return dispatchEvent(eventBuilder.build());

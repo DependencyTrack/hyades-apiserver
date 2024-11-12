@@ -136,54 +136,6 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldWaitForActivityResultWhenWithinTimeout() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), jsonConverter(ObjectNode.class), ctx -> {
-            final ObjectNode activityArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
-            final ObjectNode activityResult = ctx.callActivity("abc", "123",
-                    activityArguments, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class),
-                    Duration.ofSeconds(10)).orElseThrow();
-
-            activityResult.put("execution", "done");
-            return Optional.of(activityResult);
-        });
-
-        engine.registerActivityRunner("abc", 1, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class), ctx -> {
-            final var argObject = ctx.argument().orElseThrow();
-            argObject.put("hello", "dlrow");
-            return Optional.of(argObject);
-        });
-
-        final WorkflowRun workflowRun = engine.startWorkflow(
-                new StartWorkflowOptions("foo", 1)).join();
-
-        await("Workflow run completion")
-                .atMost(Duration.ofSeconds(15))
-                .untilAsserted(() -> {
-                    final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
-                    assertThat(currentWorkflowRun).isNotNull();
-                    assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
-                    final ObjectNode result = jsonConverter(ObjectNode.class)
-                            .convertFromPayload(currentWorkflowRun.result()).orElseThrow();
-                    assertThatJson(result).isEqualTo(/* language=JSON */ """
-                            {
-                              "hello": "dlrow",
-                              "execution": "done"
-                            }
-                            """);
-                });
-
-        assertThat(engine.getWorkflowRunEventLog(workflowRun.id())).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_REQUESTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_QUEUED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_REQUESTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_QUEUED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED));
-    }
-
-    @Test
     public void shouldReplayActivityResultsOnWorkflowRetry() {
         final var workflowAttempts = new AtomicInteger(0);
 
@@ -224,10 +176,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_RESUMED),
-                event -> {
-                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_FAILED);
-                    assertThat(event.getRunFailed().hasNextAttemptAt()).isTrue();
-                },
+                event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_FAILED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_REQUESTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SUSPENDED),
@@ -272,10 +221,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED),
-                event -> {
-                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_FAILED);
-                    assertThat(event.getRunFailed().hasNextAttemptAt()).isTrue();
-                },
+                event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_FAILED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_STARTED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_RUN_COMPLETED),
@@ -285,7 +231,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldRecordWorkflowAsFailedWhenRunFails() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
-            throw new IllegalStateException("Broken beyond repair");
+            throw new TerminalWorkflowException("Broken beyond repair");
         });
 
         final WorkflowRun workflowRun = engine.startWorkflow(

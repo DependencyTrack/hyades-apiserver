@@ -69,6 +69,8 @@ import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_ACTIVITY_RUN_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_EVENT_TYPE;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_RUN_ID;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.workflow.WorkflowEngine.DEFAULT_TASK_RETRY_INTERVAL_FUNCTION;
+import static org.dependencytrack.workflow.WorkflowEngine.DEFAULT_TASK_RETRY_MAX_ATTEMPTS;
 
 final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent> {
 
@@ -482,9 +484,14 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
     private void onRunFailed(
             final EventProcessingContext ctx,
             final WorkflowRunFailed subject) {
-        final Instant nextAttemptAt = subject.hasNextAttemptAt()
-                ? Instant.ofEpochSecond(0L, Timestamps.toNanos(subject.getNextAttemptAt()))
-                : null;
+        final Instant nextAttemptAt;
+        if (!subject.getIsTerminalFailure()
+            && subject.getAttempt() + 1 <= DEFAULT_TASK_RETRY_MAX_ATTEMPTS) {
+            final long retryDelayMillis = DEFAULT_TASK_RETRY_INTERVAL_FUNCTION.apply(subject.getAttempt());
+            nextAttemptAt = ctx.eventTimestamp().plusMillis(retryDelayMillis);
+        } else {
+            nextAttemptAt = null;
+        }
 
         LOGGER.debug("Failing workflow run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
@@ -583,9 +590,14 @@ final class WorkflowEventConsumer extends KafkaBatchConsumer<UUID, WorkflowEvent
             return;
         }
 
-        final Instant nextAttemptAt = subject.hasNextAttemptAt()
-                ? Instant.ofEpochSecond(0L, Timestamps.toNanos(subject.getNextAttemptAt()))
-                : null;
+        final Instant nextAttemptAt;
+        if (!subject.getIsTerminalFailure()
+            && subject.getAttempt() + 1 <= DEFAULT_TASK_RETRY_MAX_ATTEMPTS) {
+            final long retryDelayMillis = DEFAULT_TASK_RETRY_INTERVAL_FUNCTION.apply(subject.getAttempt());
+            nextAttemptAt = ctx.eventTimestamp().plusMillis(retryDelayMillis);
+        } else {
+            nextAttemptAt = null;
+        }
 
         LOGGER.debug("Failing activity run task");
         final WorkflowTask task = ctx.getTaskById(subject.getTaskId());
