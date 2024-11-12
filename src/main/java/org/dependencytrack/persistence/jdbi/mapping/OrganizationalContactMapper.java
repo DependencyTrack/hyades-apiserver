@@ -32,9 +32,6 @@ public class OrganizationalContactMapper implements ColumnMapper<List<Organizati
 
     @Override
     public List<OrganizationalContact> map(ResultSet r, int columnNumber, StatementContext ctx) throws SQLException {
-        if (r.getBytes(columnNumber) == null) {
-            return new ArrayList<>();
-        }
         return new OrganizationalContactsJsonConverter().convertToAttribute(r.getString(columnNumber));
     }
 }
