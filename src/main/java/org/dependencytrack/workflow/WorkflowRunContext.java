@@ -25,20 +25,19 @@ import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunRequested;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
@@ -61,40 +60,41 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         this.engine = engine;
     }
 
-    public <AA, AR> Optional<AR> callActivity(
+    public <AA, AR> Awaitable<AR> callActivity(
             final Class<? extends WorkflowActivityRunner<AA, AR>> activityClass,
             final String invocationId,
             final AA argument,
             final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter,
-            final Duration timeout) {
+            final PayloadConverter<AR> resultConverter) {
         final var activityAnnotation = activityClass.getAnnotation(WorkflowActivity.class);
         if (activityAnnotation == null) {
             throw new IllegalArgumentException();
         }
 
-        return callActivity(activityAnnotation.name(), invocationId, argument, argumentConverter, resultConverter, timeout);
+        return callActivity(activityAnnotation.name(), invocationId, argument, argumentConverter, resultConverter);
     }
 
     // TODO: Retry policy
-    public <AA, AR> Optional<AR> callActivity(
+    public <AA, AR> Awaitable<AR> callActivity(
             final String activityName,
             final String invocationId,
             final AA argument,
             final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter,
-            final Duration timeout) {
+            final PayloadConverter<AR> resultConverter) {
         requireNonNull(activityName, "activityName must not be null");
         requireNonNull(invocationId, "invocationId must not be null");
-        requireNonNull(timeout, "timeout must not be null");
+
+        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
 
         WorkflowActivityRunQueued queuedEvent = null;
         WorkflowActivityRunCompleted completedEvent = null;
         WorkflowActivityRunFailed failedEvent = null;
         for (final WorkflowEvent logEvent : getEventLog()) {
-            if (logEvent.hasActivityRunQueued()
+            if (queuedEvent == null
+                && logEvent.hasActivityRunQueued()
                 && logEvent.getActivityRunQueued().getActivityName().equals(activityName)
-                && logEvent.getActivityRunQueued().getInvocationId().equals(invocationId)) {
+                && logEvent.getActivityRunQueued().getInvocationId().equals(invocationId)
+                && argumentsMatch(logEvent.getActivityRunQueued().getArgument(), argumentPayload)) {
                 queuedEvent = logEvent.getActivityRunQueued();
                 continue;
             }
@@ -120,27 +120,52 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             }
         }
 
-        // TODO: If there is a pending execution already in the history,
-        //  don't request a new one. Register a future for its result instead.
+        if (completedEvent == null && failedEvent == null) {
+            if (queuedEvent != null) {
+                return new Awaitable.Single<>(UUID.fromString(queuedEvent.getCompletionId()));
+            }
 
-        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
-        if (queuedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(argumentPayload).test(
-                queuedEvent.hasArgument() ? queuedEvent.getArgument() : null)) {
             logger.debug("Activity completion not found in history; Triggering execution");
-            return engine.callActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, argumentPayload, this::addToEventBuffer);
-        }
-
-        if (failedEvent != null) {
+            return callActivity(taskId(), workflowRunId(), activityName, invocationId, argumentPayload);
+        } else if (failedEvent != null) {
             // TODO: Reconstruct exception from event (incl. Stacktrace), such that
             //  try-catch logic behaves as expected when replaying.
-            throw new WorkflowActivityFailedException(failedEvent.getFailureDetails());
+            return new Awaitable.Single<>(
+                    UUID.fromString(failedEvent.getCompletionId()),
+                    new WorkflowActivityFailedException(failedEvent.getFailureDetails()));
         }
 
-        return completedEvent.hasResult()
-                ? resultConverter.convertFromPayload(completedEvent.getResult())
-                : Optional.empty();
+        return new Awaitable.Single<>(
+                UUID.fromString(completedEvent.getCompletionId()),
+                completedEvent.hasResult()
+                        ? resultConverter.convertFromPayload(completedEvent.getResult()).orElse(null)
+                        : null);
+    }
+
+    private <R> Awaitable<R> callActivity(
+            final UUID invokingTaskId,
+            final UUID workflowRunId,
+            final String activityName,
+            final String invocationId,
+            final WorkflowPayload argumentPayload) {
+        final var completionId = UUID.randomUUID();
+        final var subjectBuilder = WorkflowActivityRunRequested.newBuilder()
+                .setCompletionId(completionId.toString())
+                .setActivityName(activityName)
+                .setInvocationId(invocationId)
+                .setInvokingTaskId(invokingTaskId.toString());
+        if (argumentPayload != null) {
+            subjectBuilder.setArgument(argumentPayload);
+        }
+
+        addToEventBuffer(WorkflowEvent.newBuilder()
+                .setId(UUID.randomUUID().toString())
+                .setTimestamp(Timestamps.now())
+                .setWorkflowRunId(workflowRunId.toString())
+                .setActivityRunRequested(subjectBuilder.build())
+                .build());
+
+        return new Awaitable.Single<>(completionId);
     }
 
     public <AA, AR> Optional<AR> callLocalActivity(
@@ -154,14 +179,18 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         requireNonNull(invocationId, "invocationId must not be null");
         requireNonNull(activityFunction, "activityFunction must not be null");
 
+        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
+
         WorkflowActivityRunStarted startedEvent = null;
         WorkflowActivityRunCompleted completedEvent = null;
         WorkflowActivityRunFailed failedEvent = null;
         for (final WorkflowEvent logEvent : getEventLog()) {
-            if (logEvent.hasActivityRunStarted()
+            if (startedEvent == null
+                && logEvent.hasActivityRunStarted()
                 && logEvent.getActivityRunStarted().getActivityName().equals(activityName)
                 && logEvent.getActivityRunStarted().getInvocationId().equals(invocationId)
-                && logEvent.getActivityRunStarted().getIsLocal()) {
+                && logEvent.getActivityRunStarted().getIsLocal()
+                && argumentsMatch(logEvent.getActivityRunStarted().getArgument(), argumentPayload)) {
                 startedEvent = logEvent.getActivityRunStarted();
                 continue;
             }
@@ -187,15 +216,10 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
             }
         }
 
-        final WorkflowPayload argumentPayload = argumentConverter.convertToPayload(argument).orElse(null);
-        if (startedEvent == null || (completedEvent == null && failedEvent == null)
-            || !argumentsMatch(argumentPayload).test(
-                startedEvent.hasArgument() ? startedEvent.getArgument() : null)) {
-            return engine.callLocalActivity(taskId(), workflowRunId(),
-                    activityName, invocationId, argument, argumentPayload, resultConverter, activityFunction, this::addToEventBuffer);
-        }
-
-        if (failedEvent != null) {
+        if (startedEvent == null || (completedEvent == null && failedEvent == null)) {
+            return callLocalActivity(taskId(), workflowRunId(),
+                    activityName, invocationId, argument, argumentPayload, resultConverter, activityFunction);
+        } else if (failedEvent != null) {
             // TODO: Reconstruct exception from event (incl. Stacktrace), such that
             //  try-catch logic behaves as expected when replaying.
             throw new WorkflowActivityFailedException(failedEvent.getFailureDetails());
@@ -206,26 +230,106 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                 : Optional.empty();
     }
 
-    public <T> Optional<T> awaitExternalEvent(
+    private <AA, AR> Optional<AR> callLocalActivity(
+            final UUID invokingTaskId,
+            final UUID workflowRunId,
+            final String activityName,
+            final String invocationId,
+            final AA argument,
+            final WorkflowPayload argumentPayload,
+            final PayloadConverter<AR> resultConverter,
+            final Function<AA, Optional<AR>> activityFunction) {
+        final var completionId = UUID.randomUUID();
+        final var executionStartedBuilder = WorkflowActivityRunStarted.newBuilder()
+                .setCompletionId(completionId.toString())
+                .setActivityName(activityName)
+                .setInvocationId(invocationId)
+                .setIsLocal(true)
+                .setInvokingTaskId(invokingTaskId.toString());
+        if (argumentPayload != null) {
+            executionStartedBuilder.setArgument(argumentPayload);
+        }
+        addToEventBuffer(WorkflowEvent.newBuilder()
+                .setId(UUID.randomUUID().toString())
+                .setWorkflowRunId(workflowRunId.toString())
+                .setTimestamp(Timestamps.now())
+                .setActivityRunStarted(executionStartedBuilder.build())
+                .build());
+
+        try {
+            final Optional<AR> optionalResult = activityFunction.apply(argument);
+
+            final var executionCompletedBuilder = WorkflowActivityRunCompleted.newBuilder()
+                    .setCompletionId(completionId.toString())
+                    .setActivityName(activityName)
+                    .setInvocationId(invocationId)
+                    .setIsLocal(true)
+                    .setInvokingTaskId(invokingTaskId.toString());
+            optionalResult
+                    .flatMap(resultConverter::convertToPayload)
+                    .ifPresent(executionCompletedBuilder::setResult);
+
+            addToEventBuffer(WorkflowEvent.newBuilder()
+                    .setId(UUID.randomUUID().toString())
+                    .setWorkflowRunId(workflowRunId.toString())
+                    .setTimestamp(Timestamps.now())
+                    .setActivityRunCompleted(executionCompletedBuilder.build())
+                    .build());
+
+            return optionalResult;
+        } catch (RuntimeException e) {
+            addToEventBuffer(WorkflowEvent.newBuilder()
+                    .setId(UUID.randomUUID().toString())
+                    .setWorkflowRunId(workflowRunId.toString())
+                    .setTimestamp(Timestamps.now())
+                    .setActivityRunFailed(WorkflowActivityRunFailed.newBuilder()
+                            .setCompletionId(completionId.toString())
+                            .setActivityName(activityName)
+                            .setInvocationId(invocationId)
+                            .setIsLocal(true)
+                            .setFailureDetails(e.getMessage() != null
+                                    ? e.getMessage()
+                                    : e.getClass().getName())
+                            .setInvokingTaskId(invokingTaskId.toString())
+                            .build())
+                    .build());
+
+            throw new WorkflowActivityFailedException(e);
+        }
+    }
+
+    public <T> Awaitable<T> awaitExternalEvent(
             final UUID externalEventId,
             final PayloadConverter<T> payloadConverter) {
         requireNonNull(externalEventId, "externalEventId must not be null");
 
-        ExternalEventReceived event = null;
+        ExternalEventAwaited awaitedEvent = null;
+        ExternalEventReceived receivedEvent = null;
         for (final WorkflowEvent logEvent : getEventLog()) {
-            if (logEvent.getSubjectCase() == WorkflowEvent.SubjectCase.EXTERNAL_EVENT_RECEIVED
+            if (awaitedEvent == null
+                && logEvent.hasExternalEventAwaited()
+                && logEvent.getExternalEventAwaited().getExternalEventId().equals(externalEventId.toString())) {
+                awaitedEvent = logEvent.getExternalEventAwaited();
+                continue;
+            }
+
+            if (awaitedEvent != null
+                && logEvent.hasExternalEventReceived()
                 && externalEventId.toString().equals(logEvent.getExternalEventReceived().getId())) {
                 logger.debug("Awaited external event %s found in history event %s from %s".formatted(
                         logEvent.getExternalEventReceived().getId(), logEvent.getId(),
                         Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
-                event = logEvent.getExternalEventReceived();
+                receivedEvent = logEvent.getExternalEventReceived();
                 break;
             }
         }
 
-        if (event == null) {
-            final UUID completionId = UUID.randomUUID();
+        if (receivedEvent == null) {
+            if (awaitedEvent != null) {
+                return new Awaitable.Single<>(UUID.fromString(awaitedEvent.getCompletionId()));
+            }
 
+            final UUID completionId = UUID.randomUUID();
             addToEventBuffer(WorkflowEvent.newBuilder()
                     .setId(UUID.randomUUID().toString())
                     .setWorkflowRunId(workflowRunId().toString())
@@ -237,42 +341,44 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
                             .build())
                     .build());
 
-            throw new WorkflowRunSuspendedException(completionId);
+            return new Awaitable.Single<>(completionId);
         }
 
-        return event.hasPayload()
-                ? payloadConverter.convertFromPayload(event.getPayload())
-                : Optional.empty();
+        return new Awaitable.Single<>(
+                UUID.fromString(awaitedEvent.getCompletionId()),
+                receivedEvent.hasPayload()
+                        ? payloadConverter.convertFromPayload(receivedEvent.getPayload()).orElse(null)
+                        : null);
     }
 
-    private Predicate<WorkflowPayload> argumentsMatch(final WorkflowPayload argumentPayload) {
-        if (argumentPayload == null) {
-            return logEntryArgumentPayload -> {
-                if (logEntryArgumentPayload != null) {
-                    logger.warn("Argument mismatch: %s... -> null".formatted(logEntryArgumentPayload));
-                    return false;
-                }
-
-                return true;
-            };
+    private boolean argumentsMatch(WorkflowPayload left, WorkflowPayload right) {
+        if (WorkflowPayload.getDefaultInstance().equals(left)) {
+            left = null;
+        }
+        if (WorkflowPayload.getDefaultInstance().equals(right)) {
+            right = null;
         }
 
-        return logEntryArgumentPayload -> {
-            if (logEntryArgumentPayload == null) {
-                logger.warn("Arguments mismatch: null -> %s...".formatted(argumentPayload));
-                return false;
-            }
-
-            if (!Objects.equals(logEntryArgumentPayload, argumentPayload)) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Arguments mismatch: %s... -> %s...".formatted(
-                            logEntryArgumentPayload, argumentPayload));
-                }
+        if (left == null) {
+            if (right != null) {
+                logger.warn("Argument mismatch: null -> %s".formatted(right));
                 return false;
             }
 
             return true;
-        };
+        }
+
+        if (right == null) {
+            logger.warn("Arguments mismatch: %s -> null".formatted(left));
+            return false;
+        }
+
+        if (!Objects.equals(left, right)) {
+            logger.warn("Arguments mismatch: %s... -> %s...".formatted(left, right));
+            return false;
+        }
+
+        return true;
     }
 
     private List<WorkflowEvent> getEventLog() {

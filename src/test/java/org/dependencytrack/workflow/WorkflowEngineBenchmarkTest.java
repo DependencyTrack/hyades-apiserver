@@ -84,9 +84,9 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         engine.start();
 
         engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), ctx -> {
-            ctx.callActivity("foo", "1", null, voidConverter(), voidConverter(), Duration.ZERO);
-            ctx.callActivity("bar", "2", null, voidConverter(), voidConverter(), Duration.ZERO);
-            ctx.callActivity("baz", "3", null, voidConverter(), voidConverter(), Duration.ZERO);
+            ctx.callActivity("foo", "1", null, voidConverter(), voidConverter()).await();
+            ctx.callActivity("bar", "2", null, voidConverter(), voidConverter()).await();
+            ctx.callActivity("baz", "3", null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 

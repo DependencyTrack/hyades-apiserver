@@ -31,7 +31,6 @@ import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.annotation.Workflow;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,30 +52,29 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                 .setBomFilePath(workflowArgs.getBomFilePath())
                 .build();
         ctx.callActivity(BomUploadProcessingTask.class, "123",
-                ingestBomArgs, protobufConverter(IngestBomActivityArgs.class), voidConverter(), Duration.ZERO);
+                ingestBomArgs, protobufConverter(IngestBomActivityArgs.class), voidConverter()).await();
 
         final var scanVulnsArgs = ScanProjectVulnsActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .build();
         final Optional<UUID> vulnScanToken = ctx.callActivity(VulnerabilityAnalysisTask.class, "456",
-                scanVulnsArgs, protobufConverter(ScanProjectVulnsActivityArgs.class), uuidConverter(), Duration.ZERO);
+                scanVulnsArgs, protobufConverter(ScanProjectVulnsActivityArgs.class), uuidConverter()).await();
 
-        // TODO: Read scan outcome from event.
         final var vulnScanCompletedEvent = vulnScanToken.flatMap(uuid -> ctx.awaitExternalEvent(
-                uuid, protobufConverter(ProjectVulnScanCompletedExternalEvent.class)));
+                uuid, protobufConverter(ProjectVulnScanCompletedExternalEvent.class)).await());
         LOGGER.info("Vulnerability scan " + vulnScanCompletedEvent.orElseThrow().getStatus());
 
         final var evalPoliciesArgs = EvaluateProjectPoliciesActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .build();
         ctx.callActivity(PolicyEvaluationTask.class, "789",
-                evalPoliciesArgs, protobufConverter(EvaluateProjectPoliciesActivityArgs.class), voidConverter(), Duration.ZERO);
+                evalPoliciesArgs, protobufConverter(EvaluateProjectPoliciesActivityArgs.class), voidConverter()).await();
 
         final var updateMetricsArgs = UpdateProjectMetricsActivityArgs.newBuilder()
                 .setProject(workflowArgs.getProject())
                 .build();
         ctx.callActivity(ProjectMetricsUpdateTask.class, "666",
-                updateMetricsArgs, protobufConverter(UpdateProjectMetricsActivityArgs.class), voidConverter(), Duration.ZERO);
+                updateMetricsArgs, protobufConverter(UpdateProjectMetricsActivityArgs.class), voidConverter()).await();
 
         return Optional.empty();
     }

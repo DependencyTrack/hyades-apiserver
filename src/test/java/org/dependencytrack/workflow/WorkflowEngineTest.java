@@ -48,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.workflow.payload.PayloadConverters.jsonConverter;
+import static org.dependencytrack.workflow.payload.PayloadConverters.uuidConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineTest extends PersistenceCapableTest {
@@ -91,7 +92,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), jsonConverter(ObjectNode.class), ctx -> {
             final ObjectNode activityArguments = JsonNodeFactory.instance.objectNode().put("hello", "world");
             final ObjectNode activityResult = ctx.callActivity("abc", "123",
-                    activityArguments, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class), Duration.ZERO).orElseThrow();
+                    activityArguments, jsonConverter(ObjectNode.class), jsonConverter(ObjectNode.class)).await().orElseThrow();
 
             activityResult.put("execution", "done");
             return Optional.of(activityResult);
@@ -140,13 +141,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final var workflowAttempts = new AtomicInteger(0);
 
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
-            ctx.callActivity("abc", "123", null, voidConverter(), voidConverter(), Duration.ZERO);
+            ctx.callActivity("abc", "123", null, voidConverter(), voidConverter()).await();
 
             if (workflowAttempts.incrementAndGet() < 2) {
                 throw new AssertionError("Technical Difficulties");
             }
 
-            ctx.callActivity("xyz", "321", null, voidConverter(), voidConverter(), Duration.ZERO);
+            ctx.callActivity("xyz", "321", null, voidConverter(), voidConverter()).await();
 
             return Optional.empty();
         });
@@ -286,12 +287,53 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void shouldAwaitMultipleActivities() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+
+            final Awaitable<UUID> abcActivityAwaitable =
+                    ctx.callActivity("abc", "123", null, voidConverter(), uuidConverter());
+            final Awaitable<UUID> xyzActivityAwaitable =
+                    ctx.callActivity("xyz", "789", null, voidConverter(), uuidConverter());
+
+            Awaitable.allOf(abcActivityAwaitable, xyzActivityAwaitable).await();
+
+            assertThat(abcActivityAwaitable.await().orElseThrow()).asString()
+                    .isEqualTo("61e63d87-a712-418b-a19c-b74b5112f2ca");
+            assertThat(xyzActivityAwaitable.await().orElseThrow()).asString()
+                    .isEqualTo("a668077f-a4cf-40a9-8af6-106562e31b73");
+
+            return Optional.empty();
+        });
+
+        engine.registerActivityRunner("abc", 1, voidConverter(), uuidConverter(), ctx -> {
+            Thread.sleep(500);
+            return Optional.of(UUID.fromString("61e63d87-a712-418b-a19c-b74b5112f2ca"));
+        });
+
+        engine.registerActivityRunner("xyz", 1, voidConverter(), uuidConverter(), ctx -> {
+            Thread.sleep(100);
+            return Optional.of(UUID.fromString("a668077f-a4cf-40a9-8af6-106562e31b73"));
+        });
+
+        final WorkflowRun workflowRun = engine.startWorkflow(
+                new StartWorkflowOptions("foo", 1)).join();
+
+        await("Workflow run completion")
+                .atMost(Duration.ofSeconds(15))
+                .untilAsserted(() -> {
+                    final WorkflowRun currentWorkflowRun = engine.getWorkflowRun(workflowRun.id());
+                    assertThat(currentWorkflowRun).isNotNull();
+                    assertThat(currentWorkflowRun.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                });
+    }
+
+    @Test
     public void shouldAwaitExternalEvent() {
         final UUID externalEventId = UUID.fromString("b0f44d1c-1545-44cc-a6f5-795098bd6da7");
 
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             final ObjectNode externalEventContent = ctx.awaitExternalEvent(
-                    externalEventId, jsonConverter(ObjectNode.class)).orElseThrow();
+                    externalEventId, jsonConverter(ObjectNode.class)).await().orElseThrow();
             if (!externalEventContent.has("success")) {
                 throw new IllegalStateException();
             }

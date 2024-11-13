@@ -40,7 +40,6 @@ import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunRequested;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
@@ -85,8 +84,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
@@ -610,108 +607,6 @@ public final class WorkflowEngine implements Closeable {
 
     public List<WorkflowEvent> getWorkflowRunEventLog(final UUID workflowRunId) {
         return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunEventLog(workflowRunId));
-    }
-
-    <R> Optional<R> callActivity(
-            final UUID invokingTaskId,
-            final UUID workflowRunId,
-            final String activityName,
-            final String invocationId,
-            final WorkflowPayload argumentPayload,
-            final Consumer<WorkflowEvent> eventConsumer) {
-        state.assertRunning();
-
-        final var completionId = UUID.randomUUID();
-        final var subjectBuilder = WorkflowActivityRunRequested.newBuilder()
-                .setCompletionId(completionId.toString())
-                .setActivityName(activityName)
-                .setInvocationId(invocationId)
-                .setInvokingTaskId(invokingTaskId.toString());
-        if (argumentPayload != null) {
-            subjectBuilder.setArgument(argumentPayload);
-        }
-
-        eventConsumer.accept(
-                WorkflowEvent.newBuilder()
-                        .setId(UUID.randomUUID().toString())
-                        .setTimestamp(Timestamps.now())
-                        .setWorkflowRunId(workflowRunId.toString())
-                        .setActivityRunRequested(subjectBuilder.build())
-                        .build());
-
-        // TODO: Return an awaitable instead.
-        throw new WorkflowRunSuspendedException(completionId);
-    }
-
-    <A, R> Optional<R> callLocalActivity(
-            final UUID invokingTaskId,
-            final UUID workflowRunId,
-            final String activityName,
-            final String invocationId,
-            final A argument,
-            final WorkflowPayload argumentPayload,
-            final PayloadConverter<R> resultConverter,
-            final Function<A, Optional<R>> activityFunction,
-            final Consumer<WorkflowEvent> eventConsumer) {
-        state.assertRunning();
-
-        final var completionId = UUID.randomUUID();
-        final var executionStartedBuilder = WorkflowActivityRunStarted.newBuilder()
-                .setCompletionId(completionId.toString())
-                .setActivityName(activityName)
-                .setInvocationId(invocationId)
-                .setIsLocal(true)
-                .setInvokingTaskId(invokingTaskId.toString());
-        if (argumentPayload != null) {
-            executionStartedBuilder.setArgument(argumentPayload);
-        }
-        eventConsumer.accept(WorkflowEvent.newBuilder()
-                .setId(UUID.randomUUID().toString())
-                .setWorkflowRunId(workflowRunId.toString())
-                .setTimestamp(Timestamps.now())
-                .setActivityRunStarted(executionStartedBuilder.build())
-                .build());
-
-        try {
-            final Optional<R> optionalResult = activityFunction.apply(argument);
-
-            final var executionCompletedBuilder = WorkflowActivityRunCompleted.newBuilder()
-                    .setCompletionId(completionId.toString())
-                    .setActivityName(activityName)
-                    .setInvocationId(invocationId)
-                    .setIsLocal(true)
-                    .setInvokingTaskId(invokingTaskId.toString());
-            optionalResult
-                    .flatMap(resultConverter::convertToPayload)
-                    .ifPresent(executionCompletedBuilder::setResult);
-
-            eventConsumer.accept(WorkflowEvent.newBuilder()
-                    .setId(UUID.randomUUID().toString())
-                    .setWorkflowRunId(workflowRunId.toString())
-                    .setTimestamp(Timestamps.now())
-                    .setActivityRunCompleted(executionCompletedBuilder.build())
-                    .build());
-
-            return optionalResult;
-        } catch (RuntimeException e) {
-            eventConsumer.accept(WorkflowEvent.newBuilder()
-                    .setId(UUID.randomUUID().toString())
-                    .setWorkflowRunId(workflowRunId.toString())
-                    .setTimestamp(Timestamps.now())
-                    .setActivityRunFailed(WorkflowActivityRunFailed.newBuilder()
-                            .setCompletionId(completionId.toString())
-                            .setActivityName(activityName)
-                            .setInvocationId(invocationId)
-                            .setIsLocal(true)
-                            .setFailureDetails(e.getMessage() != null
-                                    ? e.getMessage()
-                                    : e.getClass().getName())
-                            .setInvokingTaskId(invokingTaskId.toString())
-                            .build())
-                    .build());
-
-            throw new WorkflowActivityFailedException(e);
-        }
     }
 
     CompletableFuture<?> dispatchEvents(final List<WorkflowEvent> events) {
