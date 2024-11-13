@@ -18,32 +18,25 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityCompletedResumeCondition;
+import java.util.List;
+import java.util.UUID;
 
 class WorkflowRunSuspendedException extends RuntimeException {
 
-    private final WorkflowActivityCompletedResumeCondition activityCompletedResumeCondition;
-    private final ExternalEventResumeCondition externalEventResumeCondition;
+    private final List<UUID> awaitedCompletionIds;
 
-    WorkflowRunSuspendedException(final WorkflowActivityCompletedResumeCondition activityCompletedResumeCondition) {
+    WorkflowRunSuspendedException(final List<UUID> awaitedCompletionIds) {
         super();
-        this.activityCompletedResumeCondition = activityCompletedResumeCondition;
-        this.externalEventResumeCondition = null;
+        this.awaitedCompletionIds = awaitedCompletionIds;
     }
 
-    WorkflowRunSuspendedException(final ExternalEventResumeCondition externalEventResumeCondition) {
+    WorkflowRunSuspendedException(final UUID awaitedCompletionId) {
         super();
-        this.externalEventResumeCondition = externalEventResumeCondition;
-        this.activityCompletedResumeCondition = null;
+        this.awaitedCompletionIds = List.of(awaitedCompletionId);
     }
 
-    public WorkflowActivityCompletedResumeCondition getActivityCompletedResumeCondition() {
-        return activityCompletedResumeCondition;
-    }
-
-    public ExternalEventResumeCondition getExternalEventResumeCondition() {
-        return externalEventResumeCondition;
+    public List<UUID> getAwaitedCompletionIds() {
+        return awaitedCompletionIds;
     }
 
 }

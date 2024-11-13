@@ -32,7 +32,7 @@ public record WorkflowTaskRow(
         @Nullable Integer priority,
         Instant scheduledFor,
         @Nullable UUID workflowRunId,
-        @Nullable UUID activityRunId,
+        @Nullable UUID completionId,
         @Nullable String activityName,
         @Nullable String activityInvocationId,
         @Nullable UUID invokingTaskId,

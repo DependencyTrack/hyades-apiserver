@@ -27,7 +27,6 @@ import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -153,14 +152,14 @@ public class WorkflowDao {
                 , "EVENT_ID"
                 , "TIMESTAMP"
                 , "EVENT_TYPE"
-                , "ACTIVITY_RUN_ID"
+                , "COMPLETION_ID"
                 , "EVENT"
                 ) VALUES (
                   :workflowRunId
                 , :eventId
                 , :timestamp
                 , CAST(:eventType AS WORKFLOW_EVENT_TYPE)
-                , :activityRunId
+                , :completionId
                 , :event
                 )
                 ON CONFLICT ("WORKFLOW_RUN_ID", "TIMESTAMP", "EVENT_ID") DO NOTHING
@@ -194,26 +193,6 @@ public class WorkflowDao {
                 .list();
     }
 
-    public boolean hasActivityCompletionEventLog(
-            final UUID workflowRunId,
-            final UUID activityRunId,
-            final Instant upToTimestamp) {
-        return jdbiHandle.createQuery("""
-                        SELECT EXISTS(
-                            SELECT 1
-                              FROM "WORKFLOW_RUN_EVENT_LOG"
-                             WHERE "WORKFLOW_RUN_ID" = :workflowRunId
-                               AND "ACTIVITY_RUN_ID" = :activityRunId
-                               AND "EVENT_TYPE" = ANY(CAST('{ACTIVITY_RUN_COMPLETED, ACTIVITY_RUN_FAILED}' AS WORKFLOW_EVENT_TYPE[]))
-                               AND "TIMESTAMP" <= :upToTimestamp)
-                        """)
-                .bind("workflowRunId", workflowRunId)
-                .bind("activityRunId", activityRunId)
-                .bind("upToTimestamp", upToTimestamp)
-                .mapTo(Boolean.class)
-                .one();
-    }
-
     public List<UUID> createAllTasks(final Collection<NewWorkflowTaskRow> newTasks) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_TASK" (
@@ -224,7 +203,7 @@ public class WorkflowDao {
                 , "SCHEDULED_FOR"
                 , "ARGUMENT"
                 , "WORKFLOW_RUN_ID"
-                , "ACTIVITY_RUN_ID"
+                , "COMPLETION_ID"
                 , "ACTIVITY_NAME"
                 , "ACTIVITY_INVOCATION_ID"
                 , "INVOKING_TASK_ID"
@@ -237,7 +216,7 @@ public class WorkflowDao {
                 , COALESCE(:scheduledFor, NOW())
                 , :argument
                 , :workflowRunId
-                , :activityRunId
+                , :completionId
                 , :activityName
                 , :activityInvocationId
                 , :invokingTaskId
@@ -253,7 +232,7 @@ public class WorkflowDao {
                     .bind("scheduledFor", newTask.scheduledFor())
                     .bind("argument", newTask.argument())
                     .bind("workflowRunId", newTask.workflowRunId())
-                    .bind("activityRunId", newTask.activityRunId())
+                    .bind("completionId", newTask.completionId())
                     .bind("activityName", newTask.activityName())
                     .bind("activityInvocationId", newTask.activityInvocationId())
                     .bind("invokingTaskId", newTask.invokingTaskId())
@@ -340,7 +319,7 @@ public class WorkflowDao {
                         , "WORKFLOW_RUN"."WORKFLOW_NAME"
                         , "WORKFLOW_RUN"."WORKFLOW_VERSION"
                         , "WORKFLOW_TASK"."WORKFLOW_RUN_ID"
-                        , "WORKFLOW_TASK"."ACTIVITY_RUN_ID"
+                        , "WORKFLOW_TASK"."COMPLETION_ID"
                         , "WORKFLOW_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_TASK"."ACTIVITY_INVOCATION_ID"
                         , "WORKFLOW_TASK"."INVOKING_TASK_ID"

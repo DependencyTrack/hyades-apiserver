@@ -38,8 +38,6 @@ import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
-import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityCompletedResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunRequested;
@@ -51,7 +49,6 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunRequested;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStarted;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
 import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.annotation.WorkflowActivity;
 import org.dependencytrack.workflow.model.ScheduleWorkflowOptions;
@@ -624,9 +621,9 @@ public final class WorkflowEngine implements Closeable {
             final Consumer<WorkflowEvent> eventConsumer) {
         state.assertRunning();
 
-        final var activityRunId = UUID.randomUUID();
+        final var completionId = UUID.randomUUID();
         final var subjectBuilder = WorkflowActivityRunRequested.newBuilder()
-                .setRunId(activityRunId.toString())
+                .setCompletionId(completionId.toString())
                 .setActivityName(activityName)
                 .setInvocationId(invocationId)
                 .setInvokingTaskId(invokingTaskId.toString());
@@ -643,10 +640,7 @@ public final class WorkflowEngine implements Closeable {
                         .build());
 
         // TODO: Return an awaitable instead.
-        throw new WorkflowRunSuspendedException(
-                WorkflowActivityCompletedResumeCondition.newBuilder()
-                        .setRunId(activityRunId.toString())
-                        .build());
+        throw new WorkflowRunSuspendedException(completionId);
     }
 
     <A, R> Optional<R> callLocalActivity(
@@ -661,9 +655,9 @@ public final class WorkflowEngine implements Closeable {
             final Consumer<WorkflowEvent> eventConsumer) {
         state.assertRunning();
 
-        final var activityRunId = UUID.randomUUID();
+        final var completionId = UUID.randomUUID();
         final var executionStartedBuilder = WorkflowActivityRunStarted.newBuilder()
-                .setRunId(activityRunId.toString())
+                .setCompletionId(completionId.toString())
                 .setActivityName(activityName)
                 .setInvocationId(invocationId)
                 .setIsLocal(true)
@@ -682,7 +676,7 @@ public final class WorkflowEngine implements Closeable {
             final Optional<R> optionalResult = activityFunction.apply(argument);
 
             final var executionCompletedBuilder = WorkflowActivityRunCompleted.newBuilder()
-                    .setRunId(activityRunId.toString())
+                    .setCompletionId(completionId.toString())
                     .setActivityName(activityName)
                     .setInvocationId(invocationId)
                     .setIsLocal(true)
@@ -705,7 +699,7 @@ public final class WorkflowEngine implements Closeable {
                     .setWorkflowRunId(workflowRunId.toString())
                     .setTimestamp(Timestamps.now())
                     .setActivityRunFailed(WorkflowActivityRunFailed.newBuilder()
-                            .setRunId(activityRunId.toString())
+                            .setCompletionId(completionId.toString())
                             .setActivityName(activityName)
                             .setInvocationId(invocationId)
                             .setIsLocal(true)
@@ -772,7 +766,7 @@ public final class WorkflowEngine implements Closeable {
             }
         } else {
             final var subjectBuilder = WorkflowActivityRunStarted.newBuilder()
-                    .setRunId(task.activityRunId().toString())
+                    .setCompletionId(task.completionId().toString())
                     .setTaskId(task.id().toString())
                     .setActivityName(task.activityName())
                     .setInvocationId(task.activityInvocationId())
@@ -802,7 +796,7 @@ public final class WorkflowEngine implements Closeable {
             eventBuilder.setRunCompleted(subjectBuilder.build());
         } else {
             final var subjectBuilder = WorkflowActivityRunCompleted.newBuilder()
-                    .setRunId(task.activityRunId().toString())
+                    .setCompletionId(task.completionId().toString())
                     .setTaskId(task.id().toString())
                     .setActivityName(task.activityName())
                     .setInvocationId(task.activityInvocationId())
@@ -833,7 +827,7 @@ public final class WorkflowEngine implements Closeable {
                     .build());
         } else {
             eventBuilder.setActivityRunFailed(WorkflowActivityRunFailed.newBuilder()
-                    .setRunId(task.activityRunId().toString())
+                    .setCompletionId(task.completionId().toString())
                     .setTaskId(task.id().toString())
                     .setActivityName(task.activityName())
                     .setInvocationId(task.activityInvocationId())
@@ -847,38 +841,6 @@ public final class WorkflowEngine implements Closeable {
         return eventBuilder.build();
     }
 
-    WorkflowEvent createTaskSuspendedEvent(
-            final PolledWorkflowTaskRow task,
-            final WorkflowActivityCompletedResumeCondition resumeCondition) {
-        if (task.activityName() != null) {
-            throw new IllegalStateException("Activity tasks can not be suspended");
-        }
-
-        return newEventBuilder(task)
-                .setRunSuspended(WorkflowRunSuspended.newBuilder()
-                        .setTaskId(task.id().toString())
-                        .setAttempt(task.attempt())
-                        .setActivityCompletedResumeCondition(resumeCondition)
-                        .build())
-                .build();
-    }
-
-    WorkflowEvent createTaskSuspendedEvent(
-            final PolledWorkflowTaskRow task,
-            final ExternalEventResumeCondition resumeCondition) {
-        if (task.activityName() != null) {
-            throw new IllegalStateException("Activity tasks can not be suspended");
-        }
-
-        return newEventBuilder(task)
-                .setRunSuspended(WorkflowRunSuspended.newBuilder()
-                        .setTaskId(task.id().toString())
-                        .setAttempt(task.attempt())
-                        .setExternalEventReceivedCondition(resumeCondition)
-                        .build())
-                .build();
-    }
-
     private static WorkflowEvent.Builder newEventBuilder(final PolledWorkflowTaskRow task) {
         return WorkflowEvent.newBuilder()
                 .setId(UUID.randomUUID().toString())
@@ -886,17 +848,18 @@ public final class WorkflowEngine implements Closeable {
                 .setWorkflowRunId(task.workflowRunId().toString());
     }
 
-    static Optional<UUID> extractActivityRunId(final WorkflowEvent event) {
-        final String activityRunId = switch (event.getSubjectCase()) {
-            case ACTIVITY_RUN_REQUESTED -> event.getActivityRunRequested().getRunId();
-            case ACTIVITY_RUN_QUEUED -> event.getActivityRunQueued().getRunId();
-            case ACTIVITY_RUN_STARTED -> event.getActivityRunStarted().getRunId();
-            case ACTIVITY_RUN_COMPLETED -> event.getActivityRunCompleted().getRunId();
-            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().getRunId();
+    static Optional<UUID> extractCompletionId(final WorkflowEvent event) {
+        final String completionId = switch (event.getSubjectCase()) {
+            case ACTIVITY_RUN_REQUESTED -> event.getActivityRunRequested().getCompletionId();
+            case ACTIVITY_RUN_QUEUED -> event.getActivityRunQueued().getCompletionId();
+            case ACTIVITY_RUN_STARTED -> event.getActivityRunStarted().getCompletionId();
+            case ACTIVITY_RUN_COMPLETED -> event.getActivityRunCompleted().getCompletionId();
+            case ACTIVITY_RUN_FAILED -> event.getActivityRunFailed().getCompletionId();
+            case EXTERNAL_EVENT_AWAITED -> event.getExternalEventAwaited().getCompletionId();
             default -> null;
         };
 
-        return Optional.ofNullable(activityRunId).map(UUID::fromString);
+        return Optional.ofNullable(completionId).map(UUID::fromString);
     }
 
 }

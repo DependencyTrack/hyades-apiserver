@@ -20,11 +20,13 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunSuspended;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.PolledWorkflowTaskRow;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
@@ -32,12 +34,13 @@ import org.slf4j.MDC;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_ACTIVITY_RUN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_COMPLETION_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_RUN_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_ATTEMPT;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TASK_ID;
@@ -172,7 +175,7 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
         final Timer.Sample processingTimerSample = Timer.start();
         final C taskContext = taskContextFactory.apply(polledTask);
         try (var ignoredMdcRunId = MDC.putCloseable(MDC_WORKFLOW_RUN_ID, String.valueOf(polledTask.workflowRunId()));
-             var ignoredMdcActivityRunId = MDC.putCloseable(MDC_WORKFLOW_ACTIVITY_RUN_ID, String.valueOf(polledTask.activityRunId()));
+             var ignoredMdcCompletionId = MDC.putCloseable(MDC_WORKFLOW_COMPLETION_ID, String.valueOf(polledTask.completionId()));
              var ignoredMdcTaskId = MDC.putCloseable(MDC_WORKFLOW_TASK_ID, String.valueOf(polledTask.id()));
              var ignoredMdcTaskPriority = MDC.putCloseable(MDC_WORKFLOW_TASK_PRIORITY, String.valueOf(polledTask.priority()));
              var ignoredMdcTaskAttempts = MDC.putCloseable(MDC_WORKFLOW_TASK_ATTEMPT, String.valueOf(polledTask.attempt()));
@@ -196,15 +199,20 @@ final class WorkflowTaskDispatcher<A, R, C extends WorkflowTaskContext<A>> imple
                 taskRunnerLogger.debug("Task completed");
             }
         } catch (WorkflowRunSuspendedException e) {
-            if (e.getActivityCompletedResumeCondition() != null) {
-                taskContext.addToEventBuffer(engine.createTaskSuspendedEvent(
-                        polledTask, e.getActivityCompletedResumeCondition()));
-            } else if (e.getExternalEventResumeCondition() != null) {
-                taskContext.addToEventBuffer(engine.createTaskSuspendedEvent(
-                        polledTask, e.getExternalEventResumeCondition()));
-            } else {
-                throw new IllegalStateException("No resume condition provided", e);
-            }
+            taskContext.addToEventBuffer(
+                    WorkflowEvent.newBuilder()
+                            .setId(UUID.randomUUID().toString())
+                            .setWorkflowRunId(polledTask.workflowRunId().toString())
+                            .setTimestamp(Timestamps.now())
+                            .setRunSuspended(WorkflowRunSuspended.newBuilder()
+                                    .setTaskId(polledTask.id().toString())
+                                    .setAttempt(polledTask.attempt())
+                                    .addAllAwaitedCompletionIds(
+                                            e.getAwaitedCompletionIds().stream()
+                                                    .map(UUID::toString)
+                                                    .toList())
+                                    .build())
+                            .build());
 
             if (taskRunnerLogger.isDebugEnabled()) {
                 taskRunnerLogger.debug("Task suspended", e);

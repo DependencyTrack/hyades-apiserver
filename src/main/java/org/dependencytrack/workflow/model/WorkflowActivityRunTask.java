@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class WorkflowActivityRunTask extends WorkflowTask {
 
-    private UUID activityRunId;
+    private UUID completionId;
     private String activityName;
     private String activityInvocationId;
     private UUID invokingTaskId;
@@ -34,12 +34,12 @@ public final class WorkflowActivityRunTask extends WorkflowTask {
     public WorkflowActivityRunTask(
             final UUID workflowRunId,
             final String queue,
-            final UUID activityRunId,
+            final UUID completionId,
             final String activityName,
             final String activityInvocationId,
             final UUID invokingTaskId) {
         super(workflowRunId, queue);
-        this.activityRunId = requireNonNull(activityRunId, "activityRunId must not be null");
+        this.completionId = requireNonNull(completionId, "completionId must not be null");
         this.activityName = requireNonNull(activityName, "activityName must not be null");
         this.activityInvocationId = requireNonNull(activityInvocationId, "activityInvocationId must not be null");
         this.invokingTaskId = requireNonNull(invokingTaskId, "invokingTaskId must not be null");
@@ -59,8 +59,8 @@ public final class WorkflowActivityRunTask extends WorkflowTask {
         setModelState(ModelState.UNCHANGED);
     }
 
-    public UUID activityRunId() {
-        return activityRunId;
+    public UUID completionId() {
+        return completionId;
     }
 
     public String activityName() {

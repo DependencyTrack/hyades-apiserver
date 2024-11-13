@@ -33,7 +33,8 @@ message WorkflowEvent {
     WorkflowActivityRunCompleted activity_run_completed = 203;
     WorkflowActivityRunFailed activity_run_failed = 204;
 
-    ExternalEventReceived external_event_received = 300;
+    ExternalEventAwaited external_event_awaited = 300;
+    ExternalEventReceived external_event_received = 301;
   }
 }
 
@@ -90,10 +91,8 @@ message WorkflowRunSuspended {
   // Attempt that was suspended.
   int32 attempt = 2;
 
-  oneof resume_condition {
-    WorkflowActivityCompletedResumeCondition activity_completed_resume_condition = 100;
-    ExternalEventResumeCondition external_event_received_condition = 101;
-  }
+  // IDs of completions the run is waiting for.
+  repeated string awaited_completion_ids = 3;
 }
 
 message WorkflowRunResumed {
@@ -129,8 +128,8 @@ message WorkflowRunFailed {
 }
 
 message WorkflowActivityRunRequested {
-  // ID of the activity run.
-  string run_id = 1;
+  // ID of the completion.
+  string completion_id = 1;
 
   // Name of the activity.
   string activity_name = 2;
@@ -146,8 +145,8 @@ message WorkflowActivityRunRequested {
 }
 
 message WorkflowActivityRunQueued {
-  // ID of the activity run.
-  string run_id = 1;
+  // ID of the completion.
+  string completion_id = 1;
 
   // ID of the task executing the activity.
   string task_id = 2;
@@ -166,8 +165,8 @@ message WorkflowActivityRunQueued {
 }
 
 message WorkflowActivityRunStarted {
-  // ID of the activity run.
-  string run_id = 1;
+  // ID of the completion.
+  string completion_id = 1;
 
   // ID of the task executing the activity.
   // Not set when the activity is executed locally.
@@ -193,8 +192,8 @@ message WorkflowActivityRunStarted {
 }
 
 message WorkflowActivityRunCompleted {
-  // ID of the activity run.
-  string run_id = 1;
+  // ID of the completion.
+  string completion_id = 1;
 
   // ID of the task executing the activity.
   // Not set when the activity was executed locally.
@@ -220,8 +219,8 @@ message WorkflowActivityRunCompleted {
 }
 
 message WorkflowActivityRunFailed {
-  // ID of the activity run.
-  string run_id = 1;
+  // ID of the completion.
+  string completion_id = 1;
 
   // ID of the task executing the activity.
   // Not set when the activity was executed locally.
@@ -249,14 +248,15 @@ message WorkflowActivityRunFailed {
   string invoking_task_id = 10;
 }
 
-message WorkflowActivityCompletedResumeCondition {
-  // ID of the activity run to wait for.
-  string run_id = 1;
-}
+message ExternalEventAwaited {
+  // ID of the completion.
+  string completion_id = 1;
 
-message ExternalEventResumeCondition {
   // ID of the external event to wait for.
-  string external_event_id = 1;
+  string external_event_id = 2;
+
+  // ID of the task that is awaiting the event.
+  string invoking_task_id = 3;
 }
 
 message ExternalEventReceived {

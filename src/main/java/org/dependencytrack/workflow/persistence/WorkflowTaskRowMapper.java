@@ -43,7 +43,7 @@ public class WorkflowTaskRowMapper implements RowMapper<WorkflowTaskRow> {
                 nullableInteger(rs, "PRIORITY"),
                 Instant.ofEpochMilli(rs.getTimestamp("SCHEDULED_FOR").getTime()),
                 nullableUuid(rs, "WORKFLOW_RUN_ID"),
-                nullableUuid(rs, "ACTIVITY_RUN_ID"),
+                nullableUuid(rs, "COMPLETION_ID"),
                 rs.getString("ACTIVITY_NAME"),
                 rs.getString("ACTIVITY_INVOCATION_ID"),
                 nullableUuid(rs, "INVOKING_TASK_ID"),

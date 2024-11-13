@@ -20,8 +20,8 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventAwaited;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
-import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventResumeCondition;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowActivityRunQueued;
@@ -101,7 +101,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
             if (queuedEvent != null
                 && logEvent.hasActivityRunCompleted()
-                && logEvent.getActivityRunCompleted().getRunId().equals(queuedEvent.getRunId())) {
+                && logEvent.getActivityRunCompleted().getCompletionId().equals(queuedEvent.getCompletionId())) {
                 logger.debug("Completion of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
@@ -111,7 +111,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
             if (queuedEvent != null
                 && logEvent.hasActivityRunFailed()
-                && logEvent.getActivityRunFailed().getRunId().equals(queuedEvent.getRunId())) {
+                && logEvent.getActivityRunFailed().getCompletionId().equals(queuedEvent.getCompletionId())) {
                 logger.debug("Failure of activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
@@ -168,7 +168,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
             if (startedEvent != null
                 && logEvent.hasActivityRunCompleted()
-                && logEvent.getActivityRunCompleted().getRunId().equals(startedEvent.getRunId())) {
+                && logEvent.getActivityRunCompleted().getCompletionId().equals(startedEvent.getCompletionId())) {
                 logger.debug("Completion of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
@@ -178,7 +178,7 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
 
             if (startedEvent != null
                 && logEvent.hasActivityRunFailed()
-                && logEvent.getActivityRunFailed().getRunId().equals(startedEvent.getRunId())) {
+                && logEvent.getActivityRunFailed().getCompletionId().equals(startedEvent.getCompletionId())) {
                 logger.debug("Failure of local activity %s#%s found in history event %s from %s".formatted(
                         activityName, invocationId, logEvent.getId(),
                         Instant.ofEpochSecond(0L, Timestamps.toNanos(logEvent.getTimestamp()))));
@@ -224,10 +224,20 @@ public final class WorkflowRunContext<A> extends WorkflowTaskContext<A> {
         }
 
         if (event == null) {
-            throw new WorkflowRunSuspendedException(
-                    ExternalEventResumeCondition.newBuilder()
+            final UUID completionId = UUID.randomUUID();
+
+            addToEventBuffer(WorkflowEvent.newBuilder()
+                    .setId(UUID.randomUUID().toString())
+                    .setWorkflowRunId(workflowRunId().toString())
+                    .setTimestamp(Timestamps.now())
+                    .setExternalEventAwaited(ExternalEventAwaited.newBuilder()
+                            .setCompletionId(completionId.toString())
                             .setExternalEventId(externalEventId.toString())
-                            .build());
+                            .setInvokingTaskId(taskId().toString())
+                            .build())
+                    .build());
+
+            throw new WorkflowRunSuspendedException(completionId);
         }
 
         return event.hasPayload()

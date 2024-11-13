@@ -28,6 +28,6 @@ public record NewWorkflowRunEventLogEntryRow(
         Instant timestamp,
         UUID eventId,
         WorkflowEvent.SubjectCase eventType,
-        UUID activityRunId,
+        UUID completionId,
         WorkflowEvent event) {
 }

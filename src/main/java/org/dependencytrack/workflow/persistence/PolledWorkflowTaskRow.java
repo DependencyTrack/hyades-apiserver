@@ -34,7 +34,7 @@ public record PolledWorkflowTaskRow(
         String workflowName,
         int workflowVersion,
         UUID workflowRunId,
-        @Nullable UUID activityRunId,
+        @Nullable UUID completionId,
         @Nullable String activityName,
         @Nullable String activityInvocationId,
         @Nullable UUID invokingTaskId,

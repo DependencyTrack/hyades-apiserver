@@ -31,7 +31,7 @@ public record NewWorkflowTaskRow(
         UUID workflowRunId,
         Integer priority,
         Instant scheduledFor,
-        UUID activityRunId,
+        UUID completionId,
         String activityName,
         String activityInvocationId,
         UUID invokingTaskId,
@@ -45,26 +45,26 @@ public record NewWorkflowTaskRow(
 
     public NewWorkflowTaskRow withPriority(final Integer priority) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, priority, this.scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
+                this.completionId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
     }
 
     public NewWorkflowTaskRow withScheduledFor(final Instant scheduledFor) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
+                this.completionId, this.activityName, this.activityInvocationId, this.invokingTaskId, this.argument);
     }
 
     public NewWorkflowTaskRow withActivityRun(
-            final UUID activityRunId,
+            final UUID completionId,
             final String activityName,
             final String activityInvocationId,
             final UUID invokingTaskId) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, this.scheduledFor,
-                activityRunId, activityName, activityInvocationId, invokingTaskId, this.argument);
+                completionId, activityName, activityInvocationId, invokingTaskId, this.argument);
     }
 
     public NewWorkflowTaskRow withArgument(final WorkflowPayload argument) {
         return new NewWorkflowTaskRow(this.id, this.queue, this.workflowRunId, this.priority, this.scheduledFor,
-                this.activityRunId, this.activityName, this.activityInvocationId, this.invokingTaskId, argument);
+                this.completionId, this.activityName, this.activityInvocationId, this.invokingTaskId, argument);
     }
 
 }

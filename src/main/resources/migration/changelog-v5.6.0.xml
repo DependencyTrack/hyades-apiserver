@@ -154,6 +154,7 @@
             , 'ACTIVITY_RUN_STARTED'
             , 'ACTIVITY_RUN_COMPLETED'
             , 'ACTIVITY_RUN_FAILED'
+            , 'EXTERNAL_EVENT_AWAITED'
             , 'EXTERNAL_EVENT_RECEIVED');
         </sql>
 
@@ -218,7 +219,7 @@
             <column name="EVENT_TYPE" type="WORKFLOW_EVENT_TYPE">
                 <constraints nullable="false"/>
             </column>
-            <column name="ACTIVITY_RUN_ID" type="UUID"/>
+            <column name="COMPLETION_ID" type="UUID"/>
             <column name="EVENT" type="BYTEA">
                 <constraints nullable="false"/>
             </column>
@@ -240,7 +241,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
-            <column name="ACTIVITY_RUN_ID" type="UUID"/>
+            <column name="COMPLETION_ID" type="UUID"/>
             <column name="ACTIVITY_NAME" type="TEXT"/>
             <column name="ACTIVITY_INVOCATION_ID" type="TEXT"/>
             <column name="INVOKING_TASK_ID" type="UUID"/>
@@ -277,9 +278,9 @@
                 ON "WORKFLOW_RUN_EVENT_LOG" ("WORKFLOW_RUN_ID", "TIMESTAMP");
 
             -- Supporting index for activity result completer.
-            CREATE INDEX "WORKFLOW_RUN_EVENT_LOG_ACTIVITY_RUN_ID_IDX"
-                ON "WORKFLOW_RUN_EVENT_LOG" ("ACTIVITY_RUN_ID")
-                WHERE "ACTIVITY_RUN_ID" IS NOT NULL;
+            CREATE INDEX "WORKFLOW_RUN_EVENT_LOG_COMPLETION_ID_IDX"
+                ON "WORKFLOW_RUN_EVENT_LOG" ("COMPLETION_ID")
+                WHERE "COMPLETION_ID" IS NOT NULL;
         </sql>
 
         <addPrimaryKey
