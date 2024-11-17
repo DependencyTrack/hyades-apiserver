@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.v1alpha1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.v1alpha1";
+
+message WorkflowPayload {
+  map<string, bytes> metadata = 1;
+
+  oneof content {
+    bytes binary_content = 10;
+    google.protobuf.Any proto_content = 11;
+  }
+}
+
+enum WorkflowRunStatus {
+  WORKFLOW_RUN_STATUS_UNSPECIFIED = 0;
+  WORKFLOW_RUN_STATUS_PENDING = 1;
+  WORKFLOW_RUN_STATUS_RUNNING = 2;
+  WORKFLOW_RUN_STATUS_SUSPENDED = 3;
+  WORKFLOW_RUN_STATUS_CANCELLED = 4;
+  WORKFLOW_RUN_STATUS_COMPLETED = 5;
+  WORKFLOW_RUN_STATUS_FAILED = 6;
+  WORKFLOW_RUN_STATUS_TERMINATED = 7;
+}
+
+message WorkflowEvent {
+  int32 sequence_id = 1;
+
+  google.protobuf.Timestamp timestamp = 2;
+
+  oneof subject {
+    RunnerStarted runner_started = 25;
+    RunnerCompleted Runner_completed = 26;
+
+    RunStarted run_started = 50;
+    RunSuspended run_suspended = 51;
+    RunResumed run_resumed = 52;
+    RunCompleted run_completed = 53;
+    RunTerminated run_terminated = 54;
+
+    ActivityTaskScheduled activity_task_scheduled = 75;
+    ActivityTaskCompleted activity_task_completed = 76;
+    ActivityTaskFailed activity_task_failed = 77;
+
+    SubWorkflowRunScheduled sub_workflow_run_scheduled = 100;
+    SubWorkflowRunCompleted sub_workflow_run_completed = 101;
+    SubWorkflowRunFailed sub_workflow_run_failed = 102;
+
+    TimerScheduled timer_scheduled = 125;
+    TimerFired timer_fired = 126;
+
+    ExternalEventReceived external_event_received = 150;
+  }
+}
+
+message ParentWorkflowRun {
+  int32 sub_workflow_run_scheduled_sequence_id = 1;
+  string run_id = 2;
+  string workflow_name = 3;
+  int32 workflow_version = 4;
+}
+
+message RunnerStarted {
+}
+
+message RunnerCompleted {
+}
+
+message RunStarted {
+  string workflow_name = 1;
+  int32 workflow_version= 2;
+  optional WorkflowPayload argument = 3;
+  optional ParentWorkflowRun parent_run = 4;
+}
+
+message RunSuspended {
+
+}
+
+message RunResumed {
+
+}
+
+message RunCompleted {
+  WorkflowRunStatus status = 1;
+  optional WorkflowPayload result = 2;
+  optional string failure_details = 3;
+}
+
+message RunTerminated {
+
+}
+
+message ActivityTaskScheduled {
+  string name = 1;
+  int32 version = 2;
+  optional int32 priority = 3;
+  optional WorkflowPayload argument = 4;
+}
+
+message ActivityTaskCompleted {
+  int32 task_scheduled_sequence_id = 1;
+  optional WorkflowPayload result = 2;
+}
+
+message ActivityTaskFailed {
+  int32 task_scheduled_sequence_id = 1;
+  string failure_details = 2;
+}
+
+message SubWorkflowRunScheduled {
+  string run_id = 1;
+  string workflow_name = 2;
+  int32 workflow_version = 3;
+  optional int32 priority = 4;
+  optional WorkflowPayload argument = 5;
+}
+
+message SubWorkflowRunCompleted {
+  int32 run_scheduled_sequence_id = 1;
+  optional WorkflowPayload result = 2;
+}
+
+message SubWorkflowRunFailed {
+  int32 run_scheduled_sequence_id = 1;
+  string failure_details = 2;
+}
+
+message TimerScheduled {
+  google.protobuf.Timestamp elapse_at = 1;
+}
+
+message TimerFired {
+  int32 timer_created_sequence_id = 1;
+  google.protobuf.Timestamp elapse_at = 2;
+}
+
+message ExternalEventReceived {
+  string id = 1;
+  optional WorkflowPayload content = 2;
+}

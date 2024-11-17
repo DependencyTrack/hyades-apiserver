@@ -139,4 +139,134 @@
                 ON "COMPONENT_PROPERTY" ("COMPONENT_ID");
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-10" author="nscuro">
+        <sql>
+            CREATE TYPE WORKFLOW_RUN_STATUS AS ENUM (
+              'WORKFLOW_RUN_STATUS_PENDING'
+            , 'WORKFLOW_RUN_STATUS_RUNNING'
+            , 'WORKFLOW_RUN_STATUS_SUSPENDED'
+            , 'WORKFLOW_RUN_STATUS_CANCELLED'
+            , 'WORKFLOW_RUN_STATUS_COMPLETED'
+            , 'WORKFLOW_RUN_STATUS_FAILED'
+            , 'WORKFLOW_RUN_STATUS_TERMINATED'
+            )
+        </sql>
+
+        <createTable tableName="WORKFLOW_RUN">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="WORKFLOW_RUN_PK"/>
+            </column>
+            <column name="PARENT_ID" type="UUID"/>
+            <column name="WORKFLOW_NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="WORKFLOW_VERSION" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STATUS" type="WORKFLOW_RUN_STATUS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ARGUMENT" type="BYTEA"/>
+            <column name="RESULT" type="BYTEA"/>
+            <column name="FAILURE_DETAILS" type="TEXT"/>
+            <column name="PRIORITY" type="SMALLINT"/>
+            <column name="LOCKED_BY" type="TEXT"/>
+            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(6)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="COMPLETED_AT" type="TIMESTAMPTZ(6)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_RUN"
+                baseColumnNames="PARENT_ID"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"
+                constraintName="WORKFLOW_RUN_PARENT_ID_FK"/>
+
+        <createTable tableName="WORKFLOW_EVENT_LOG">
+            <column name="WORKFLOW_RUN_ID" type="UUID"/>
+            <column name="SEQUENCE_ID" type="INT"/>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="EVENT" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="WORKFLOW_EVENT_LOG"
+                columnNames="WORKFLOW_RUN_ID, SEQUENCE_ID"
+                constraintName="WORKFLOW_EVENT_LOG_PK"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_EVENT_LOG"
+                baseColumnNames="WORKFLOW_RUN_ID"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"
+                constraintName="WORKFLOW_EVENT_LOG_WORKFLOW_RUN_ID_FK"/>
+
+        <createTable tableName="WORKFLOW_EVENT_INBOX">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints primaryKey="true" primaryKeyName="WORKFLOW_EVENT_INBOX_PK"/>
+            </column>
+            <column name="WORKFLOW_RUN_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(6)"/>
+            <column name="LOCKED_BY" type="TEXT"/>
+            <column name="EVENT" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_EVENT_INBOX"
+                baseColumnNames="WORKFLOW_RUN_ID"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"
+                constraintName="WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_ID_FK"/>
+
+        <createTable tableName="WORKFLOW_ACTIVITY_TASK">
+            <column name="WORKFLOW_RUN_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SEQUENCE_ID" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ACTIVITY_NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PRIORITY" type="SMALLINT"/>
+            <column name="ARGUMENT" type="BYTEA"/>
+            <column name="ATTEMPT" type="SMALLINT"/>
+            <column name="LOCKED_BY" type="TEXT"/>
+            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(6)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="WORKFLOW_ACTIVITY_TASK"
+                columnNames="WORKFLOW_RUN_ID, SEQUENCE_ID"
+                constraintName="WORKFLOW_ACTIVITY_TASK_PK"/>
+        <addForeignKeyConstraint
+                baseTableName="WORKFLOW_ACTIVITY_TASK"
+                baseColumnNames="WORKFLOW_RUN_ID"
+                referencedTableName="WORKFLOW_RUN"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"
+                constraintName="WORKFLOW_ACTIVITY_TASK_WORKFLOW_RUN_ID_FK"/>
+    </changeSet>
 </databaseChangeLog>
