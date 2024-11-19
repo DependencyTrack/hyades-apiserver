@@ -29,7 +29,7 @@ enum WorkflowRunStatus {
 }
 
 message WorkflowEvent {
-  int32 sequence_id = 1;
+  int32 id = 1;
 
   google.protobuf.Timestamp timestamp = 2;
 
@@ -54,12 +54,14 @@ message WorkflowEvent {
     TimerScheduled timer_scheduled = 125;
     TimerFired timer_fired = 126;
 
-    ExternalEventReceived external_event_received = 150;
+    SideEffectExecuted side_effect_executed = 150;
+
+    ExternalEventReceived external_event_received = 151;
   }
 }
 
 message ParentWorkflowRun {
-  int32 sub_workflow_run_scheduled_sequence_id = 1;
+  int32 sub_workflow_run_scheduled_event_id = 1;
   string run_id = 2;
   string workflow_name = 3;
   int32 workflow_version = 4;
@@ -104,12 +106,12 @@ message ActivityTaskScheduled {
 }
 
 message ActivityTaskCompleted {
-  int32 task_scheduled_sequence_id = 1;
+  int32 task_scheduled_event_id = 1;
   optional WorkflowPayload result = 2;
 }
 
 message ActivityTaskFailed {
-  int32 task_scheduled_sequence_id = 1;
+  int32 task_scheduled_event_id = 1;
   string failure_details = 2;
 }
 
@@ -122,12 +124,12 @@ message SubWorkflowRunScheduled {
 }
 
 message SubWorkflowRunCompleted {
-  int32 run_scheduled_sequence_id = 1;
+  int32 run_scheduled_event_id = 1;
   optional WorkflowPayload result = 2;
 }
 
 message SubWorkflowRunFailed {
-  int32 run_scheduled_sequence_id = 1;
+  int32 run_scheduled_event_id = 1;
   string failure_details = 2;
 }
 
@@ -136,8 +138,13 @@ message TimerScheduled {
 }
 
 message TimerFired {
-  int32 timer_created_sequence_id = 1;
+  int32 timer_scheduled_event_id = 1;
   google.protobuf.Timestamp elapse_at = 2;
+}
+
+message SideEffectExecuted {
+  int32 side_effect_event_id = 1;
+  optional WorkflowPayload result = 2;
 }
 
 message ExternalEventReceived {

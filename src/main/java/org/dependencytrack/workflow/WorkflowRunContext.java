@@ -26,15 +26,17 @@ import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.RunTerminated;
+import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowCommand.CompleteExecutionCommand;
-import org.dependencytrack.workflow.WorkflowCommand.ScheduleTimerCommand;
-import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityTaskCommand;
+import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultCommand;
+import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleSubWorkflowCommand;
+import org.dependencytrack.workflow.WorkflowCommand.ScheduleTimerCommand;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.payload.VoidPayloadConverter;
 import org.slf4j.Logger;
@@ -51,6 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
@@ -69,13 +72,14 @@ public final class WorkflowRunContext<A, R> {
     private final List<WorkflowEvent> eventLog;
     private final List<WorkflowEvent> inboxEvents;
     private final List<WorkflowEvent> suspendedEvents;
-    private final Map<Integer, WorkflowCommand> pendingActionBySequenceId;
+    private final Map<Integer, WorkflowCommand> pendingCommandBySequenceId;
     private final Map<Integer, Awaitable<?>> pendingAwaitableBySequenceId;
     private final Map<String, Queue<Awaitable<?>>> pendingAwaitablesByExternalEventId;
     private final Map<String, Queue<WorkflowEvent>> bufferedExternalEvents;
     private int currentEventIndex;
     private int currentSequenceId;
     private Instant currentTime;
+    private boolean isInSideEffect;
     private boolean isReplaying;
     private boolean isSuspended;
 
@@ -99,7 +103,7 @@ public final class WorkflowRunContext<A, R> {
         this.eventLog = eventLog;
         this.inboxEvents = inboxEvents;
         this.suspendedEvents = new ArrayList<>();
-        this.pendingActionBySequenceId = new HashMap<>();
+        this.pendingCommandBySequenceId = new HashMap<>();
         this.pendingAwaitableBySequenceId = new HashMap<>();
         this.pendingAwaitablesByExternalEventId = new HashMap<>();
         this.bufferedExternalEvents = new HashMap<>();
@@ -135,8 +139,8 @@ public final class WorkflowRunContext<A, R> {
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter) {
         final int sequenceId = currentSequenceId++;
-        pendingActionBySequenceId.put(sequenceId,
-                new ScheduleActivityTaskCommand(
+        pendingCommandBySequenceId.put(sequenceId,
+                new ScheduleActivityCommand(
                         sequenceId,
                         name,
                         /* version */ -1,
@@ -155,7 +159,7 @@ public final class WorkflowRunContext<A, R> {
             final PayloadConverter<WA> argumentConverter,
             final PayloadConverter<WR> resultConverter) {
         final int sequenceId = currentSequenceId++;
-        pendingActionBySequenceId.put(sequenceId, new ScheduleSubWorkflowCommand(
+        pendingCommandBySequenceId.put(sequenceId, new ScheduleSubWorkflowCommand(
                 sequenceId, name, version, this.priority, argumentConverter.convertToPayload(argument)));
 
         final var awaitable = new Awaitable<>(this, resultConverter);
@@ -163,14 +167,40 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
-    // TODO: callLocalActivity, run synchronously but persist result to log.
-
     public Awaitable<Void> scheduleTimer(final Duration delay) {
         final int sequenceId = currentSequenceId++;
-        pendingActionBySequenceId.put(sequenceId, new ScheduleTimerCommand(sequenceId, currentTime.plus(delay)));
+        pendingCommandBySequenceId.put(sequenceId, new ScheduleTimerCommand(sequenceId, currentTime.plus(delay)));
 
         final var awaitable = new Awaitable<>(this, new VoidPayloadConverter());
         pendingAwaitableBySequenceId.put(sequenceId, awaitable);
+        return awaitable;
+    }
+
+    public <SA, SR> Awaitable<SR> sideEffect(
+            final Function<SA, SR> sideEffectFunction,
+            final SA argument,
+            final PayloadConverter<SR> resultConverter) {
+        final int sequenceId = currentSequenceId++;
+
+        final var awaitable = new Awaitable<>(this, resultConverter);
+        pendingAwaitableBySequenceId.put(sequenceId, awaitable);
+
+        if (!isReplaying) {
+            try {
+                isInSideEffect = true;
+
+                final SR result = sideEffectFunction.apply(argument);
+                final WorkflowPayload resultPayload = resultConverter.convertToPayload(result);
+                pendingCommandBySequenceId.put(sequenceId, new RecordSideEffectResultCommand(
+                        sequenceId, resultPayload));
+                awaitable.complete(resultPayload);
+            } catch (RuntimeException e) {
+                awaitable.completeExceptionally(e);
+            } finally {
+                isInSideEffect = false;
+            }
+        }
+
         return awaitable;
     }
 
@@ -232,7 +262,7 @@ public final class WorkflowRunContext<A, R> {
         }
 
         return !isSuspended
-                ? List.copyOf(pendingActionBySequenceId.values())
+                ? List.copyOf(pendingCommandBySequenceId.values())
                 : Collections.emptyList();
     }
 
@@ -258,14 +288,15 @@ public final class WorkflowRunContext<A, R> {
             case RUN_SUSPENDED -> onRunSuspended(event.getRunSuspended());
             case RUN_RESUMED -> onRunResumed(event.getRunResumed());
             case RUN_TERMINATED -> onRunTerminated(event.getRunTerminated());
-            case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getSequenceId());
+            case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getId());
             case ACTIVITY_TASK_COMPLETED -> onActivityTaskCompleted(event.getActivityTaskCompleted());
             case ACTIVITY_TASK_FAILED -> onActivityTaskFailed(event.getActivityTaskFailed());
-            case SUB_WORKFLOW_RUN_SCHEDULED -> onSubWorkflowRunScheduled(event.getSequenceId());
+            case SUB_WORKFLOW_RUN_SCHEDULED -> onSubWorkflowRunScheduled(event.getId());
             case SUB_WORKFLOW_RUN_COMPLETED -> onSubWorkflowRunCompleted(event.getSubWorkflowRunCompleted());
             case SUB_WORKFLOW_RUN_FAILED -> onSubWorkflowRunFailed(event.getSubWorkflowRunFailed());
-            case TIMER_SCHEDULED -> onTimerScheduled(event.getSequenceId());
+            case TIMER_SCHEDULED -> onTimerScheduled(event.getId());
             case TIMER_FIRED -> onTimerFired(event.getTimerFired());
+            case SIDE_EFFECT_EXECUTED -> onSideEffectExecuted(event.getSideEffectExecuted());
             case EXTERNAL_EVENT_RECEIVED -> onExternalEventReceived(event);
         }
     }
@@ -299,7 +330,8 @@ public final class WorkflowRunContext<A, R> {
 
             throw new RuntimeException(e);
         }
-        result.ifPresentOrElse(this::complete, () -> complete(null));
+
+        complete(result.orElse(null));
     }
 
     private void onRunSuspended(final RunSuspended ignored) {
@@ -323,7 +355,7 @@ public final class WorkflowRunContext<A, R> {
     private void onActivityTaskScheduled(final int eventSequenceNumber) {
         LOGGER.debug("Activity task scheduled for sequence ID {}", eventSequenceNumber);
 
-        final WorkflowCommand action = pendingActionBySequenceId.get(eventSequenceNumber);
+        final WorkflowCommand action = pendingCommandBySequenceId.get(eventSequenceNumber);
         if (action == null) {
             LOGGER.warn("""
                     Encountered TaskScheduled event for sequence ID {}, \
@@ -337,11 +369,11 @@ public final class WorkflowRunContext<A, R> {
             return;
         }
 
-        pendingActionBySequenceId.remove(eventSequenceNumber);
+        pendingCommandBySequenceId.remove(eventSequenceNumber);
     }
 
     private void onActivityTaskCompleted(final ActivityTaskCompleted subject) {
-        final int sequenceId = subject.getTaskScheduledSequenceId();
+        final int sequenceId = subject.getTaskScheduledEventId();
         LOGGER.debug("Activity task completed for sequence ID {}", sequenceId);
 
         final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
@@ -357,7 +389,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onActivityTaskFailed(final ActivityTaskFailed subject) {
-        final int sequenceId = subject.getTaskScheduledSequenceId();
+        final int sequenceId = subject.getTaskScheduledEventId();
         LOGGER.debug("Activity task failed for sequence ID {}", sequenceId);
 
         final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
@@ -376,7 +408,7 @@ public final class WorkflowRunContext<A, R> {
     private void onSubWorkflowRunScheduled(final int sequenceId) {
         LOGGER.debug("Sub workflow run scheduled for sequence ID {}", sequenceId);
 
-        final WorkflowCommand command = pendingActionBySequenceId.get(sequenceId);
+        final WorkflowCommand command = pendingCommandBySequenceId.get(sequenceId);
         if (command == null) {
             LOGGER.warn("""
                     Encountered SubWorkflowRunScheduled event for sequence ID {}, \
@@ -390,11 +422,11 @@ public final class WorkflowRunContext<A, R> {
             return;
         }
 
-        pendingActionBySequenceId.remove(sequenceId);
+        pendingCommandBySequenceId.remove(sequenceId);
     }
 
     private void onSubWorkflowRunCompleted(final SubWorkflowRunCompleted subject) {
-        final int sequenceId = subject.getRunScheduledSequenceId();
+        final int sequenceId = subject.getRunScheduledEventId();
         LOGGER.debug("Sub workflow run failed for sequence ID {}", sequenceId);
 
         final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
@@ -410,7 +442,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onSubWorkflowRunFailed(final SubWorkflowRunFailed subject) {
-        final int sequenceId = subject.getRunScheduledSequenceId();
+        final int sequenceId = subject.getRunScheduledEventId();
         LOGGER.debug("Sub workflow run failed for sequence ID {}", sequenceId);
 
         final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
@@ -429,25 +461,25 @@ public final class WorkflowRunContext<A, R> {
     private void onTimerScheduled(final int sequenceId) {
         LOGGER.debug("Timer created for sequence ID {}", sequenceId);
 
-        final WorkflowCommand action = pendingActionBySequenceId.get(sequenceId);
+        final WorkflowCommand action = pendingCommandBySequenceId.get(sequenceId);
         if (action == null) {
             LOGGER.warn("""
-                    Encountered TimerCreated event for sequence ID {}, \
+                    Encountered TimerScheduled event for sequence ID {}, \
                     but no pending action was found for it""", sequenceId);
             return;
         } else if (!(action instanceof ScheduleTimerCommand)) {
             LOGGER.warn("""
-                    Encountered TimerCreated event for sequence ID {}, \
+                    Encountered TimerScheduled event for sequence ID {}, \
                     but the pending action for that number is of type {}\
                     """, sequenceId, action.getClass().getSimpleName());
             return;
         }
 
-        pendingActionBySequenceId.remove(sequenceId);
+        pendingCommandBySequenceId.remove(sequenceId);
     }
 
     private void onTimerFired(final TimerFired subject) {
-        final int sequenceId = subject.getTimerCreatedSequenceId();
+        final int sequenceId = subject.getTimerScheduledEventId();
         LOGGER.debug("Timer fired for sequence ID {}", sequenceId);
 
         final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
@@ -460,6 +492,24 @@ public final class WorkflowRunContext<A, R> {
 
         pendingAwaitableBySequenceId.remove(sequenceId);
         awaitable.complete(null);
+    }
+
+    private void onSideEffectExecuted(final SideEffectExecuted subject) {
+        final int sequenceId = subject.getSideEffectEventId();
+        LOGGER.debug("Side effect executed for sequence ID {}", sequenceId);
+
+        final Awaitable<?> awaitable = pendingAwaitableBySequenceId.get(sequenceId);
+        if (awaitable == null) {
+            LOGGER.warn("""
+                    Encountered SideEffectExecuted event for sequence ID {}, \
+                    but no pending awaitable was found for it""", sequenceId);
+            return;
+        }
+
+        pendingAwaitableBySequenceId.remove(sequenceId);
+        awaitable.complete(subject.hasResult()
+                ? subject.getResult()
+                : null);
     }
 
     private void onExternalEventReceived(final WorkflowEvent event) {
@@ -495,7 +545,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void complete(final R result) {
         final int sequenceId = currentSequenceId++;
-        pendingActionBySequenceId.put(sequenceId,
+        pendingCommandBySequenceId.put(sequenceId,
                 new CompleteExecutionCommand(
                         sequenceId,
                         WORKFLOW_RUN_STATUS_COMPLETED,
@@ -505,7 +555,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void fail(final Throwable exception) {
         final int sequenceId = currentSequenceId++;
-        pendingActionBySequenceId.put(sequenceId,
+        pendingCommandBySequenceId.put(sequenceId,
                 new CompleteExecutionCommand(
                         sequenceId,
                         WORKFLOW_RUN_STATUS_FAILED,
