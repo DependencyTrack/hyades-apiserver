@@ -33,19 +33,19 @@ sealed interface WorkflowCommand permits
         WorkflowCommand.TerminateExecutionCommand {
 
     record CompleteExecutionCommand(
-            int sequenceId,
+            int eventId,
             WorkflowRunStatus status,
             WorkflowPayload result,
             String failureDetails) implements WorkflowCommand {
     }
 
     record RecordSideEffectResultCommand(
-            int sequenceId,
+            int eventId,
             WorkflowPayload result) implements WorkflowCommand {
     }
 
     record ScheduleActivityCommand(
-            int sequenceId,
+            int eventId,
             String name,
             int version,
             Integer priority,
@@ -53,7 +53,7 @@ sealed interface WorkflowCommand permits
     }
 
     record ScheduleSubWorkflowCommand(
-            int sequenceId,
+            int eventId,
             String workflowName,
             int workflowVersion,
             Integer priority,
@@ -61,12 +61,12 @@ sealed interface WorkflowCommand permits
     }
 
     record ScheduleTimerCommand(
-            int sequenceId,
+            int eventId,
             Instant elapseAt) implements WorkflowCommand {
     }
 
     record TerminateExecutionCommand(
-            int sequenceId,
+            int eventId,
             UUID instanceId) implements WorkflowCommand {
     }
 

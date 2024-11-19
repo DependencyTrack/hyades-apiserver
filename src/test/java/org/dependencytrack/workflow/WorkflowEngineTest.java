@@ -248,6 +248,37 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void shouldNotAllowNestedSideEffects() {
+        engine.registerWorkflowRunner("foo", ctx -> {
+            ctx.sideEffect(ignored -> {
+                ctx.sideEffect(ignored2 -> null, null, voidConverter());
+                return null;
+            }, null, voidConverter()).await();
+
+            return Optional.empty();
+        }, 1, voidConverter(), voidConverter());
+
+        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+
+        await("Completion")
+                .atMost(Duration.ofSeconds(15))
+                .untilAsserted(() -> {
+                    final WorkflowRunRow run = engine.getWorkflowRun(runId);
+                    assertThat(run.status()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
+                });
+
+        assertThat(engine.getWorkflowEventLog(runId)).satisfiesExactly(
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
+                event -> {
+                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
+                    assertThat(event.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
+                    assertThat(event.getRunCompleted().getFailureDetails()).isEqualTo("IllegalStateException: Nested side effects are not allowed");
+                },
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+    }
+
+    @Test
     public void shouldSupportWorkflowVersioning() {
         // TODO
     }

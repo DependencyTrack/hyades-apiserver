@@ -86,7 +86,7 @@ public class WorkflowRun {
         this.pendingWorkflowMessages = new ArrayList<>();
 
         for (final WorkflowEvent event : eventLog) {
-            onEvent(event, false);
+            onEvent(event, /* isNew */ false);
         }
     }
 
@@ -248,21 +248,21 @@ public class WorkflowRun {
         }
 
         onEvent(WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setRunCompleted(subjectBuilder.build())
-                .build(), true);
+                .build(), /* isNew */ true);
     }
 
     private void executeRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {
         final var subjectBuilder = SideEffectExecuted.newBuilder()
-                .setSideEffectEventId(command.sequenceId());
+                .setSideEffectEventId(command.eventId());
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }
 
         onEvent(WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setSideEffectExecuted(subjectBuilder.build())
                 .build());
@@ -280,11 +280,11 @@ public class WorkflowRun {
         }
 
         final var taskScheduledEvent = WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setActivityTaskScheduled(subjectBuilder.build())
                 .build();
-        onEvent(taskScheduledEvent, true);
+        onEvent(taskScheduledEvent, /* isNew */ true);
         pendingActivityTaskScheduledEvents.add(taskScheduledEvent);
     }
 
@@ -299,7 +299,7 @@ public class WorkflowRun {
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
                 .setParentRun(ParentWorkflowRun.newBuilder()
-                        .setSubWorkflowRunScheduledEventId(command.sequenceId())
+                        .setSubWorkflowRunScheduledEventId(command.eventId())
                         .setRunId(this.workflowRunId.toString())
                         .setWorkflowName(this.workflowName)
                         .setWorkflowVersion(this.workflowVersion)
@@ -313,10 +313,10 @@ public class WorkflowRun {
         }
 
         onEvent(WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setSubWorkflowRunScheduled(subWorkflowScheduledBuilder.build())
-                .build(), true);
+                .build(), /* isNew */ true);
 
         pendingWorkflowMessages.add(new WorkflowMessage(
                 subWorkflowRunId,
@@ -329,18 +329,18 @@ public class WorkflowRun {
 
     private void executeScheduleTimerCommand(final ScheduleTimerCommand command) {
         onEvent(WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerScheduled(TimerScheduled.newBuilder()
                         .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
                         .build())
-                .build(), true);
+                .build(), /* isNew */ true);
 
         pendingTimerFiredEvents.add(WorkflowEvent.newBuilder()
-                .setId(command.sequenceId())
+                .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerFired(TimerFired.newBuilder()
-                        .setTimerScheduledEventId(command.sequenceId())
+                        .setTimerScheduledEventId(command.eventId())
                         .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
                         .build())
                 .build());
