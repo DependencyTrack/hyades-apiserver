@@ -26,7 +26,8 @@ import java.util.UUID;
 
 sealed interface WorkflowCommand permits
         WorkflowCommand.CompleteExecutionCommand,
-        WorkflowCommand.ScheduleActivityTaskCommand,
+        WorkflowCommand.RecordSideEffectResultCommand,
+        WorkflowCommand.ScheduleActivityCommand,
         WorkflowCommand.ScheduleSubWorkflowCommand,
         WorkflowCommand.ScheduleTimerCommand,
         WorkflowCommand.TerminateExecutionCommand {
@@ -38,7 +39,12 @@ sealed interface WorkflowCommand permits
             String failureDetails) implements WorkflowCommand {
     }
 
-    record ScheduleActivityTaskCommand(
+    record RecordSideEffectResultCommand(
+            int sequenceId,
+            WorkflowPayload result) implements WorkflowCommand {
+    }
+
+    record ScheduleActivityCommand(
             int sequenceId,
             String name,
             int version,

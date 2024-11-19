@@ -23,6 +23,7 @@ import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
+import org.dependencytrack.proto.workflow.v1alpha1.RunnerCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunnerStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.payload.PayloadConverter;
@@ -154,7 +155,7 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
                     polledTask.workflowVersion(),
                     polledTask.eventLog());
             workflowRun.onEvent(WorkflowEvent.newBuilder()
-                    .setSequenceId(-1)
+                    .setId(-1)
                     .setTimestamp(Timestamps.now())
                     .setRunnerStarted(RunnerStarted.newBuilder().build())
                     .build());
@@ -188,6 +189,11 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
             final List<WorkflowCommand> commands = ctx.runWorkflow();
 
             workflowRun.executeCommands(commands);
+            workflowRun.onEvent(WorkflowEvent.newBuilder()
+                    .setId(-1)
+                    .setTimestamp(Timestamps.now())
+                    .setRunnerCompleted(RunnerCompleted.newBuilder().build())
+                    .build());
 
             // TODO: Send this off to Kafka and do the sync in batches
             //  to take load off the database.

@@ -198,7 +198,7 @@ public class WorkflowEngine implements Closeable {
 
         final var runId = UUID.randomUUID();
         final var executionStartedEvent = WorkflowEvent.newBuilder()
-                .setSequenceId(-1)
+                .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunStarted(RunStarted.newBuilder()
                         .setWorkflowName(workflowName)
@@ -233,7 +233,7 @@ public class WorkflowEngine implements Closeable {
         useJdbiTransaction(handle -> new WorkflowDao(handle).createInboxEvents(List.of(
                 new NewWorkflowEventInboxRow(workflowRunId, null,
                         WorkflowEvent.newBuilder()
-                                .setSequenceId(-1)
+                                .setId(-1)
                                 .setTimestamp(Timestamps.now())
                                 .setExternalEventReceived(subjectBuilder.build())
                                 .build()))));
@@ -302,10 +302,13 @@ public class WorkflowEngine implements Closeable {
                     workflowRun.completedAt().orElse(null)));
 
             int sequenceNumber = workflowRun.eventLog().size();
-            final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(workflowRun.eventLog().size());
+            final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(workflowRun.inboxEvents().size());
             for (final WorkflowEvent newEvent : workflowRun.inboxEvents()) {
                 newEventLogEntries.add(new NewWorkflowEventLogRow(
-                        workflowRun.workflowRunId(), sequenceNumber++, toInstant(newEvent.getTimestamp()), newEvent));
+                        workflowRun.workflowRunId(),
+                        sequenceNumber++,
+                        toInstant(newEvent.getTimestamp()),
+                        newEvent));
             }
             dao.createWorkflowEventLogEntries(newEventLogEntries);
 
@@ -347,7 +350,7 @@ public class WorkflowEngine implements Closeable {
             for (final WorkflowEvent newEvent : workflowRun.pendingActivityTaskScheduledEvents()) {
                 newActivityTasks.add(new NewActivityTaskRow(
                         workflowRun.workflowRunId(),
-                        newEvent.getSequenceId(),
+                        newEvent.getId(),
                         newEvent.getActivityTaskScheduled().getName(),
                         newEvent.getActivityTaskScheduled().hasPriority()
                                 ? newEvent.getActivityTaskScheduled().getPriority()

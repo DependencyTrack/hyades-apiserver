@@ -304,12 +304,12 @@ public final class WorkflowDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_EVENT_LOG" (
                   "WORKFLOW_RUN_ID"
-                , "SEQUENCE_ID"
+                , "SEQUENCE_NUMBER"
                 , "TIMESTAMP"
                 , "EVENT"
                 ) VALUES (
                   :workflowRunId
-                , :sequenceId
+                , :sequenceNumber
                 , :timestamp
                 , :event
                 )
@@ -331,7 +331,7 @@ public final class WorkflowDao {
                 SELECT "EVENT"
                   FROM "WORKFLOW_EVENT_LOG"
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
-                 ORDER BY "TIMESTAMP"
+                 ORDER BY "SEQUENCE_NUMBER"
                 """);
 
         return query
@@ -345,7 +345,7 @@ public final class WorkflowDao {
                 SELECT *
                   FROM "WORKFLOW_EVENT_LOG"
                  WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
-                 ORDER BY "SEQUENCE_ID"
+                 ORDER BY "SEQUENCE_NUMBER"
                 """);
 
         return query
@@ -362,14 +362,14 @@ public final class WorkflowDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_ACTIVITY_TASK" (
                   "WORKFLOW_RUN_ID"
-                , "SEQUENCE_ID"
+                , "SEQUENCE_NUMBER"
                 , "ACTIVITY_NAME"
                 , "PRIORITY"
                 , "ARGUMENT"
                 , "CREATED_AT"
                 ) VALUES (
                   :workflowRunId
-                , :sequenceId
+                , :sequenceNumber
                 , :activityName
                 , :priority
                 , :argument
@@ -417,7 +417,7 @@ public final class WorkflowDao {
                      , "UPDATED_AT" = NOW()
                   FROM "CTE_POLL"
                 RETURNING "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                        , "WORKFLOW_ACTIVITY_TASK"."SEQUENCE_ID"
+                        , "WORKFLOW_ACTIVITY_TASK"."SEQUENCE_NUMBER"
                         , "WORKFLOW_ACTIVITY_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_ACTIVITY_TASK"."PRIORITY"
                         , "WORKFLOW_ACTIVITY_TASK"."ARGUMENT"
@@ -432,7 +432,7 @@ public final class WorkflowDao {
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
                         "WORKFLOW_RUN_ID",
-                        "SEQUENCE_ID",
+                        "SEQUENCE_NUMBER",
                         "ACTIVITY_NAME",
                         "PRIORITY",
                         "ARGUMENT",

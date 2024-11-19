@@ -190,7 +190,7 @@
 
         <createTable tableName="WORKFLOW_EVENT_LOG">
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
-            <column name="SEQUENCE_ID" type="INT"/>
+            <column name="SEQUENCE_NUMBER" type="INT"/>
             <column name="TIMESTAMP" type="TIMESTAMPTZ(6)">
                 <constraints nullable="false"/>
             </column>
@@ -201,7 +201,7 @@
 
         <addPrimaryKey
                 tableName="WORKFLOW_EVENT_LOG"
-                columnNames="WORKFLOW_RUN_ID, SEQUENCE_ID"
+                columnNames="WORKFLOW_RUN_ID, SEQUENCE_NUMBER"
                 constraintName="WORKFLOW_EVENT_LOG_PK"/>
         <addForeignKeyConstraint
                 baseTableName="WORKFLOW_EVENT_LOG"
@@ -240,7 +240,7 @@
             <column name="WORKFLOW_RUN_ID" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="SEQUENCE_ID" type="INT">
+            <column name="SEQUENCE_NUMBER" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="ACTIVITY_NAME" type="TEXT">
@@ -259,7 +259,7 @@
 
         <addPrimaryKey
                 tableName="WORKFLOW_ACTIVITY_TASK"
-                columnNames="WORKFLOW_RUN_ID, SEQUENCE_ID"
+                columnNames="WORKFLOW_RUN_ID, SEQUENCE_NUMBER"
                 constraintName="WORKFLOW_ACTIVITY_TASK_PK"/>
         <addForeignKeyConstraint
                 baseTableName="WORKFLOW_ACTIVITY_TASK"

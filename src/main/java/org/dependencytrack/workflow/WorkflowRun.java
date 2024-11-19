@@ -23,6 +23,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.ParentWorkflowRun;
 import org.dependencytrack.proto.workflow.v1alpha1.RunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
+import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunScheduled;
@@ -32,7 +33,8 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
 import org.dependencytrack.workflow.WorkflowCommand.CompleteExecutionCommand;
-import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityTaskCommand;
+import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultCommand;
+import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleTimerCommand;
 
@@ -196,7 +198,9 @@ public class WorkflowRun {
     private void executeCommand(final WorkflowCommand command) {
         switch (command) {
             case CompleteExecutionCommand completeCommand -> executeCompleteExecutionCommand(completeCommand);
-            case ScheduleActivityTaskCommand activityCommand -> executeScheduleActivityTaskCommand(activityCommand);
+            case RecordSideEffectResultCommand sideEffectCommand ->
+                    executeRecordSideEffectResultCommand(sideEffectCommand);
+            case ScheduleActivityCommand activityCommand -> executeScheduleActivityTaskCommand(activityCommand);
             case ScheduleSubWorkflowCommand subWorkflowCommand -> executeScheduleSubWorkflowCommand(subWorkflowCommand);
             case ScheduleTimerCommand timerCommand -> executeScheduleTimerCommand(timerCommand);
             default -> throw new IllegalStateException("Unexpected command: " + command);
@@ -209,11 +213,11 @@ public class WorkflowRun {
             final var parentRunId = UUID.fromString(parentRun.getRunId());
 
             final var subWorkflowEventBuilder = WorkflowEvent.newBuilder()
-                    .setSequenceId(-1)
+                    .setId(-1)
                     .setTimestamp(Timestamps.now());
             if (command.status() == WORKFLOW_RUN_STATUS_COMPLETED) {
                 final var subWorkflowCompletedBuilder = SubWorkflowRunCompleted.newBuilder()
-                        .setRunScheduledSequenceId(parentRun.getSubWorkflowRunScheduledSequenceId());
+                        .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
                 if (command.result() != null) {
                     subWorkflowCompletedBuilder.setResult(command.result());
                 }
@@ -221,7 +225,7 @@ public class WorkflowRun {
                         subWorkflowCompletedBuilder.build());
             } else if (command.status() == WORKFLOW_RUN_STATUS_FAILED) {
                 final var subWorkflowFailedBuilder = SubWorkflowRunFailed.newBuilder()
-                        .setRunScheduledSequenceId(parentRun.getSubWorkflowRunScheduledSequenceId());
+                        .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
                 if (command.failureDetails() != null) {
                     subWorkflowFailedBuilder.setFailureDetails(command.failureDetails());
                 }
@@ -244,13 +248,27 @@ public class WorkflowRun {
         }
 
         onEvent(WorkflowEvent.newBuilder()
-                .setSequenceId(command.sequenceId())
+                .setId(command.sequenceId())
                 .setTimestamp(Timestamps.now())
                 .setRunCompleted(subjectBuilder.build())
                 .build(), true);
     }
 
-    private void executeScheduleActivityTaskCommand(final ScheduleActivityTaskCommand command) {
+    private void executeRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {
+        final var subjectBuilder = SideEffectExecuted.newBuilder()
+                .setSideEffectEventId(command.sequenceId());
+        if (command.result() != null) {
+            subjectBuilder.setResult(command.result());
+        }
+
+        onEvent(WorkflowEvent.newBuilder()
+                .setId(command.sequenceId())
+                .setTimestamp(Timestamps.now())
+                .setSideEffectExecuted(subjectBuilder.build())
+                .build());
+    }
+
+    private void executeScheduleActivityTaskCommand(final ScheduleActivityCommand command) {
         final var subjectBuilder = ActivityTaskScheduled.newBuilder()
                 .setName(command.name())
                 .setVersion(command.version());
@@ -262,7 +280,7 @@ public class WorkflowRun {
         }
 
         final var taskScheduledEvent = WorkflowEvent.newBuilder()
-                .setSequenceId(command.sequenceId())
+                .setId(command.sequenceId())
                 .setTimestamp(Timestamps.now())
                 .setActivityTaskScheduled(subjectBuilder.build())
                 .build();
@@ -281,7 +299,7 @@ public class WorkflowRun {
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
                 .setParentRun(ParentWorkflowRun.newBuilder()
-                        .setSubWorkflowRunScheduledSequenceId(command.sequenceId())
+                        .setSubWorkflowRunScheduledEventId(command.sequenceId())
                         .setRunId(this.workflowRunId.toString())
                         .setWorkflowName(this.workflowName)
                         .setWorkflowVersion(this.workflowVersion)
@@ -295,7 +313,7 @@ public class WorkflowRun {
         }
 
         onEvent(WorkflowEvent.newBuilder()
-                .setSequenceId(command.sequenceId())
+                .setId(command.sequenceId())
                 .setTimestamp(Timestamps.now())
                 .setSubWorkflowRunScheduled(subWorkflowScheduledBuilder.build())
                 .build(), true);
@@ -303,7 +321,7 @@ public class WorkflowRun {
         pendingWorkflowMessages.add(new WorkflowMessage(
                 subWorkflowRunId,
                 WorkflowEvent.newBuilder()
-                        .setSequenceId(-1)
+                        .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunStarted(subWorkflowRunStartedBuilder.build())
                         .build()));
@@ -311,7 +329,7 @@ public class WorkflowRun {
 
     private void executeScheduleTimerCommand(final ScheduleTimerCommand command) {
         onEvent(WorkflowEvent.newBuilder()
-                .setSequenceId(command.sequenceId())
+                .setId(command.sequenceId())
                 .setTimestamp(Timestamps.now())
                 .setTimerScheduled(TimerScheduled.newBuilder()
                         .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
@@ -319,10 +337,10 @@ public class WorkflowRun {
                 .build(), true);
 
         pendingTimerFiredEvents.add(WorkflowEvent.newBuilder()
-                .setSequenceId(command.sequenceId())
+                .setId(command.sequenceId())
                 .setTimestamp(Timestamps.now())
                 .setTimerFired(TimerFired.newBuilder()
-                        .setTimerCreatedSequenceId(command.sequenceId())
+                        .setTimerScheduledEventId(command.sequenceId())
                         .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
                         .build())
                 .build());

@@ -25,7 +25,7 @@ import java.util.UUID;
 
 public record NewWorkflowEventLogRow(
         UUID workflowRunId,
-        int sequenceId,
+        int sequenceNumber,
         Instant timestamp,
         WorkflowEvent event) {
 }
