@@ -183,19 +183,19 @@ public final class WorkflowRunContext<A, R> {
     }
 
     public <SA, SR> Awaitable<SR> sideEffect(
-            final Function<SA, SR> sideEffectFunction,
             final SA argument,
-            final PayloadConverter<SR> resultConverter) {
+            final PayloadConverter<SR> resultConverter,
+            final Function<SA, SR> sideEffectFunction) {
         assertNotInSideEffect("Nested side effects are not allowed");
 
         final int eventId = currentEventId++;
-        isInSideEffect = true;
 
         final var awaitable = new Awaitable<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);
 
         if (!isReplaying) {
             try {
+                isInSideEffect = true;
                 final SR result = sideEffectFunction.apply(argument);
                 final WorkflowPayload resultPayload = resultConverter.convertToPayload(result);
                 pendingCommandByEventId.put(eventId, new RecordSideEffectResultCommand(

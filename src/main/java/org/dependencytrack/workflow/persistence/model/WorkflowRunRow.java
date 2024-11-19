@@ -32,6 +32,7 @@ public record WorkflowRunRow(
         WorkflowRunStatus status,
         @Nullable WorkflowPayload argument,
         @Nullable WorkflowPayload result,
+        @Nullable String failureDetails,
         @Nullable Integer priority,
         @Nullable String lockedBy,
         @Nullable Instant lockedUntil,
