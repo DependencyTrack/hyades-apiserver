@@ -67,9 +67,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldFailWorkflowInstanceWhenExecutionThrows() {
-        engine.registerWorkflowRunner("foo", ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             throw new IllegalStateException("Ouch!");
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -92,10 +92,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldWaitForScheduledTimerToElapse() {
-        engine.registerWorkflowRunner("foo", ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             ctx.scheduleTimer(Duration.ofSeconds(3)).await();
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -119,15 +119,15 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldWaitForScheduledSubWorkflow() {
-        engine.registerWorkflowRunner("foo", ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             final Optional<String> subWorkflowResult = ctx.callSubWorkflow(
                     "bar", 1, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(subWorkflowResult).contains("inputValue-outputValue");
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
-        engine.registerWorkflowRunner("bar", ctx -> ctx.argument().map(argument -> argument + "-outputValue"), 1,
-                stringConverter(), stringConverter());
+        engine.registerWorkflowRunner("bar", 1, stringConverter(), stringConverter(),
+                ctx -> ctx.argument().map(argument -> argument + "-outputValue"));
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -151,10 +151,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldWaitForExternalEvent() {
-        engine.registerWorkflowRunner("foo", ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofSeconds(30)).await();
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -187,10 +187,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldCallActivities() {
-        engine.registerWorkflowRunner("foo", ctx -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
             ctx.callActivity("bar", null, voidConverter(), voidConverter()).await();
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -214,15 +214,15 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldRecordSideEffectResult() {
         final var sideEffectInvocationCounter = new AtomicInteger();
 
-        engine.registerWorkflowRunner("foo", ctx -> {
-            ctx.sideEffect(ignored -> {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+            ctx.sideEffect(null, voidConverter(), ignored -> {
                 sideEffectInvocationCounter.incrementAndGet();
                 return null;
-            }, null, voidConverter()).await();
+            }).await();
 
             ctx.scheduleTimer(Duration.ofMillis(10)).await();
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 
@@ -249,14 +249,14 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldNotAllowNestedSideEffects() {
-        engine.registerWorkflowRunner("foo", ctx -> {
-            ctx.sideEffect(ignored -> {
-                ctx.sideEffect(ignored2 -> null, null, voidConverter());
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+            ctx.sideEffect(null, voidConverter(), ignored -> {
+                ctx.sideEffect(null, voidConverter(), ignored2 -> null).await();
                 return null;
-            }, null, voidConverter()).await();
+            }).await();
 
             return Optional.empty();
-        }, 1, voidConverter(), voidConverter());
+        });
 
         final UUID runId = engine.scheduleWorkflowRun("foo", 1);
 

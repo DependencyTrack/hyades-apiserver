@@ -167,10 +167,10 @@ public class WorkflowEngine implements Closeable {
 
     public <A, R> void registerWorkflowRunner(
             final String workflowName,
-            final WorkflowRunner<A, R> workflowRunner,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter) {
+            final PayloadConverter<R> resultConverter,
+            final WorkflowRunner<A, R> workflowRunner) {
         state.assertRunning();
 
         if (executorServiceByName.containsKey(workflowName)) {
