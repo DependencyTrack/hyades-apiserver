@@ -74,8 +74,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -98,8 +97,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE AND 'foo' = :apiFilter
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{apiFilter:foo}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{named:{apiFilter:foo}}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -123,8 +121,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             OFFSET :paginationOffset FETCH NEXT :paginationLimit ROWS ONLY
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{paginationOffset:0,paginationLimit:100}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{named:{paginationOffset:0,paginationLimit:100}}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -187,8 +184,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE ORDER BY "valueA" DESC
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -259,8 +255,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE ORDER BY "valueA" DESC
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -287,8 +282,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE ORDER BY "valueA" DESC, "valueB"
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -315,8 +309,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE ORDER BY "valueA" DESC, "valueB" asc
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -349,8 +342,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -383,8 +375,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE AND FALSE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -423,8 +414,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -463,8 +453,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -503,8 +492,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -543,8 +531,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{}, finder:[]}""");
+                    assertThat(ctx.getBinding()).hasToString("{}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -586,8 +573,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                                            )
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("""
-                            {positional:{}, named:{projectAclTeamIds:[%s]}, finder:[]}""".formatted(team.getId()));
+                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
