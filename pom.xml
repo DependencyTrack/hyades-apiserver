@@ -96,7 +96,7 @@
         <lib.datanucleus-postgresql.version>0.2.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.jdbi.version>3.45.4</lib.jdbi.version>
-        <lib.json-unit.version>3.5.0</lib.json-unit.version>
+        <lib.json-unit.version>4.0.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.8.0</lib.kafka.version>
         <lib.liquibase.version>4.29.2</lib.liquibase.version>
