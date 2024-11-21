@@ -107,10 +107,8 @@ public class Buffer<T> implements Closeable {
             }
 
             final var batch = new ArrayList<BufferedItem<T>>(maxBatchSize);
-            while (bufferedItems.peek() != null && batch.size() < maxBatchSize) {
-                batch.add(bufferedItems.poll());
-            }
-            
+            bufferedItems.drainTo(batch, maxBatchSize);
+
             DistributionSummary.builder("dtrack.buffer.flush.batch.size")
                     .tag("buffer", name)
                     .register(Metrics.getRegistry())
