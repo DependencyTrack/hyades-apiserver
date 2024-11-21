@@ -23,6 +23,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadArgumentFactory;
+import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
@@ -35,13 +36,14 @@ import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.result.ResultIterator;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
@@ -120,10 +122,10 @@ public final class WorkflowDao {
                 .list();
     }
 
-    public WorkflowRunRow updateWorkflowRun(
+    public int updateWorkflowRuns(
             final UUID workerInstanceId,
-            final WorkflowRunRowUpdate runUpdate) {
-        final Update update = jdbiHandle.createUpdate("""
+            final Collection<WorkflowRunRowUpdate> runUpdates) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 UPDATE "WORKFLOW_RUN"
                    SET "STATUS" = COALESCE(:status, "STATUS")
                      , "ARGUMENT" = COALESCE(:argument, "ARGUMENT")
@@ -136,18 +138,26 @@ public final class WorkflowDao {
                      , "COMPLETED_AT" = COALESCE(:completedAt, "COMPLETED_AT")
                  WHERE "ID" = :id
                    AND "LOCKED_BY" = :workerInstanceId
-                RETURNING *
                 """);
 
-        return update
+        for (final WorkflowRunRowUpdate runUpdate : runUpdates) {
+            preparedBatch
+                    .bind("workerInstanceId", workerInstanceId.toString())
+                    .bindMethods(runUpdate)
+                    .add();
+        }
+
+        final ResultIterator<Integer> modCountIterator = preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
                 .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
-                .bind("workerInstanceId", workerInstanceId.toString())
-                .bindMethods(runUpdate)
-                .executeAndReturnGeneratedKeys("*")
-                .map(ConstructorMapper.of(WorkflowRunRow.class))
-                .findOne()
-                .orElse(null);
+                .executeAndGetModCount();
+
+        int modCount = 0;
+        while (modCountIterator.hasNext()) {
+            modCount += modCountIterator.next();
+        }
+
+        return modCount;
     }
 
     public Map<UUID, PolledWorkflowRunRow> pollAndLockWorkflowRuns(
@@ -208,7 +218,7 @@ public final class WorkflowDao {
                 """);
 
         return update
-                .bind("workerInstanceId", workerInstanceId)
+                .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("workflowRunId", workflowRunId)
                 .execute();
     }
@@ -226,7 +236,7 @@ public final class WorkflowDao {
                 , :visibleFrom
                 , :event
                 )
-                RETURNING "ID"
+                RETURNING 1
                 """);
 
         for (final NewWorkflowEventInboxRow newEvent : newEvents) {
@@ -235,12 +245,13 @@ public final class WorkflowDao {
                     .add();
         }
 
-        final List<Long> ids = preparedBatch
+        return preparedBatch
                 .registerArgument(new WorkflowEventArgumentFactory())
-                .executePreparedBatch("ID")
-                .mapTo(Long.class)
-                .list();
-        return ids.size();
+                .executePreparedBatch("1")
+                .mapTo(Integer.class)
+                .stream()
+                .mapToInt(Integer::intValue)
+                .sum();
     }
 
     public Map<UUID, List<WorkflowEvent>> pollAndLockInboxEvents(
@@ -281,21 +292,21 @@ public final class WorkflowDao {
                 """);
 
         return update
-                .bind("workerInstanceId", workerInstanceId)
+                .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("workflowRunId", workflowRunId)
                 .execute();
     }
 
-    public int deleteLockedInboxEvents(final UUID workerInstanceId, final UUID workflowRunId) {
+    public int deleteLockedInboxEvents(final UUID workerInstanceId, final Collection<UUID> workflowRunIds) {
         final Update update = jdbiHandle.createUpdate("""
                 DELETE
                   FROM "WORKFLOW_EVENT_INBOX"
-                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
+                 WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
                    AND "LOCKED_BY" = :workerInstanceId
                 """);
 
         return update
-                .bind("workflowRunId", workflowRunId)
+                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .execute();
     }
@@ -362,19 +373,20 @@ public final class WorkflowDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_ACTIVITY_TASK" (
                   "WORKFLOW_RUN_ID"
-                , "SEQUENCE_NUMBER"
+                , "SCHEDULED_EVENT_ID"
                 , "ACTIVITY_NAME"
                 , "PRIORITY"
                 , "ARGUMENT"
                 , "CREATED_AT"
                 ) VALUES (
                   :workflowRunId
-                , :sequenceNumber
+                , :scheduledEventId
                 , :activityName
                 , :priority
                 , :argument
                 , NOW()
                 )
+                RETURNING 1
                 """);
 
         for (final NewActivityTaskRow newTask : newTasks) {
@@ -383,15 +395,13 @@ public final class WorkflowDao {
                     .add();
         }
 
-        final Iterator<Integer> modCountIterator = preparedBatch
+        return preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
-                .executeAndGetModCount();
-        int modCount = 0;
-        while (modCountIterator.hasNext()) {
-            modCount += modCountIterator.next();
-        }
-
-        return modCount;
+                .executePreparedBatch("1")
+                .mapTo(Integer.class)
+                .stream()
+                .mapToInt(Integer::intValue)
+                .sum();
     }
 
     public List<PolledActivityTaskRow> pollAndLockActivityTasks(
@@ -401,7 +411,8 @@ public final class WorkflowDao {
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 WITH "CTE_POLL" AS (
-                    SELECT "ID"
+                    SELECT "WORKFLOW_RUN_ID"
+                         , "SCHEDULED_EVENT_ID"
                       FROM "WORKFLOW_ACTIVITY_TASK"
                      WHERE "ACTIVITY_NAME" = :activityName
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
@@ -411,13 +422,15 @@ public final class WorkflowDao {
                       SKIP LOCKED
                      LIMIT :limit)
                 UPDATE "WORKFLOW_ACTIVITY_TASK"
-                   SET "ATTEMPT" = COALESCE("WORKFLOW_TASK"."ATTEMPT", 0) + 1
+                   SET "ATTEMPT" = COALESCE("WORKFLOW_ACTIVITY_TASK"."ATTEMPT", 0) + 1
                      , "LOCKED_BY" = :workerInstanceId
                      , "LOCKED_UNTIL" = NOW() + :lockTimeout
                      , "UPDATED_AT" = NOW()
                   FROM "CTE_POLL"
+                 WHERE "CTE_POLL"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
+                   AND "CTE_POLL"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
                 RETURNING "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                        , "WORKFLOW_ACTIVITY_TASK"."SEQUENCE_NUMBER"
+                        , "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
                         , "WORKFLOW_ACTIVITY_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_ACTIVITY_TASK"."PRIORITY"
                         , "WORKFLOW_ACTIVITY_TASK"."ARGUMENT"
@@ -432,13 +445,70 @@ public final class WorkflowDao {
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
                         "WORKFLOW_RUN_ID",
-                        "SEQUENCE_NUMBER",
+                        "SCHEDULED_EVENT_ID",
                         "ACTIVITY_NAME",
                         "PRIORITY",
                         "ARGUMENT",
                         "ATTEMPT")
                 .map(ConstructorMapper.of(PolledActivityTaskRow.class))
                 .list();
+    }
+
+    public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
+        final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
+        final var scheduledEventIds = new ArrayList<Integer>(activityTasks.size());
+
+        for (final ActivityTaskId activityTask : activityTasks) {
+            workflowRunIds.add(activityTask.workflowRunId());
+            scheduledEventIds.add(activityTask.scheduledEventId());
+        }
+
+        final Update update = jdbiHandle.createUpdate("""
+                WITH "CTE" AS (
+                    SELECT *
+                      FROM UNNEST(:workflowRunIds, :scheduledEventIds) AS t("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID"))
+                UPDATE "WORKFLOW_ACTIVITY_TASK"
+                   SET "LOCKED_BY" = NULL
+                     , "LOCKED_UNTIL" = NULL
+                  FROM "CTE"
+                 WHERE "CTE"."WOKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
+                   AND "CTE"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
+                   AND "WORKFLOW_ACTIVITY_TASK"."LOCKED_BY" = :workerInstanceId
+                """);
+
+        return update
+                .bind("workerInstanceId", workerInstanceId.toString())
+                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
+                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .execute();
+    }
+
+    public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
+        final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
+        final var scheduledEventIds = new ArrayList<Integer>(activityTasks.size());
+
+        for (final ActivityTaskId activityTask : activityTasks) {
+            workflowRunIds.add(activityTask.workflowRunId());
+            scheduledEventIds.add(activityTask.scheduledEventId());
+        }
+
+        final Update update = jdbiHandle.createUpdate("""
+                WITH "CTE" AS (
+                    SELECT *
+                      FROM UNNEST(:workflowRunIds, :scheduledEventIds) AS t("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID"))
+                DELETE
+                  FROM "WORKFLOW_ACTIVITY_TASK"
+                 USING "CTE"
+                 WHERE "CTE"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
+                   AND "CTE"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
+                   AND "WORKFLOW_ACTIVITY_TASK"."LOCKED_BY" = :workerInstanceId
+                """);
+
+        return update
+                .bind("workerInstanceId", workerInstanceId.toString())
+                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
+                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .execute();
     }
 
 }

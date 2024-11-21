@@ -19,14 +19,9 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.metrics.Metrics;
-import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
-import org.dependencytrack.proto.workflow.v1alpha1.RunnerCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.RunnerStarted;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-final class WorkflowTaskDispatcher<A, R> implements Runnable {
+final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskDispatcher.class);
     private static final IntervalFunction POLL_BACKOFF_INTERVAL_FUNCTION =
@@ -47,27 +42,18 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
                     /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(5));
 
     private final WorkflowEngine engine;
-    private final ExecutorService executorService;
-    private final String workflowName;
-    private final WorkflowRunner<A, R> workflowRunner;
-    private final PayloadConverter<A> argumentConverter;
-    private final PayloadConverter<R> resultConverter;
+    private final ExecutorService taskExecutorService;
+    private final WorkflowTaskProcessor<T> taskProcessor;
     private final Semaphore taskSemaphore;
 
     WorkflowTaskDispatcher(
             final WorkflowEngine engine,
-            final ExecutorService executorService,
-            final String workflowName,
-            final WorkflowRunner<A, R> workflowRunner,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
+            final ExecutorService taskExecutorService,
+            final WorkflowTaskProcessor<T> taskProcessor,
             final int maxConcurrency) {
         this.engine = engine;
-        this.executorService = executorService;
-        this.workflowName = workflowName;
-        this.workflowRunner = workflowRunner;
-        this.argumentConverter = argumentConverter;
-        this.resultConverter = resultConverter;
+        this.taskExecutorService = taskExecutorService;
+        this.taskProcessor = taskProcessor;
         this.taskSemaphore = new Semaphore(maxConcurrency);
     }
 
@@ -98,20 +84,29 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
             assert tasksToPoll > 0;
 
             LOGGER.debug("Polling up to {} tasks", tasksToPoll);
-            final List<WorkflowRunTask> polledTasks;
+            final List<T> polledTasks;
             final Timer.Sample pollTimerSample = Timer.start();
             try {
-                polledTasks = engine.pollWorkflowRunTasks(workflowName, tasksToPoll);
-
-                DistributionSummary
-                        .builder("dtrack.workflow.task.dispatcher.poll.tasks")
-                        .register(Metrics.getRegistry())
-                        .record(polledTasks.size());
+                polledTasks = taskProcessor.poll(tasksToPoll);
             } finally {
                 pollTimerSample.stop(Timer
                         .builder("dtrack.workflow.task.dispatcher.poll.latency")
+                        .tag("taskType", switch (taskProcessor) {
+                            case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
+                            case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
+                        })
                         .register(Metrics.getRegistry()));
             }
+
+            DistributionSummary
+                    .builder("dtrack.workflow.task.dispatcher.poll.tasks")
+                    .tag("taskType", switch (taskProcessor) {
+                        case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
+                        case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
+                    })
+                    .register(Metrics.getRegistry())
+                    .record(polledTasks.size());
+
             if (polledTasks.isEmpty()) {
                 final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++pollsWithoutResults);
                 LOGGER.debug("Backing off for {}ms", backoffMs);
@@ -131,8 +126,8 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
             // Prevent race conditions where the next dispatcher iteration acquires a semaphore
             // permit before the dispatched tasks acquired theirs.
             final var permitAcquiredLatch = new CountDownLatch(polledTasks.size());
-            for (final WorkflowRunTask polledTask : polledTasks) {
-                executorService.execute(() -> executeTask(polledTask, permitAcquiredLatch));
+            for (final T polledTask : polledTasks) {
+                taskExecutorService.execute(() -> executeTask(polledTask, permitAcquiredLatch));
             }
 
             try {
@@ -144,66 +139,26 @@ final class WorkflowTaskDispatcher<A, R> implements Runnable {
         }
     }
 
-    private void executeTask(final WorkflowRunTask polledTask, final CountDownLatch permitAcquiredLatch) {
+    private void executeTask(final T polledTask, final CountDownLatch permitAcquiredLatch) {
         try {
             taskSemaphore.acquire();
             permitAcquiredLatch.countDown();
 
-            final var workflowRun = new WorkflowRun(
-                    polledTask.workflowRunId(),
-                    polledTask.workflowName(),
-                    polledTask.workflowVersion(),
-                    polledTask.eventLog());
-            workflowRun.onEvent(WorkflowEvent.newBuilder()
-                    .setId(-1)
-                    .setTimestamp(Timestamps.now())
-                    .setRunnerStarted(RunnerStarted.newBuilder().build())
-                    .build());
-
-            int eventsAdded = 0;
-            for (final WorkflowEvent newEvent : polledTask.inboxEvents()) {
-                workflowRun.onEvent(newEvent);
-                eventsAdded++;
-
-                if (newEvent.hasRunStarted()) {
-                    LOGGER.info("Starting run of workflow {} with ID {}",
-                            newEvent.getRunStarted().getWorkflowName(), polledTask.workflowRunId());
-                }
+            final Timer.Sample taskProcessingTimerSample = Timer.start();
+            try {
+                taskProcessor.process(polledTask);
+            } finally {
+                taskProcessingTimerSample.stop(Timer.builder("dtrack.workflow.task.process.latency")
+                        .tag("taskType", switch (taskProcessor) {
+                            case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
+                            case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
+                        })
+                        .register(Metrics.getRegistry()));
             }
-
-            if (eventsAdded == 0) {
-                LOGGER.warn("No new events");
-                return;
-            }
-
-            final var ctx = new WorkflowRunContext<>(
-                    polledTask.workflowRunId(),
-                    polledTask.workflowName(),
-                    polledTask.workflowVersion(),
-                    polledTask.priority(),
-                    argumentConverter.convertFromPayload(polledTask.argument()),
-                    workflowRunner,
-                    resultConverter,
-                    workflowRun.eventLog(),
-                    workflowRun.inboxEvents());
-            final List<WorkflowCommand> commands = ctx.runWorkflow();
-
-            workflowRun.executeCommands(commands);
-            workflowRun.onEvent(WorkflowEvent.newBuilder()
-                    .setId(-1)
-                    .setTimestamp(Timestamps.now())
-                    .setRunnerCompleted(RunnerCompleted.newBuilder().build())
-                    .build());
-
-            // TODO: Send this off to Kafka and do the sync in batches
-            //  to take load off the database.
-            engine.completeWorkflowRunTask(workflowRun);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for semaphore permit", e);
-            engine.abandonWorkflowRunTask(polledTask);
-        } catch (Throwable e) {
-            LOGGER.error("failed", e);
+            taskProcessor.abandon(polledTask);
         } finally {
             taskSemaphore.release();
         }

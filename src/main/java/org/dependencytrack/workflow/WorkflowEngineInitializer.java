@@ -22,6 +22,10 @@ import alpine.common.logging.Logger;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import java.security.SecureRandom;
+import java.util.Optional;
+
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
 
@@ -35,6 +39,33 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         engine = WorkflowEngine.getInstance();
         engine.start();
+
+        final var random = new SecureRandom();
+
+        engine.registerWorkflowRunner(
+                new ProcessBomUploadWorkflowRunner(),
+                /* maxConcurrency */ 5,
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter());
+
+        engine.registerActivityRunner(
+                /* activityName */ "ingest-bom",
+                /* maxConcurrency */ 5,
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter(),
+                new RandomlyFailingActivityRunner(random));
+        engine.registerActivityRunner(
+                /* activityName */ "eval-project-policies",
+                /* maxConcurrency */ 5,
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter(),
+                new RandomlyFailingActivityRunner(random));
+        engine.registerActivityRunner(
+                /* activityName */ "update-project-metrics",
+                /* maxConcurrency */ 5,
+                /* argumentConverter */ voidConverter(),
+                /* resultConverter */ voidConverter(),
+                new RandomlyFailingActivityRunner(random));
     }
 
     @Override
@@ -43,7 +74,6 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             return;
         }
 
-
         LOGGER.info("Stopping workflow engine");
         try {
             engine.close();
@@ -51,4 +81,29 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             LOGGER.warn("Failed to stop workflow engine", e);
         }
     }
+
+    public static class RandomlyFailingActivityRunner implements ActivityRunner<Void, Void> {
+
+        private static final Logger LOGGER = Logger.getLogger(RandomlyFailingActivityRunner.class);
+        private final SecureRandom random;
+
+        public RandomlyFailingActivityRunner(final SecureRandom random) {
+            this.random = random;
+        }
+
+        @Override
+        public Optional<Void> run(final ActivityRunContext<Void> ctx) throws Exception {
+            LOGGER.debug("Processing " + ctx);
+
+            Thread.sleep(random.nextInt(10, 1000));
+
+            if (random.nextDouble() < 0.1) {
+                throw new IllegalStateException("Oh no, this looks permanently broken!");
+            }
+
+            return Optional.empty();
+        }
+
+    }
+
 }

@@ -18,18 +18,21 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import java.util.Optional;
 
-import java.util.List;
-import java.util.UUID;
+import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
-record WorkflowRunTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        WorkflowPayload argument,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements WorkflowTask {
+public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<Void, Void> {
+
+    @Override
+    public Optional<Void> run(final WorkflowRunContext<Void, Void> ctx) throws Exception {
+        ctx.callActivity("ingest-bom", null, voidConverter(), voidConverter()).await();
+
+        ctx.callActivity("eval-project-policies", null, voidConverter(), voidConverter()).await();
+
+        ctx.callActivity("update-project-metrics", null, voidConverter(), voidConverter()).await();
+
+        return Optional.empty();
+    }
+
 }

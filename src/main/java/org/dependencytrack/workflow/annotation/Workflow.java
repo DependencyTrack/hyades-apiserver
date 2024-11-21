@@ -16,20 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.workflow.annotation;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.util.List;
-import java.util.UUID;
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Workflow {
 
-record WorkflowRunTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        WorkflowPayload argument,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements WorkflowTask {
+    String name();
+
+    int version() default 1;
+
 }

@@ -26,7 +26,7 @@ import java.util.UUID;
 
 public record ActivityTaskRow(
         UUID workflowRunId,
-        int sequenceNumber,
+        int scheduledEventId,
         String activityName,
         @Nullable Integer priority,
         @Nullable WorkflowPayload argument,
