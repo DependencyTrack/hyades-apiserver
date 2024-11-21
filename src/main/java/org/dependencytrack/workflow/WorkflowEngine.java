@@ -30,9 +30,16 @@ import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.WorkflowTaskAction.AbandonActivityRunTaskAction;
+import org.dependencytrack.workflow.WorkflowTaskAction.AbandonWorkflowRunTaskAction;
+import org.dependencytrack.workflow.WorkflowTaskAction.CompleteActivityRunTaskAction;
+import org.dependencytrack.workflow.WorkflowTaskAction.CompleteWorkflowRunTaskAction;
+import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
+import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
@@ -49,17 +56,23 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -106,6 +119,8 @@ public class WorkflowEngine implements Closeable {
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngine.class);
+    private static final Pattern WORKFLOW_NAME_PATTERN = Pattern.compile("^[\\w-]+");
+    private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
     private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
     private final UUID instanceId = UUID.randomUUID();
@@ -113,6 +128,7 @@ public class WorkflowEngine implements Closeable {
     private State state = State.CREATED;
     private ExecutorService dispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
+    private Buffer<WorkflowTaskAction> taskActionBuffer;
 
     public static WorkflowEngine getInstance() {
         return INSTANCE;
@@ -120,6 +136,17 @@ public class WorkflowEngine implements Closeable {
 
     public void start() {
         setState(State.STARTING);
+
+        // The buffer's flush interval should be long enough to allow
+        // for more than one task result to be included, but short enough
+        // to not block task execution unnecessarily. In a worst-case scenario,
+        // task workers can be blocked for an entire flush interval.
+        taskActionBuffer = new Buffer<>(
+                "workflow-task-action",
+                this::flushWorkflowTaskActions,
+                /* flushInterval */ Duration.ofMillis(5),
+                /* maxBatchSize */ 100);
+        taskActionBuffer.start();
 
         executorServiceByName = new HashMap<>();
 
@@ -162,35 +189,145 @@ public class WorkflowEngine implements Closeable {
         }
         executorServiceByName = null;
 
+        taskActionBuffer.close();
+        taskActionBuffer = null;
+
         setState(State.STOPPED);
     }
 
     public <A, R> void registerWorkflowRunner(
+            final WorkflowRunner<A, R> workflowRunner,
+            final int maxConcurrency,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter) {
+        requireNonNull(workflowRunner, "workflowRunner must not be null");
+
+        final var workflowAnnotation = workflowRunner.getClass().getAnnotation(Workflow.class);
+        if (workflowAnnotation == null) {
+            throw new IllegalArgumentException("workflowRunner must be annotated with @Workflow");
+        }
+
+        registerWorkflowRunner(workflowAnnotation.name(), maxConcurrency, argumentConverter, resultConverter, workflowRunner);
+    }
+
+    <A, R> void registerWorkflowRunner(
             final String workflowName,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final WorkflowRunner<A, R> workflowRunner) {
         state.assertRunning();
+        requireNonNull(workflowName, "workflowName must not be null");
+        requireValidWorkflowName(workflowName);
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
+        requireNonNull(workflowRunner, "workflowRunner must not be null");
 
-        if (executorServiceByName.containsKey(workflowName)) {
-            throw new IllegalStateException();
+        final String executorName = "workflow:%s".formatted(workflowName);
+        if (executorServiceByName.containsKey(executorName)) {
+            throw new IllegalStateException("Workflow %s is already registered".formatted(workflowName));
+        }
+
+        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .name("WorkflowEngine-WorkflowRunner-" + workflowName + "-", 0)
+                        .factory());
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowRunner-" + workflowName, null)
+                    .bindTo(Metrics.getRegistry());
+        }
+        executorServiceByName.put(executorName, executorService);
+
+        final var taskProcessor = new WorkflowRunTaskProcessor<>(
+                this, workflowName, workflowRunner, argumentConverter, resultConverter);
+
+        dispatcherExecutor.execute(new WorkflowTaskDispatcher<>(this, executorService, taskProcessor, maxConcurrency));
+    }
+
+    public <A, R> void registerActivityRunner(
+            final ActivityRunner<A, R> activityRunner,
+            final int maxConcurrency,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter) {
+        requireNonNull(activityRunner, "activityRunner must not be null");
+
+        final var activityAnnotation = activityRunner.getClass().getAnnotation(Activity.class);
+        if (activityAnnotation == null) {
+            throw new IllegalArgumentException("activityRunner class must be annotated with @Activity");
+        }
+
+        registerActivityRunner(activityAnnotation.name(), maxConcurrency, argumentConverter, resultConverter, activityRunner);
+    }
+
+    <A, R> void registerActivityRunner(
+            final String activityName,
+            final int maxConcurrency,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter,
+            final ActivityRunner<A, R> activityRunner) {
+        state.assertRunning();
+        requireNonNull(activityName, "activityName must not be null");
+        requireValidActivityName(activityName);
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
+        requireNonNull(activityRunner, "activityRunner must not be null");
+
+        final String executorName = "activity:%s".formatted(activityName);
+        if (executorServiceByName.containsKey(executorName)) {
+            throw new IllegalStateException("Activity %s is already registered".formatted(activityName));
         }
 
         // TODO: Use virtual threads?
         final ExecutorService executorService = Executors.newFixedThreadPool(maxConcurrency,
                 new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .namingPattern("WorkflowEngine-WorkflowRunner-" + workflowName + "-%d")
+                        .namingPattern("WorkflowEngine-ActivityRunner-" + activityName + "-%d")
                         .build());
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowRunner-" + workflowName, null)
+            new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityRunner-" + activityName, null)
                     .bindTo(Metrics.getRegistry());
         }
-        executorServiceByName.put(workflowName, executorService);
+        executorServiceByName.put(executorName, executorService);
 
-        dispatcherExecutor.execute(new WorkflowTaskDispatcher<>(
-                this, executorService, workflowName, workflowRunner, argumentConverter, resultConverter, maxConcurrency));
+        final var taskProcessor = new ActivityRunTaskProcessor<>(
+                this, activityName, activityRunner, argumentConverter, resultConverter);
+
+        dispatcherExecutor.execute(new WorkflowTaskDispatcher<>(this, executorService, taskProcessor, maxConcurrency));
+    }
+
+    public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
+        final var now = Timestamps.now();
+        final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
+        final var newInboxEventRows = new ArrayList<NewWorkflowEventInboxRow>(options.size());
+        for (final ScheduleWorkflowRunOptions option : options) {
+            final var runId = UUID.randomUUID();
+            newWorkflowRunRows.add(new NewWorkflowRunRow(
+                    runId, option.workflowName(), option.workflowVersion(), option.argument()));
+            newInboxEventRows.add(new NewWorkflowEventInboxRow(runId, null,
+                    WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(now)
+                            .setRunStarted(RunStarted.newBuilder()
+                                    .setWorkflowName(option.workflowName())
+                                    .setWorkflowVersion(option.workflowVersion())
+                                    .build())
+                            .build()));
+        }
+
+        return inJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final List<WorkflowRunRow> createdRuns = dao.createWorkflowRuns(newWorkflowRunRows);
+            assert createdRuns.size() == newWorkflowRunRows.size();
+
+            final int createdInboxEvents = dao.createInboxEvents(newInboxEventRows);
+            assert createdInboxEvents == newInboxEventRows.size();
+
+            return createdRuns.stream()
+                    .map(WorkflowRunRow::id)
+                    .toList();
+        });
     }
 
     public UUID scheduleWorkflowRun(final String workflowName, final int workflowVersion) {
@@ -275,34 +412,46 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    void abandonWorkflowRunTask(final WorkflowRunTask task) {
-        useJdbiTransaction(handle -> {
-            final var dao = new WorkflowDao(handle);
-
-            final int unlockedEvents = dao.unlockInboxEvents(this.instanceId, task.workflowRunId());
-            assert unlockedEvents == task.inboxEvents().size();
-
-            final int unlockedWorkflowRuns = dao.unlockWorkflowRun(this.instanceId, task.workflowRunId());
-            assert unlockedWorkflowRuns == 1;
-        });
+    CompletableFuture<Void> abandonWorkflowRunTask(
+            final WorkflowRunTask task) throws InterruptedException, TimeoutException {
+        return taskActionBuffer.add(new AbandonWorkflowRunTaskAction(task));
     }
 
-    void completeWorkflowRunTask(final WorkflowRun workflowRun) {
-        useJdbiTransaction(handle -> {
-            final var dao = new WorkflowDao(handle);
+    private void abandonWorkflowRunTask(final WorkflowDao dao, final WorkflowRunTask task) {
+        final int unlockedEvents = dao.unlockInboxEvents(this.instanceId, task.workflowRunId());
+        assert unlockedEvents == task.inboxEvents().size();
 
-            dao.updateWorkflowRun(this.instanceId, new WorkflowRunRowUpdate(
-                    workflowRun.workflowRunId(),
-                    workflowRun.status(),
-                    workflowRun.argument().orElse(null),
-                    workflowRun.result().orElse(null),
-                    workflowRun.failureDetails().orElse(null),
-                    workflowRun.createdAt().orElse(null),
-                    workflowRun.updatedAt().orElse(null),
-                    workflowRun.completedAt().orElse(null)));
+        final int unlockedWorkflowRuns = dao.unlockWorkflowRun(this.instanceId, task.workflowRunId());
+        assert unlockedWorkflowRuns == 1;
+    }
 
+    CompletableFuture<Void> completeWorkflowRunTask(
+            final WorkflowRun workflowRun) throws InterruptedException, TimeoutException {
+        return taskActionBuffer.add(new CompleteWorkflowRunTaskAction(workflowRun));
+    }
+
+    private void completeWorkflowRunTasks(final WorkflowDao dao, final Collection<WorkflowRun> workflowRuns) {
+        final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(workflowRuns.size() * 2);
+        final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(workflowRuns.size() * 2);
+        final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
+        final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
+
+        final int updatedRuns = dao.updateWorkflowRuns(this.instanceId,
+                workflowRuns.stream()
+                        .map(run -> new WorkflowRunRowUpdate(
+                                run.workflowRunId(),
+                                run.status(),
+                                run.argument().orElse(null),
+                                run.result().orElse(null),
+                                run.failureDetails().orElse(null),
+                                run.createdAt().orElse(null),
+                                run.updatedAt().orElse(null),
+                                run.completedAt().orElse(null)))
+                        .toList());
+        assert updatedRuns == workflowRuns.size();
+
+        for (final WorkflowRun workflowRun : workflowRuns) {
             int sequenceNumber = workflowRun.eventLog().size();
-            final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(workflowRun.inboxEvents().size());
             for (final WorkflowEvent newEvent : workflowRun.inboxEvents()) {
                 newEventLogEntries.add(new NewWorkflowEventLogRow(
                         workflowRun.workflowRunId(),
@@ -310,17 +459,14 @@ public class WorkflowEngine implements Closeable {
                         toInstant(newEvent.getTimestamp()),
                         newEvent));
             }
-            dao.createWorkflowEventLogEntries(newEventLogEntries);
 
-            final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(
-                    workflowRun.pendingTimerFiredEvents().size() + workflowRun.pendingWorkflowMessages().size());
             for (final WorkflowEvent newEvent : workflowRun.pendingTimerFiredEvents()) {
                 newInboxEvents.add(new NewWorkflowEventInboxRow(
                         workflowRun.workflowRunId(),
                         toInstant(newEvent.getTimerFired().getElapseAt()),
                         newEvent));
             }
-            final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
+
             for (final WorkflowMessage message : workflowRun.pendingWorkflowMessages()) {
                 // If the outbound message is a RunStarted event, the recipient
                 // workflow run will need to be created first.
@@ -338,15 +484,7 @@ public class WorkflowEngine implements Closeable {
                         toInstant(message.event().getTimestamp()),
                         message.event()));
             }
-            if (!newWorkflowRuns.isEmpty()) {
-                final List<WorkflowRunRow> createdRuns = dao.createWorkflowRuns(newWorkflowRuns);
-                assert createdRuns.size() == newWorkflowRuns.size();
-            }
-            final int createdOutboxEvents = dao.createInboxEvents(newInboxEvents);
-            assert createdOutboxEvents == newInboxEvents.size();
 
-            final var newActivityTasks = new ArrayList<NewActivityTaskRow>(
-                    workflowRun.pendingActivityTaskScheduledEvents().size());
             for (final WorkflowEvent newEvent : workflowRun.pendingActivityTaskScheduledEvents()) {
                 newActivityTasks.add(new NewActivityTaskRow(
                         workflowRun.workflowRunId(),
@@ -359,10 +497,93 @@ public class WorkflowEngine implements Closeable {
                                 ? newEvent.getActivityTaskScheduled().getArgument()
                                 : null));
             }
+        }
+
+        if (!newEventLogEntries.isEmpty()) {
+            dao.createWorkflowEventLogEntries(newEventLogEntries);
+        }
+
+        if (!newWorkflowRuns.isEmpty()) {
+            final List<WorkflowRunRow> createdRuns = dao.createWorkflowRuns(newWorkflowRuns);
+            assert createdRuns.size() == newWorkflowRuns.size();
+        }
+
+        if (!newInboxEvents.isEmpty()) {
+            final int createdInboxEvents = dao.createInboxEvents(newInboxEvents);
+            assert createdInboxEvents == newInboxEvents.size();
+        }
+
+        if (!newActivityTasks.isEmpty()) {
             final int createdActivityTasks = dao.createActivityTasks(newActivityTasks);
             assert createdActivityTasks == newActivityTasks.size();
+        }
 
-            dao.deleteLockedInboxEvents(this.instanceId, workflowRun.workflowRunId());
+        final int deletedInboxEvents = dao.deleteLockedInboxEvents(
+                this.instanceId, workflowRuns.stream().map(WorkflowRun::workflowRunId).toList());
+        assert deletedInboxEvents >= workflowRuns.size();
+    }
+
+    List<ActivityRunTask> pollActivityRunTasks(final String activityName, final int limit) {
+        return inJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            return dao.pollAndLockActivityTasks(this.instanceId, activityName, Duration.ofSeconds(5), limit).stream()
+                    .map(polledTask -> new ActivityRunTask(
+                            polledTask.workflowRunId(),
+                            polledTask.scheduledEventId(),
+                            polledTask.activityName(),
+                            polledTask.argument()))
+                    .toList();
+        });
+    }
+
+    CompletableFuture<Void> abandonActivityRunTask(
+            final ActivityRunTask task) throws InterruptedException, TimeoutException {
+        return taskActionBuffer.add(new AbandonActivityRunTaskAction(task));
+    }
+
+    private void abandonActivityRunTask(final WorkflowDao dao, final ActivityRunTask task) {
+        final int unlockedTasks = dao.unlockActivityTasks(this.instanceId,
+                Stream.of(task)
+                        .map(t -> new ActivityTaskId(t.workflowRunId(), t.sequenceNumber()))
+                        .toList());
+        assert unlockedTasks == 1;
+    }
+
+    CompletableFuture<Void> completeActivityRunTask(
+            final ActivityRunTask task, final WorkflowEvent event) throws InterruptedException, TimeoutException {
+        return taskActionBuffer.add(new CompleteActivityRunTaskAction(task, event));
+    }
+
+    private void completeActivityRunTask(final WorkflowDao dao, final ActivityRunTask task, final WorkflowEvent event) {
+        final int createdInboxEvents = dao.createInboxEvents(List.of(new NewWorkflowEventInboxRow(task.workflowRunId(), null, event)));
+        assert createdInboxEvents == 1;
+
+        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId,
+                Stream.of(task)
+                        .map(t -> new ActivityTaskId(t.workflowRunId(), t.sequenceNumber()))
+                        .toList());
+        assert deletedTasks == 1;
+    }
+
+    private void flushWorkflowTaskActions(final List<WorkflowTaskAction> actions) {
+        useJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            // TODO: Group by action and process them using batch queries.
+            final var runsToComplete = new ArrayList<WorkflowRun>();
+            for (final WorkflowTaskAction action : actions) {
+                switch (action) {
+                    case AbandonActivityRunTaskAction a -> abandonActivityRunTask(dao, a.task());
+                    case CompleteActivityRunTaskAction c -> completeActivityRunTask(dao, c.task(), c.event());
+                    case AbandonWorkflowRunTaskAction a -> abandonWorkflowRunTask(dao, a.task());
+                    case CompleteWorkflowRunTaskAction c -> runsToComplete.add(c.workflowRun());
+                }
+            }
+
+            if (!runsToComplete.isEmpty()) {
+                completeWorkflowRunTasks(dao, runsToComplete);
+            }
         });
     }
 
@@ -412,6 +633,18 @@ public class WorkflowEngine implements Closeable {
 
     static Timestamp toTimestamp(final Instant instant) {
         return Timestamps.fromDate(Date.from(instant));
+    }
+
+    private static void requireValidWorkflowName(final String workflowName) {
+        if (!WORKFLOW_NAME_PATTERN.matcher(workflowName).matches()) {
+            throw new IllegalArgumentException("workflowName must match " + WORKFLOW_NAME_PATTERN.pattern());
+        }
+    }
+
+    private static void requireValidActivityName(final String activityName) {
+        if (!ACTIVITY_NAME_PATTERN.matcher(activityName).matches()) {
+            throw new IllegalArgumentException("activityName must match " + ACTIVITY_NAME_PATTERN.pattern());
+        }
     }
 
 }

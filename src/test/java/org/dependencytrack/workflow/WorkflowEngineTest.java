@@ -360,6 +360,36 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void shouldCallActivity() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), ctx -> {
+            ctx.callActivity(
+                    "abc", null, voidConverter(), stringConverter()).await().orElseThrow();
+            return Optional.empty();
+        });
+
+        engine.registerActivityRunner("abc", 1, voidConverter(), stringConverter(), ctx -> Optional.of("123"));
+
+        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+
+        await("Completion")
+                .atMost(Duration.ofSeconds(15))
+                .untilAsserted(() -> {
+                    final WorkflowRunRow run = engine.getWorkflowRun(runId);
+                    assertThat(run.status()).isEqualTo(WORKFLOW_RUN_STATUS_COMPLETED);
+                });
+
+        assertThat(engine.getWorkflowEventLog(runId)).satisfiesExactly(
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+    }
+
+    @Test
     public void shouldSupportWorkflowVersioning() {
         // TODO
     }

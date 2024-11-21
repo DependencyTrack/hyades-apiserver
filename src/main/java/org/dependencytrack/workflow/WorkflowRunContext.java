@@ -367,12 +367,12 @@ public final class WorkflowRunContext<A, R> {
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
             LOGGER.warn("""
-                    Encountered TaskScheduled event for event ID {}, \
+                    Encountered ActivityTaskScheduled event for event ID {}, \
                     but no pending action was found for it""", eventId);
             return;
-        } else if (!(action instanceof ScheduleTimerCommand)) {
+        } else if (!(action instanceof ScheduleActivityCommand)) {
             LOGGER.warn("""
-                    Encountered TaskScheduled event for event ID {}, \
+                    Encountered ActivityTaskScheduled event for event ID {}, \
                     but the pending action for that number is of type {}\
                     """, eventId, action.getClass().getSimpleName());
             return;

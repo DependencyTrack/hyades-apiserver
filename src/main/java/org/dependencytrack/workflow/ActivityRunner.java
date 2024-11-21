@@ -18,18 +18,10 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import java.util.Optional;
 
-import java.util.List;
-import java.util.UUID;
+public interface ActivityRunner<A, R> {
 
-record WorkflowRunTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        WorkflowPayload argument,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements WorkflowTask {
+    Optional<R> run(final ActivityRunContext<A> ctx) throws Exception;
+
 }

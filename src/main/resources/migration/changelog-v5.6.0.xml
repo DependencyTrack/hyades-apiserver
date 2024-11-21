@@ -123,7 +123,7 @@
             <column name="IS_LATEST"/>
         </createIndex>
     </changeSet>
-
+    
     <changeSet id="v5.6.0-8" author="nscuro">
         <sql>
             DELETE
@@ -187,6 +187,16 @@
                 referencedColumnNames="ID"
                 onDelete="CASCADE"
                 constraintName="WORKFLOW_RUN_PARENT_ID_FK"/>
+        <sql>
+            CREATE INDEX "WORKFLOW_RUN_POLL_IDX"
+                ON "WORKFLOW_RUN" (
+                     "PRIORITY" DESC NULLS LAST
+                   , "CREATED_AT"
+                   , "WORKFLOW_NAME"
+                   , "LOCKED_UNTIL")
+            INCLUDE ("ID")
+              WHERE "STATUS" = ANY('{WORKFLOW_RUN_STATUS_PENDING, WORKFLOW_RUN_STATUS_RUNNING}'::WORKFLOW_RUN_STATUS[]);
+        </sql>
 
         <createTable tableName="WORKFLOW_EVENT_LOG">
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
@@ -236,11 +246,16 @@
                 onDelete="CASCADE"
                 constraintName="WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_ID_FK"/>
 
+        <createIndex tableName="WORKFLOW_EVENT_INBOX" indexName="WORKFLOW_EVENT_INBOX_POLL_IDX">
+            <column name="WORKFLOW_RUN_ID"/>
+            <column name="VISIBLE_FROM"/>
+        </createIndex>
+
         <createTable tableName="WORKFLOW_ACTIVITY_TASK">
             <column name="WORKFLOW_RUN_ID" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="SEQUENCE_NUMBER" type="INT">
+            <column name="SCHEDULED_EVENT_ID" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="ACTIVITY_NAME" type="TEXT">
@@ -259,7 +274,7 @@
 
         <addPrimaryKey
                 tableName="WORKFLOW_ACTIVITY_TASK"
-                columnNames="WORKFLOW_RUN_ID, SEQUENCE_NUMBER"
+                columnNames="WORKFLOW_RUN_ID, SCHEDULED_EVENT_ID"
                 constraintName="WORKFLOW_ACTIVITY_TASK_PK"/>
         <addForeignKeyConstraint
                 baseTableName="WORKFLOW_ACTIVITY_TASK"

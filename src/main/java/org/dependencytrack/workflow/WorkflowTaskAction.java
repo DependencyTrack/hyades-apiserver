@@ -19,17 +19,25 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-import java.util.List;
-import java.util.UUID;
+sealed interface WorkflowTaskAction permits
+        WorkflowTaskAction.AbandonActivityRunTaskAction,
+        WorkflowTaskAction.CompleteActivityRunTaskAction,
+        WorkflowTaskAction.AbandonWorkflowRunTaskAction,
+        WorkflowTaskAction.CompleteWorkflowRunTaskAction {
 
-record WorkflowRunTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        WorkflowPayload argument,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements WorkflowTask {
+    record AbandonActivityRunTaskAction(ActivityRunTask task) implements WorkflowTaskAction {
+    }
+
+    record CompleteActivityRunTaskAction(
+            ActivityRunTask task,
+            WorkflowEvent event) implements WorkflowTaskAction {
+    }
+
+    record AbandonWorkflowRunTaskAction(WorkflowRunTask task) implements WorkflowTaskAction {
+    }
+
+    record CompleteWorkflowRunTaskAction(WorkflowRun workflowRun) implements WorkflowTaskAction {
+    }
+
 }
