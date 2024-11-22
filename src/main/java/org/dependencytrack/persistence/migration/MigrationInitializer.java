@@ -22,11 +22,10 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import liquibase.Liquibase;
 import liquibase.Scope;
 import liquibase.UpdateSummaryOutputEnum;
+import liquibase.analytics.configuration.AnalyticsArgs;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
@@ -38,6 +37,8 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.ui.LoggerUIService;
 import org.dependencytrack.common.ConfigKey;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Optional;
@@ -97,6 +98,7 @@ public class MigrationInitializer implements ServletContextListener {
 
     public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
         final var scopeAttributes = new HashMap<String, Object>();
+        scopeAttributes.put(AnalyticsArgs.ENABLED.getKey(), false);
         scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
         scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
 
