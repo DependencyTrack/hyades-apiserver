@@ -146,6 +146,7 @@ public class ModelConverter {
         project.setName(trimToNull(cdxComponent.getName()));
         project.setVersion(trimToNull(cdxComponent.getVersion()));
         project.setDescription(trimToNull(cdxComponent.getDescription()));
+        project.setCpe(trimToNull(cdxComponent.getCpe()));
         project.setExternalReferences(convertExternalReferences(cdxComponent.getExternalReferences()));
 
         List<OrganizationalContact> contacts = new ArrayList<>();
