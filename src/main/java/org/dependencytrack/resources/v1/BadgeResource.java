@@ -19,9 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.common.util.BooleanUtil;
 import alpine.model.ApiKey;
-import alpine.model.ConfigProperty;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -78,12 +76,6 @@ public class BadgeResource extends AlpineResource {
     private static final String SVG_MEDIA_TYPE = "image/svg+xml";
 
     private final Logger LOGGER = Logger.getLogger(AuthenticationFilter.class);
-
-    private boolean isUnauthenticatedBadgeAccessEnabled(final QueryManager qm) {
-        ConfigProperty property = qm.getConfigProperty(
-                GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName());
-        return BooleanUtil.valueOf(property.getPropertyValue());
-    }
 
     // Stand-in methods for alpine.server.filters.AuthenticationFilter and
     // alpine.server.filters.AuthorizationFilter to allow enabling and disabling of
@@ -190,15 +182,16 @@ public class BadgeResource extends AlpineResource {
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthentication()) {
+            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
+            if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthorization(qm)) {
+            if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!isUnauthenticatedBadgeAccessEnabled(qm) && !qm.hasAccess(super.getPrincipal(), project)) {
+                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -234,15 +227,16 @@ public class BadgeResource extends AlpineResource {
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthentication()) {
+            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
+            if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthorization(qm)) {
+            if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!isUnauthenticatedBadgeAccessEnabled(qm) && !qm.hasAccess(super.getPrincipal(), project)) {
+                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -276,15 +270,16 @@ public class BadgeResource extends AlpineResource {
             @Parameter(description = "The UUID of the project to retrieve a badge for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthentication()) {
+            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
+            if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthorization(qm)) {
+            if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!isUnauthenticatedBadgeAccessEnabled(qm) && !qm.hasAccess(super.getPrincipal(), project)) {
+                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
@@ -320,15 +315,16 @@ public class BadgeResource extends AlpineResource {
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthentication()) {
+            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
+            if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            if (!isUnauthenticatedBadgeAccessEnabled(qm) && !passesAuthorization(qm)) {
+            if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!isUnauthenticatedBadgeAccessEnabled(qm) && !qm.hasAccess(super.getPrincipal(), project)) {
+                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
