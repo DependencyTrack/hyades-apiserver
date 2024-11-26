@@ -29,6 +29,7 @@ import org.dependencytrack.workflow.annotation.Workflow;
 import java.time.Duration;
 import java.util.Optional;
 
+import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
@@ -48,7 +49,9 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .setBomFilePath(args.getBomFilePath())
                         .build(),
                 protoConverter(IngestBomArgs.class),
-                voidConverter()).await();
+                voidConverter(),
+                defaultRetryPolicy()
+                        .withMaxAttempts(6)).await();
 
         ctx.logger().info("Triggering vulnerability analysis");
         final Optional<AnalyzeProjectVulnsResult> vulnAnalysisResult =
@@ -58,7 +61,9 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                                 .setProject(args.getProject())
                                 .build(),
                         protoConverter(AnalyzeProjectVulnsArgs.class),
-                        protoConverter(AnalyzeProjectVulnsResult.class)).await();
+                        protoConverter(AnalyzeProjectVulnsResult.class),
+                        defaultRetryPolicy()
+                                .withMaxAttempts(6)).await();
 
         if (vulnAnalysisResult.isPresent()) {
             ctx.logger().info("Waiting for vulnerability analysis to complete");
@@ -79,7 +84,9 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .setProject(args.getProject())
                         .build(),
                 protoConverter(EvalProjectPoliciesArgs.class),
-                voidConverter()).await();
+                voidConverter(),
+                defaultRetryPolicy()
+                        .withMaxAttempts(6)).await();
 
         ctx.logger().info("Scheduling metrics update");
         ctx.callActivity(
@@ -88,7 +95,9 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .setProject(args.getProject())
                         .build(),
                 protoConverter(UpdateProjectMetricsArgs.class),
-                voidConverter()).await();
+                voidConverter(),
+                defaultRetryPolicy()
+                        .withMaxAttempts(6)).await();
 
         ctx.logger().info("BOM upload processed successfully");
         return Optional.empty();

@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import com.google.protobuf.Timestamp;
+import io.github.resilience4j.core.IntervalFunction;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
@@ -137,9 +138,44 @@ public final class WorkflowRunContext<A, R> {
             final String name,
             final AA argument,
             final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter) {
+            final PayloadConverter<AR> resultConverter,
+            final RetryPolicy retryPolicy) {
         assertNotInSideEffect("Activities can not be called from within a side effect");
 
+        return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, /* attempt */ 1);
+    }
+
+    private <AA, AR> Awaitable<AR> callActivityInternal(
+            final String name,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter,
+            final RetryPolicy retryPolicy,
+            final int attempt) {
+        final IntervalFunction retryIntervalFunction = IntervalFunction.ofExponentialRandomBackoff(
+                retryPolicy.initialDelay(), retryPolicy.multiplier(), retryPolicy.randomizationFactor(), retryPolicy.maxDelay());
+        return new RetryingAwaitable<>(this, resultConverter,
+                () -> callActivityInternalWithNoRetries(name, argument, argumentConverter, resultConverter),
+                exception -> {
+                    if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
+                        logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
+                        throw exception;
+                    }
+
+                    final Duration delay = Duration.ofMillis(retryIntervalFunction.apply(attempt + 1));
+                    logger().info("Retrying in {}", delay);
+                    scheduleTimer(delay).await();
+
+                    logger().info("Scheduling retry attempt #{}", attempt);
+                    return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, attempt + 1);
+                });
+    }
+
+    private <AA, AR> Awaitable<AR> callActivityInternalWithNoRetries(
+            final String name,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter) {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
                 new ScheduleActivityCommand(
