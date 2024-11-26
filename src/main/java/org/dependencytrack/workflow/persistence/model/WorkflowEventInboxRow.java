@@ -27,7 +27,6 @@ import java.util.UUID;
 public record WorkflowEventInboxRow(
         long id,
         UUID workflowRunId,
-        Instant timestamp,
         @Nullable Instant visibleFrom,
         @Nullable String lockedBy,
         WorkflowEvent event) {

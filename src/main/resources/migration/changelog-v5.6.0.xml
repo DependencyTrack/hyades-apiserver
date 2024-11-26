@@ -172,12 +172,12 @@
             <column name="FAILURE_DETAILS" type="TEXT"/>
             <column name="PRIORITY" type="SMALLINT"/>
             <column name="LOCKED_BY" type="TEXT"/>
-            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(6)"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
+            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
-            <column name="COMPLETED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="COMPLETED_AT" type="TIMESTAMPTZ(3)"/>
         </createTable>
 
         <addForeignKeyConstraint
@@ -201,9 +201,6 @@
         <createTable tableName="WORKFLOW_EVENT_LOG">
             <column name="WORKFLOW_RUN_ID" type="UUID"/>
             <column name="SEQUENCE_NUMBER" type="INT"/>
-            <column name="TIMESTAMP" type="TIMESTAMPTZ(6)">
-                <constraints nullable="false"/>
-            </column>
             <column name="EVENT" type="BYTEA">
                 <constraints nullable="false"/>
             </column>
@@ -228,10 +225,7 @@
             <column name="WORKFLOW_RUN_ID" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="TIMESTAMP" type="TIMESTAMPTZ(6)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(6)"/>
+            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(3)"/>
             <column name="LOCKED_BY" type="TEXT"/>
             <column name="EVENT" type="BYTEA">
                 <constraints nullable="false"/>
@@ -265,11 +259,11 @@
             <column name="ARGUMENT" type="BYTEA"/>
             <column name="ATTEMPT" type="SMALLINT"/>
             <column name="LOCKED_BY" type="TEXT"/>
-            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(6)"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(6)">
+            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
                 <constraints nullable="false"/>
             </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
         </createTable>
 
         <addPrimaryKey

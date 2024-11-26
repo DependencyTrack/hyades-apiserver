@@ -20,12 +20,10 @@ package org.dependencytrack.workflow.persistence.model;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public record WorkflowEventLogRow(
         UUID workflowRunId,
         int sequenceNumber,
-        Instant timestamp,
         WorkflowEvent event) {
 }
