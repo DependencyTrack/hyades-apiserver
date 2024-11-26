@@ -28,7 +28,12 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
+import org.dependencytrack.workflow.ActivityRunContext;
+import org.dependencytrack.workflow.ActivityRunner;
+import org.dependencytrack.workflow.annotation.Activity;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
@@ -38,14 +43,18 @@ import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
  *
  * @since 5.0.0
  */
-public class PolicyEvaluationTask implements Subscriber {
+@Activity(name = "eval-project-policies")
+public class PolicyEvaluationTask implements ActivityRunner<EvalProjectPoliciesArgs, Void>, Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 
+    @Override
+    public Optional<Void> run(final ActivityRunContext<EvalProjectPoliciesArgs> ctx) throws Exception {
+        final EvalProjectPoliciesArgs args = ctx.argument().orElseThrow();
+        evaluateProject(UUID.fromString(args.getProject().getUuid()));
 
-    public PolicyEvaluationTask() {
+        return Optional.empty();
     }
-
 
     @Override
     public void inform(final Event e) {

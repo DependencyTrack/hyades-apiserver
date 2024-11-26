@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package org.dependencytrack.workflow.payload.v1alpha1;
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.payload.v1alpha1";
+
+message Project {
+  string uuid = 1;
+  string name = 2;
+  string version = 3;
+}
+
+message ProcessBomUploadArgs {
+  Project project = 1;
+  string bom_file_path = 2;
+}
+
+message IngestBomArgs {
+  Project project = 1;
+  string bom_file_path = 2;
+}
+
+message AnalyzeProjectVulnsArgs {
+  Project project = 1;
+}
+
+message AnalyzeProjectVulnsResult {
+  string scan_token = 1;
+}
+
+message EvalProjectPoliciesArgs {
+  Project project = 1;
+}
+
+message UpdateProjectMetricsArgs {
+  Project project = 1;
+}

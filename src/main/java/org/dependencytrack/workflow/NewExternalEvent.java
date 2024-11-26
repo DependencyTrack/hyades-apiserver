@@ -16,22 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.payload;
+package org.dependencytrack.workflow;
 
-import com.google.protobuf.Message;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-public class PayloadConverters {
+import java.util.UUID;
 
-    public static <T extends Message> PayloadConverter<T> protoConverter(final Class<T> clazz) {
-        return new ProtobufPayloadConverter<>(clazz);
-    }
-
-    public static PayloadConverter<String> stringConverter() {
-        return new StringPayloadConverter();
-    }
-
-    public static PayloadConverter<Void> voidConverter() {
-        return new VoidPayloadConverter();
-    }
-
+public record NewExternalEvent(UUID workflowRunId, String eventId, WorkflowPayload content) {
 }

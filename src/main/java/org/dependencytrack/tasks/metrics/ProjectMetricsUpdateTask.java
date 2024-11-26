@@ -27,9 +27,14 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
+import org.dependencytrack.workflow.ActivityRunContext;
+import org.dependencytrack.workflow.ActivityRunner;
+import org.dependencytrack.workflow.annotation.Activity;
 import org.slf4j.MDC;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
@@ -39,9 +44,18 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
  *
  * @since 4.6.0
  */
-public class ProjectMetricsUpdateTask implements Subscriber {
+@Activity(name = "update-project-metrics")
+public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMetricsArgs, Void>, Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
+
+    @Override
+    public Optional<Void> run(final ActivityRunContext<UpdateProjectMetricsArgs> ctx) throws Exception {
+        final UpdateProjectMetricsArgs args = ctx.argument().orElseThrow();
+        updateMetrics(UUID.fromString(args.getProject().getUuid()));
+
+        return Optional.empty();
+    }
 
     @Override
     public void inform(final Event e) {

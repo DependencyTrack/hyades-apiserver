@@ -60,6 +60,8 @@ public enum ConfigKey implements Config.Key {
     INIT_TASKS_ENABLED("init.tasks.enabled", true),
     INIT_AND_EXIT("init.and.exit", false),
 
+    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false),
+
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
     DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.8.0"),

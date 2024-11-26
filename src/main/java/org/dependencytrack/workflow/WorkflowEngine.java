@@ -128,6 +128,7 @@ public class WorkflowEngine implements Closeable {
     private State state = State.CREATED;
     private ExecutorService dispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
+    private Buffer<NewExternalEvent> externalEventBuffer;
     private Buffer<WorkflowTaskAction> taskActionBuffer;
 
     public static WorkflowEngine getInstance() {
@@ -136,6 +137,13 @@ public class WorkflowEngine implements Closeable {
 
     public void start() {
         setState(State.STARTING);
+
+        externalEventBuffer = new Buffer<>(
+                "workflow-external-event",
+                this::flushExternalEvents,
+                Duration.ofMillis(10),
+                100);
+        externalEventBuffer.start();
 
         // The buffer's flush interval should be long enough to allow
         // for more than one task result to be included, but short enough
@@ -188,6 +196,9 @@ public class WorkflowEngine implements Closeable {
             }
         }
         executorServiceByName = null;
+
+        externalEventBuffer.close();
+        externalEventBuffer = null;
 
         taskActionBuffer.close();
         taskActionBuffer = null;
@@ -297,6 +308,8 @@ public class WorkflowEngine implements Closeable {
     }
 
     public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
+        state.assertRunning();
+
         final var now = Timestamps.now();
         final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
         final var newInboxEventRows = new ArrayList<NewWorkflowEventInboxRow>(options.size());
@@ -330,50 +343,47 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    public UUID scheduleWorkflowRun(final String workflowName, final int workflowVersion) {
+    public UUID scheduleWorkflowRun(final ScheduleWorkflowRunOptions options) {
+        final List<UUID> scheduledRunIds = scheduleWorkflowRuns(List.of(options));
+        if (scheduledRunIds.isEmpty()) {
+            return null;
+        }
+
+        return scheduledRunIds.getFirst();
+    }
+
+    public CompletableFuture<Void> sendExternalEvent(
+            final UUID workflowRunId,
+            final String eventId,
+            final WorkflowPayload content) {
         state.assertRunning();
 
-        final var runId = UUID.randomUUID();
-        final var executionStartedEvent = WorkflowEvent.newBuilder()
-                .setId(-1)
-                .setTimestamp(Timestamps.now())
-                .setRunStarted(RunStarted.newBuilder()
-                        .setWorkflowName(workflowName)
-                        .setWorkflowVersion(workflowVersion)
-                        .build())
-                .build();
+        try {
+            return externalEventBuffer.add(new NewExternalEvent(workflowRunId, eventId, content));
+        } catch (InterruptedException | TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
+    private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunRow runRow = dao.createWorkflowRun(
-                    new NewWorkflowRunRow(runId, workflowName, workflowVersion, null));
-            assert runRow != null;
-
-            final int createdInboxEvents = dao.createInboxEvents(List.of(
-                    new NewWorkflowEventInboxRow(runId, /* visibleFrom */ null, executionStartedEvent)));
-            assert createdInboxEvents == 1;
+            final var now = Timestamps.now();
+            dao.createInboxEvents(externalEvents.stream()
+                    .map(externalEvent -> new NewWorkflowEventInboxRow(
+                            externalEvent.workflowRunId(),
+                            null,
+                            WorkflowEvent.newBuilder()
+                                    .setId(-1)
+                                    .setTimestamp(now)
+                                    .setExternalEventReceived(ExternalEventReceived.newBuilder()
+                                            .setId(externalEvent.eventId())
+                                            .build())
+                                    .build()
+                    ))
+                    .toList());
         });
-
-        return runId;
-    }
-
-    public void sendExternalEvent(final UUID workflowRunId, final String eventId, final WorkflowPayload content) {
-        state.assertRunning();
-
-        final var subjectBuilder = ExternalEventReceived.newBuilder()
-                .setId(eventId);
-        if (content != null) {
-            subjectBuilder.setContent(content);
-        }
-
-        useJdbiTransaction(handle -> new WorkflowDao(handle).createInboxEvents(List.of(
-                new NewWorkflowEventInboxRow(workflowRunId, null,
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(Timestamps.now())
-                                .setExternalEventReceived(subjectBuilder.build())
-                                .build()))));
     }
 
     List<WorkflowRunTask> pollWorkflowRunTasks(final String workflowName, final int limit) {

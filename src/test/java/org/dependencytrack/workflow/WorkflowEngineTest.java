@@ -72,7 +72,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             throw new IllegalStateException("Ouch!");
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .untilAsserted(() -> {
@@ -98,7 +98,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(10))
@@ -133,7 +133,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(10))
@@ -169,7 +169,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         engine.registerWorkflowRunner("bar", 1, stringConverter(), stringConverter(),
                 ctx -> ctx.argument().map(argument -> argument + "-outputValue"));
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(5))
@@ -200,7 +200,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             throw new IllegalStateException("Oh no!");
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(5))
@@ -231,7 +231,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Update")
                 .atMost(Duration.ofSeconds(5))
@@ -240,7 +240,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
-        engine.sendExternalEvent(runId, "foo-123", null);
+        engine.sendExternalEvent(runId, "foo-123", null).join();
 
         await("Completion")
                 .atMost(Duration.ofSeconds(5))
@@ -267,7 +267,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(5))
@@ -305,7 +305,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(15))
@@ -339,7 +339,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(15))
@@ -369,7 +369,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
         engine.registerActivityRunner("abc", 1, voidConverter(), stringConverter(), ctx -> Optional.of("123"));
 
-        final UUID runId = engine.scheduleWorkflowRun("foo", 1);
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
                 .atMost(Duration.ofSeconds(15))

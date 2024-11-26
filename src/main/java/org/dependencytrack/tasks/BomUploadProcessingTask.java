@@ -61,8 +61,12 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
+import org.dependencytrack.workflow.ActivityRunContext;
+import org.dependencytrack.workflow.ActivityRunner;
+import org.dependencytrack.workflow.annotation.Activity;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -70,6 +74,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
@@ -82,6 +87,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -128,7 +134,8 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
  * @author Steve Springett
  * @since 3.0.0
  */
-public class BomUploadProcessingTask implements Subscriber {
+@Activity(name = "ingest-bom")
+public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Void>, Subscriber {
 
     private static final class Context {
 
@@ -154,6 +161,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
+    private final boolean isWorkflowEngineEnabled;
 
     public BomUploadProcessingTask() {
         this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
@@ -162,6 +170,24 @@ public class BomUploadProcessingTask implements Subscriber {
     BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
+        this.isWorkflowEngineEnabled = Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED);
+    }
+
+    @Override
+    public Optional<Void> run(final ActivityRunContext<IngestBomArgs> ctx) throws Exception {
+        final IngestBomArgs args = ctx.argument().orElseThrow();
+
+        final var project = new Project();
+        project.setUuid(UUID.fromString(args.getProject().getUuid()));
+        project.setName(args.getProject().getName());
+        project.setVersion(args.getProject().getVersion());
+
+        final var bomFilePath = Paths.get(args.getBomFilePath());
+
+        final var bomUploadEvent = new BomUploadEvent(project, bomFilePath.toFile());
+        inform(bomUploadEvent);
+
+        return Optional.empty();
     }
 
     /**
@@ -182,10 +208,13 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void processEvent(final Context ctx, final BomUploadEvent event) {
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
-        });
+        if (!isWorkflowEngineEnabled) {
+            useJdbiTransaction(handle -> {
+                final var workflowDao = handle.attach(WorkflowDao.class);
+                workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
+            });
+        }
+
         final ConsumedBom consumedBom;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
@@ -203,17 +232,26 @@ public class BomUploadProcessingTask implements Subscriber {
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
-            failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
+            if (!isWorkflowEngineEnabled) {
+                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
+            }
+
+            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
+            //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
-            workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
-        });
+        if (!isWorkflowEngineEnabled) {
+            useJdbiTransaction(handle -> {
+                final var workflowDao = handle.attach(WorkflowDao.class);
+                workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
+                workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
+            });
+        }
 
+        // TODO: If workflow engine is enabled, perform the dispatch in a side effect
+        //  as part of the workflow.
         dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
@@ -226,29 +264,39 @@ public class BomUploadProcessingTask implements Subscriber {
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
-            failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
+            if (!isWorkflowEngineEnabled) {
+                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
+            }
+
+            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
+            //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
         }
 
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
-        });
-
+        if (!isWorkflowEngineEnabled) {
+            useJdbiTransaction(handle -> {
+                final var workflowDao = handle.attach(WorkflowDao.class);
+                workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
+            });
+        }
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {
+            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
+            //  as part of the workflow.
             dispatchBomProcessedNotification(ctx);
         }
 
-        final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
-        final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
+        if (!isWorkflowEngineEnabled) {
+            final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
+            final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
 
-        final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
-        dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
-        dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
-        CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
+            final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
+            dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
+            dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
+            CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
+        }
     }
 
     private record ConsumedBom(

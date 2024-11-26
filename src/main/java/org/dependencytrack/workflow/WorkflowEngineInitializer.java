@@ -18,13 +18,26 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
+import org.dependencytrack.tasks.BomUploadProcessingTask;
+import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import java.security.SecureRandom;
 import java.util.Optional;
 
+import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
@@ -35,37 +48,41 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            return;
+        }
+
         LOGGER.info("Starting workflow engine");
 
         engine = WorkflowEngine.getInstance();
         engine.start();
 
-        final var random = new SecureRandom();
-
         engine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflowRunner(),
                 /* maxConcurrency */ 5,
-                /* argumentConverter */ voidConverter(),
+                /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
                 /* resultConverter */ voidConverter());
 
         engine.registerActivityRunner(
-                /* activityName */ "ingest-bom",
+                new BomUploadProcessingTask(),
                 /* maxConcurrency */ 5,
-                /* argumentConverter */ voidConverter(),
-                /* resultConverter */ voidConverter(),
-                new RandomlyFailingActivityRunner(random));
+                /* argumentConverter */ protoConverter(IngestBomArgs.class),
+                /* resultConverter */ voidConverter());
         engine.registerActivityRunner(
-                /* activityName */ "eval-project-policies",
+                new VulnerabilityAnalysisTask(),
                 /* maxConcurrency */ 5,
-                /* argumentConverter */ voidConverter(),
-                /* resultConverter */ voidConverter(),
-                new RandomlyFailingActivityRunner(random));
+                /* argumentConverter */ protoConverter(AnalyzeProjectVulnsArgs.class),
+                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResult.class));
         engine.registerActivityRunner(
-                /* activityName */ "update-project-metrics",
+                new PolicyEvaluationTask(),
                 /* maxConcurrency */ 5,
-                /* argumentConverter */ voidConverter(),
-                /* resultConverter */ voidConverter(),
-                new RandomlyFailingActivityRunner(random));
+                /* argumentConverter */ protoConverter(EvalProjectPoliciesArgs.class),
+                /* resultConverter */ voidConverter());
+        engine.registerActivityRunner(
+                new ProjectMetricsUpdateTask(),
+                /* maxConcurrency */ 5,
+                /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
+                /* resultConverter */ voidConverter());
     }
 
     @Override
