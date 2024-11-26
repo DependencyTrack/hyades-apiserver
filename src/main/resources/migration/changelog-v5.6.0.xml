@@ -240,7 +240,9 @@
                 onDelete="CASCADE"
                 constraintName="WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_ID_FK"/>
 
-        <createIndex tableName="WORKFLOW_EVENT_INBOX" indexName="WORKFLOW_EVENT_INBOX_POLL_IDX">
+        <createIndex
+                tableName="WORKFLOW_EVENT_INBOX"
+                indexName="WORKFLOW_EVENT_INBOX_POLL_IDX">
             <column name="WORKFLOW_RUN_ID"/>
             <column name="VISIBLE_FROM"/>
         </createIndex>
@@ -257,7 +259,7 @@
             </column>
             <column name="PRIORITY" type="SMALLINT"/>
             <column name="ARGUMENT" type="BYTEA"/>
-            <column name="ATTEMPT" type="SMALLINT"/>
+            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(3)"/>
             <column name="LOCKED_BY" type="TEXT"/>
             <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(3)"/>
             <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
@@ -277,5 +279,11 @@
                 referencedColumnNames="ID"
                 onDelete="CASCADE"
                 constraintName="WORKFLOW_ACTIVITY_TASK_WORKFLOW_RUN_ID_FK"/>
+        <createIndex
+                tableName="WORKFLOW_ACTIVITY_TASK"
+                indexName="WORKFLOW_ACTIVITY_TASK_VISIBLE_FROM_IDX">
+            <column name="VISIBLE_FROM"/>
+        </createIndex>
+
     </changeSet>
 </databaseChangeLog>

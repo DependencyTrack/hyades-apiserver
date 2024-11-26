@@ -344,6 +344,7 @@ public final class WorkflowDao {
                 , "ACTIVITY_NAME"
                 , "PRIORITY"
                 , "ARGUMENT"
+                , "VISIBLE_FROM"
                 , "CREATED_AT"
                 ) VALUES (
                   :workflowRunId
@@ -351,6 +352,7 @@ public final class WorkflowDao {
                 , :activityName
                 , :priority
                 , :argument
+                , :visibleFrom
                 , NOW()
                 )
                 RETURNING 1
@@ -382,6 +384,7 @@ public final class WorkflowDao {
                          , "SCHEDULED_EVENT_ID"
                       FROM "WORKFLOW_ACTIVITY_TASK"
                      WHERE "ACTIVITY_NAME" = :activityName
+                       AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                      ORDER BY "PRIORITY" DESC NULLS LAST
                             , "CREATED_AT"
@@ -389,8 +392,7 @@ public final class WorkflowDao {
                       SKIP LOCKED
                      LIMIT :limit)
                 UPDATE "WORKFLOW_ACTIVITY_TASK"
-                   SET "ATTEMPT" = COALESCE("WORKFLOW_ACTIVITY_TASK"."ATTEMPT", 0) + 1
-                     , "LOCKED_BY" = :workerInstanceId
+                   SET "LOCKED_BY" = :workerInstanceId
                      , "LOCKED_UNTIL" = NOW() + :lockTimeout
                      , "UPDATED_AT" = NOW()
                   FROM "CTE_POLL"
@@ -401,7 +403,6 @@ public final class WorkflowDao {
                         , "WORKFLOW_ACTIVITY_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_ACTIVITY_TASK"."PRIORITY"
                         , "WORKFLOW_ACTIVITY_TASK"."ARGUMENT"
-                        , "WORKFLOW_ACTIVITY_TASK"."ATTEMPT"
                 """);
 
         return update
@@ -415,8 +416,7 @@ public final class WorkflowDao {
                         "SCHEDULED_EVENT_ID",
                         "ACTIVITY_NAME",
                         "PRIORITY",
-                        "ARGUMENT",
-                        "ATTEMPT")
+                        "ARGUMENT")
                 .map(ConstructorMapper.of(PolledActivityTaskRow.class))
                 .list();
     }
