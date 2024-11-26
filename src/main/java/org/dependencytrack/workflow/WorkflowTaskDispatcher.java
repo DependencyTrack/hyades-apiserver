@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.Config;
 import alpine.common.metrics.Metrics;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,9 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
     private final ExecutorService taskExecutorService;
     private final WorkflowTaskProcessor<T> taskProcessor;
     private final Semaphore taskSemaphore;
+    private Timer taskPollLatencyTimer;
+    private DistributionSummary taskPollDistribution;
+    private Timer taskProcessingLatencyTimer;
 
     WorkflowTaskDispatcher(
             final WorkflowEngine engine,
@@ -59,6 +64,8 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
 
     @Override
     public void run() {
+        maybeInitializeMeters();
+
         int pollsWithoutResults = 0;
 
         while (engine.state().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
@@ -85,27 +92,18 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
 
             LOGGER.debug("Polling up to {} tasks", tasksToPoll);
             final List<T> polledTasks;
-            final Timer.Sample pollTimerSample = Timer.start();
+            final Timer.Sample taskPollLatencySample = Timer.start();
             try {
                 polledTasks = taskProcessor.poll(tasksToPoll);
             } finally {
-                pollTimerSample.stop(Timer
-                        .builder("dtrack.workflow.task.dispatcher.poll.latency")
-                        .tag("taskType", switch (taskProcessor) {
-                            case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
-                            case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
-                        })
-                        .register(Metrics.getRegistry()));
+                if (taskPollLatencyTimer != null) {
+                    taskPollLatencySample.stop(taskPollLatencyTimer);
+                }
             }
 
-            DistributionSummary
-                    .builder("dtrack.workflow.task.dispatcher.poll.tasks")
-                    .tag("taskType", switch (taskProcessor) {
-                        case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
-                        case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
-                    })
-                    .register(Metrics.getRegistry())
-                    .record(polledTasks.size());
+            if (taskPollDistribution != null) {
+                taskPollDistribution.record(polledTasks.size());
+            }
 
             if (polledTasks.isEmpty()) {
                 final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++pollsWithoutResults);
@@ -144,16 +142,13 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
             taskSemaphore.acquire();
             permitAcquiredLatch.countDown();
 
-            final Timer.Sample taskProcessingTimerSample = Timer.start();
+            final Timer.Sample taskProcessingLatencySample = Timer.start();
             try {
                 taskProcessor.process(polledTask);
             } finally {
-                taskProcessingTimerSample.stop(Timer.builder("dtrack.workflow.task.process.latency")
-                        .tag("taskType", switch (taskProcessor) {
-                            case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
-                            case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
-                        })
-                        .register(Metrics.getRegistry()));
+                if (taskProcessingLatencyTimer != null) {
+                    taskProcessingLatencySample.stop(taskProcessingLatencyTimer);
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -162,6 +157,33 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
         } finally {
             taskSemaphore.release();
         }
+    }
+
+    private void maybeInitializeMeters() {
+        if (!Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            return;
+        }
+
+        final List<Tag> commonTags = List.of(
+                Tag.of("taskType", switch (taskProcessor) {
+                    case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
+                    case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
+                }));
+
+        taskPollLatencyTimer = Timer
+                .builder("dtrack.workflow.task.dispatcher.poll.latency")
+                .tags(commonTags)
+                .register(Metrics.getRegistry());
+
+        taskPollDistribution = DistributionSummary
+                .builder("dtrack.workflow.task.dispatcher.poll.tasks")
+                .tags(commonTags)
+                .register(Metrics.getRegistry());
+
+        taskProcessingLatencyTimer = Timer
+                .builder("dtrack.workflow.task.process.latency")
+                .tags(commonTags)
+                .register(Metrics.getRegistry());
     }
 
 }

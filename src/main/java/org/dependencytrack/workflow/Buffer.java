@@ -18,9 +18,12 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.Config;
 import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +57,8 @@ public class Buffer<T> implements Closeable {
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
+    private DistributionSummary batchSizeDistribution;
+    private Timer flushLatencyTimer;
 
     public Buffer(
             final String name,
@@ -70,19 +75,30 @@ public class Buffer<T> implements Closeable {
     }
 
     public void start() {
+        maybeInitializeMeters();
+
         flushExecutor.scheduleAtFixedRate(this::maybeFlush, flushInterval.toMillis(),
                 flushInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void close() throws IOException {
+        LOGGER.debug("{}: Closing buffer", name);
+
+        LOGGER.debug("{}: Waiting for flush executor to stop", name);
         flushExecutor.shutdown();
         try {
-            flushExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            final boolean terminated = flushExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            if (!terminated) {
+                LOGGER.warn("{}: Flush executor did not terminate in time", name);
+            }
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            Thread.currentThread().interrupt();
+            LOGGER.warn("{}: Interrupted while waiting for flush executor to terminate", name, e);
         }
 
+        // Flush one last time, in case new items were added to the buffer while
+        // the executor was shutting down.
         maybeFlush();
     }
 
@@ -103,35 +119,65 @@ public class Buffer<T> implements Closeable {
         flushLock.lock();
         try {
             if (bufferedItems.isEmpty()) {
+                LOGGER.debug("{}: Buffer is empty; Nothing to flush", name);
                 return;
             }
 
             final var batch = new ArrayList<BufferedItem<T>>(maxBatchSize);
             bufferedItems.drainTo(batch, maxBatchSize);
 
-            DistributionSummary.builder("dtrack.buffer.flush.batch.size")
-                    .tag("buffer", name)
-                    .register(Metrics.getRegistry())
-                    .record(batch.size());
+            if (batchSizeDistribution != null) {
+                batchSizeDistribution.record(batch.size());
+            }
 
-            final Timer.Sample flushTimerSample = Timer.start();
+            LOGGER.debug("{}: Flushing batch of {} items", name, batch.size());
+            final Timer.Sample flushLatencySample = Timer.start();
             try {
                 batchConsumer.accept(batch.stream().map(BufferedItem::item).collect(Collectors.toList()));
                 for (final BufferedItem<T> bufferedItem : batch) {
                     bufferedItem.future.complete(null);
                 }
             } catch (Throwable e) {
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("{}: Flush of {} items failed", name, batch.size(), e);
+                }
+
                 for (final BufferedItem<T> item : batch) {
                     item.future.completeExceptionally(e);
                 }
             } finally {
-                flushTimerSample.stop(Timer.builder("dtrack.buffer.flush.latency")
-                        .tag("buffer", name)
-                        .register(Metrics.getRegistry()));
+                if (flushLatencyTimer != null) {
+                    final long latencyNanos = flushLatencySample.stop(flushLatencyTimer);
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("{}: Flush of {} items completed in {}",
+                                name, batch.size(), Duration.ofNanos(latencyNanos));
+                    }
+                }
             }
         } finally {
             flushLock.unlock();
         }
+    }
+
+    private void maybeInitializeMeters() {
+        if (!Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            return;
+        }
+
+        final List<Tag> commonTags = List.of(Tag.of("buffer", name));
+
+        batchSizeDistribution = DistributionSummary
+                .builder("dtrack.buffer.flush.batch.size")
+                .tags(commonTags)
+                .register(Metrics.getRegistry());
+
+        flushLatencyTimer = Timer
+                .builder("dtrack.buffer.flush.latency")
+                .tags(commonTags)
+                .register(Metrics.getRegistry());
+
+        new ExecutorServiceMetrics(flushExecutor, "dtrack.buffer.%s".formatted(name), null)
+                .bindTo(Metrics.getRegistry());
     }
 
 }
