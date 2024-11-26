@@ -32,6 +32,7 @@ public class Awaitable<T> {
     private boolean completed;
     private boolean cancelled;
     private Consumer<T> completeCallback;
+    private Consumer<RuntimeException> errorCallback;
     private T result;
     private RuntimeException exception;
 
@@ -78,6 +79,9 @@ public class Awaitable<T> {
 
         this.completed = true;
         this.exception = exception;
+        if (errorCallback != null) {
+            errorCallback.accept(this.exception);
+        }
         return true;
     }
 
@@ -93,6 +97,10 @@ public class Awaitable<T> {
 
     void onComplete(final Consumer<T> callback) {
         this.completeCallback = callback;
+    }
+
+    void onError(final Consumer<RuntimeException> callback) {
+        this.errorCallback = callback;
     }
 
 }

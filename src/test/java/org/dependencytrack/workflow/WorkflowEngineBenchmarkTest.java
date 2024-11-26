@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
@@ -69,9 +70,9 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         engine.start();
 
         engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), ctx -> {
-            ctx.callActivity("foo", null, voidConverter(), voidConverter()).await();
-            ctx.callActivity("bar", null, voidConverter(), voidConverter()).await();
-            ctx.callActivity("baz", null, voidConverter(), voidConverter()).await();
+            ctx.callActivity("foo", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("bar", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("baz", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return Optional.empty();
         });
 
