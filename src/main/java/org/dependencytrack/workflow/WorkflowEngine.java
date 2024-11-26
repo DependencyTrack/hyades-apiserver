@@ -504,6 +504,9 @@ public class WorkflowEngine implements Closeable {
                                 : null,
                         newEvent.getActivityTaskScheduled().hasArgument()
                                 ? newEvent.getActivityTaskScheduled().getArgument()
+                                : null,
+                        newEvent.getActivityTaskScheduled().hasScheduledFor()
+                                ? toInstant(newEvent.getActivityTaskScheduled().getScheduledFor())
                                 : null));
             }
         }

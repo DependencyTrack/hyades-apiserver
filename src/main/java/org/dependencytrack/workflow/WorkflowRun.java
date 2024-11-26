@@ -50,6 +50,7 @@ import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORK
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
+import static org.dependencytrack.workflow.WorkflowEngine.toTimestamp;
 
 public class WorkflowRun {
 
@@ -278,6 +279,9 @@ public class WorkflowRun {
         if (command.argument() != null) {
             subjectBuilder.setArgument(command.argument());
         }
+        if (command.scheduleFor() != null) {
+            subjectBuilder.setScheduledFor(toTimestamp(command.scheduleFor()));
+        }
 
         final var taskScheduledEvent = WorkflowEvent.newBuilder()
                 .setId(command.eventId())
@@ -332,7 +336,7 @@ public class WorkflowRun {
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerScheduled(TimerScheduled.newBuilder()
-                        .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
+                        .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
                 .build(), /* isNew */ true);
 
@@ -341,7 +345,7 @@ public class WorkflowRun {
                 .setTimestamp(Timestamps.now())
                 .setTimerFired(TimerFired.newBuilder()
                         .setTimerScheduledEventId(command.eventId())
-                        .setElapseAt(WorkflowEngine.toTimestamp(command.elapseAt()))
+                        .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
                 .build());
     }

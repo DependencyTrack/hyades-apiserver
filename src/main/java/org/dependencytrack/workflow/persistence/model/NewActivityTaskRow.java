@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.persistence.model;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public record NewActivityTaskRow(
@@ -27,5 +28,6 @@ public record NewActivityTaskRow(
         int scheduledEventId,
         String activityName,
         Integer priority,
-        WorkflowPayload argument) {
+        WorkflowPayload argument,
+        Instant visibleFrom) {
 }

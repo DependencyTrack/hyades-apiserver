@@ -28,6 +28,5 @@ public record PolledActivityTaskRow(
         int scheduledEventId,
         String activityName,
         @Nullable Integer priority,
-        @Nullable WorkflowPayload argument,
-        int attempt) {
+        @Nullable WorkflowPayload argument) {
 }

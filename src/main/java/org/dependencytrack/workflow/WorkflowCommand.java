@@ -49,7 +49,8 @@ sealed interface WorkflowCommand permits
             String name,
             int version,
             Integer priority,
-            WorkflowPayload argument) implements WorkflowCommand {
+            WorkflowPayload argument,
+            Instant scheduleFor) implements WorkflowCommand {
     }
 
     record ScheduleSubWorkflowCommand(

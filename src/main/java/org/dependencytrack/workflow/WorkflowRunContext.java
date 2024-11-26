@@ -142,7 +142,7 @@ public final class WorkflowRunContext<A, R> {
             final RetryPolicy retryPolicy) {
         assertNotInSideEffect("Activities can not be called from within a side effect");
 
-        return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, /* attempt */ 1);
+        return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, /* attempt */ 1, /* delay */ null);
     }
 
     private <AA, AR> Awaitable<AR> callActivityInternal(
@@ -151,23 +151,22 @@ public final class WorkflowRunContext<A, R> {
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter,
             final RetryPolicy retryPolicy,
-            final int attempt) {
+            final int attempt,
+            final Duration delay) {
         final IntervalFunction retryIntervalFunction = IntervalFunction.ofExponentialRandomBackoff(
                 retryPolicy.initialDelay(), retryPolicy.multiplier(), retryPolicy.randomizationFactor(), retryPolicy.maxDelay());
         return new RetryingAwaitable<>(this, resultConverter,
-                () -> callActivityInternalWithNoRetries(name, argument, argumentConverter, resultConverter),
+                () -> callActivityInternalWithNoRetries(name, argument, argumentConverter, resultConverter, delay),
                 exception -> {
                     if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
                         logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
                         throw exception;
                     }
 
-                    final Duration delay = Duration.ofMillis(retryIntervalFunction.apply(attempt + 1));
-                    logger().info("Retrying in {}", delay);
-                    scheduleTimer(delay).await();
+                    final Duration nextDelay = Duration.ofMillis(retryIntervalFunction.apply(attempt + 1));
+                    logger().info("Scheduling retry attempt #{} in {}", attempt, nextDelay);
 
-                    logger().info("Scheduling retry attempt #{}", attempt);
-                    return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, attempt + 1);
+                    return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, attempt + 1, nextDelay);
                 });
     }
 
@@ -175,7 +174,8 @@ public final class WorkflowRunContext<A, R> {
             final String name,
             final AA argument,
             final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter) {
+            final PayloadConverter<AR> resultConverter,
+            final Duration delay) {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
                 new ScheduleActivityCommand(
@@ -183,7 +183,8 @@ public final class WorkflowRunContext<A, R> {
                         name,
                         /* version */ -1,
                         this.priority,
-                        argumentConverter.convertToPayload(argument)));
+                        argumentConverter.convertToPayload(argument),
+                        delay != null ? currentTime.plus(delay) : null));
 
         final var awaitable = new Awaitable<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);

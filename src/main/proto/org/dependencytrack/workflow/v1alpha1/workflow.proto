@@ -103,6 +103,7 @@ message ActivityTaskScheduled {
   int32 version = 2;
   optional int32 priority = 3;
   optional WorkflowPayload argument = 4;
+  optional google.protobuf.Timestamp scheduled_for = 5;
 }
 
 message ActivityTaskCompleted {
