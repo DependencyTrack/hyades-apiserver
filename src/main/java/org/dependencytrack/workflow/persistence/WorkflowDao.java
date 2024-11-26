@@ -59,35 +59,6 @@ public final class WorkflowDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    public WorkflowRunRow createWorkflowRun(final NewWorkflowRunRow newWorkflowRun) {
-        final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_RUN" (
-                  "ID"
-                , "WORKFLOW_NAME"
-                , "WORKFLOW_VERSION"
-                , "STATUS"
-                , "ARGUMENT"
-                , "CREATED_AT"
-                ) VALUES (
-                  :id
-                , :workflowName
-                , :workflowVersion
-                , 'WORKFLOW_RUN_STATUS_PENDING'
-                , :argument
-                , NOW()
-                )
-                """);
-
-        return update
-                .bindMethods(newWorkflowRun)
-                .registerArgument(new WorkflowPayloadArgumentFactory())
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
-                .executeAndReturnGeneratedKeys("*")
-                .map(ConstructorMapper.of(WorkflowRunRow.class))
-                .findOne()
-                .orElse(null);
-    }
-
     public List<WorkflowRunRow> createWorkflowRuns(final Collection<NewWorkflowRunRow> newWorkflowRuns) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_RUN" (
@@ -227,12 +198,10 @@ public final class WorkflowDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_EVENT_INBOX" (
                   "WORKFLOW_RUN_ID"
-                , "TIMESTAMP"
                 , "VISIBLE_FROM"
                 , "EVENT"
                 ) VALUES (
                   :workflowRunId
-                , NOW()
                 , :visibleFrom
                 , :event
                 )
@@ -316,12 +285,10 @@ public final class WorkflowDao {
                 INSERT INTO "WORKFLOW_EVENT_LOG" (
                   "WORKFLOW_RUN_ID"
                 , "SEQUENCE_NUMBER"
-                , "TIMESTAMP"
                 , "EVENT"
                 ) VALUES (
                   :workflowRunId
                 , :sequenceNumber
-                , :timestamp
                 , :event
                 )
                 """);

@@ -466,7 +466,6 @@ public class WorkflowEngine implements Closeable {
                 newEventLogEntries.add(new NewWorkflowEventLogRow(
                         workflowRun.workflowRunId(),
                         sequenceNumber++,
-                        toInstant(newEvent.getTimestamp()),
                         newEvent));
             }
 
