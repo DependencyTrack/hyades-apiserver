@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
@@ -34,6 +35,39 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BOMInputStream;
+import org.apache.commons.lang3.StringUtils;
+import org.cyclonedx.CycloneDxMediaType;
+import org.cyclonedx.exception.GeneratorException;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.BomValidationMode;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.vo.BomValidationFailed;
+import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
+import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
+import org.dependencytrack.parser.cyclonedx.InvalidBomException;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
+import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.WorkflowEngine;
+import org.glassfish.jersey.media.multipart.BodyPartEntity;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
+import org.glassfish.jersey.media.multipart.FormDataParam;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonReader;
@@ -51,35 +85,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BOMInputStream;
-import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.CycloneDxMediaType;
-import org.cyclonedx.exception.GeneratorException;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.BomValidationMode;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomValidationFailed;
-import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
-import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.parser.cyclonedx.InvalidBomException;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
-import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.glassfish.jersey.media.multipart.BodyPartEntity;
-import org.glassfish.jersey.media.multipart.FormDataBodyPart;
-import org.glassfish.jersey.media.multipart.FormDataParam;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -92,11 +97,13 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -330,7 +337,7 @@ public class BomResource extends AlpineResource {
                         final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
                         if (request.isLatestProjectVersion()) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
                                 return Response.status(Response.Status.FORBIDDEN)
                                         .entity("Cannot create latest version for project with this name. Access to current latest " +
                                                 "version is forbidden!")
@@ -436,7 +443,7 @@ public class BomResource extends AlpineResource {
                         }
                         if (isLatest) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
                                 return Response.status(Response.Status.FORBIDDEN)
                                         .entity("Cannot create latest version for project with this name. Access to current latest " +
                                                 "version is forbidden!")
@@ -477,12 +484,30 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 
-            final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-            Event.dispatch(bomUploadEvent);
+            final UUID workflowRunId;
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+                // TODO: The BOM will need to be stored somewhere else since the workflow can
+                //  be picked up by another API server instance.
+                workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                        new ScheduleWorkflowRunOptions("process-bom-upload", 1)
+                                .withArgument(ProcessBomUploadArgs.newBuilder()
+                                                .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                                        .setUuid(project.getUuid().toString())
+                                                        .setName(project.getName())
+                                                        .setVersion(project.getVersion())
+                                                        .build())
+                                                .setBomFilePath(bomFile.getAbsolutePath())
+                                                .build(),
+                                        protoConverter(ProcessBomUploadArgs.class)));
+            } else {
+                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+                workflowRunId = bomUploadEvent.getChainIdentifier();
+                qm.createWorkflowSteps(workflowRunId);
+                Event.dispatch(bomUploadEvent);
+            }
 
             BomUploadResponse bomUploadResponse = new BomUploadResponse();
-            bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+            bomUploadResponse.setToken(workflowRunId);
             return Response.ok(bomUploadResponse).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -509,15 +534,32 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
                 }
 
-                // todo: make option to combine all the bom data so components are reconciled in a single pass.
-                // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
-
-                qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-                Event.dispatch(bomUploadEvent);
+                final UUID workflowRunId;
+                if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+                    // TODO: The BOM will need to be stored somewhere else since the workflow can
+                    //  be picked up by another API server instance.
+                    workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                            new ScheduleWorkflowRunOptions("process-bom-upload", 1)
+                                    .withArgument(ProcessBomUploadArgs.newBuilder()
+                                                    .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                                            .setUuid(project.getUuid().toString())
+                                                            .setName(project.getName())
+                                                            .setVersion(project.getVersion())
+                                                            .build())
+                                                    .setBomFilePath(bomFile.getAbsolutePath())
+                                                    .build(),
+                                            protoConverter(ProcessBomUploadArgs.class)));
+                } else {
+                    // todo: make option to combine all the bom data so components are reconciled in a single pass.
+                    // todo: https://github.com/DependencyTrack/dependency-track/issues/130
+                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+                    workflowRunId = bomUploadEvent.getChainIdentifier();
+                    qm.createWorkflowSteps(workflowRunId);
+                    Event.dispatch(bomUploadEvent);
+                }
 
                 BomUploadResponse bomUploadResponse = new BomUploadResponse();
-                bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+                bomUploadResponse.setToken(workflowRunId);
                 return Response.ok(bomUploadResponse).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -634,7 +676,7 @@ public class BomResource extends AlpineResource {
                     .map(org.dependencytrack.model.Tag::getName)
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+                   || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
         }
     }
 }

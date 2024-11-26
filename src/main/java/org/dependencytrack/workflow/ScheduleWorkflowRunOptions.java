@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.payload.PayloadConverter;
 
 public record ScheduleWorkflowRunOptions(
         String workflowName,
@@ -28,6 +29,11 @@ public record ScheduleWorkflowRunOptions(
 
     public ScheduleWorkflowRunOptions(final String workflowName, final int workflowVersion) {
         this(workflowName, workflowVersion, null, null);
+    }
+
+    public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
+        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion, this.priority,
+                converter.convertToPayload(argument));
     }
 
 }

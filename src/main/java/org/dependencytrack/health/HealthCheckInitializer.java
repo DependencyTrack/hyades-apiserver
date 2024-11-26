@@ -44,7 +44,10 @@ public class HealthCheckInitializer implements ServletContextListener {
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
         HealthCheckRegistry.getInstance().register("kafka-processors", new ProcessorsHealthCheck());
-        HealthCheckRegistry.getInstance().register("workflow-engine", new WorkflowEngineHealthCheck());
+
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            HealthCheckRegistry.getInstance().register("workflow-engine", new WorkflowEngineHealthCheck());
+        }
     }
 
 }
