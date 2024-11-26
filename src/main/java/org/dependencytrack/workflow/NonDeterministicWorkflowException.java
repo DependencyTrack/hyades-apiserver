@@ -16,23 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.persistence.model;
+package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
+public class NonDeterministicWorkflowException extends RuntimeException {
 
-import java.time.Instant;
-import java.util.UUID;
-
-public record WorkflowRunRowUpdate(
-        UUID id,
-        WorkflowRunStatus status,
-        String customStatus,
-        WorkflowPayload argument,
-        WorkflowPayload result,
-        String failureDetails,
-        Instant createdAt,
-        Instant updatedAt,
-        Instant completedAt) {
+    NonDeterministicWorkflowException(final String message) {
+        super(message);
+    }
 
 }

@@ -83,6 +83,7 @@ public final class WorkflowRunContext<A, R> {
     private boolean isInSideEffect;
     private boolean isReplaying;
     private boolean isSuspended;
+    private String customStatus;
 
     WorkflowRunContext(
             final UUID workflowRunId,
@@ -219,6 +220,10 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
+    public void setStatus(final String status) {
+        this.customStatus = status;
+    }
+
     public <SA, SR> Awaitable<SR> sideEffect(
             final SA argument,
             final PayloadConverter<SR> resultConverter,
@@ -295,7 +300,7 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
-    List<WorkflowCommand> runWorkflow() {
+    WorkflowRunResult runWorkflow() {
         try {
             WorkflowEvent currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
@@ -307,9 +312,11 @@ public final class WorkflowRunContext<A, R> {
             fail(e);
         }
 
-        return !isSuspended
+        final List<WorkflowCommand> commands = !isSuspended
                 ? List.copyOf(pendingCommandByEventId.values())
                 : Collections.emptyList();
+
+        return new WorkflowRunResult(commands, customStatus);
     }
 
     WorkflowEvent processNextEvent() {
@@ -424,10 +431,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered TaskCompleted event for event ID {}, \
-                    but no pending awaitable exists for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered ActivityTaskCompleted event for event ID %d, \
+                    but no pending awaitable exists for it""".formatted(eventId));
         }
 
         awaitable.complete(subject.hasResult() ? subject.getResult() : null);
@@ -440,10 +446,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered TaskFailed event for event ID {}, \
-                    but no pending awaitable exists for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered ActivityTaskFailed event for event ID %d, \
+                    but no pending awaitable exists for it""".formatted(eventId));
         }
 
         // TODO: Reconstruct exception
@@ -456,16 +461,14 @@ public final class WorkflowRunContext<A, R> {
 
         final WorkflowCommand command = pendingCommandByEventId.get(eventId);
         if (command == null) {
-            LOGGER.warn("""
-                    Encountered SubWorkflowRunScheduled event for event ID {}, \
-                    but no pending command was found for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered SubWorkflowRunScheduled event for event ID %d, \
+                    but no pending command was found for it""".formatted(eventId));
         } else if (!(command instanceof ScheduleSubWorkflowCommand)) {
-            LOGGER.warn("""
-                    Encountered SubWorkflowRunScheduled event for event ID {}, \
-                    but the pending command for that number is of type {}\
-                    """, eventId, command.getClass().getSimpleName());
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered SubWorkflowRunScheduled event for event ID %d, \
+                    but the pending command for that number is of type %s\
+                    """.formatted(eventId, command.getClass().getSimpleName()));
         }
 
         pendingCommandByEventId.remove(eventId);
@@ -477,10 +480,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered SubWorkflowRunCompleted event for event ID {}, \
-                    but no pending awaitable exists for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered SubWorkflowRunCompleted event for event ID %d, \
+                    but no pending awaitable exists for it""".formatted(eventId));
         }
 
         awaitable.complete(subject.hasResult() ? subject.getResult() : null);
@@ -493,10 +495,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered SubWorkflowRunFailed event for event ID {}, \
-                    but no pending awaitable exists for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered SubWorkflowRunFailed event for event ID %d, \
+                    but no pending awaitable exists for it""".formatted(eventId));
         }
 
         // TODO: Reconstruct exception
@@ -509,16 +510,14 @@ public final class WorkflowRunContext<A, R> {
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
-            LOGGER.warn("""
-                    Encountered TimerScheduled event for event ID {}, \
-                    but no pending action was found for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered TimerScheduled event for event ID %d, \
+                    but no pending action was found for it""".formatted(eventId));
         } else if (!(action instanceof ScheduleTimerCommand)) {
-            LOGGER.warn("""
-                    Encountered TimerScheduled event for event ID {}, \
-                    but the pending action for that number is of type {}\
-                    """, eventId, action.getClass().getSimpleName());
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered TimerScheduled event for event ID %d, \
+                    but the pending action for that number is of type %s\
+                    """.formatted(eventId, action.getClass().getSimpleName()));
         }
 
         pendingCommandByEventId.remove(eventId);
@@ -530,10 +529,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered TimerFired event for event ID {}, \
-                    but no pending awaitable was found for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered TimerFired event for event ID %d, \
+                    but no pending awaitable was found for it""".formatted(eventId));
         }
 
         pendingAwaitableByEventId.remove(eventId);
@@ -546,10 +544,9 @@ public final class WorkflowRunContext<A, R> {
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            LOGGER.warn("""
-                    Encountered SideEffectExecuted event for event ID {}, \
-                    but no pending awaitable was found for it""", eventId);
-            return;
+            throw new NonDeterministicWorkflowException("""
+                    Encountered SideEffectExecuted event for event ID %d, \
+                    but no pending awaitable was found for it""".formatted(eventId));
         }
 
         pendingAwaitableByEventId.remove(eventId);
@@ -600,6 +597,8 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void fail(final Throwable exception) {
+        LOGGER.warn("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
+
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
                 new CompleteExecutionCommand(

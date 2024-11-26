@@ -167,6 +167,7 @@
             <column name="STATUS" type="WORKFLOW_RUN_STATUS">
                 <constraints nullable="false"/>
             </column>
+            <column name="CUSTOM_STATUS" type="TEXT"/>
             <column name="ARGUMENT" type="BYTEA"/>
             <column name="RESULT" type="BYTEA"/>
             <column name="FAILURE_DETAILS" type="TEXT"/>
