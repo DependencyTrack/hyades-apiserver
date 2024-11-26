@@ -36,12 +36,19 @@ import static org.dependencytrack.workflow.payload.PayloadConverters.voidConvert
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBomUploadArgs, Void> {
 
+    private static final String STATUS_INGESTING_BOM = "INGESTING_BOM";
+    private static final String STATUS_ANALYZING_VULNS = "ANALYZING_VULNS";
+    private static final String STATUS_EVALUATING_POLICIES = "EVALUATING_POLICIES";
+    private static final String STATUS_UPDATING_METRICS = "UPDATING_METRICS";
+    private static final String STATUS_PROCESSED = "PROCESSED";
+
     @Override
     public Optional<Void> run(final WorkflowRunContext<ProcessBomUploadArgs, Void> ctx) throws Exception {
         final ProcessBomUploadArgs args = ctx.argument().orElseThrow();
         ctx.logger().info("Processing BOM upload");
 
         ctx.logger().info("Scheduling BOM ingestion");
+        ctx.setStatus(STATUS_INGESTING_BOM);
         ctx.callActivity(
                 "ingest-bom",
                 IngestBomArgs.newBuilder()
@@ -54,6 +61,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .withMaxAttempts(6)).await();
 
         ctx.logger().info("Triggering vulnerability analysis");
+        ctx.setStatus(STATUS_ANALYZING_VULNS);
         final Optional<AnalyzeProjectVulnsResult> vulnAnalysisResult =
                 ctx.callActivity(
                         "analyze-project-vulns",
@@ -78,6 +86,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         }
 
         ctx.logger().info("Scheduling policy evaluation");
+        ctx.setStatus(STATUS_EVALUATING_POLICIES);
         ctx.callActivity(
                 "eval-project-policies",
                 EvalProjectPoliciesArgs.newBuilder()
@@ -89,6 +98,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .withMaxAttempts(6)).await();
 
         ctx.logger().info("Scheduling metrics update");
+        ctx.setStatus(STATUS_UPDATING_METRICS);
         ctx.callActivity(
                 "update-project-metrics",
                 UpdateProjectMetricsArgs.newBuilder()
@@ -100,6 +110,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                         .withMaxAttempts(6)).await();
 
         ctx.logger().info("BOM upload processed successfully");
+        ctx.setStatus(STATUS_PROCESSED);
         return Optional.empty();
     }
 

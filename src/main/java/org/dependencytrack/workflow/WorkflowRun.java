@@ -68,6 +68,7 @@ public class WorkflowRun {
     private WorkflowPayload argument;
     private WorkflowPayload result;
     private String failureDetails;
+    private String customStatus;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant completedAt;
@@ -125,6 +126,14 @@ public class WorkflowRun {
         }
 
         return WORKFLOW_RUN_STATUS_RUNNING;
+    }
+
+    Optional<String> customStatus() {
+        return Optional.ofNullable(customStatus);
+    }
+
+    void setCustomStatus(final String customStatus) {
+        this.customStatus = customStatus;
     }
 
     Optional<WorkflowPayload> argument() {

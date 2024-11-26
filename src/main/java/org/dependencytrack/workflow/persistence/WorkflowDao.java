@@ -99,6 +99,7 @@ public final class WorkflowDao {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 UPDATE "WORKFLOW_RUN"
                    SET "STATUS" = COALESCE(:status, "STATUS")
+                     , "CUSTOM_STATUS" = COALESCE(:customStatus, "CUSTOM_STATUS")
                      , "ARGUMENT" = COALESCE(:argument, "ARGUMENT")
                      , "RESULT" = COALESCE(:result, "RESULT")
                      , "FAILURE_DETAILS" = COALESCE(:failureDetails, "FAILURE_DETAILS")
@@ -129,6 +130,21 @@ public final class WorkflowDao {
         }
 
         return modCount;
+    }
+
+    public WorkflowRunRow getWorkflowRun(final UUID id) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT *
+                  FROM "WORKFLOW_RUN"
+                 WHERE "ID" = :id
+                """);
+
+        return query
+                .bind("id", id)
+                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
+                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .findOne()
+                .orElse(null);
     }
 
     public Map<UUID, PolledWorkflowRunRow> pollAndLockWorkflowRuns(

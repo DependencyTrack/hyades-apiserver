@@ -19,7 +19,10 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,19 +32,30 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
+import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
+import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
+import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
+
+import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 @Path("/v1/workflow")
 @Tag(name = "workflow")
@@ -85,4 +99,60 @@ public class WorkflowResource {
         }
         return Response.ok(workflowStates).build();
     }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record WorkflowRunResponse(
+            UUID id,
+            String workflowName,
+            int workflowVersion,
+            String status,
+            @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload argument,
+            @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload result,
+            String failureDetails,
+            Integer priority,
+            String lockedBy,
+            Instant lockedUntil,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant completedAt,
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventLog) {
+    }
+
+    @GET
+    @Path("/run/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response getWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        final WorkflowRunResponse run = withJdbiHandle(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow runRow = dao.getWorkflowRun(UUID.fromString(runId));
+            if (runRow == null) {
+                throw new ClientErrorException(Response.Status.NOT_FOUND);
+            }
+
+            final List<WorkflowEvent> eventLog = dao.getWorkflowRunEventLog(UUID.fromString(runId));
+
+            return new WorkflowRunResponse(
+                    runRow.id(),
+                    runRow.workflowName(),
+                    runRow.workflowVersion(),
+                    runRow.customStatus() != null
+                            ? runRow.customStatus()
+                            : runRow.status().name(),
+                    runRow.argument(),
+                    runRow.result(),
+                    runRow.failureDetails(),
+                    runRow.priority(),
+                    runRow.lockedBy(),
+                    runRow.lockedUntil(),
+                    runRow.createdAt(),
+                    runRow.updatedAt(),
+                    runRow.completedAt(),
+                    eventLog);
+        });
+
+        return Response.ok(run).build();
+    }
+
 }

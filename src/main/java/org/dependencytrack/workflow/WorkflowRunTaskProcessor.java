@@ -62,17 +62,15 @@ final class WorkflowRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Work
         try {
             processInternal(task);
         } catch (RuntimeException e) {
-            try {
-                // TODO: Add retry?
-                engine.abandonWorkflowRunTask(task).join();
-            } catch (InterruptedException | TimeoutException ex) {
-                throw new RuntimeException(ex);
-            }
+            LOGGER.warn("Failed to process task", e);
+            abandon(task);
         }
     }
 
     @Override
     public void abandon(final WorkflowRunTask task) {
+        LOGGER.debug("Abandoning task for workflow run {}", task.workflowRunId());
+
         try {
             // TODO: Add retry?
             engine.abandonWorkflowRunTask(task).join();
@@ -114,9 +112,10 @@ final class WorkflowRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Work
                 resultConverter,
                 workflowRun.eventLog(),
                 workflowRun.inboxEvents());
-        final List<WorkflowCommand> commands = ctx.runWorkflow();
+        final WorkflowRunResult runResult = ctx.runWorkflow();
 
-        workflowRun.executeCommands(commands);
+        workflowRun.setCustomStatus(runResult.customStatus());
+        workflowRun.executeCommands(runResult.commands());
         workflowRun.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())

@@ -451,6 +451,7 @@ public class WorkflowEngine implements Closeable {
                         .map(run -> new WorkflowRunRowUpdate(
                                 run.workflowRunId(),
                                 run.status(),
+                                run.customStatus().orElse(null),
                                 run.argument().orElse(null),
                                 run.result().orElse(null),
                                 run.failureDetails().orElse(null),

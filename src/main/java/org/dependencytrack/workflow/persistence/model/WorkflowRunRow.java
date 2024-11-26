@@ -30,6 +30,7 @@ public record WorkflowRunRow(
         String workflowName,
         int workflowVersion,
         WorkflowRunStatus status,
+        @Nullable String customStatus,
         @Nullable WorkflowPayload argument,
         @Nullable WorkflowPayload result,
         @Nullable String failureDetails,
