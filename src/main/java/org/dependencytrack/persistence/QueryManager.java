@@ -1900,10 +1900,6 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().getWorkflowState(id);
     }
 
-    public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
-        return getWorkflowStateQueryManager().updateWorkflowState(transientWorkflowState);
-    }
-
     public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
         return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus, updatedAt);
     }
