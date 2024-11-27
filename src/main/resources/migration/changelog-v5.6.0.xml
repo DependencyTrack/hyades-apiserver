@@ -228,6 +228,7 @@
             </column>
             <column name="VISIBLE_FROM" type="TIMESTAMPTZ(3)"/>
             <column name="LOCKED_BY" type="TEXT"/>
+            <column name="DEQUEUE_COUNT" type="SMALLINT"/>
             <column name="EVENT" type="BYTEA">
                 <constraints nullable="false"/>
             </column>

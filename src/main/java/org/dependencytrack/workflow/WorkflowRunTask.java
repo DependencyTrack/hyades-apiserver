@@ -30,6 +30,7 @@ record WorkflowRunTask(
         int workflowVersion,
         Integer priority,
         WorkflowPayload argument,
+        int attempt,
         List<WorkflowEvent> eventLog,
         List<WorkflowEvent> inboxEvents) implements WorkflowTask {
 }

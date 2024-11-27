@@ -167,6 +167,11 @@ public class WorkflowRun {
     private void onEvent(final WorkflowEvent event, final boolean isNew) {
         switch (event.getSubjectCase()) {
             case RUN_STARTED -> {
+                if (startedEvent != null) {
+                    throw new IllegalStateException("""
+                            %s/%s: Duplicate RunStarted event; Previous event is: %s; \
+                            New event is: %s""".formatted(this.workflowName, this.workflowRunId, startedEvent, event));
+                }
                 startedEvent = event;
                 argument = event.getRunStarted().hasArgument()
                         ? event.getRunStarted().getArgument()
@@ -175,7 +180,9 @@ public class WorkflowRun {
             }
             case RUN_COMPLETED -> {
                 if (completedEvent != null) {
-                    throw new IllegalStateException("Duplicate complete events");
+                    throw new IllegalStateException("""
+                            %s/%s: Duplicate RunCompleted event; Previous event is: %s; \
+                            Next event is: %s""".formatted(this.workflowName, this.workflowRunId, completedEvent, event));
                 }
                 completedEvent = event;
                 result = event.getRunCompleted().hasResult()
