@@ -23,6 +23,7 @@ import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.datanucleus.store.types.wrappers.Date;
@@ -44,6 +45,7 @@ import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
+import org.dependencytrack.workflow.persistence.model.PolledInboxEvent;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
@@ -391,7 +393,7 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             final Map<UUID, PolledWorkflowRunRow> polledRunById =
-                    dao.pollAndLockWorkflowRuns(this.instanceId, workflowName, Duration.ofMinutes(5), limit);
+                    dao.pollAndLockWorkflowRuns(this.instanceId, workflowName, Duration.ofSeconds(30), limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -399,15 +401,23 @@ public class WorkflowEngine implements Closeable {
             final Map<UUID, List<WorkflowEvent>> eventLogByRunId =
                     dao.getWorkflowEventLogs(polledRunById.keySet());
 
-            final Map<UUID, List<WorkflowEvent>> inboxEventsByRunId =
+            final Map<UUID, List<PolledInboxEvent>> polledInboxEventsByRunId =
                     dao.pollAndLockInboxEvents(this.instanceId, polledRunById.keySet());
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
                         final List<WorkflowEvent> eventLog = eventLogByRunId.getOrDefault(
                                 polledRun.id(), Collections.emptyList());
-                        final List<WorkflowEvent> inboxEvents = inboxEventsByRunId.getOrDefault(
-                                polledRun.id(), Collections.emptyList());
+
+                        final List<PolledInboxEvent> polledInboxEvents =
+                                polledInboxEventsByRunId.getOrDefault(polledRun.id(), Collections.emptyList());
+
+                        int maxDequeueCount = 0;
+                        final var inboxEvents = new ArrayList<WorkflowEvent>(polledInboxEvents.size());
+                        for (final PolledInboxEvent polledEvent : polledInboxEvents) {
+                            maxDequeueCount = Math.max(maxDequeueCount, polledEvent.dequeueCount());
+                            inboxEvents.add(polledEvent.event());
+                        }
 
                         return new WorkflowRunTask(
                                 polledRun.id(),
@@ -415,6 +425,7 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.workflowVersion(),
                                 polledRun.priority(),
                                 polledRun.argument(),
+                                maxDequeueCount,
                                 eventLog,
                                 inboxEvents);
                     })
@@ -428,7 +439,12 @@ public class WorkflowEngine implements Closeable {
     }
 
     private void abandonWorkflowRunTask(final WorkflowDao dao, final WorkflowRunTask task) {
-        final int unlockedEvents = dao.unlockInboxEvents(this.instanceId, task.workflowRunId());
+        // TODO: Make this configurable.
+        final IntervalFunction abandonDelayIntervalFunction = IntervalFunction.ofExponentialBackoff(
+                Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
+        final Duration abandonDelay = Duration.ofMillis(abandonDelayIntervalFunction.apply(task.attempt() + 1));
+
+        final int unlockedEvents = dao.unlockInboxEvents(this.instanceId, task.workflowRunId(), abandonDelay);
         assert unlockedEvents == task.inboxEvents().size();
 
         final int unlockedWorkflowRuns = dao.unlockWorkflowRun(this.instanceId, task.workflowRunId());
@@ -540,12 +556,13 @@ public class WorkflowEngine implements Closeable {
         return inJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            return dao.pollAndLockActivityTasks(this.instanceId, activityName, Duration.ofSeconds(5), limit).stream()
+            return dao.pollAndLockActivityTasks(this.instanceId, activityName, Duration.ofSeconds(30), limit).stream()
                     .map(polledTask -> new ActivityRunTask(
                             polledTask.workflowRunId(),
                             polledTask.scheduledEventId(),
                             polledTask.activityName(),
-                            polledTask.argument()))
+                            polledTask.argument(),
+                            polledTask.lockedUntil()))
                     .toList();
         });
     }
@@ -577,6 +594,14 @@ public class WorkflowEngine implements Closeable {
                         .map(t -> new ActivityTaskId(t.workflowRunId(), t.sequenceNumber()))
                         .toList());
         assert deletedTasks == 1;
+    }
+
+    Instant heartbeatActivityTask(final ActivityTaskId taskId) {
+        final Instant newLockTimeout = inJdbiTransaction(
+                handle -> new WorkflowDao(handle).extendActivityTaskLock(
+                        this.instanceId, taskId, Duration.ofSeconds(30)));
+        assert newLockTimeout != null;
+        return newLockTimeout;
     }
 
     private void flushWorkflowTaskActions(final List<WorkflowTaskAction> actions) {

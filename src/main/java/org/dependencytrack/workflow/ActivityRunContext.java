@@ -18,17 +18,31 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
+
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 public final class ActivityRunContext<T> {
 
+    private final WorkflowEngine engine;
     private final UUID workflowRunId;
+    private final int scheduledEventId;
     private final T argument;
+    private Instant lockedUntil;
 
-    ActivityRunContext(final UUID workflowRunId, final T argument) {
+    ActivityRunContext(
+            final WorkflowEngine engine,
+            final UUID workflowRunId,
+            final int scheduledEventId,
+            final T argument,
+            final Instant lockedUntil) {
+        this.engine = engine;
         this.workflowRunId = workflowRunId;
+        this.scheduledEventId = scheduledEventId;
         this.argument = argument;
+        this.lockedUntil = lockedUntil;
     }
 
     public UUID workflowRunId() {
@@ -37,6 +51,18 @@ public final class ActivityRunContext<T> {
 
     public Optional<T> argument() {
         return Optional.ofNullable(argument);
+    }
+
+    public Instant lockedUntil() {
+        return lockedUntil;
+    }
+
+    public void heartbeat() {
+        // TODO: Fail when task was not locked by this worker.
+        // TODO: Return info about workflow run so the task can
+        //  detect when run was cancelled or failed.
+        this.lockedUntil = engine.heartbeatActivityTask(
+                new ActivityTaskId(workflowRunId, scheduledEventId));
     }
 
 }

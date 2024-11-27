@@ -20,11 +20,13 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
+import java.time.Instant;
 import java.util.UUID;
 
 record ActivityRunTask(
         UUID workflowRunId,
         int sequenceNumber,
         String activityName,
-        WorkflowPayload argument) implements WorkflowTask {
+        WorkflowPayload argument,
+        Instant lockedUntil) implements WorkflowTask {
 }

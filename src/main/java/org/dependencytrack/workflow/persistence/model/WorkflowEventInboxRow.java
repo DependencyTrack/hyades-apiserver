@@ -29,5 +29,6 @@ public record WorkflowEventInboxRow(
         UUID workflowRunId,
         @Nullable Instant visibleFrom,
         @Nullable String lockedBy,
+        int dequeueCount,
         WorkflowEvent event) {
 }

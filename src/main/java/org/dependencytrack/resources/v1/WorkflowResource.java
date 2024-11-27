@@ -38,7 +38,6 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
@@ -115,7 +114,8 @@ public class WorkflowResource {
             Instant createdAt,
             Instant updatedAt,
             Instant completedAt,
-            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventLog) {
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventLog,
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventInbox) {
     }
 
     @GET
@@ -132,6 +132,7 @@ public class WorkflowResource {
             }
 
             final List<WorkflowEvent> eventLog = dao.getWorkflowRunEventLog(UUID.fromString(runId));
+            final List<WorkflowEvent> eventInbox = dao.getInboxEvents(UUID.fromString(runId));
 
             return new WorkflowRunResponse(
                     runRow.id(),
@@ -149,7 +150,8 @@ public class WorkflowResource {
                     runRow.createdAt(),
                     runRow.updatedAt(),
                     runRow.completedAt(),
-                    eventLog);
+                    eventLog,
+                    eventInbox);
         });
 
         return Response.ok(run).build();

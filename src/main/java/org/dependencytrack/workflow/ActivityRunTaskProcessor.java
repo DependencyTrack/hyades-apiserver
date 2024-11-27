@@ -62,8 +62,11 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
     @Override
     public void process(final ActivityRunTask task) {
         final var ctx = new ActivityRunContext<>(
+                engine,
                 task.workflowRunId(),
-                argumentConverter.convertFromPayload(task.argument()));
+                task.sequenceNumber(),
+                argumentConverter.convertFromPayload(task.argument()),
+                task.lockedUntil());
 
         try {
             final Optional<R> result = activityRunner.run(ctx);

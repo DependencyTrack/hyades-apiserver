@@ -29,6 +29,7 @@ import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
+import org.dependencytrack.workflow.persistence.model.PolledInboxEvent;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
@@ -42,6 +43,7 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -157,6 +159,7 @@ public final class WorkflowDao {
                     SELECT "ID"
                       FROM "WORKFLOW_RUN"
                      WHERE "WORKFLOW_NAME" = :workflowName
+                       AND "STATUS" = ANY('{WORKFLOW_RUN_STATUS_PENDING, WORKFLOW_RUN_STATUS_RUNNING}'::WORKFLOW_RUN_STATUS[])
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                        AND EXISTS (SELECT 1
                                      FROM "WORKFLOW_EVENT_INBOX"
@@ -239,7 +242,7 @@ public final class WorkflowDao {
                 .sum();
     }
 
-    public Map<UUID, List<WorkflowEvent>> pollAndLockInboxEvents(
+    public Map<UUID, List<PolledInboxEvent>> pollAndLockInboxEvents(
             final UUID workerInstanceId,
             final Collection<UUID> workflowRunIds) {
         final Update update = jdbiHandle.createUpdate("""
@@ -251,6 +254,7 @@ public final class WorkflowDao {
                      ORDER BY "ID")
                 UPDATE "WORKFLOW_EVENT_INBOX"
                    SET "LOCKED_BY" = :workerInstanceId
+                     , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
                   FROM "CTE"
                  WHERE "CTE"."ID" = "WORKFLOW_EVENT_INBOX"."ID"
                 RETURNING "WORKFLOW_EVENT_INBOX".*
@@ -265,13 +269,30 @@ public final class WorkflowDao {
                 .stream()
                 .collect(Collectors.groupingBy(
                         WorkflowEventInboxRow::workflowRunId,
-                        Collectors.mapping(WorkflowEventInboxRow::event, Collectors.toList())));
+                        Collectors.mapping(
+                                row -> new PolledInboxEvent(row.event(), row.dequeueCount()),
+                                Collectors.toList())));
     }
 
-    public int unlockInboxEvents(final UUID workerInstanceId, final UUID workflowRunId) {
+    public List<WorkflowEvent> getInboxEvents(final UUID workflowRunId) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT "EVENT"
+                  FROM "WORKFLOW_EVENT_INBOX"
+                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
+                 ORDER BY "ID"
+                """);
+
+        return query
+                .bind("workflowRunId", workflowRunId)
+                .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .list();
+    }
+
+    public int unlockInboxEvents(final UUID workerInstanceId, final UUID workflowRunId, final Duration visibilityDelay) {
         final Update update = jdbiHandle.createUpdate("""
                 UPDATE "WORKFLOW_EVENT_INBOX"
                    SET "LOCKED_BY" = NULL
+                     , "VISIBLE_FROM" = NOW() + :visibilityDelay
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                    AND "LOCKED_BY" = :workerInstanceId
                 """);
@@ -279,6 +300,7 @@ public final class WorkflowDao {
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("workflowRunId", workflowRunId)
+                .bind("visibilityDelay", visibilityDelay)
                 .execute();
     }
 
@@ -419,6 +441,7 @@ public final class WorkflowDao {
                         , "WORKFLOW_ACTIVITY_TASK"."ACTIVITY_NAME"
                         , "WORKFLOW_ACTIVITY_TASK"."PRIORITY"
                         , "WORKFLOW_ACTIVITY_TASK"."ARGUMENT"
+                        , "WORKFLOW_ACTIVITY_TASK"."LOCKED_UNTIL"
                 """);
 
         return update
@@ -432,9 +455,35 @@ public final class WorkflowDao {
                         "SCHEDULED_EVENT_ID",
                         "ACTIVITY_NAME",
                         "PRIORITY",
-                        "ARGUMENT")
+                        "ARGUMENT",
+                        "LOCKED_UNTIL")
                 .map(ConstructorMapper.of(PolledActivityTaskRow.class))
                 .list();
+    }
+
+    public Instant extendActivityTaskLock(
+            final UUID workerInstanceId,
+            final ActivityTaskId activityTask,
+            final Duration lockTimeout) {
+        final Update update = jdbiHandle.createUpdate("""
+                UPDATE "WORKFLOW_ACTIVITY_TASK"
+                   SET "LOCKED_UNTIL" = "LOCKED_UNTIL" + :lockTimeout
+                     , "UPDATED_AT" = NOW()
+                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
+                   AND "SCHEDULED_EVENT_ID" = :scheduledEventId
+                   AND "LOCKED_BY" = :workerInstanceId
+                RETURNING "LOCKED_UNTIL"
+                """);
+
+        return update
+                .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("workflowRunId", activityTask.workflowRunId())
+                .bind("scheduledEventId", activityTask.scheduledEventId())
+                .bind("lockTimeout", lockTimeout)
+                .executeAndReturnGeneratedKeys("LOCKED_UNTIL")
+                .mapTo(Instant.class)
+                .findOne()
+                .orElse(null);
     }
 
     public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
