@@ -62,8 +62,10 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
+import org.jdbi.v3.core.Handle;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -113,6 +115,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertSe
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
@@ -174,13 +177,15 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
-            processEvent(ctx, event);
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
+             final Handle jdbiHandle = openJdbiHandle()) {
+            processEvent(ctx, event, jdbiHandle);
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event) {
-        startBomConsumptionWorkflowStep(ctx);
+    private void processEvent(final Context ctx, final BomUploadEvent event, Handle jdbiHandle) {
+        final var workflowDao = jdbiHandle.attach(WorkflowDao.class);
+        workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
 
         final ConsumedBom consumedBom;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
@@ -204,7 +209,8 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        startBomProcessingWorkflowStep(ctx);
+        workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
+        workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
         dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
@@ -222,7 +228,8 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        completeBomProcessingWorkflowStep(ctx);
+        workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
+
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {
@@ -828,45 +835,6 @@ public class BomUploadProcessingTask implements Subscriber {
 
             return !isSeenBefore;
         };
-    }
-
-    private static void startBomConsumptionWorkflowStep(final Context ctx) {
-        // TODO: This should be a single UPDATE query.
-        try (final var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomConsumptionState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_CONSUMPTION);
-                bomConsumptionState.setStartedAt(Date.from(Instant.now()));
-            });
-        }
-    }
-
-    private static void startBomProcessingWorkflowStep(final Context ctx) {
-        // TODO: This should be a batched UPDATE query.
-        try (var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomConsumptionState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_CONSUMPTION);
-                bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
-                bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
-
-                final WorkflowState bomProcessingState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_PROCESSING);
-                bomProcessingState.setStartedAt(Date.from(Instant.now()));
-            });
-        }
-    }
-
-    private static void completeBomProcessingWorkflowStep(final Context ctx) {
-        // TODO: This should be a single UPDATE query.
-        try (final var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomProcessingState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_PROCESSING);
-                bomProcessingState.setStatus(WorkflowStatus.COMPLETED);
-                bomProcessingState.setUpdatedAt(new Date());
-            });
-        }
     }
 
     private static void failWorkflowStepAndCancelDescendants(
