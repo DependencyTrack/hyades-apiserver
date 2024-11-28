@@ -69,16 +69,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         engine = new WorkflowEngine();
         engine.start();
 
-        engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), ctx -> {
+        engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity("foo", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("bar", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("baz", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("foo", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
-        engine.registerActivityRunner("bar", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
-        engine.registerActivityRunner("baz", 5, voidConverter(), voidConverter(), ctx -> Optional.empty());
+        engine.registerActivityRunner("foo", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
     }
 
     @After
@@ -120,7 +120,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 .untilAsserted(() -> {
                     final long completedWorkflows = withJdbiHandle(
                             handle -> handle.createQuery("""
-                                            SELECT COUNT(*) FROM "WORKFLOW_RUN" WHERE "STATUS" = 'WORKFLOW_RUN_STATUS_COMPLETED'
+                                            SELECT COUNT(*) FROM "WORKFLOW_RUN" WHERE "STATUS" = 'COMPLETED'
                                             """)
                                     .mapTo(Long.class)
                                     .one());

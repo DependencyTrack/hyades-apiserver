@@ -38,9 +38,9 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
+import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 

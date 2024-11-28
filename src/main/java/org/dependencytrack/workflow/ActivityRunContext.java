@@ -21,6 +21,7 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +33,7 @@ public final class ActivityRunContext<T> {
     private final int scheduledEventId;
     private final T argument;
     private final ActivityRunner<T, ?> activityRunner;
+    private final Duration lockTimeout;
     private Instant lockedUntil;
 
     ActivityRunContext(
@@ -40,12 +42,14 @@ public final class ActivityRunContext<T> {
             final int scheduledEventId,
             final T argument,
             final ActivityRunner<T, ?> activityRunner,
+            final Duration lockTimeout,
             final Instant lockedUntil) {
         this.engine = engine;
         this.workflowRunId = workflowRunId;
         this.scheduledEventId = scheduledEventId;
         this.argument = argument;
         this.activityRunner = activityRunner;
+        this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
     }
 
@@ -66,7 +70,7 @@ public final class ActivityRunContext<T> {
         // TODO: Return info about workflow run so the task can
         //  detect when run was cancelled or failed.
         this.lockedUntil = engine.heartbeatActivityTask(
-                new ActivityTaskId(workflowRunId, scheduledEventId));
+                new ActivityTaskId(workflowRunId, scheduledEventId), lockTimeout);
         LoggerFactory.getLogger(activityRunner.getClass()).debug(
                 "Lock extended to {}", this.lockedUntil);
     }

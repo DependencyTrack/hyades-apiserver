@@ -86,16 +86,7 @@ public class Buffer<T> implements Closeable {
         LOGGER.debug("{}: Closing buffer", name);
 
         LOGGER.debug("{}: Waiting for flush executor to stop", name);
-        flushExecutor.shutdown();
-        try {
-            final boolean terminated = flushExecutor.awaitTermination(30, TimeUnit.SECONDS);
-            if (!terminated) {
-                LOGGER.warn("{}: Flush executor did not terminate in time", name);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOGGER.warn("{}: Interrupted while waiting for flush executor to terminate", name, e);
-        }
+        flushExecutor.close();
 
         // Flush one last time, in case new items were added to the buffer while
         // the executor was shutting down.

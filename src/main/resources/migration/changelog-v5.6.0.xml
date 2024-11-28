@@ -143,13 +143,13 @@
     <changeSet id="v5.6.0-10" author="nscuro">
         <sql>
             CREATE TYPE WORKFLOW_RUN_STATUS AS ENUM (
-              'WORKFLOW_RUN_STATUS_PENDING'
-            , 'WORKFLOW_RUN_STATUS_RUNNING'
-            , 'WORKFLOW_RUN_STATUS_SUSPENDED'
-            , 'WORKFLOW_RUN_STATUS_CANCELLED'
-            , 'WORKFLOW_RUN_STATUS_COMPLETED'
-            , 'WORKFLOW_RUN_STATUS_FAILED'
-            , 'WORKFLOW_RUN_STATUS_TERMINATED'
+              'PENDING'
+            , 'RUNNING'
+            , 'SUSPENDED'
+            , 'CANCELLED'
+            , 'COMPLETED'
+            , 'FAILED'
+            , 'TERMINATED'
             )
         </sql>
 
@@ -196,7 +196,7 @@
                    , "WORKFLOW_NAME"
                    , "LOCKED_UNTIL")
             INCLUDE ("ID")
-              WHERE "STATUS" = ANY('{WORKFLOW_RUN_STATUS_PENDING, WORKFLOW_RUN_STATUS_RUNNING}'::WORKFLOW_RUN_STATUS[]);
+              WHERE "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[]);
         </sql>
 
         <createTable tableName="WORKFLOW_EVENT_LOG">

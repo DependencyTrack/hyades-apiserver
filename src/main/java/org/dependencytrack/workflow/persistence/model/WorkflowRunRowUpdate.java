@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.persistence.model;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
+import org.dependencytrack.workflow.WorkflowRunStatus;
 
 import java.time.Instant;
 import java.util.UUID;

@@ -74,7 +74,7 @@ public final class WorkflowDao {
                   :id
                 , :workflowName
                 , :workflowVersion
-                , 'WORKFLOW_RUN_STATUS_PENDING'
+                , 'PENDING'
                 , :argument
                 , NOW()
                 )
@@ -123,7 +123,6 @@ public final class WorkflowDao {
 
         final ResultIterator<Integer> modCountIterator = preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executeAndGetModCount();
 
         int modCount = 0;
@@ -159,7 +158,7 @@ public final class WorkflowDao {
                     SELECT "ID"
                       FROM "WORKFLOW_RUN"
                      WHERE "WORKFLOW_NAME" = :workflowName
-                       AND "STATUS" = ANY('{WORKFLOW_RUN_STATUS_PENDING, WORKFLOW_RUN_STATUS_RUNNING}'::WORKFLOW_RUN_STATUS[])
+                       AND "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[])
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                        AND EXISTS (SELECT 1
                                      FROM "WORKFLOW_EVENT_INBOX"

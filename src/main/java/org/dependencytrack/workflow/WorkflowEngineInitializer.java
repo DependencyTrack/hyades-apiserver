@@ -35,6 +35,7 @@ import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
@@ -61,28 +62,33 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 new ProcessBomUploadWorkflowRunner(),
                 /* maxConcurrency */ 5,
                 /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
-                /* resultConverter */ voidConverter());
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
 
         engine.registerActivityRunner(
                 new BomUploadProcessingTask(),
                 /* maxConcurrency */ 5,
                 /* argumentConverter */ protoConverter(IngestBomArgs.class),
-                /* resultConverter */ voidConverter());
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new VulnerabilityAnalysisTask(),
                 /* maxConcurrency */ 5,
                 /* argumentConverter */ protoConverter(AnalyzeProjectVulnsArgs.class),
-                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResult.class));
+                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResult.class),
+                /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new PolicyEvaluationTask(),
                 /* maxConcurrency */ 5,
                 /* argumentConverter */ protoConverter(EvalProjectPoliciesArgs.class),
-                /* resultConverter */ voidConverter());
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new ProjectMetricsUpdateTask(),
                 /* maxConcurrency */ 5,
                 /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
-                /* resultConverter */ voidConverter());
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
     }
 
     @Override
