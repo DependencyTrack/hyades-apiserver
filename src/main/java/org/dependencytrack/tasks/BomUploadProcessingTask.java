@@ -65,7 +65,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
-import org.jdbi.v3.core.Handle;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -115,7 +114,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertSe
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
@@ -177,16 +176,16 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             final Handle jdbiHandle = openJdbiHandle()) {
-            processEvent(ctx, event, jdbiHandle);
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
+            processEvent(ctx, event);
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event, Handle jdbiHandle) {
-        final var workflowDao = jdbiHandle.attach(WorkflowDao.class);
-        workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
-
+    private void processEvent(final Context ctx, final BomUploadEvent event) {
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
+        });
         final ConsumedBom consumedBom;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
@@ -209,8 +208,12 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
-        workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
+            workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
+        });
+
         dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
@@ -228,7 +231,10 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
+        });
 
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
