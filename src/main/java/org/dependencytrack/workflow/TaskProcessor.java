@@ -18,19 +18,16 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-
 import java.util.List;
-import java.util.UUID;
 
-record WorkflowTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
-        WorkflowPayload argument,
-        int attempt,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements Task {
+sealed interface TaskProcessor<T extends Task> permits
+        ActivityTaskProcessor,
+        WorkflowTaskProcessor {
+
+    List<T> poll(final int limit);
+
+    void process(final T task);
+
+    void abandon(final T task);
+
 }

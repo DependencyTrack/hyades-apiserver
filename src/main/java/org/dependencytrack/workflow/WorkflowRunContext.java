@@ -68,7 +68,7 @@ public final class WorkflowRunContext<A, R> {
     private final int workflowVersion;
     private final Integer priority;
     private final A argument;
-    private final WorkflowRunner<A, R> executor;
+    private final WorkflowRunner<A, R> workflowRunner;
     private final PayloadConverter<R> resultConverter;
     private final List<WorkflowEvent> eventLog;
     private final List<WorkflowEvent> inboxEvents;
@@ -100,7 +100,7 @@ public final class WorkflowRunContext<A, R> {
         this.workflowVersion = workflowVersion;
         this.priority = priority;
         this.argument = argument;
-        this.executor = workflowRunner;
+        this.workflowRunner = workflowRunner;
         this.resultConverter = resultConverter;
         this.eventLog = eventLog;
         this.inboxEvents = inboxEvents;
@@ -132,7 +132,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     public Logger logger() {
-        return new WorkflowReplayAwareLogger(this, LoggerFactory.getLogger(executor.getClass()));
+        return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowRunner.getClass()));
     }
 
     public <AA, AR> Awaitable<AR> callActivity(
@@ -375,7 +375,7 @@ public final class WorkflowRunContext<A, R> {
 
         final Optional<R> result;
         try {
-            result = executor.run(this);
+            result = workflowRunner.run(this);
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;

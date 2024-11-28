@@ -27,7 +27,7 @@ public class ProtobufPayloadConverter<T extends Message> implements PayloadConve
 
     private final Class<T> clazz;
 
-    public ProtobufPayloadConverter(Class<T> clazz) {
+    public ProtobufPayloadConverter(final Class<T> clazz) {
         this.clazz = clazz;
     }
 

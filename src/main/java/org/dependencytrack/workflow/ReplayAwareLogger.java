@@ -21,12 +21,12 @@ package org.dependencytrack.workflow;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 
-final class WorkflowReplayAwareLogger implements Logger {
+final class ReplayAwareLogger implements Logger {
 
     private final WorkflowRunContext<?, ?> executionContext;
     private final Logger delegate;
 
-    WorkflowReplayAwareLogger(
+    ReplayAwareLogger(
             final WorkflowRunContext<?, ?> executionContext,
             final Logger delegate) {
         this.executionContext = executionContext;
