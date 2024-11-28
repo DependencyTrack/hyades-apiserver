@@ -222,25 +222,6 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWorkflowStateIsUpdated() {
-        UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState = new WorkflowState();
-        workflowState.setParent(null);
-        workflowState.setFailureReason(null);
-        workflowState.setStep(BOM_CONSUMPTION);
-        workflowState.setStatus(PENDING);
-        workflowState.setToken(uuid);
-        workflowState.setStartedAt(Date.from(Instant.now()));
-        workflowState.setUpdatedAt(Date.from(Instant.now()));
-        WorkflowState persisted = qm.persist(workflowState);
-
-        persisted.setStatus(CANCELLED);
-
-        WorkflowState result  = qm.updateWorkflowState(persisted);
-        assertThat(result.getStatus()).isEqualTo(CANCELLED);
-    }
-
-    @Test
     public void testWorkflowStateIsDeleted() {
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState = new WorkflowState();

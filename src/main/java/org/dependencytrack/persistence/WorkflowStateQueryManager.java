@@ -111,18 +111,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return singleResult(query.execute(id));
     }
 
-    public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
-        //update fields
-        WorkflowState workflowState = getObjectById(WorkflowState.class, transientWorkflowState.getId());
-        if (workflowState != null) {
-            workflowState.setStatus(transientWorkflowState.getStatus());
-            workflowState.setUpdatedAt(transientWorkflowState.getUpdatedAt());
-            workflowState.setFailureReason(transientWorkflowState.getFailureReason());
-            return persist(workflowState);
-        }
-        return null;
-    }
-
     public void deleteWorkflowState(WorkflowState workflowState) {
         delete(workflowState);
     }

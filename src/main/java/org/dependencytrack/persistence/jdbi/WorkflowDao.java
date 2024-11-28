@@ -73,6 +73,17 @@ public interface WorkflowDao extends SqlObject {
         return Optional.of(updatedStates.getFirst());
     }
 
+    @SqlUpdate("""
+            UPDATE "WORKFLOW_STATE"
+               SET "STARTED_AT" = NOW()
+             WHERE "STEP" = :step
+               AND "TOKEN" = :token
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterBeanMapper(WorkflowState.class)
+    WorkflowState startState(@Bind WorkflowStep step, @Bind("token") UUID token);
+
     @SqlQuery("""
             SELECT "TOKEN"
               FROM "WORKFLOW_STATE"
