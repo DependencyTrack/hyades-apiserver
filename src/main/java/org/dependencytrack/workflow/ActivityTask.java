@@ -25,7 +25,7 @@ import java.util.UUID;
 
 record ActivityTask(
         UUID workflowRunId,
-        int sequenceNumber,
+        int scheduledEventId,
         String activityName,
         WorkflowPayload argument,
         Instant lockedUntil) implements Task {

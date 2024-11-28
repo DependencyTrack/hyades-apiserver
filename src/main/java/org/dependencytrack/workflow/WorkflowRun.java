@@ -31,7 +31,6 @@ import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
 import org.dependencytrack.workflow.WorkflowCommand.CompleteExecutionCommand;
 import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
@@ -45,11 +44,6 @@ import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
 
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
 import static org.dependencytrack.workflow.WorkflowEngine.toTimestamp;
 
 public class WorkflowRun {
@@ -64,10 +58,10 @@ public class WorkflowRun {
     private final List<WorkflowMessage> pendingWorkflowMessages;
     private WorkflowEvent startedEvent;
     private WorkflowEvent completedEvent;
-    private boolean isSuspended;
     private WorkflowPayload argument;
     private WorkflowPayload result;
     private String failureDetails;
+    private WorkflowRunStatus status = WorkflowRunStatus.PENDING;
     private String customStatus;
     private Instant createdAt;
     private Instant updatedAt;
@@ -117,15 +111,7 @@ public class WorkflowRun {
     }
 
     WorkflowRunStatus status() {
-        if (startedEvent == null) {
-            return WORKFLOW_RUN_STATUS_PENDING;
-        } else if (isSuspended) {
-            return WORKFLOW_RUN_STATUS_SUSPENDED;
-        } else if (completedEvent != null) {
-            return completedEvent.getRunCompleted().getStatus();
-        }
-
-        return WORKFLOW_RUN_STATUS_RUNNING;
+        return status;
     }
 
     Optional<String> customStatus() {
@@ -173,6 +159,7 @@ public class WorkflowRun {
                             New event is: %s""".formatted(this.workflowName, this.workflowRunId, startedEvent, event));
                 }
                 startedEvent = event;
+                setStatus(WorkflowRunStatus.RUNNING);
                 argument = event.getRunStarted().hasArgument()
                         ? event.getRunStarted().getArgument()
                         : null;
@@ -185,6 +172,7 @@ public class WorkflowRun {
                             Next event is: %s""".formatted(this.workflowName, this.workflowRunId, completedEvent, event));
                 }
                 completedEvent = event;
+                setStatus(WorkflowRunStatus.fromProto(completedEvent.getRunCompleted().getStatus()));
                 result = event.getRunCompleted().hasResult()
                         ? event.getRunCompleted().getResult()
                         : null;
@@ -193,8 +181,8 @@ public class WorkflowRun {
                         : null;
                 completedAt = WorkflowEngine.toInstant(event.getTimestamp());
             }
-            case RUN_SUSPENDED -> isSuspended = true;
-            case RUN_RESUMED -> isSuspended = false;
+            case RUN_SUSPENDED -> setStatus(WorkflowRunStatus.SUSPENDED);
+            case RUN_RESUMED -> setStatus(WorkflowRunStatus.RUNNING);
         }
 
         if (isNew) {
@@ -232,7 +220,7 @@ public class WorkflowRun {
             final var subWorkflowEventBuilder = WorkflowEvent.newBuilder()
                     .setId(-1)
                     .setTimestamp(Timestamps.now());
-            if (command.status() == WORKFLOW_RUN_STATUS_COMPLETED) {
+            if (command.status() == WorkflowRunStatus.COMPLETED) {
                 final var subWorkflowCompletedBuilder = SubWorkflowRunCompleted.newBuilder()
                         .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
                 if (command.result() != null) {
@@ -240,7 +228,7 @@ public class WorkflowRun {
                 }
                 subWorkflowEventBuilder.setSubWorkflowRunCompleted(
                         subWorkflowCompletedBuilder.build());
-            } else if (command.status() == WORKFLOW_RUN_STATUS_FAILED) {
+            } else if (command.status() == WorkflowRunStatus.FAILED) {
                 final var subWorkflowFailedBuilder = SubWorkflowRunFailed.newBuilder()
                         .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
                 if (command.failureDetails() != null) {
@@ -256,7 +244,7 @@ public class WorkflowRun {
         }
 
         final var subjectBuilder = RunCompleted.newBuilder()
-                .setStatus(command.status());
+                .setStatus(command.status().toProto());
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }
@@ -364,6 +352,16 @@ public class WorkflowRun {
                         .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
                 .build());
+    }
+
+    private void setStatus(final WorkflowRunStatus newStatus) {
+        if (this.status.canTransitionTo(newStatus)) {
+            this.status = newStatus;
+            return;
+        }
+
+        throw new IllegalStateException(
+                "Can not transition from state %s to %s".formatted(this.status, newStatus));
     }
 
 }

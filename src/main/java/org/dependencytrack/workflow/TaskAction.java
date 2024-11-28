@@ -18,11 +18,14 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+
+import java.time.Instant;
 
 sealed interface TaskAction permits
         TaskAction.AbandonActivityTaskAction,
         TaskAction.CompleteActivityTaskAction,
+        TaskAction.FailActivityTaskAction,
         TaskAction.AbandonWorkflowTaskAction,
         TaskAction.CompleteWorkflowTaskAction {
 
@@ -31,7 +34,14 @@ sealed interface TaskAction permits
 
     record CompleteActivityTaskAction(
             ActivityTask task,
-            WorkflowEvent event) implements TaskAction {
+            WorkflowPayload result,
+            Instant timestamp) implements TaskAction {
+    }
+
+    record FailActivityTaskAction(
+            ActivityTask task,
+            Throwable exception,
+            Instant timestamp) implements TaskAction {
     }
 
     record AbandonWorkflowTaskAction(WorkflowTask task) implements TaskAction {

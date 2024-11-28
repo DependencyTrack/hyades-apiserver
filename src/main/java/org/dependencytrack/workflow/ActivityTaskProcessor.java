@@ -18,15 +18,13 @@
  */
 package org.dependencytrack.workflow;
 
-import com.google.protobuf.util.Timestamps;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
@@ -40,33 +38,60 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     private final ActivityRunner<A, R> activityRunner;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
+    private final Duration taskLockTimeout;
 
     public ActivityTaskProcessor(
             final WorkflowEngine engine,
             final String activityName,
             final ActivityRunner<A, R> activityRunner,
             final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter) {
+            final PayloadConverter<R> resultConverter,
+            final Duration taskLockTimeout) {
         this.engine = engine;
         this.activityName = activityName;
         this.activityRunner = activityRunner;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
+        this.taskLockTimeout = taskLockTimeout;
     }
 
     @Override
     public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(activityName, limit);
+        return engine.pollActivityTasks(activityName, limit, taskLockTimeout);
     }
 
     @Override
     public void process(final ActivityTask task) {
+        try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
+             var ignoredMdcWorkflowActivityName = MDC.putCloseable("workflowActivityName", task.activityName())) {
+            processInternal(task);
+        } catch (RuntimeException e) {
+            LOGGER.error("Failed to process task; Abandoning it", e);
+            abandon(task);
+        }
+    }
+
+    @Override
+    public void abandon(final ActivityTask task) {
+        try {
+            // TODO: Retry on TimeoutException
+            engine.abandonActivityTask(task).join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
+        }
+    }
+
+    private void processInternal(final ActivityTask task) {
         final var ctx = new ActivityRunContext<>(
                 engine,
                 task.workflowRunId(),
-                task.sequenceNumber(),
+                task.scheduledEventId(),
                 argumentConverter.convertFromPayload(task.argument()),
                 activityRunner,
+                taskLockTimeout,
                 task.lockedUntil());
 
         try {
@@ -74,42 +99,27 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
 
             try {
                 final var subjectBuilder = ActivityTaskCompleted.newBuilder()
-                        .setTaskScheduledEventId(task.sequenceNumber());
+                        .setTaskScheduledEventId(task.scheduledEventId());
                 result.ifPresent(r -> subjectBuilder.setResult(resultConverter.convertToPayload(r)));
 
-                engine.completeActivityTask(task,
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(Timestamps.now())
-                                .setActivityTaskCompleted(subjectBuilder.build())
-                                .build()).join();
-            } catch (InterruptedException | TimeoutException e) {
-                throw new RuntimeException(e);
+                // TODO: Retry on TimeoutException
+                engine.completeActivityTask(task, result.map(resultConverter::convertToPayload).orElse(null)).join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);
+            } catch (TimeoutException e) {
+                throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
             }
         } catch (Exception e) {
             try {
-                engine.completeActivityTask(task,
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(Timestamps.now())
-                                .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                        .setTaskScheduledEventId(task.sequenceNumber())
-                                        .setFailureDetails(ExceptionUtils.getMessage(e))
-                                        .build())
-                                .build()).join();
-            } catch (InterruptedException | TimeoutException ex) {
-                throw new RuntimeException(ex);
+                // TODO: Retry on TimeoutException
+                engine.failActivityTask(task, e).join();
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                LOGGER.warn("Interrupted while waiting for task failure to be acknowledged", ex);
+            } catch (TimeoutException ex) {
+                throw new RuntimeException("Timed out while waiting for task failure to be acknowledged", ex);
             }
-        }
-    }
-
-    @Override
-    public void abandon(final ActivityTask task) {
-        try {
-            // TODO: Add retry?
-            engine.abandonActivityTask(task).join();
-        } catch (InterruptedException | TimeoutException ex) {
-            throw new RuntimeException(ex);
         }
     }
 

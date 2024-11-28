@@ -56,9 +56,6 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.function.Function;
 
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
-
 public final class WorkflowRunContext<A, R> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunContext.class);
@@ -591,7 +588,7 @@ public final class WorkflowRunContext<A, R> {
         pendingCommandByEventId.put(eventId,
                 new CompleteExecutionCommand(
                         eventId,
-                        WORKFLOW_RUN_STATUS_COMPLETED,
+                        WorkflowRunStatus.COMPLETED,
                         resultConverter.convertToPayload(result),
                         /* failureDetails */ null));
     }
@@ -603,7 +600,7 @@ public final class WorkflowRunContext<A, R> {
         pendingCommandByEventId.put(eventId,
                 new CompleteExecutionCommand(
                         eventId,
-                        WORKFLOW_RUN_STATUS_FAILED,
+                        WorkflowRunStatus.FAILED,
                         /* result */ null,
                         ExceptionUtils.getMessage(exception)));
     }

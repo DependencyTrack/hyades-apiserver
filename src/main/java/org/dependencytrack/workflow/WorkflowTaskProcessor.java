@@ -25,7 +25,9 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -38,44 +40,51 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     private final WorkflowRunner<A, R> workflowRunner;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
+    private final Duration taskLockTimeout;
 
     public WorkflowTaskProcessor(
             final WorkflowEngine engine,
             final String workflowName,
             final WorkflowRunner<A, R> workflowRunner,
             final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter) {
+            final PayloadConverter<R> resultConverter,
+            final Duration taskLockTimeout) {
         this.engine = engine;
         this.workflowName = workflowName;
         this.workflowRunner = workflowRunner;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
+        this.taskLockTimeout = taskLockTimeout;
     }
 
     @Override
     public List<WorkflowTask> poll(final int limit) {
-        return engine.pollWorkflowTasks(workflowName, limit);
+        return engine.pollWorkflowTasks(workflowName, limit, taskLockTimeout);
     }
 
     @Override
     public void process(final WorkflowTask task) {
-        try {
+        try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
+             var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
+             var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()));
+             var ignoredMdcWorkflowPriority = MDC.putCloseable("workflowPriority", String.valueOf(task.priority()))) {
             processInternal(task);
         } catch (RuntimeException e) {
-            LOGGER.warn("Failed to process task", e);
+            LOGGER.error("Failed to process task; Abandoning it", e);
             abandon(task);
         }
     }
 
     @Override
     public void abandon(final WorkflowTask task) {
-        LOGGER.debug("Abandoning task for workflow run {}", task.workflowRunId());
-
         try {
-            // TODO: Add retry?
+            // TODO: Retry on TimeoutException
             engine.abandonWorkflowTask(task).join();
-        } catch (InterruptedException | TimeoutException ex) {
-            throw new RuntimeException(ex);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
         }
     }
 
@@ -123,10 +132,13 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 .build());
 
         try {
-            // TODO: Add retry?
+            // TODO: Retry on TimeoutException.
             engine.completeWorkflowTask(workflowRun).join();
-        } catch (InterruptedException | TimeoutException e) {
-            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
         }
     }
 
