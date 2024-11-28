@@ -37,7 +37,10 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
@@ -52,7 +55,18 @@ public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMet
     @Override
     public Optional<Void> run(final ActivityRunContext<UpdateProjectMetricsArgs> ctx) throws Exception {
         final UpdateProjectMetricsArgs args = ctx.argument().orElseThrow();
-        updateMetrics(UUID.fromString(args.getProject().getUuid()));
+
+        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, args.getProject().getUuid());
+             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, args.getProject().getName());
+             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, args.getProject().getVersion())) {
+            LOGGER.info("Executing metrics update");
+
+            useJdbiHandle(handle -> handle
+                    .createCall("CALL \"UPDATE_PROJECT_METRICS\"(:uuid)")
+                    .bind("uuid", args.getProject().getUuid())
+                    .setQueryTimeout(30) // TODO: Set this globally?
+                    .invoke());
+        }
 
         return Optional.empty();
     }
