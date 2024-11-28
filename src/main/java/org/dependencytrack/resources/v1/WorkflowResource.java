@@ -38,6 +38,7 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
@@ -105,6 +106,7 @@ public class WorkflowResource {
             String workflowName,
             int workflowVersion,
             String status,
+            WorkflowRunStatus runtimeStatus,
             @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload argument,
             @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload result,
             String failureDetails,
@@ -138,9 +140,8 @@ public class WorkflowResource {
                     runRow.id(),
                     runRow.workflowName(),
                     runRow.workflowVersion(),
-                    runRow.customStatus() != null
-                            ? runRow.customStatus()
-                            : runRow.status().name(),
+                    runRow.customStatus(),
+                    runRow.status(),
                     runRow.argument(),
                     runRow.result(),
                     runRow.failureDetails(),

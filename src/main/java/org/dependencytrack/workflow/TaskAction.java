@@ -20,24 +20,24 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-sealed interface WorkflowTaskAction permits
-        WorkflowTaskAction.AbandonActivityRunTaskAction,
-        WorkflowTaskAction.CompleteActivityRunTaskAction,
-        WorkflowTaskAction.AbandonWorkflowRunTaskAction,
-        WorkflowTaskAction.CompleteWorkflowRunTaskAction {
+sealed interface TaskAction permits
+        TaskAction.AbandonActivityTaskAction,
+        TaskAction.CompleteActivityTaskAction,
+        TaskAction.AbandonWorkflowTaskAction,
+        TaskAction.CompleteWorkflowTaskAction {
 
-    record AbandonActivityRunTaskAction(ActivityRunTask task) implements WorkflowTaskAction {
+    record AbandonActivityTaskAction(ActivityTask task) implements TaskAction {
     }
 
-    record CompleteActivityRunTaskAction(
-            ActivityRunTask task,
-            WorkflowEvent event) implements WorkflowTaskAction {
+    record CompleteActivityTaskAction(
+            ActivityTask task,
+            WorkflowEvent event) implements TaskAction {
     }
 
-    record AbandonWorkflowRunTaskAction(WorkflowRunTask task) implements WorkflowTaskAction {
+    record AbandonWorkflowTaskAction(WorkflowTask task) implements TaskAction {
     }
 
-    record CompleteWorkflowRunTaskAction(WorkflowRun workflowRun) implements WorkflowTaskAction {
+    record CompleteWorkflowTaskAction(WorkflowRun workflowRun) implements TaskAction {
     }
 
 }

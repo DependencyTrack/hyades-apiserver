@@ -33,9 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
+final class TaskDispatcher<T extends Task> implements Runnable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskDispatcher.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TaskDispatcher.class);
     private static final IntervalFunction POLL_BACKOFF_INTERVAL_FUNCTION =
             IntervalFunction.ofExponentialRandomBackoff(
                     /* initialIntervalMillis */ 500,
@@ -45,16 +45,16 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
 
     private final WorkflowEngine engine;
     private final ExecutorService taskExecutorService;
-    private final WorkflowTaskProcessor<T> taskProcessor;
+    private final TaskProcessor<T> taskProcessor;
     private final Semaphore taskSemaphore;
     private Timer taskPollLatencyTimer;
     private DistributionSummary taskPollDistribution;
     private Timer taskProcessingLatencyTimer;
 
-    WorkflowTaskDispatcher(
+    TaskDispatcher(
             final WorkflowEngine engine,
             final ExecutorService taskExecutorService,
-            final WorkflowTaskProcessor<T> taskProcessor,
+            final TaskProcessor<T> taskProcessor,
             final int maxConcurrency) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
@@ -166,8 +166,8 @@ final class WorkflowTaskDispatcher<T extends WorkflowTask> implements Runnable {
 
         final List<Tag> commonTags = List.of(
                 Tag.of("taskType", switch (taskProcessor) {
-                    case ActivityRunTaskProcessor<?, ?> ignored -> "activity";
-                    case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
+                    case ActivityTaskProcessor<?, ?> ignored -> "activity";
+                    case WorkflowTaskProcessor<?, ?> ignored -> "workflow";
                 }));
 
         taskPollLatencyTimer = Timer

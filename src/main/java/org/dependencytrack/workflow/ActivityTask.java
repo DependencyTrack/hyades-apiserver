@@ -18,19 +18,15 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
-record WorkflowRunTask(
+record ActivityTask(
         UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        Integer priority,
+        int sequenceNumber,
+        String activityName,
         WorkflowPayload argument,
-        int attempt,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements WorkflowTask {
+        Instant lockedUntil) implements Task {
 }

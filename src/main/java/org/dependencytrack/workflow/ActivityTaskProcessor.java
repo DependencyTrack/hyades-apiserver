@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
-final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<ActivityRunTask> {
+final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ActivityRunTaskProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskProcessor.class);
 
     private final WorkflowEngine engine;
     private final String activityName;
@@ -41,7 +41,7 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
 
-    public ActivityRunTaskProcessor(
+    public ActivityTaskProcessor(
             final WorkflowEngine engine,
             final String activityName,
             final ActivityRunner<A, R> activityRunner,
@@ -55,17 +55,18 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
     }
 
     @Override
-    public List<ActivityRunTask> poll(final int limit) {
-        return engine.pollActivityRunTasks(activityName, limit);
+    public List<ActivityTask> poll(final int limit) {
+        return engine.pollActivityTasks(activityName, limit);
     }
 
     @Override
-    public void process(final ActivityRunTask task) {
+    public void process(final ActivityTask task) {
         final var ctx = new ActivityRunContext<>(
                 engine,
                 task.workflowRunId(),
                 task.sequenceNumber(),
                 argumentConverter.convertFromPayload(task.argument()),
+                activityRunner,
                 task.lockedUntil());
 
         try {
@@ -76,7 +77,7 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
                         .setTaskScheduledEventId(task.sequenceNumber());
                 result.ifPresent(r -> subjectBuilder.setResult(resultConverter.convertToPayload(r)));
 
-                engine.completeActivityRunTask(task,
+                engine.completeActivityTask(task,
                         WorkflowEvent.newBuilder()
                                 .setId(-1)
                                 .setTimestamp(Timestamps.now())
@@ -87,7 +88,7 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
             }
         } catch (Exception e) {
             try {
-                engine.completeActivityRunTask(task,
+                engine.completeActivityTask(task,
                         WorkflowEvent.newBuilder()
                                 .setId(-1)
                                 .setTimestamp(Timestamps.now())
@@ -103,10 +104,10 @@ final class ActivityRunTaskProcessor<A, R> implements WorkflowTaskProcessor<Acti
     }
 
     @Override
-    public void abandon(final ActivityRunTask task) {
+    public void abandon(final ActivityTask task) {
         try {
             // TODO: Add retry?
-            engine.abandonActivityRunTask(task).join();
+            engine.abandonActivityTask(task).join();
         } catch (InterruptedException | TimeoutException ex) {
             throw new RuntimeException(ex);
         }

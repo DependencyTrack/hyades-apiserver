@@ -18,16 +18,116 @@
  */
 package org.dependencytrack.workflow;
 
+import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.proto.workflow.v1alpha1.RunnerCompleted;
+import org.dependencytrack.proto.workflow.v1alpha1.RunnerStarted;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.payload.PayloadConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
-sealed interface WorkflowTaskProcessor<T extends WorkflowTask> permits
-        ActivityRunTaskProcessor,
-        WorkflowRunTaskProcessor {
+final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
-    List<T> poll(final int limit);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskProcessor.class);
 
-    void process(final T task);
+    private final WorkflowEngine engine;
+    private final String workflowName;
+    private final WorkflowRunner<A, R> workflowRunner;
+    private final PayloadConverter<A> argumentConverter;
+    private final PayloadConverter<R> resultConverter;
 
-    void abandon(final T task);
+    public WorkflowTaskProcessor(
+            final WorkflowEngine engine,
+            final String workflowName,
+            final WorkflowRunner<A, R> workflowRunner,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter) {
+        this.engine = engine;
+        this.workflowName = workflowName;
+        this.workflowRunner = workflowRunner;
+        this.argumentConverter = argumentConverter;
+        this.resultConverter = resultConverter;
+    }
+
+    @Override
+    public List<WorkflowTask> poll(final int limit) {
+        return engine.pollWorkflowTasks(workflowName, limit);
+    }
+
+    @Override
+    public void process(final WorkflowTask task) {
+        try {
+            processInternal(task);
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to process task", e);
+            abandon(task);
+        }
+    }
+
+    @Override
+    public void abandon(final WorkflowTask task) {
+        LOGGER.debug("Abandoning task for workflow run {}", task.workflowRunId());
+
+        try {
+            // TODO: Add retry?
+            engine.abandonWorkflowTask(task).join();
+        } catch (InterruptedException | TimeoutException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private void processInternal(final WorkflowTask task) {
+        final var workflowRun = new WorkflowRun(
+                task.workflowRunId(),
+                task.workflowName(),
+                task.workflowVersion(),
+                task.eventLog());
+        workflowRun.onEvent(WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.now())
+                .setRunnerStarted(RunnerStarted.newBuilder().build())
+                .build());
+
+        int eventsAdded = 0;
+        for (final WorkflowEvent newEvent : task.inboxEvents()) {
+            workflowRun.onEvent(newEvent);
+            eventsAdded++;
+        }
+
+        if (eventsAdded == 0) {
+            LOGGER.warn("No new events");
+            return;
+        }
+
+        final var ctx = new WorkflowRunContext<>(
+                task.workflowRunId(),
+                task.workflowName(),
+                task.workflowVersion(),
+                task.priority(),
+                argumentConverter.convertFromPayload(task.argument()),
+                workflowRunner,
+                resultConverter,
+                workflowRun.eventLog(),
+                workflowRun.inboxEvents());
+        final WorkflowRunResult runResult = ctx.runWorkflow();
+
+        workflowRun.setCustomStatus(runResult.customStatus());
+        workflowRun.executeCommands(runResult.commands());
+        workflowRun.onEvent(WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.now())
+                .setRunnerCompleted(RunnerCompleted.newBuilder().build())
+                .build());
+
+        try {
+            // TODO: Add retry?
+            engine.completeWorkflowTask(workflowRun).join();
+        } catch (InterruptedException | TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
