@@ -63,7 +63,7 @@ public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMet
 
             useJdbiHandle(handle -> handle
                     .createCall("CALL \"UPDATE_PROJECT_METRICS\"(:uuid)")
-                    .bind("uuid", args.getProject().getUuid())
+                    .bind("uuid", UUID.fromString(args.getProject().getUuid()))
                     .setQueryTimeout(30) // TODO: Set this globally?
                     .invoke());
         }
