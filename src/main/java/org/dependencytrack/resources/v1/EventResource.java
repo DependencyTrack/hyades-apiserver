@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.event.framework.Event;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,16 +30,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
-
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -91,8 +93,14 @@ public class EventResource extends AlpineResource {
         if (Event.isEventBeingProcessed(token)) {
             isProcessing = true;
         } else {
-            isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+                isProcessing = withJdbiHandle(getAlpineRequest(),
+                        handle -> new org.dependencytrack.workflow.persistence.WorkflowDao(handle)
+                                .existsWorkflowRunWithNonTerminalStatus(token));
+            } else {
+                isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+            }
         }
 
         final var response = new IsTokenBeingProcessedResponse();

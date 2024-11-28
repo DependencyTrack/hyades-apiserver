@@ -148,6 +148,22 @@ public final class WorkflowDao {
                 .orElse(null);
     }
 
+    public boolean existsWorkflowRunWithNonTerminalStatus(final UUID id) {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT EXISTS (
+                    SELECT 1
+                      FROM "WORKFLOW_RUN"
+                     WHERE "ID" = :id
+                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]))
+                """);
+
+        return query
+                .bind("id", id)
+                .mapTo(Boolean.class)
+                .findOne()
+                .orElse(false);
+    }
+
     public Map<UUID, PolledWorkflowRunRow> pollAndLockWorkflowRuns(
             final UUID workerInstanceId,
             final String workflowName,
