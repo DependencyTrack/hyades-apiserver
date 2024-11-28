@@ -34,7 +34,7 @@
     <changeSet id="v5.6.0-2" author="nscuro">
         <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
     </changeSet>
-  
+
     <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
         <addColumn tableName="PROJECT">
             <column name="AUTHORS" type="TEXT"/>
@@ -42,7 +42,7 @@
         <addColumn tableName="COMPONENT">
             <column name="AUTHORS" type="TEXT"/>
         </addColumn>
-        
+
         <sql>
             UPDATE "PROJECT"
             SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
@@ -61,7 +61,7 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
-    
+
     <changeSet id="v5.6.0-4" author="nscuro">
         <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
         <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
@@ -121,6 +121,28 @@
         </addColumn>
         <createIndex indexName="PROJECT_IS_LATEST_IDX" tableName="PROJECT">
             <column name="IS_LATEST"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-8" author="nscuro">
+        <dropIndex tableName="REPOSITORY_META_COMPONENT" indexName="REPOSITORY_META_COMPONENT_COMPOUND_IDX"/>
+        <!--
+            Create two partial unique indexes to cover cases where NAMESPACE is NULL.
+            Per default, NULLs are considered to be unique values.
+            PostgreSQL 15 supports NULLS NOT DISTINCT: https://stackoverflow.com/a/8289253
+            But we are far away from being able to raise the baseline version to 15.
+        -->
+        <sql splitStatements="true">
+            CREATE UNIQUE INDEX "REPOSITORY_META_COMPONENT_REPOSITORY_TYPE_NAME_IDX"
+                ON "REPOSITORY_META_COMPONENT" ("REPOSITORY_TYPE", "NAME")
+                WHERE "NAMESPACE" IS NULL;
+            CREATE UNIQUE INDEX "REPOSITORY_META_COMPONENT_REPOSITORY_TYPE_NAMESPACE_NAME_IDX"
+                ON "REPOSITORY_META_COMPONENT" ("REPOSITORY_TYPE", "NAMESPACE", "NAME")
+                WHERE "NAMESPACE" IS NOT NULL;
+        </sql>
+        <dropIndex tableName="INTEGRITY_ANALYSIS" indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX"/>
+        <createIndex tableName="INTEGRITY_ANALYSIS" indexName="INTEGRITY_ANALYSIS_COMPONENT_ID_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
         </createIndex>
     </changeSet>
 </databaseChangeLog>
