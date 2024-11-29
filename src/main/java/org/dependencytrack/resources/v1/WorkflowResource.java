@@ -18,9 +18,12 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.resources.AlpineResource;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +36,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -43,11 +47,13 @@ import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerialize
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -66,7 +72,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class WorkflowResource {
+public class WorkflowResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
 
@@ -104,6 +110,51 @@ public class WorkflowResource {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record WorkflowRunListResponseItem(
+            UUID id,
+            String workflowName,
+            int workflowVersion,
+            String status,
+            WorkflowRunStatus runtimeStatus,
+            Integer priority,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
+            int historySize,
+            int pendingEvents,
+            int pendingActivities) {
+    }
+
+    @GET
+    @Path("/run")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response getWorkflowRuns() {
+        assertWorkflowEngineEnabled();
+
+        final List<WorkflowRunListRow> runRows = withJdbiHandle(getAlpineRequest(),
+                handle -> new WorkflowDao(handle).getWorkflowRuns());
+        final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
+                .map(runRow -> new WorkflowRunListResponseItem(
+                        runRow.id(),
+                        runRow.workflowName(),
+                        runRow.workflowVersion(),
+                        runRow.customStatus(),
+                        runRow.status(),
+                        runRow.priority(),
+                        runRow.createdAt(),
+                        runRow.updatedAt(),
+                        runRow.completedAt(),
+                        runRow.historySize(),
+                        runRow.pendingEvents(),
+                        runRow.pendingActivities()))
+                .toList();
+
+        final long totalCount = runRows.isEmpty() ? 0 : runRows.getFirst().totalCount();
+        return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record WorkflowRunResponse(
             UUID id,
             String workflowName,
@@ -116,9 +167,9 @@ public class WorkflowResource {
             Integer priority,
             String lockedBy,
             Instant lockedUntil,
-            Instant createdAt,
-            Instant updatedAt,
-            Instant completedAt,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
             @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventLog,
             @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventInbox) {
     }
@@ -128,6 +179,8 @@ public class WorkflowResource {
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired
     public Response getWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        assertWorkflowEngineEnabled();
+
         final WorkflowRunResponse run = withJdbiHandle(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -161,33 +214,45 @@ public class WorkflowResource {
         return Response.ok(run).build();
     }
 
-    @GET // TODO: Should be POST
+    @POST
     @Path("/run/{id}/cancel")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired
     public Response cancelWorkflowRun(
             @PathParam("id") @ValidUuid final String runId,
             @QueryParam("reason") @NotBlank final String reason) {
+        assertWorkflowEngineEnabled();
+
         WorkflowEngine.getInstance().cancelWorkflowRun(UUID.fromString(runId), reason);
         return Response.noContent().build();
     }
 
-    @GET // TODO: Should be POST
+    @POST
     @Path("/run/{id}/suspend")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired
     public Response suspendWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        assertWorkflowEngineEnabled();
+
         WorkflowEngine.getInstance().suspendWorkflowRun(UUID.fromString(runId));
         return Response.noContent().build();
     }
 
-    @GET // TODO: Should be POST
+    @POST
     @Path("/run/{id}/resume")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired
     public Response resumeWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        assertWorkflowEngineEnabled();
+
         WorkflowEngine.getInstance().resumeWorkflowRun(UUID.fromString(runId));
         return Response.noContent().build();
+    }
+
+    private void assertWorkflowEngineEnabled() {
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            throw new ClientErrorException(Response.Status.NOT_FOUND);
+        }
     }
 
 }

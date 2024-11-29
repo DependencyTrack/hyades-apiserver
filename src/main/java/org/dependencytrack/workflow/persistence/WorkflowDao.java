@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
@@ -33,6 +34,7 @@ import org.dependencytrack.workflow.persistence.model.PolledInboxEvent;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
@@ -49,6 +51,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -92,6 +95,56 @@ public final class WorkflowDao {
                 .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executePreparedBatch("*")
                 .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .list();
+    }
+
+    public List<WorkflowRunListRow> getWorkflowRuns() {
+        // TODO: Make apiFilterParameter work with ID, without risking type errors
+        //  in case the provided value is not a valid UUID.
+        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="apiFilterParameter" type="String" -->
+                <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+                <#-- @ftlvariable name="apiOrderByClause" type="String" -->
+                SELECT "ID" AS "id"
+                     , "WORKFLOW_NAME" AS "workflowName"
+                     , "WORKFLOW_VERSION" AS "workflowVersion"
+                     , "STATUS" AS "status"
+                     , "CUSTOM_STATUS" AS "customStatus"
+                     , "PRIORITY" AS "priority"
+                     , "CREATED_AT" AS "createdAt"
+                     , "UPDATED_AT" AS "updatedAt"
+                     , "COMPLETED_AT" AS "completedAt"
+                     , (SELECT COUNT(*)
+                          FROM "WORKFLOW_EVENT_LOG" AS "WEL"
+                         WHERE "WEL"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "historySize"
+                     , (SELECT COUNT(*)
+                          FROM "WORKFLOW_EVENT_INBOX" AS "WEI"
+                         WHERE "WEI"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "pendingEvents"
+                     , (SELECT COUNT(*)
+                          FROM "WORKFLOW_ACTIVITY_TASK" AS "WAT"
+                         WHERE "WAT"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "pendingActivities"
+                     , COUNT(*) OVER() AS "totalCount"
+                  FROM "WORKFLOW_RUN"
+                <#if apiFilterParameter??>
+                 WHERE "WORKFLOW_NAME" LIKE ('%' || ${apiFilterParameter} || '%')
+                </#if>
+                ${apiOrderByClause!}
+                ${apiOffsetLimitClause!}
+                """);
+
+        return query
+                .configure(ApiRequestConfig.class, apiRequestConfig ->
+                        apiRequestConfig.setOrderingAllowedColumns(Set.of(
+                                new ApiRequestConfig.OrderingColumn("id"),
+                                new ApiRequestConfig.OrderingColumn("workflowName"),
+                                new ApiRequestConfig.OrderingColumn("priority"),
+                                new ApiRequestConfig.OrderingColumn("createdAt"),
+                                new ApiRequestConfig.OrderingColumn("updatedAt"),
+                                new ApiRequestConfig.OrderingColumn("completedAt"),
+                                new ApiRequestConfig.OrderingColumn("historySize"),
+                                new ApiRequestConfig.OrderingColumn("pendingEvents"),
+                                new ApiRequestConfig.OrderingColumn("pendingActivities"))))
+                .map(ConstructorMapper.of(WorkflowRunListRow.class))
                 .list();
     }
 
