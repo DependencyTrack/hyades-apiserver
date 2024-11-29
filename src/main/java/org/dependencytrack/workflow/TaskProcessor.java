@@ -20,9 +20,7 @@ package org.dependencytrack.workflow;
 
 import java.util.List;
 
-sealed interface TaskProcessor<T extends Task> permits
-        ActivityTaskProcessor,
-        WorkflowTaskProcessor {
+sealed interface TaskProcessor<T extends Task> permits ActivityTaskProcessor, WorkflowTaskProcessor {
 
     List<T> poll(final int limit);
 

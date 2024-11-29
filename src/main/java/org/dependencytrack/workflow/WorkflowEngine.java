@@ -509,14 +509,17 @@ public class WorkflowEngine implements Closeable {
         return taskActionBuffer.add(new CompleteWorkflowTaskAction(workflowRun));
     }
 
-    private void completeWorkflowTasks(final WorkflowDao dao, final Collection<WorkflowRun> workflowRuns) {
-        final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(workflowRuns.size() * 2);
-        final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(workflowRuns.size() * 2);
+    private void completeWorkflowTasksInternal(
+            final WorkflowDao dao,
+            final Collection<CompleteWorkflowTaskAction> actions) {
+        final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(actions.size() * 2);
+        final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(actions.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
         final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
 
         final int updatedRuns = dao.updateWorkflowRuns(this.instanceId,
-                workflowRuns.stream()
+                actions.stream()
+                        .map(CompleteWorkflowTaskAction::workflowRun)
                         .map(run -> new WorkflowRunRowUpdate(
                                 run.workflowRunId(),
                                 run.status(),
@@ -528,9 +531,11 @@ public class WorkflowEngine implements Closeable {
                                 run.updatedAt().orElse(null),
                                 run.completedAt().orElse(null)))
                         .toList());
-        assert updatedRuns == workflowRuns.size();
+        assert updatedRuns == actions.size();
 
-        for (final WorkflowRun workflowRun : workflowRuns) {
+        for (final CompleteWorkflowTaskAction action : actions) {
+            final WorkflowRun workflowRun = action.workflowRun();
+
             int sequenceNumber = workflowRun.eventLog().size();
             for (final WorkflowEvent newEvent : workflowRun.inboxEvents()) {
                 newEventLogEntries.add(new NewWorkflowEventLogRow(
@@ -617,8 +622,12 @@ public class WorkflowEngine implements Closeable {
         }
 
         final int deletedInboxEvents = dao.deleteLockedInboxEvents(
-                this.instanceId, workflowRuns.stream().map(WorkflowRun::workflowRunId).toList());
-        assert deletedInboxEvents >= workflowRuns.size();
+                this.instanceId,
+                actions.stream()
+                        .map(CompleteWorkflowTaskAction::workflowRun)
+                        .map(WorkflowRun::workflowRunId)
+                        .toList());
+        assert deletedInboxEvents >= actions.size();
     }
 
     List<ActivityTask> pollActivityTasks(final String activityName, final int limit, final Duration lockTimeout) {
@@ -660,53 +669,62 @@ public class WorkflowEngine implements Closeable {
         return taskActionBuffer.add(new FailActivityTaskAction(task, exception, Instant.now()));
     }
 
-    // TODO: Make this a batch operation.
-    private void completeActivityTaskInternal(final WorkflowDao dao, final CompleteActivityTaskAction action) {
-        final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
-                .setTaskScheduledEventId(action.task().scheduledEventId());
-        if (action.result() != null) {
-            taskCompletedBuilder.setResult(action.result());
+    private void completeActivityTasksInternal(
+            final WorkflowDao dao,
+            final Collection<CompleteActivityTaskAction> actions) {
+        final var tasksToDelete = new ArrayList<ActivityTaskId>(actions.size());
+        final var inboxEventsToCreate = new ArrayList<NewWorkflowEventInboxRow>(actions.size());
+
+        for (final CompleteActivityTaskAction action : actions) {
+            tasksToDelete.add(new ActivityTaskId(action.task().workflowRunId(), action.task().scheduledEventId()));
+
+            final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
+                    .setTaskScheduledEventId(action.task().scheduledEventId());
+            if (action.result() != null) {
+                taskCompletedBuilder.setResult(action.result());
+            }
+            inboxEventsToCreate.add(new NewWorkflowEventInboxRow(
+                    action.task().workflowRunId(),
+                    null,
+                    WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(toTimestamp(action.timestamp()))
+                            .setActivityTaskCompleted(taskCompletedBuilder.build())
+                            .build()));
         }
 
-        final int createdInboxEvents = dao.createInboxEvents(List.of(
-                new NewWorkflowEventInboxRow(
-                        action.task().workflowRunId(),
-                        null,
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(toTimestamp(action.timestamp()))
-                                .setActivityTaskCompleted(taskCompletedBuilder.build())
-                                .build())));
-        assert createdInboxEvents == 1;
+        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
+        assert deletedTasks == tasksToDelete.size();
 
-        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId,
-                Stream.of(action.task())
-                        .map(t -> new ActivityTaskId(t.workflowRunId(), t.scheduledEventId()))
-                        .toList());
-        assert deletedTasks == 1;
+        final int createdInboxEvents = dao.createInboxEvents(inboxEventsToCreate);
+        assert createdInboxEvents == inboxEventsToCreate.size();
     }
 
-    // TODO: Make this a batch operation.
-    private void failActivityTaskInternal(final WorkflowDao dao, final FailActivityTaskAction action) {
-        final int createdInboxEvents = dao.createInboxEvents(List.of(
-                new NewWorkflowEventInboxRow(
-                        action.task().workflowRunId(),
-                        null,
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(toTimestamp(action.timestamp()))
-                                .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                        .setTaskScheduledEventId(action.task().scheduledEventId())
-                                        .setFailureDetails(ExceptionUtils.getMessage(action.exception()))
-                                        .build())
-                                .build())));
-        assert createdInboxEvents == 1;
+    private void failActivityTasksInternal(final WorkflowDao dao, final Collection<FailActivityTaskAction> actions) {
+        final var tasksToDelete = new ArrayList<ActivityTaskId>(actions.size());
+        final var inboxEventsToCreate = new ArrayList<NewWorkflowEventInboxRow>(actions.size());
 
-        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId,
-                Stream.of(action.task())
-                        .map(t -> new ActivityTaskId(t.workflowRunId(), t.scheduledEventId()))
-                        .toList());
-        assert deletedTasks == 1;
+        for (final FailActivityTaskAction action : actions) {
+            tasksToDelete.add(new ActivityTaskId(action.task().workflowRunId(), action.task().scheduledEventId()));
+
+            inboxEventsToCreate.add(new NewWorkflowEventInboxRow(
+                    action.task().workflowRunId(),
+                    null,
+                    WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(toTimestamp(action.timestamp()))
+                            .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
+                                    .setTaskScheduledEventId(action.task().scheduledEventId())
+                                    .setFailureDetails(ExceptionUtils.getMessage(action.exception()))
+                                    .build())
+                            .build()));
+        }
+
+        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
+        assert deletedTasks == tasksToDelete.size();
+
+        final int createdInboxEvents = dao.createInboxEvents(inboxEventsToCreate);
+        assert createdInboxEvents == inboxEventsToCreate.size();
     }
 
     Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
@@ -722,19 +740,28 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             // TODO: Group by action and process them using batch queries.
-            final var runsToComplete = new ArrayList<WorkflowRun>();
+            final var completeActivityTaskActions = new ArrayList<CompleteActivityTaskAction>();
+            final var failActivityTaskActions = new ArrayList<FailActivityTaskAction>();
+            final var completeWorkflowTaskActions = new ArrayList<CompleteWorkflowTaskAction>();
+
             for (final TaskAction action : actions) {
                 switch (action) {
                     case AbandonActivityTaskAction a -> abandonActivityTask(dao, a.task());
-                    case CompleteActivityTaskAction c -> completeActivityTaskInternal(dao, c);
-                    case FailActivityTaskAction f -> failActivityTaskInternal(dao, f);
+                    case CompleteActivityTaskAction c -> completeActivityTaskActions.add(c);
+                    case FailActivityTaskAction f -> failActivityTaskActions.add(f);
                     case AbandonWorkflowTaskAction a -> abandonWorkflowTask(dao, a.task());
-                    case CompleteWorkflowTaskAction c -> runsToComplete.add(c.workflowRun());
+                    case CompleteWorkflowTaskAction c -> completeWorkflowTaskActions.add(c);
                 }
             }
 
-            if (!runsToComplete.isEmpty()) {
-                completeWorkflowTasks(dao, runsToComplete);
+            if (!completeActivityTaskActions.isEmpty()) {
+                completeActivityTasksInternal(dao, completeActivityTaskActions);
+            }
+            if (!failActivityTaskActions.isEmpty()) {
+                failActivityTasksInternal(dao, failActivityTaskActions);
+            }
+            if (!completeWorkflowTaskActions.isEmpty()) {
+                completeWorkflowTasksInternal(dao, completeWorkflowTaskActions);
             }
         });
     }
