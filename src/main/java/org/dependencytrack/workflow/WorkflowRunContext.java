@@ -332,6 +332,13 @@ public final class WorkflowRunContext<A, R> {
 
     private void processEvent(final WorkflowEvent event) {
         if (isSuspended && !event.hasRunResumed() && !event.hasRunCancelled()) {
+            if (event.hasRunSuspended()) {
+                logger().warn("""
+                    Encountered RunSuspended event at index {}, \
+                    but run is already suspended. Ignoring.""", currentEventIndex);
+                return;
+            }
+
             suspendedEvents.add(event);
             return;
         }
@@ -372,7 +379,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onRunStarted(final RunStarted ignored) {
-        LOGGER.debug("Started");
+        logger().debug("Started");
 
         final Optional<R> result;
         try {
@@ -389,17 +396,24 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onRunCancelled(final RunCancelled runCancelled) {
-        LOGGER.debug("Cancelled with reason: {}", runCancelled.getReason());
+        logger().debug("Cancelled with reason: {}", runCancelled.getReason());
         throw new WorkflowRunCancelledException(runCancelled.getReason());
     }
 
     private void onRunSuspended(final RunSuspended ignored) {
-        LOGGER.debug("Suspended");
-        this.isSuspended = true;
+        logger().debug("Suspended");
+        isSuspended = true;
     }
 
     private void onRunResumed(final RunResumed ignored) {
-        LOGGER.debug("Resumed");
+        if (!isSuspended) {
+            logger().warn("""
+                    Encountered RunResumed event at index {}, \
+                    but run is not in suspended state. Ignoring.""", currentEventIndex);
+            return;
+        }
+
+        logger().debug("Resumed");
         isSuspended = false;
 
         for (final WorkflowEvent event : suspendedEvents) {
@@ -408,16 +422,16 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onActivityTaskScheduled(final int eventId) {
-        LOGGER.debug("Activity task scheduled for event ID {}", eventId);
+        logger().debug("Activity task scheduled for event ID {}", eventId);
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
-            LOGGER.warn("""
+            logger().warn("""
                     Encountered ActivityTaskScheduled event for event ID {}, \
                     but no pending action was found for it""", eventId);
             return;
         } else if (!(action instanceof ScheduleActivityCommand)) {
-            LOGGER.warn("""
+            logger().warn("""
                     Encountered ActivityTaskScheduled event for event ID {}, \
                     but the pending action for that number is of type {}\
                     """, eventId, action.getClass().getSimpleName());
@@ -429,7 +443,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onActivityTaskCompleted(final ActivityTaskCompleted subject) {
         final int eventId = subject.getTaskScheduledEventId();
-        LOGGER.debug("Activity task completed for event ID {}", eventId);
+        logger().debug("Activity task completed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -444,7 +458,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onActivityTaskFailed(final ActivityTaskFailed subject) {
         final int eventId = subject.getTaskScheduledEventId();
-        LOGGER.debug("Activity task failed for event ID {}", eventId);
+        logger().debug("Activity task failed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -459,7 +473,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onSubWorkflowRunScheduled(final int eventId) {
-        LOGGER.debug("Sub workflow run scheduled for event ID {}", eventId);
+        logger().debug("Sub workflow run scheduled for event ID {}", eventId);
 
         final WorkflowCommand command = pendingCommandByEventId.get(eventId);
         if (command == null) {
@@ -478,7 +492,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onSubWorkflowRunCompleted(final SubWorkflowRunCompleted subject) {
         final int eventId = subject.getRunScheduledEventId();
-        LOGGER.debug("Sub workflow run failed for event ID {}", eventId);
+        logger().debug("Sub workflow run failed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -493,7 +507,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onSubWorkflowRunFailed(final SubWorkflowRunFailed subject) {
         final int eventId = subject.getRunScheduledEventId();
-        LOGGER.debug("Sub workflow run failed for event ID {}", eventId);
+        logger().debug("Sub workflow run failed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -508,7 +522,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onTimerScheduled(final int eventId) {
-        LOGGER.debug("Timer created for event ID {}", eventId);
+        logger().debug("Timer created for event ID {}", eventId);
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
@@ -527,7 +541,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onTimerFired(final TimerFired subject) {
         final int eventId = subject.getTimerScheduledEventId();
-        LOGGER.debug("Timer fired for event ID {}", eventId);
+        logger().debug("Timer fired for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -542,7 +556,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onSideEffectExecuted(final SideEffectExecuted subject) {
         final int eventId = subject.getSideEffectEventId();
-        LOGGER.debug("Side effect executed for event ID {}", eventId);
+        logger().debug("Side effect executed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
@@ -559,7 +573,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void onExternalEventReceived(final WorkflowEvent event) {
         final String externalEventId = event.getExternalEventReceived().getId();
-        LOGGER.debug("External event received for ID {}", externalEventId);
+        logger().debug("External event received for ID {}", externalEventId);
 
         final WorkflowPayload externalEventContent = event.getExternalEventReceived().hasContent()
                 ? event.getExternalEventReceived().getContent()
@@ -589,8 +603,8 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void cancel(final String reason) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Workflow run {}/{} cancelled", workflowName, workflowRunId);
+        if (logger().isDebugEnabled()) {
+            logger().debug("Workflow run {}/{} cancelled", workflowName, workflowRunId);
         }
 
         final int eventId = currentEventId++;
@@ -600,11 +614,13 @@ public final class WorkflowRunContext<A, R> {
                         WorkflowRunStatus.CANCELLED,
                         /* result */ null,
                         reason));
+
+        isSuspended = false;
     }
 
     private void complete(final R result) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Workflow run {}/{} completed with result {}", workflowName, workflowRunId, result);
+        if (logger().isDebugEnabled()) {
+            logger().debug("Workflow run {}/{} completed with result {}", workflowName, workflowRunId, result);
         }
 
         final int eventId = currentEventId++;
@@ -617,8 +633,8 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void fail(final Throwable exception) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
+        if (logger().isDebugEnabled()) {
+            logger().debug("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
         }
 
         final int eventId = currentEventId++;
