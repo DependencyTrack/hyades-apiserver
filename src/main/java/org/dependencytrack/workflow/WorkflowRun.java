@@ -31,7 +31,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.workflow.WorkflowCommand.CompleteExecutionCommand;
+import org.dependencytrack.workflow.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleSubWorkflowCommand;
@@ -44,6 +44,7 @@ import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
 
+import static org.dependencytrack.workflow.WorkflowEngine.randomUUIDv7;
 import static org.dependencytrack.workflow.WorkflowEngine.toTimestamp;
 
 public class WorkflowRun {
@@ -202,7 +203,7 @@ public class WorkflowRun {
 
     private void executeCommand(final WorkflowCommand command) {
         switch (command) {
-            case CompleteExecutionCommand completeCommand -> executeCompleteExecutionCommand(completeCommand);
+            case CompleteRunCommand completeCommand -> executeCompleteRunCommand(completeCommand);
             case RecordSideEffectResultCommand sideEffectCommand ->
                     executeRecordSideEffectResultCommand(sideEffectCommand);
             case ScheduleActivityCommand activityCommand -> executeScheduleActivityTaskCommand(activityCommand);
@@ -212,7 +213,7 @@ public class WorkflowRun {
         }
     }
 
-    private void executeCompleteExecutionCommand(final CompleteExecutionCommand command) {
+    private void executeCompleteRunCommand(final CompleteRunCommand command) {
         if (startedEvent.getRunStarted().hasParentRun()) {
             final ParentWorkflowRun parentRun = startedEvent.getRunStarted().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
@@ -297,7 +298,7 @@ public class WorkflowRun {
     }
 
     private void executeScheduleSubWorkflowCommand(final ScheduleSubWorkflowCommand command) {
-        final var subWorkflowRunId = UUID.randomUUID();
+        final UUID subWorkflowRunId = randomUUIDv7();
 
         final var subWorkflowScheduledBuilder = SubWorkflowRunScheduled.newBuilder()
                 .setRunId(subWorkflowRunId.toString())

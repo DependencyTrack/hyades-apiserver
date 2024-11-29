@@ -31,7 +31,10 @@ import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
+import org.dependencytrack.proto.workflow.v1alpha1.RunCancelled;
+import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
+import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.TaskAction.AbandonActivityTaskAction;
@@ -77,6 +80,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
@@ -283,12 +287,11 @@ public class WorkflowEngine implements Closeable {
             throw new IllegalStateException("Activity %s is already registered".formatted(activityName));
         }
 
-        // TODO: Use virtual threads?
-        final ExecutorService executorService = Executors.newFixedThreadPool(maxConcurrency,
-                new BasicThreadFactory.Builder()
+        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .namingPattern("WorkflowEngine-ActivityRunner-" + activityName + "-%d")
-                        .build());
+                        .name("WorkflowEngine-ActivityRunner-" + activityName + "-", 0)
+                        .factory());
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityRunner-" + activityName, null)
                     .bindTo(Metrics.getRegistry());
@@ -309,7 +312,7 @@ public class WorkflowEngine implements Closeable {
         final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
         final var newInboxEventRows = new ArrayList<NewWorkflowEventInboxRow>(options.size());
         for (final ScheduleWorkflowRunOptions option : options) {
-            final var runId = UUID.randomUUID();
+            final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(new NewWorkflowRunRow(
                     runId, option.workflowName(), option.workflowVersion(), option.argument()));
             newInboxEventRows.add(new NewWorkflowEventInboxRow(runId, null,
@@ -345,6 +348,62 @@ public class WorkflowEngine implements Closeable {
         }
 
         return scheduledRunIds.getFirst();
+    }
+
+    public void cancelWorkflowRun(final UUID runId, final String reason) {
+        final var cancellationEvent = WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.now())
+                .setRunCancelled(RunCancelled.newBuilder()
+                        .setReason(reason)
+                        .build())
+                .build();
+
+        // TODO: Assert that current run status is not terminal.
+
+        useJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final int createdInboxEvents = dao.createInboxEvents(List.of(
+                    new NewWorkflowEventInboxRow(runId, null, cancellationEvent)));
+            assert createdInboxEvents == 1;
+        });
+    }
+
+    public void suspendWorkflowRun(final UUID runId) {
+        final var suspensionEvent = WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.now())
+                .setRunSuspended(RunSuspended.newBuilder().build())
+                .build();
+
+        // TODO: Assert that current run status is not suspended or terminal.
+
+        useJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final int createdInboxEvents = dao.createInboxEvents(List.of(
+                    new NewWorkflowEventInboxRow(runId, null, suspensionEvent)));
+            assert createdInboxEvents == 1;
+        });
+    }
+
+    public void resumeWorkflowRun(final UUID runId) {
+        final var resumeEvent = WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.now())
+                .setRunResumed(RunResumed.newBuilder().build())
+                .build();
+
+        // TODO: Assert that current run status is suspended.
+
+        useJdbiTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final int createdInboxEvents = dao.createInboxEvents(List.of(
+                    new NewWorkflowEventInboxRow(runId, null, resumeEvent)));
+            assert createdInboxEvents == 1;
+        });
     }
 
     public CompletableFuture<Void> sendExternalEvent(
@@ -503,6 +562,22 @@ public class WorkflowEngine implements Closeable {
                         message.recipientRunId(),
                         toInstant(message.event().getTimestamp()),
                         message.event()));
+            }
+
+            // If there are pending sub workflow runs, make sure those are cancelled, too.
+            if (workflowRun.status() == WorkflowRunStatus.CANCELLED) {
+                for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(workflowRun)) {
+                    newInboxEvents.add(new NewWorkflowEventInboxRow(
+                            subWorkflowRunId,
+                            null,
+                            WorkflowEvent.newBuilder()
+                                    .setId(-1)
+                                    .setTimestamp(Timestamps.now())
+                                    .setRunCancelled(RunCancelled.newBuilder()
+                                            .setReason("Parent cancelled")
+                                            .build())
+                                    .build()));
+                }
             }
 
             for (final WorkflowEvent newEvent : workflowRun.pendingActivityTaskScheduledEvents()) {
@@ -681,6 +756,29 @@ public class WorkflowEngine implements Closeable {
         return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunEventLog(runId));
     }
 
+    private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRun run) {
+        final var runIdByEventId = new HashMap<Integer, UUID>();
+
+        Stream.concat(run.eventLog().stream(), run.inboxEvents().stream()).forEach(event -> {
+            switch (event.getSubjectCase()) {
+                case SUB_WORKFLOW_RUN_SCHEDULED -> {
+                    final String runId = event.getSubWorkflowRunScheduled().getRunId();
+                    runIdByEventId.put(event.getId(), UUID.fromString(runId));
+                }
+                case SUB_WORKFLOW_RUN_COMPLETED -> {
+                    final int scheduledEventId = event.getSubWorkflowRunCompleted().getRunScheduledEventId();
+                    runIdByEventId.remove(scheduledEventId);
+                }
+                case SUB_WORKFLOW_RUN_FAILED -> {
+                    final int scheduledEventId = event.getSubWorkflowRunFailed().getRunScheduledEventId();
+                    runIdByEventId.remove(scheduledEventId);
+                }
+            }
+        });
+
+        return Set.copyOf(runIdByEventId.values());
+    }
+
     State state() {
         return state;
     }
@@ -710,6 +808,14 @@ public class WorkflowEngine implements Closeable {
 
     static Timestamp toTimestamp(final Instant instant) {
         return Timestamps.fromDate(Date.from(instant));
+    }
+
+    static UUID randomUUIDv7() {
+        // UUIDv7 cause BTREE indexes (i.e., primary keys) to bloat less than other UUID versions,
+        // because they're time-sortable.
+        // https://antonz.org/uuidv7/
+        // https://maciejwalkowiak.com/blog/postgres-uuid-primary-key/
+        return timeBasedEpochRandomGenerator().generate();
     }
 
     private static void requireValidWorkflowName(final String workflowName) {

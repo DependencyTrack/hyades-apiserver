@@ -26,17 +26,15 @@ import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORK
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
-import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_TERMINATED;
 
 public enum WorkflowRunStatus {
 
-    PENDING(1, 3),          // 0
-    RUNNING(2, 3, 4, 5, 6), // 1
-    SUSPENDED(1, 3, 6),     // 2
-    CANCELLED,              // 3
-    COMPLETED,              // 4
-    FAILED,                 // 5
-    TERMINATED;             // 6
+    PENDING(1, 3),       // 0
+    RUNNING(2, 3, 4, 5), // 1
+    SUSPENDED(1, 3),     // 2
+    CANCELLED,           // 3
+    COMPLETED,           // 4
+    FAILED;              // 5
 
     private final Set<Integer> allowedTransitions;
 
@@ -48,6 +46,10 @@ public enum WorkflowRunStatus {
         return allowedTransitions.contains(newState.ordinal());
     }
 
+    boolean isTerminal() {
+        return !equals(PENDING) && !equals(RUNNING) && !equals(SUSPENDED);
+    }
+
     static WorkflowRunStatus fromProto(
             final org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
@@ -57,7 +59,6 @@ public enum WorkflowRunStatus {
             case WORKFLOW_RUN_STATUS_CANCELLED -> CANCELLED;
             case WORKFLOW_RUN_STATUS_COMPLETED -> COMPLETED;
             case WORKFLOW_RUN_STATUS_FAILED -> FAILED;
-            case WORKFLOW_RUN_STATUS_TERMINATED -> TERMINATED;
             default -> throw new IllegalArgumentException("Unexpected status: " + protoStatus);
         };
     }
@@ -70,7 +71,6 @@ public enum WorkflowRunStatus {
             case CANCELLED -> WORKFLOW_RUN_STATUS_CANCELLED;
             case COMPLETED -> WORKFLOW_RUN_STATUS_COMPLETED;
             case FAILED -> WORKFLOW_RUN_STATUS_FAILED;
-            case TERMINATED -> WORKFLOW_RUN_STATUS_TERMINATED;
         };
     }
 
