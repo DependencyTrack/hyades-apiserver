@@ -18,28 +18,25 @@
  */
 package org.dependencytrack.model.validation;
 
-import jakarta.validation.Constraint;
-import jakarta.validation.Payload;
-import jakarta.validation.ReportAsSingleViolation;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
+import java.util.UUID;
 
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+public class ValidUuidValidator implements ConstraintValidator<ValidUuid, String> {
 
-/**
- * @since 4.11.0
- */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.TYPE_USE})
-@Constraint(validatedBy = ValidUuidValidator.class)
-@Retention(RUNTIME)
-@ReportAsSingleViolation
-public @interface ValidUuid {
+    @Override
+    public boolean isValid(final String uuidString, final ConstraintValidatorContext validatorContext) {
+        if (uuidString == null) {
+            // null-ness is expected to be validated using @NotNull
+            return true;
+        }
 
-    String message() default "Invalid UUID";
-
-    Class<?>[] groups() default {};
-
-    Class<? extends Payload>[] payload() default {};
+        try {
+            UUID.fromString(uuidString);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
 
 }
