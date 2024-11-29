@@ -174,7 +174,7 @@ public final class WorkflowDao {
                     SELECT "ID"
                       FROM "WORKFLOW_RUN"
                      WHERE "WORKFLOW_NAME" = :workflowName
-                       AND "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[])
+                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                        AND EXISTS (SELECT 1
                                      FROM "WORKFLOW_EVENT_INBOX"

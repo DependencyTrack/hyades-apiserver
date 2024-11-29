@@ -23,17 +23,17 @@ import io.github.resilience4j.core.IntervalFunction;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
+import org.dependencytrack.proto.workflow.v1alpha1.RunCancelled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
-import org.dependencytrack.proto.workflow.v1alpha1.RunTerminated;
 import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.workflow.WorkflowCommand.CompleteExecutionCommand;
+import org.dependencytrack.workflow.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleSubWorkflowCommand;
@@ -301,10 +301,14 @@ public final class WorkflowRunContext<A, R> {
         try {
             WorkflowEvent currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
-                LOGGER.debug("Processed " + currentEvent);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Processed {}", currentEvent);
+                }
             }
         } catch (WorkflowRunBlockedException e) {
             LOGGER.debug("Blocked", e);
+        } catch (WorkflowRunCancelledException e) {
+            cancel(e.getMessage());
         } catch (Exception e) {
             fail(e);
         }
@@ -327,7 +331,7 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void processEvent(final WorkflowEvent event) {
-        if (isSuspended && !event.hasRunResumed() && !event.hasRunTerminated()) {
+        if (isSuspended && !event.hasRunResumed() && !event.hasRunCancelled()) {
             suspendedEvents.add(event);
             return;
         }
@@ -335,9 +339,9 @@ public final class WorkflowRunContext<A, R> {
         switch (event.getSubjectCase()) {
             case RUNNER_STARTED -> onRunnerStarted(event.getTimestamp());
             case RUN_STARTED -> onRunStarted(event.getRunStarted());
+            case RUN_CANCELLED -> onRunCancelled(event.getRunCancelled());
             case RUN_SUSPENDED -> onRunSuspended(event.getRunSuspended());
             case RUN_RESUMED -> onRunResumed(event.getRunResumed());
-            case RUN_TERMINATED -> onRunTerminated(event.getRunTerminated());
             case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getId());
             case ACTIVITY_TASK_COMPLETED -> onActivityTaskCompleted(event.getActivityTaskCompleted());
             case ACTIVITY_TASK_FAILED -> onActivityTaskFailed(event.getActivityTaskFailed());
@@ -384,6 +388,11 @@ public final class WorkflowRunContext<A, R> {
         complete(result.orElse(null));
     }
 
+    private void onRunCancelled(final RunCancelled runCancelled) {
+        LOGGER.debug("Cancelled with reason: {}", runCancelled.getReason());
+        throw new WorkflowRunCancelledException(runCancelled.getReason());
+    }
+
     private void onRunSuspended(final RunSuspended ignored) {
         LOGGER.debug("Suspended");
         this.isSuspended = true;
@@ -396,10 +405,6 @@ public final class WorkflowRunContext<A, R> {
         for (final WorkflowEvent event : suspendedEvents) {
             processEvent(event);
         }
-    }
-
-    private void onRunTerminated(final RunTerminated ignored) {
-        LOGGER.debug("Terminated");
     }
 
     private void onActivityTaskScheduled(final int eventId) {
@@ -583,10 +588,28 @@ public final class WorkflowRunContext<A, R> {
         });
     }
 
-    private void complete(final R result) {
+    private void cancel(final String reason) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Workflow run {}/{} cancelled", workflowName, workflowRunId);
+        }
+
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
-                new CompleteExecutionCommand(
+                new CompleteRunCommand(
+                        eventId,
+                        WorkflowRunStatus.CANCELLED,
+                        /* result */ null,
+                        reason));
+    }
+
+    private void complete(final R result) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Workflow run {}/{} completed with result {}", workflowName, workflowRunId, result);
+        }
+
+        final int eventId = currentEventId++;
+        pendingCommandByEventId.put(eventId,
+                new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.COMPLETED,
                         resultConverter.convertToPayload(result),
@@ -594,11 +617,13 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void fail(final Throwable exception) {
-        LOGGER.warn("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
+        }
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
-                new CompleteExecutionCommand(
+                new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.FAILED,
                         /* result */ null,

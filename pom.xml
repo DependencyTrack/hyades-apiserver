@@ -94,6 +94,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>9.1.0</lib.cyclonedx-java.version>
         <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
+        <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.jackson.version>2.18.0</lib.jackson.version>
         <lib.jackson-databind.version>2.18.0</lib.jackson-databind.version>
@@ -313,6 +314,12 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${lib.jackson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+            <version>${lib.java-uuid-generator.version}</version>
         </dependency>
 
         <!-- Package URL -->

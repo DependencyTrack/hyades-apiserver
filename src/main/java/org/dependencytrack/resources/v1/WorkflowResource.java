@@ -40,15 +40,18 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
+import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
@@ -156,6 +159,35 @@ public class WorkflowResource {
         });
 
         return Response.ok(run).build();
+    }
+
+    @GET // TODO: Should be POST
+    @Path("/run/{id}/cancel")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response cancelWorkflowRun(
+            @PathParam("id") @ValidUuid final String runId,
+            @QueryParam("reason") @NotBlank final String reason) {
+        WorkflowEngine.getInstance().cancelWorkflowRun(UUID.fromString(runId), reason);
+        return Response.noContent().build();
+    }
+
+    @GET // TODO: Should be POST
+    @Path("/run/{id}/suspend")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response suspendWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        WorkflowEngine.getInstance().suspendWorkflowRun(UUID.fromString(runId));
+        return Response.noContent().build();
+    }
+
+    @GET // TODO: Should be POST
+    @Path("/run/{id}/resume")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response resumeWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+        WorkflowEngine.getInstance().resumeWorkflowRun(UUID.fromString(runId));
+        return Response.noContent().build();
     }
 
 }

@@ -94,6 +94,17 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 task.workflowName(),
                 task.workflowVersion(),
                 task.eventLog());
+        if (workflowRun.status().isTerminal()) {
+            LOGGER.warn("""
+                    Task was scheduled despite the workflow run already being in terminal state {}. \
+                    Discarding {} events in the run's inbox.""", workflowRun.status(), task.inboxEvents().size());
+
+            // TODO: Discard the inbox events without modifying the workflow run.
+            // TODO: Consider logging discarded events.
+            abandon(task);
+            return;
+        }
+
         workflowRun.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())

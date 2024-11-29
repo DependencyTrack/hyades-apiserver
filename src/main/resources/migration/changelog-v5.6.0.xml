@@ -149,7 +149,6 @@
             , 'CANCELLED'
             , 'COMPLETED'
             , 'FAILED'
-            , 'TERMINATED'
             )
         </sql>
 
@@ -196,7 +195,7 @@
                    , "WORKFLOW_NAME"
                    , "LOCKED_UNTIL")
             INCLUDE ("ID")
-              WHERE "STATUS" = ANY('{PENDING, RUNNING}'::WORKFLOW_RUN_STATUS[]);
+              WHERE "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]);
         </sql>
 
         <createTable tableName="WORKFLOW_EVENT_LOG">

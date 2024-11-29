@@ -21,17 +21,21 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
 import java.time.Instant;
-import java.util.UUID;
 
 sealed interface WorkflowCommand permits
-        WorkflowCommand.CompleteExecutionCommand,
+        WorkflowCommand.CancelRunCommand,
+        WorkflowCommand.CompleteRunCommand,
         WorkflowCommand.RecordSideEffectResultCommand,
         WorkflowCommand.ScheduleActivityCommand,
         WorkflowCommand.ScheduleSubWorkflowCommand,
-        WorkflowCommand.ScheduleTimerCommand,
-        WorkflowCommand.TerminateExecutionCommand {
+        WorkflowCommand.ScheduleTimerCommand {
 
-    record CompleteExecutionCommand(
+    record CancelRunCommand(
+            int eventId,
+            String reason) implements WorkflowCommand {
+    }
+
+    record CompleteRunCommand(
             int eventId,
             WorkflowRunStatus status,
             WorkflowPayload result,
@@ -63,11 +67,6 @@ sealed interface WorkflowCommand permits
     record ScheduleTimerCommand(
             int eventId,
             Instant elapseAt) implements WorkflowCommand {
-    }
-
-    record TerminateExecutionCommand(
-            int eventId,
-            UUID instanceId) implements WorkflowCommand {
     }
 
 }

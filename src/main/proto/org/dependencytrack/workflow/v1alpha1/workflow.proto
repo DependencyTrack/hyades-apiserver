@@ -25,7 +25,6 @@ enum WorkflowRunStatus {
   WORKFLOW_RUN_STATUS_CANCELLED = 4;
   WORKFLOW_RUN_STATUS_COMPLETED = 5;
   WORKFLOW_RUN_STATUS_FAILED = 6;
-  WORKFLOW_RUN_STATUS_TERMINATED = 7;
 }
 
 message WorkflowEvent {
@@ -38,10 +37,10 @@ message WorkflowEvent {
     RunnerCompleted Runner_completed = 26;
 
     RunStarted run_started = 50;
-    RunSuspended run_suspended = 51;
-    RunResumed run_resumed = 52;
-    RunCompleted run_completed = 53;
-    RunTerminated run_terminated = 54;
+    RunCancelled run_cancelled = 51;
+    RunSuspended run_suspended = 52;
+    RunResumed run_resumed = 53;
+    RunCompleted run_completed = 54;
 
     ActivityTaskScheduled activity_task_scheduled = 75;
     ActivityTaskCompleted activity_task_completed = 76;
@@ -78,24 +77,24 @@ message RunStarted {
   int32 workflow_version= 2;
   optional WorkflowPayload argument = 3;
   optional ParentWorkflowRun parent_run = 4;
+  // TODO: Principal?
+}
+
+message RunCancelled {
+  string reason = 1;
+  // TODO: Principal?
 }
 
 message RunSuspended {
-
 }
 
 message RunResumed {
-
 }
 
 message RunCompleted {
   WorkflowRunStatus status = 1;
   optional WorkflowPayload result = 2;
   optional string failure_details = 3;
-}
-
-message RunTerminated {
-
 }
 
 message ActivityTaskScheduled {
