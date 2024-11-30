@@ -18,13 +18,10 @@
  */
 package org.dependencytrack.workflow.persistence.model;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-
 import java.util.UUID;
 
 public record NewWorkflowRunRow(
         UUID id,
         String workflowName,
-        int workflowVersion,
-        WorkflowPayload argument) {
+        int workflowVersion) {
 }

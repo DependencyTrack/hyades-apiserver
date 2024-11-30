@@ -20,7 +20,6 @@ package org.dependencytrack.workflow.persistence;
 
 import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
@@ -75,14 +74,12 @@ public final class WorkflowDao {
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
                 , "STATUS"
-                , "ARGUMENT"
                 , "CREATED_AT"
                 ) VALUES (
                   :id
                 , :workflowName
                 , :workflowVersion
                 , 'PENDING'
-                , :argument
                 , NOW()
                 )
                 RETURNING "ID"
@@ -95,7 +92,6 @@ public final class WorkflowDao {
         }
 
         return preparedBatch
-                .registerArgument(new WorkflowPayloadArgumentFactory())
                 .executePreparedBatch("ID")
                 .mapTo(UUID.class)
                 .list();
@@ -158,9 +154,6 @@ public final class WorkflowDao {
                 UPDATE "WORKFLOW_RUN"
                    SET "STATUS" = COALESCE(:status, "STATUS")
                      , "CUSTOM_STATUS" = COALESCE(:customStatus, "CUSTOM_STATUS")
-                     , "ARGUMENT" = COALESCE(:argument, "ARGUMENT")
-                     , "RESULT" = COALESCE(:result, "RESULT")
-                     , "FAILURE_DETAILS" = COALESCE(:failureDetails, "FAILURE_DETAILS")
                      , "LOCKED_BY" = NULL
                      , "LOCKED_UNTIL" = NULL
                      , "CREATED_AT" = COALESCE(:createdAt, "CREATED_AT")
@@ -198,7 +191,6 @@ public final class WorkflowDao {
 
         return query
                 .bind("id", id)
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .map(ConstructorMapper.of(WorkflowRunRow.class))
                 .findOne()
                 .orElse(null);
@@ -250,7 +242,6 @@ public final class WorkflowDao {
                         , "WORKFLOW_RUN"."WORKFLOW_NAME"
                         , "WORKFLOW_RUN"."WORKFLOW_VERSION"
                         , "WORKFLOW_RUN"."PRIORITY"
-                        , "WORKFLOW_RUN"."ARGUMENT"
                 """);
 
         return update
@@ -262,8 +253,7 @@ public final class WorkflowDao {
                         "ID",
                         "WORKFLOW_NAME",
                         "WORKFLOW_VERSION",
-                        "PRIORITY",
-                        "ARGUMENT")
+                        "PRIORITY")
                 .map(new PolledWorkflowRunRowMapper())
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }

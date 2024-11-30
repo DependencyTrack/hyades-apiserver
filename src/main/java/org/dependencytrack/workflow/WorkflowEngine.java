@@ -314,15 +314,20 @@ public class WorkflowEngine implements Closeable {
         for (final ScheduleWorkflowRunOptions option : options) {
             final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(new NewWorkflowRunRow(
-                    runId, option.workflowName(), option.workflowVersion(), option.argument()));
+                    runId, option.workflowName(), option.workflowVersion()));
+
+            final var runStartedBuilder = RunStarted.newBuilder()
+                    .setWorkflowName(option.workflowName())
+                    .setWorkflowVersion(option.workflowVersion());
+            if (option.argument() != null) {
+                runStartedBuilder.setArgument(option.argument());
+            }
+
             newInboxEventRows.add(new NewWorkflowEventInboxRow(runId, null,
                     WorkflowEvent.newBuilder()
                             .setId(-1)
                             .setTimestamp(now)
-                            .setRunStarted(RunStarted.newBuilder()
-                                    .setWorkflowName(option.workflowName())
-                                    .setWorkflowVersion(option.workflowVersion())
-                                    .build())
+                            .setRunStarted(runStartedBuilder.build())
                             .build()));
         }
 
@@ -474,7 +479,6 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.workflowName(),
                                 polledRun.workflowVersion(),
                                 polledRun.priority(),
-                                polledRun.argument(),
                                 maxDequeueCount,
                                 eventLog,
                                 inboxEvents);
@@ -522,9 +526,6 @@ public class WorkflowEngine implements Closeable {
                                 run.workflowRunId(),
                                 run.status(),
                                 run.customStatus().orElse(null),
-                                run.argument().orElse(null),
-                                run.result().orElse(null),
-                                run.failureDetails().orElse(null),
                                 run.createdAt().orElse(null),
                                 run.updatedAt().orElse(null),
                                 run.completedAt().orElse(null)))
@@ -556,10 +557,7 @@ public class WorkflowEngine implements Closeable {
                     newWorkflowRuns.add(new NewWorkflowRunRow(
                             message.recipientRunId(),
                             message.event().getRunStarted().getWorkflowName(),
-                            message.event().getRunStarted().getWorkflowVersion(),
-                            message.event().getRunStarted().hasArgument()
-                                    ? message.event().getRunStarted().getArgument()
-                                    : null));
+                            message.event().getRunStarted().getWorkflowVersion()));
                 }
                 newInboxEvents.add(new NewWorkflowEventInboxRow(
                         message.recipientRunId(),
