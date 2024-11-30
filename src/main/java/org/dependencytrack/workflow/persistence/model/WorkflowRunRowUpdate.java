@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.persistence.model;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 
 import java.time.Instant;
@@ -28,9 +27,6 @@ public record WorkflowRunRowUpdate(
         UUID id,
         WorkflowRunStatus status,
         String customStatus,
-        WorkflowPayload argument,
-        WorkflowPayload result,
-        String failureDetails,
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt) {

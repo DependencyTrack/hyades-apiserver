@@ -127,8 +127,8 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 task.workflowName(),
                 task.workflowVersion(),
                 task.priority(),
-                argumentConverter.convertFromPayload(task.argument()),
                 workflowRunner,
+                argumentConverter,
                 resultConverter,
                 workflowRun.eventLog(),
                 workflowRun.inboxEvents());

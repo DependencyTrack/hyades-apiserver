@@ -18,9 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
-import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -32,17 +30,13 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullabl
 
 public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRow> {
 
-    private final ColumnMapper<WorkflowPayload> argumentColumnMapper =
-            new ProtobufColumnMapper<>(WorkflowPayload.parser());
-
     @Override
     public PolledWorkflowRunRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledWorkflowRunRow(
                 rs.getObject("ID", UUID.class),
                 rs.getString("WORKFLOW_NAME"),
                 rs.getInt("WORKFLOW_VERSION"),
-                nullableInt(rs, "PRIORITY"),
-                argumentColumnMapper.map(rs, "ARGUMENT", ctx));
+                nullableInt(rs, "PRIORITY"));
     }
 
 }

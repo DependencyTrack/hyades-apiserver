@@ -41,9 +41,7 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
-import org.dependencytrack.resources.v1.serializers.WorkflowPayloadJsonSerializer;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
@@ -161,9 +159,6 @@ public class WorkflowResource extends AlpineResource {
             int workflowVersion,
             String status,
             WorkflowRunStatus runtimeStatus,
-            @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload argument,
-            @JsonSerialize(using = WorkflowPayloadJsonSerializer.class) WorkflowPayload result,
-            String failureDetails,
             Integer priority,
             String lockedBy,
             Instant lockedUntil,
@@ -198,9 +193,6 @@ public class WorkflowResource extends AlpineResource {
                     runRow.workflowVersion(),
                     runRow.customStatus(),
                     runRow.status(),
-                    runRow.argument(),
-                    runRow.result(),
-                    runRow.failureDetails(),
                     runRow.priority(),
                     runRow.lockedBy(),
                     runRow.lockedUntil(),

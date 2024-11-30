@@ -64,8 +64,8 @@ public final class WorkflowRunContext<A, R> {
     private final String workflowName;
     private final int workflowVersion;
     private final Integer priority;
-    private final A argument;
     private final WorkflowRunner<A, R> workflowRunner;
+    private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
     private final List<WorkflowEvent> eventLog;
     private final List<WorkflowEvent> inboxEvents;
@@ -77,6 +77,7 @@ public final class WorkflowRunContext<A, R> {
     private int currentEventIndex;
     private int currentEventId;
     private Instant currentTime;
+    private A argument;
     private boolean isInSideEffect;
     private boolean isReplaying;
     private boolean isSuspended;
@@ -87,8 +88,8 @@ public final class WorkflowRunContext<A, R> {
             final String workflowName,
             final int workflowVersion,
             final Integer priority,
-            final A argument,
             final WorkflowRunner<A, R> workflowRunner,
+            final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final List<WorkflowEvent> eventLog,
             final List<WorkflowEvent> inboxEvents) {
@@ -96,8 +97,8 @@ public final class WorkflowRunContext<A, R> {
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.priority = priority;
-        this.argument = argument;
         this.workflowRunner = workflowRunner;
+        this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
         this.eventLog = eventLog;
         this.inboxEvents = inboxEvents;
@@ -378,8 +379,12 @@ public final class WorkflowRunContext<A, R> {
         currentTime = WorkflowEngine.toInstant(timestamp);
     }
 
-    private void onRunStarted(final RunStarted ignored) {
+    private void onRunStarted(final RunStarted runStarted) {
         logger().debug("Started");
+
+        if (runStarted.hasArgument()) {
+            this.argument = argumentConverter.convertFromPayload(runStarted.getArgument());
+        }
 
         final Optional<R> result;
         try {

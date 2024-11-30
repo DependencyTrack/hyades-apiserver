@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.workflow.persistence.model;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-
 import jakarta.annotation.Nullable;
 import java.util.UUID;
 
@@ -27,6 +25,5 @@ public record PolledWorkflowRunRow(
         UUID id,
         String workflowName,
         int workflowVersion,
-        @Nullable Integer priority,
-        @Nullable WorkflowPayload argument) {
+        @Nullable Integer priority) {
 }
