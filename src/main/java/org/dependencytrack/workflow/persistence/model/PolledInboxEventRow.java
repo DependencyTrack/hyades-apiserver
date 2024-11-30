@@ -20,5 +20,5 @@ package org.dependencytrack.workflow.persistence.model;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-public record PolledInboxEvent(WorkflowEvent event, int dequeueCount) {
+public record PolledInboxEventRow(WorkflowEvent event, int dequeueCount) {
 }

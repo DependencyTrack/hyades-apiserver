@@ -21,8 +21,12 @@ package org.dependencytrack.workflow.persistence;
 import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowEventInboxRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowEventLogRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadArgumentFactory;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
@@ -30,7 +34,7 @@ import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
-import org.dependencytrack.workflow.persistence.model.PolledInboxEvent;
+import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
@@ -64,7 +68,7 @@ public final class WorkflowDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    public List<WorkflowRunRow> createWorkflowRuns(final Collection<NewWorkflowRunRow> newWorkflowRuns) {
+    public List<UUID> createWorkflowRuns(final Collection<NewWorkflowRunRow> newWorkflowRuns) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "WORKFLOW_RUN" (
                   "ID"
@@ -81,7 +85,7 @@ public final class WorkflowDao {
                 , :argument
                 , NOW()
                 )
-                RETURNING *
+                RETURNING "ID"
                 """);
 
         for (final NewWorkflowRunRow newWorkflowRun : newWorkflowRuns) {
@@ -92,9 +96,8 @@ public final class WorkflowDao {
 
         return preparedBatch
                 .registerArgument(new WorkflowPayloadArgumentFactory())
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
-                .executePreparedBatch("*")
-                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .executePreparedBatch("ID")
+                .mapTo(UUID.class)
                 .list();
     }
 
@@ -255,14 +258,13 @@ public final class WorkflowDao {
                 .bind("workflowName", workflowName)
                 .bind("lockTimeout", lockTimeout)
                 .bind("limit", limit)
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .executeAndReturnGeneratedKeys(
                         "ID",
                         "WORKFLOW_NAME",
                         "WORKFLOW_VERSION",
                         "PRIORITY",
                         "ARGUMENT")
-                .map(ConstructorMapper.of(PolledWorkflowRunRow.class))
+                .map(new PolledWorkflowRunRowMapper())
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }
 
@@ -310,7 +312,7 @@ public final class WorkflowDao {
                 .sum();
     }
 
-    public Map<UUID, List<PolledInboxEvent>> pollAndLockInboxEvents(
+    public Map<UUID, List<PolledInboxEventRow>> pollAndLockInboxEvents(
             final UUID workerInstanceId,
             final Collection<UUID> workflowRunIds) {
         final Update update = jdbiHandle.createUpdate("""
@@ -331,14 +333,13 @@ public final class WorkflowDao {
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .registerColumnMapper(WorkflowEvent.class, new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .executeAndReturnGeneratedKeys("*")
-                .map(ConstructorMapper.of(WorkflowEventInboxRow.class))
+                .map(new WorkflowEventInboxRowMapper())
                 .stream()
                 .collect(Collectors.groupingBy(
                         WorkflowEventInboxRow::workflowRunId,
                         Collectors.mapping(
-                                row -> new PolledInboxEvent(row.event(), row.dequeueCount()),
+                                row -> new PolledInboxEventRow(row.event(), row.dequeueCount()),
                                 Collectors.toList())));
     }
 
@@ -435,7 +436,7 @@ public final class WorkflowDao {
         return query
                 .registerColumnMapper(WorkflowEvent.class, new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .map(ConstructorMapper.of(WorkflowEventLogRow.class))
+                .map(new WorkflowEventLogRowMapper())
                 .stream()
                 .collect(Collectors.groupingBy(
                         WorkflowEventLogRow::workflowRunId,
@@ -513,7 +514,6 @@ public final class WorkflowDao {
                 """);
 
         return update
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("activityName", activityName)
                 .bind("lockTimeout", lockTimeout)
@@ -525,7 +525,7 @@ public final class WorkflowDao {
                         "PRIORITY",
                         "ARGUMENT",
                         "LOCKED_UNTIL")
-                .map(ConstructorMapper.of(PolledActivityTaskRow.class))
+                .map(new PolledActivityTaskRowMapper())
                 .list();
     }
 

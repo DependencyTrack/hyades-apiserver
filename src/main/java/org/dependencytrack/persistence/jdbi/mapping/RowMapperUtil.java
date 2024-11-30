@@ -104,6 +104,15 @@ public class RowMapperUtil {
         return value;
     }
 
+    public static Integer nullableInt(final ResultSet rs, final String columnName) throws SQLException {
+        final int value = rs.getInt(columnName);
+        if (rs.wasNull()) {
+            return null;
+        }
+
+        return value;
+    }
+
     public static Timestamp nullableTimestamp(final ResultSet rs, final String columnName) throws SQLException {
         final Date timestamp = rs.getTimestamp(columnName);
         return timestamp != null ? Timestamps.fromDate(timestamp) : null;

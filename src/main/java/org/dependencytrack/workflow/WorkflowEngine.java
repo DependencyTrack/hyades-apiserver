@@ -52,7 +52,7 @@ import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
-import org.dependencytrack.workflow.persistence.model.PolledInboxEvent;
+import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
@@ -329,15 +329,13 @@ public class WorkflowEngine implements Closeable {
         return inJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final List<WorkflowRunRow> createdRuns = dao.createWorkflowRuns(newWorkflowRunRows);
-            assert createdRuns.size() == newWorkflowRunRows.size();
+            final List<UUID> createdRunIds = dao.createWorkflowRuns(newWorkflowRunRows);
+            assert createdRunIds.size() == newWorkflowRunRows.size();
 
             final int createdInboxEvents = dao.createInboxEvents(newInboxEventRows);
             assert createdInboxEvents == newInboxEventRows.size();
 
-            return createdRuns.stream()
-                    .map(WorkflowRunRow::id)
-                    .toList();
+            return createdRunIds;
         });
     }
 
@@ -453,7 +451,7 @@ public class WorkflowEngine implements Closeable {
             final Map<UUID, List<WorkflowEvent>> eventLogByRunId =
                     dao.getWorkflowEventLogs(polledRunById.keySet());
 
-            final Map<UUID, List<PolledInboxEvent>> polledInboxEventsByRunId =
+            final Map<UUID, List<PolledInboxEventRow>> polledInboxEventsByRunId =
                     dao.pollAndLockInboxEvents(this.instanceId, polledRunById.keySet());
 
             return polledRunById.values().stream()
@@ -461,12 +459,12 @@ public class WorkflowEngine implements Closeable {
                         final List<WorkflowEvent> eventLog = eventLogByRunId.getOrDefault(
                                 polledRun.id(), Collections.emptyList());
 
-                        final List<PolledInboxEvent> polledInboxEvents =
+                        final List<PolledInboxEventRow> polledInboxEventRows =
                                 polledInboxEventsByRunId.getOrDefault(polledRun.id(), Collections.emptyList());
 
                         int maxDequeueCount = 0;
-                        final var inboxEvents = new ArrayList<WorkflowEvent>(polledInboxEvents.size());
-                        for (final PolledInboxEvent polledEvent : polledInboxEvents) {
+                        final var inboxEvents = new ArrayList<WorkflowEvent>(polledInboxEventRows.size());
+                        for (final PolledInboxEventRow polledEvent : polledInboxEventRows) {
                             maxDequeueCount = Math.max(maxDequeueCount, polledEvent.dequeueCount());
                             inboxEvents.add(polledEvent.event());
                         }
@@ -607,8 +605,8 @@ public class WorkflowEngine implements Closeable {
         }
 
         if (!newWorkflowRuns.isEmpty()) {
-            final List<WorkflowRunRow> createdRuns = dao.createWorkflowRuns(newWorkflowRuns);
-            assert createdRuns.size() == newWorkflowRuns.size();
+            final List<UUID> createdRunIds = dao.createWorkflowRuns(newWorkflowRuns);
+            assert createdRunIds.size() == newWorkflowRuns.size();
         }
 
         if (!newInboxEvents.isEmpty()) {
