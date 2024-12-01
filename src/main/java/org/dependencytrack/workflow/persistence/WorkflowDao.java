@@ -561,7 +561,7 @@ public final class WorkflowDao {
                    SET "LOCKED_BY" = NULL
                      , "LOCKED_UNTIL" = NULL
                   FROM "CTE"
-                 WHERE "CTE"."WOKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
+                 WHERE "CTE"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
                    AND "CTE"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
                    AND "WORKFLOW_ACTIVITY_TASK"."LOCKED_BY" = :workerInstanceId
                 """);

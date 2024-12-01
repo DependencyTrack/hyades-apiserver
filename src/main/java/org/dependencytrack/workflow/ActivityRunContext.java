@@ -21,12 +21,16 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public final class ActivityRunContext<T> {
+public final class ActivityRunContext<T> implements Closeable {
 
     private final WorkflowEngine engine;
     private final UUID workflowRunId;
@@ -34,7 +38,8 @@ public final class ActivityRunContext<T> {
     private final T argument;
     private final ActivityRunner<T, ?> activityRunner;
     private final Duration lockTimeout;
-    private Instant lockedUntil;
+    private final ScheduledExecutorService heartbeatExecutor;
+    private volatile Instant lockedUntil;
 
     ActivityRunContext(
             final WorkflowEngine engine,
@@ -51,6 +56,17 @@ public final class ActivityRunContext<T> {
         this.activityRunner = activityRunner;
         this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
+
+        // Heartbeat after 2/3 of the lock timeout elapsed.
+        // TODO: Signal back to the activity when heartbeat failed (Interrupt?).
+        final long heartbeatIntervalMillis = lockTimeout.minus(
+                lockTimeout.dividedBy(3)).toMillis();
+        this.heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
+        heartbeatExecutor.scheduleAtFixedRate(
+                this::heartbeat,
+                heartbeatIntervalMillis,
+                heartbeatIntervalMillis,
+                TimeUnit.MILLISECONDS);
     }
 
     public UUID workflowRunId() {
@@ -61,11 +77,7 @@ public final class ActivityRunContext<T> {
         return Optional.ofNullable(argument);
     }
 
-    public Instant lockedUntil() {
-        return lockedUntil;
-    }
-
-    public void heartbeat() {
+    private void heartbeat() {
         // TODO: Fail when task was not locked by this worker.
         // TODO: Return info about workflow run so the task can
         //  detect when run was cancelled or failed.
@@ -73,6 +85,13 @@ public final class ActivityRunContext<T> {
                 new ActivityTaskId(workflowRunId, scheduledEventId), lockTimeout);
         LoggerFactory.getLogger(activityRunner.getClass()).debug(
                 "Lock extended to {}", this.lockedUntil);
+    }
+
+    @Override
+    public void close() {
+        if (this.heartbeatExecutor != null) {
+            this.heartbeatExecutor.close();
+        }
     }
 
 }
