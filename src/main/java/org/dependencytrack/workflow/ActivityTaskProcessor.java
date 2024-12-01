@@ -95,7 +95,10 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
                 task.lockedUntil());
 
         try {
-            final Optional<R> result = activityRunner.run(ctx);
+            final Optional<R> result;
+            try (ctx) {
+                result = activityRunner.run(ctx);
+            }
 
             try {
                 final var subjectBuilder = ActivityTaskCompleted.newBuilder()
