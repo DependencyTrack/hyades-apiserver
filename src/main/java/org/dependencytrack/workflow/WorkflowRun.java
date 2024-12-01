@@ -341,6 +341,7 @@ public class WorkflowRun {
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerScheduled(TimerScheduled.newBuilder()
+                        .setName(command.name())
                         .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
                 .build(), /* isNew */ true);
