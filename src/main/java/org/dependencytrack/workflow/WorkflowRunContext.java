@@ -207,11 +207,11 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
-    public Awaitable<Void> scheduleTimer(final Duration delay) {
+    public Awaitable<Void> scheduleTimer(final String name, final Duration delay) {
         assertNotInSideEffect("Timers can not be scheduled from within a side effect");
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId, new ScheduleTimerCommand(eventId, currentTime.plus(delay)));
+        pendingCommandByEventId.put(eventId, new ScheduleTimerCommand(eventId, name, currentTime.plus(delay)));
 
         final var awaitable = new Awaitable<>(this, new VoidPayloadConverter());
         pendingAwaitableByEventId.put(eventId, awaitable);
@@ -282,7 +282,7 @@ public final class WorkflowRunContext<A, R> {
             return awaitables;
         });
 
-        scheduleTimer(timeout).onComplete(ignored -> {
+        scheduleTimer("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
             awaitable.cancel();
 
             pendingAwaitablesByExternalEventId.computeIfPresent(externalEventId, (ignoredKey, awaitables) -> {

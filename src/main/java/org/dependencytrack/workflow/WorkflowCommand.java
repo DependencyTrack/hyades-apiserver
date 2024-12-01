@@ -66,6 +66,7 @@ sealed interface WorkflowCommand permits
 
     record ScheduleTimerCommand(
             int eventId,
+            String name,
             Instant elapseAt) implements WorkflowCommand {
     }
 

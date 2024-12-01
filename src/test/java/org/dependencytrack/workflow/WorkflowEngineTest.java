@@ -95,7 +95,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldFailWorkflowRunWhenCancelled() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.scheduleTimer(Duration.ofSeconds(3)).await();
+            ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
         });
 
@@ -133,7 +133,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldWaitForScheduledTimerToElapse() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.scheduleTimer(Duration.ofSeconds(3)).await();
+            ctx.scheduleTimer("Sleep for 3 seconds", Duration.ofSeconds(3)).await();
             return Optional.empty();
         });
 
@@ -149,7 +149,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(engine.getWorkflowEventLog(runId)).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED);
+                    assertThat(entry.getTimerScheduled().getName()).isEqualTo("Sleep for 3 seconds");
+                },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_FIRED),
@@ -162,7 +165,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             final var timers = new ArrayList<Awaitable<Void>>(3);
             for (int i = 0; i < 3; i++) {
-                timers.add(ctx.scheduleTimer(Duration.ofSeconds(3)));
+                timers.add(ctx.scheduleTimer("sleep", Duration.ofSeconds(3)));
             }
 
             for (final Awaitable<Void> timer : timers) {
@@ -340,7 +343,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 return null;
             }).await();
 
-            ctx.scheduleTimer(Duration.ofMillis(10)).await();
+            ctx.scheduleTimer("sleep", Duration.ofMillis(10)).await();
             return Optional.empty();
         });
 

@@ -134,7 +134,8 @@ message SubWorkflowRunFailed {
 }
 
 message TimerScheduled {
-  google.protobuf.Timestamp elapse_at = 1;
+  string name = 1;
+  google.protobuf.Timestamp elapse_at = 2;
 }
 
 message TimerFired {
