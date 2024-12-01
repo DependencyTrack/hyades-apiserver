@@ -1032,9 +1032,9 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static boolean prepareIntegrityMetaComponent(final QueryManager qm, final Component component) {
-        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurlCoordinates().toString());
+        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
         if (integrityMetaComponent == null) {
-            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurlCoordinates().toString()));
+            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
             return true;
         } else if (integrityMetaComponent.getStatus() == null
                 || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
