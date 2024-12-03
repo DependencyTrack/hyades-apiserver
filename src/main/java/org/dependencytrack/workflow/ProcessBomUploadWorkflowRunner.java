@@ -53,7 +53,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
                 "ingest-bom",
                 IngestBomArgs.newBuilder()
                         .setProject(args.getProject())
-                        .setBomFilePath(args.getBomFilePath())
+                        .setBomFileMetadata(args.getBomFileMetadata())
                         .build(),
                 protoConverter(IngestBomArgs.class),
                 voidConverter(),

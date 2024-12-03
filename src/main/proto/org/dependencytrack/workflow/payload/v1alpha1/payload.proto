@@ -11,14 +11,20 @@ message Project {
   string version = 3;
 }
 
+message FileMetadata {
+  string key = 1;
+  string storage = 2;
+  string sha256 = 3;
+}
+
 message ProcessBomUploadArgs {
   Project project = 1;
-  string bom_file_path = 2;
+  FileMetadata bom_file_metadata = 2;
 }
 
 message IngestBomArgs {
   Project project = 1;
-  string bom_file_path = 2;
+  FileMetadata bom_file_metadata = 2;
 }
 
 message TriggerProjectVulnAnalysisArgs {
