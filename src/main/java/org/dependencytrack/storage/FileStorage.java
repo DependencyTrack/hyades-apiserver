@@ -16,23 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.storage;
 
-import alpine.common.util.SystemUtil;
-import org.dependencytrack.model.Project;
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionPoint;
 
-import java.io.File;
+import java.io.IOException;
 
-public class BomUploadEventTest {
+public interface FileStorage extends ExtensionPoint {
 
-    @Test
-    public void testFileConstructor() {
-        Project project = new Project();
-        File bitBucket = new File(SystemUtil.getBitBucket());
-        BomUploadEvent event = new BomUploadEvent(project, null);
-        Assert.assertEquals(project, event.getProject());
-        Assert.assertEquals(bitBucket, event.getFileMetadata());
-    }
+    FileMetadata store(final String name, final byte[] content) throws IOException;
+
+    byte[] get(final String key) throws IOException;
+
+    boolean delete(final String key) throws IOException;
+
 }

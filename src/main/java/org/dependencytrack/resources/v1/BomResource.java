@@ -57,11 +57,14 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.storage.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
@@ -86,12 +89,9 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
@@ -474,11 +474,11 @@ public class BomResource extends AlpineResource {
                 return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
             }
 
-            final File bomFile;
+            final FileMetadata bomFileMetadata;
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -486,8 +486,6 @@ public class BomResource extends AlpineResource {
 
             final UUID workflowRunId;
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
-                // TODO: The BOM will need to be stored somewhere else since the workflow can
-                //  be picked up by another API server instance.
                 workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
                         new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                 .withArgument(ProcessBomUploadArgs.newBuilder()
@@ -496,11 +494,15 @@ public class BomResource extends AlpineResource {
                                                         .setName(project.getName())
                                                         .setVersion(project.getVersion())
                                                         .build())
-                                                .setBomFilePath(bomFile.getAbsolutePath())
+                                                .setBomFileMetadata(org.dependencytrack.proto.workflow.payload.v1alpha1.FileMetadata.newBuilder()
+                                                        .setKey(bomFileMetadata.key())
+                                                        .setStorage(bomFileMetadata.storage())
+                                                        .setSha256(bomFileMetadata.sha256())
+                                                        .build())
                                                 .build(),
                                         protoConverter(ProcessBomUploadArgs.class)));
             } else {
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFileMetadata);
                 workflowRunId = bomUploadEvent.getChainIdentifier();
                 qm.createWorkflowSteps(workflowRunId);
                 Event.dispatch(bomUploadEvent);
@@ -525,10 +527,10 @@ public class BomResource extends AlpineResource {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
 
-                final File bomFile;
+                final FileMetadata bomFileMetadata;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -546,13 +548,17 @@ public class BomResource extends AlpineResource {
                                                             .setName(project.getName())
                                                             .setVersion(project.getVersion())
                                                             .build())
-                                                    .setBomFilePath(bomFile.getAbsolutePath())
+                                                    .setBomFileMetadata(org.dependencytrack.proto.workflow.payload.v1alpha1.FileMetadata.newBuilder()
+                                                            .setKey(bomFileMetadata.key())
+                                                            .setStorage(bomFileMetadata.storage())
+                                                            .setSha256(bomFileMetadata.sha256())
+                                                            .build())
                                                     .build(),
                                             protoConverter(ProcessBomUploadArgs.class)));
                 } else {
                     // todo: make option to combine all the bom data so components are reconciled in a single pass.
                     // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFile);
+                    final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFileMetadata);
                     workflowRunId = bomUploadEvent.getChainIdentifier();
                     qm.createWorkflowSteps(workflowRunId);
                     Event.dispatch(bomUploadEvent);
@@ -568,21 +574,12 @@ public class BomResource extends AlpineResource {
         return Response.ok().build();
     }
 
-    private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
+    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
         validate(bomBytes, project);
 
-        // TODO: Store externally so other instances of the API server can pick it up.
-        //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
-        final java.nio.file.Path tmpPath = Files.createTempFile("dtrack-bom-%s".formatted(project.getUuid()), null);
-        final File tmpFile = tmpPath.toFile();
-        tmpFile.deleteOnExit();
-
-        LOGGER.debug("Writing BOM for project %s to %s".formatted(project.getUuid(), tmpPath));
-        try (final var tmpOutputStream = Files.newOutputStream(tmpPath, StandardOpenOption.WRITE)) {
-            tmpOutputStream.write(bomBytes);
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            return fileStorage.store("bom", bomBytes);
         }
-
-        return tmpFile;
     }
 
     static void validate(final byte[] bomBytes, final Project project) {

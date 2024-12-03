@@ -61,7 +61,10 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
+import org.dependencytrack.storage.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.dependencytrack.workflow.ActivityRunContext;
@@ -73,9 +76,6 @@ import org.slf4j.MDC;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -182,9 +182,13 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         project.setName(args.getProject().getName());
         project.setVersion(args.getProject().getVersion());
 
-        final var bomFilePath = Paths.get(args.getBomFilePath());
+        final org.dependencytrack.proto.workflow.payload.v1alpha1.FileMetadata bomFileMetadata = args.getBomFileMetadata();
 
-        final var bomUploadEvent = new BomUploadEvent(project, bomFilePath.toFile());
+        final var bomUploadEvent = new BomUploadEvent(project,
+                new FileMetadata(
+                        bomFileMetadata.getKey(),
+                        bomFileMetadata.getStorage(),
+                        bomFileMetadata.getSha256()));
         inform(bomUploadEvent);
 
         return Optional.empty();
@@ -202,12 +206,19 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
-            processEvent(ctx, event);
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
+             var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            processEvent(ctx, fileStorage, event);
+
+            try {
+                fileStorage.delete(event.getFileMetadata().key());
+            } catch (IOException ex) {
+                LOGGER.warn("Failed to delete BOM file from storage", ex);
+            }
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event) {
+    private void processEvent(final Context ctx, final FileStorage fileStorage, final BomUploadEvent event) {
         if (!isWorkflowEngineEnabled) {
             useJdbiTransaction(handle -> {
                 final var workflowDao = handle.attach(WorkflowDao.class);
@@ -216,8 +227,8 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         }
 
         final ConsumedBom consumedBom;
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
-            final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
+        try {
+            final byte[] cdxBomBytes = fileStorage.get(event.getFileMetadata().key());
             final Parser parser = BomParserFactory.createParser(cdxBomBytes);
             final org.cyclonedx.model.Bom cdxBom = parser.parse(cdxBomBytes);
 
