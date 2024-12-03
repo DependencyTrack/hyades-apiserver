@@ -32,6 +32,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.resources.v1.exception.ConstraintViolationExceptionMapper;
 import org.dependencytrack.resources.v1.exception.NoSuchElementExceptionMapper;
@@ -130,13 +131,15 @@ public class TagResourceTest extends ResourceTest {
                     "name": "bar",
                     "projectCount": 1,
                     "policyCount": 1,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   },
                   {
                     "name": "foo",
                     "projectCount": 2,
                     "policyCount": 0,
-                    "notificationRuleCount": 1
+                    "notificationRuleCount": 1,
+                    "vulnerabilityCount": 0
                   }
                 ]
                 """);
@@ -163,19 +166,22 @@ public class TagResourceTest extends ResourceTest {
                     "name": "tag-1",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   },
                   {
                     "name": "tag-2",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   },
                   {
                     "name": "tag-3",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   }
                 ]
                 """);
@@ -194,13 +200,15 @@ public class TagResourceTest extends ResourceTest {
                     "name": "tag-4",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   },
                   {
                     "name": "tag-5",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   }
                 ]
                 """);
@@ -225,7 +233,8 @@ public class TagResourceTest extends ResourceTest {
                     "name": "foo",
                     "projectCount": 0,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   }
                 ]
                 """);
@@ -262,13 +271,15 @@ public class TagResourceTest extends ResourceTest {
                     "name": "foo",
                     "projectCount": 2,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   },
                   {
                     "name": "bar",
                     "projectCount": 1,
                     "policyCount": 0,
-                    "notificationRuleCount": 0
+                    "notificationRuleCount": 0,
+                    "vulnerabilityCount": 0
                   }
                 ]
                 """);
@@ -1705,5 +1716,337 @@ public class TagResourceTest extends ResourceTest {
 
         qm.getPersistenceManager().evictAll();
         assertThat(notificationRule.getTags()).isEmpty();
+    }
+
+    @Test
+    public void getTaggedVulnerabilitiesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        final var vulnB = new Vulnerability();
+        vulnB.setVulnId("vuln-b");
+        vulnB.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnB);
+
+        final Tag tagFoo = qm.createTag("foo");
+        final Tag tagBar = qm.createTag("bar");
+
+        qm.bind(vulnA, List.of(tagFoo));
+        qm.bind(vulnB, List.of(tagFoo, tagBar));
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("vulnUuidA", equalTo(vulnA.getUuid().toString()))
+                .withMatcher("vulnUuidB", equalTo(vulnB.getUuid().toString()))
+                .isEqualTo("""
+                        [
+                          {
+                            "uuid": "${json-unit.matches:vulnUuidA}",
+                            "vulnId": "vuln-a",
+                            "source": "INTERNAL"
+                          },
+                          {
+                            "uuid": "${json-unit.matches:vulnUuidB}",
+                            "vulnId": "vuln-b",
+                            "source": "INTERNAL"
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    public void getTaggedVulnerabilitiesWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        final Tag tag = qm.createTag("foo");
+
+        for (int i = 0; i < 5; i++) {
+            final var vuln = new Vulnerability();
+            vuln.setVulnId("vuln-" + (i + 1));
+            vuln.setSource(Vulnerability.Source.INTERNAL);
+            qm.persist(vuln);
+            qm.bind(vuln, List.of(tag));
+        }
+
+        Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "vulnId": "vuln-1",
+                    "source": "INTERNAL"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "vulnId": "vuln-2",
+                    "source": "INTERNAL"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "vulnId": "vuln-3",
+                    "source": "INTERNAL"
+                  }
+                ]
+                """);
+
+        response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "vulnId": "vuln-4",
+                    "source": "INTERNAL"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "vulnId": "vuln-5",
+                    "source": "INTERNAL"
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getTaggedVulnerabilitiesWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        qm.createTag("foo");
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void getTaggedVulnerabilitiesWithNonLowerCaseTagNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        final Response response = jersey.target(V1_TAG + "/Foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    public void untagVulnerabilitiesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        final var vulnB = new Vulnerability();
+        vulnB.setVulnId("vuln-b");
+        vulnB.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnB);
+
+        final Tag tagFoo = qm.createTag("foo");
+
+        qm.bind(vulnA, List.of(tagFoo));
+        qm.bind(vulnB, List.of(tagFoo));
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(vulnA.getUuid(), vulnB.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(vulnA.getTags()).isEmpty();
+        assertThat(vulnB.getTags().isEmpty());
+    }
+
+    @Test
+    public void untagVulnerabilitiesWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(vulnA.getUuid())));
+
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "A tag with name foo does not exist"
+                }
+                """);
+    }
+
+    @Test
+    public void untagVulnerabilitiesWithNoVulnerabilityUuidsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        qm.createTag("foo");
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(Collections.emptyList()));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "message": "size must be between 1 and 100",
+                    "messageTemplate": "{jakarta.validation.constraints.Size.message}",
+                    "path": "untagVulnerabilities.vulnerabilityUuids",
+                    "invalidValue": "[]"
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void untagVulnerabilitiesWithTooManyVulnerabilityUuidsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        qm.createTag("foo");
+
+        final List<String> vulnUuids = IntStream.range(0, 101)
+                .mapToObj(ignored -> UUID.randomUUID())
+                .map(UUID::toString)
+                .toList();
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(vulnUuids));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "message": "size must be between 1 and 100",
+                    "messageTemplate": "{jakarta.validation.constraints.Size.message}",
+                    "path": "untagVulnerabilities.vulnerabilityUuids",
+                    "invalidValue": "${json-unit.any-string}"
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void untagVulnerabilitiesWhenNotTaggedTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        qm.createTag("foo");
+
+        final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(vulnA.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(vulnA.getTags()).isEmpty();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToVulnerabilityTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        qm.bind(vulnA, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNull();
+        assertThat(qm.getTagByName("bar")).isNull();
+    }
+
+    @Test
+    public void deleteTagsWhenAssignedToVulnerabilityWithoutPortfolioManagementPermissionTest() {
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+
+        qm.bind(vulnA, List.of(usedTag));
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) bar could not be deleted",
+                  "errors": {
+                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the PORTFOLIO_MANAGEMENT or PORTFOLIO_MANAGEMENT_UPDATE permission."
+                  }
+                }
+                """);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNotNull();
+        assertThat(qm.getTagByName("bar")).isNotNull();
     }
 }

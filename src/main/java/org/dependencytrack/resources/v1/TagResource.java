@@ -54,6 +54,7 @@ import org.dependencytrack.resources.v1.vo.TagListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedNotificationRuleListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
+import org.dependencytrack.resources.v1.vo.TaggedVulnerabilityListResponseItem;
 
 import java.util.List;
 import java.util.Set;
@@ -93,7 +94,8 @@ public class TagResource extends AlpineResource {
                         row.name(),
                         row.projectCount(),
                         row.policyCount(),
-                        row.notificationRuleCount()
+                        row.notificationRuleCount(),
+                        row.vulnerabilityCount()
                 ))
                 .toList();
         final long totalCount = tagListRows.isEmpty() ? 0 : tagListRows.getFirst().totalCount();
@@ -499,6 +501,79 @@ public class TagResource extends AlpineResource {
             qm.untagNotificationRules(tagName, policyUuids);
         }
 
+        return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/{name}/vulnerability")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all vulnerabilities assigned to the given tag.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all vulnerabilities assigned to the given tag",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of vulnerabilities", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TaggedVulnerabilityListResponseItem.class)))
+            )
+    })
+    @PaginatedApi
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getTaggedVulnerabilities(
+            @Parameter(description = "Name of the tag to get vulnerabilities for.", required = true)
+            @PathParam("name") final String tagName
+    ) {
+        // TODO: Should enforce lowercase for tagName once we are sure that
+        //   users don't have any mixed-case tags in their system anymore.
+        //   Will likely need a migration to cleanup existing tags for this.
+
+        final List<TagQueryManager.TaggedVulnerabilityRow> taggedVulnerabilityListRows;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            taggedVulnerabilityListRows = qm.getTaggedVulnerabilities(tagName);
+        }
+
+        final List<TaggedVulnerabilityListResponseItem> tags = taggedVulnerabilityListRows.stream()
+                .map(row -> new TaggedVulnerabilityListResponseItem(row.uuid(), row.vulnId(), row.source()))
+                .toList();
+        final long totalCount = taggedVulnerabilityListRows.isEmpty() ? 0 : taggedVulnerabilityListRows.getFirst().totalCount();
+        return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @DELETE
+    @Path("/{name}/vulnerability")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Untags one or more vulnerabilities.",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Vulnerabilities untagged successfully."
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "A tag with the provided name does not exist.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
+            )
+    })
+    @PermissionRequired({Permissions.Constants.VIEW_PORTFOLIO, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    public Response untagVulnerabilities(
+            @Parameter(description = "Name of the tag", required = true)
+            @PathParam("name") final String tagName,
+            @Parameter(
+                    description = "UUIDs of vulnerabilities to untag",
+                    required = true,
+                    array = @ArraySchema(schema = @Schema(type = "string", format = "uuid"))
+            )
+            @Size(min = 1, max = 100) final Set<@ValidUuid String> vulnerabilityUuids
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.untagVulnerabilities(tagName, vulnerabilityUuids);
+        }
         return Response.noContent().build();
     }
 }
