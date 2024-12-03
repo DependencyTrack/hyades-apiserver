@@ -157,7 +157,9 @@ public final class WorkflowRunContext<A, R> {
         return new RetryingAwaitable<>(this, resultConverter,
                 () -> callActivityInternalWithNoRetries(name, argument, argumentConverter, resultConverter, delay),
                 exception -> {
-                    if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
+                    if (exception instanceof TerminalActivityException) {
+                        throw exception;
+                    } else if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
                         logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
                         throw exception;
                     }

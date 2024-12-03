@@ -18,10 +18,18 @@
  */
 package org.dependencytrack.workflow;
 
-public class WorkflowRunCancelledException extends WorkflowException {
+public class WorkflowException extends RuntimeException {
 
-    WorkflowRunCancelledException(final String message) {
+    WorkflowException() {
+        super();
+    }
+
+    WorkflowException(final String message) {
         super(message);
+    }
+
+    WorkflowException(final String message, final Throwable cause) {
+        super(message, cause);
     }
 
 }
