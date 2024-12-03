@@ -21,11 +21,11 @@ message IngestBomArgs {
   string bom_file_path = 2;
 }
 
-message AnalyzeProjectVulnsArgs {
+message TriggerProjectVulnAnalysisArgs {
   Project project = 1;
 }
 
-message AnalyzeProjectVulnsResult {
+message TriggerProjectVulnAnalysisResult {
   string scan_token = 1;
 }
 
