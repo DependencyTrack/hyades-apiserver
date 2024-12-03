@@ -21,11 +21,11 @@ package org.dependencytrack.workflow;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
@@ -74,8 +74,8 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         engine.registerActivityRunner(
                 new VulnerabilityAnalysisTask(),
                 /* maxConcurrency */ 5,
-                /* argumentConverter */ protoConverter(AnalyzeProjectVulnsArgs.class),
-                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResult.class),
+                /* argumentConverter */ protoConverter(TriggerProjectVulnAnalysisArgs.class),
+                /* resultConverter */ protoConverter(TriggerProjectVulnAnalysisResult.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new PolicyEvaluationTask(),

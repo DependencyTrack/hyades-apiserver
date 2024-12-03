@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.workflow.annotation.Workflow;
 
@@ -62,14 +62,14 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
 
         ctx.logger().info("Triggering vulnerability analysis");
         ctx.setStatus(STATUS_ANALYZING_VULNS);
-        final Optional<AnalyzeProjectVulnsResult> vulnAnalysisResult =
+        final Optional<TriggerProjectVulnAnalysisResult> vulnAnalysisResult =
                 ctx.callActivity(
-                        "analyze-project-vulns",
-                        AnalyzeProjectVulnsArgs.newBuilder()
+                        "trigger-project-vuln-analysis",
+                        TriggerProjectVulnAnalysisArgs.newBuilder()
                                 .setProject(args.getProject())
                                 .build(),
-                        protoConverter(AnalyzeProjectVulnsArgs.class),
-                        protoConverter(AnalyzeProjectVulnsResult.class),
+                        protoConverter(TriggerProjectVulnAnalysisArgs.class),
+                        protoConverter(TriggerProjectVulnAnalysisResult.class),
                         defaultRetryPolicy()
                                 .withMaxAttempts(6)).await();
 
