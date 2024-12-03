@@ -41,8 +41,8 @@ public class LocalFileStorage implements FileStorage {
 
     @Override
     public FileMetadata store(final String name, final byte[] content) throws IOException {
-        requireNonNull(name);
-        requireNonNull(content);
+        requireNonNull(name, "name must not be null");
+        requireNonNull(content, "content must not be null");
 
         final UUID uuid = Generators.timeBasedEpochRandomGenerator().generate();
         final Path filePath = baseDirPath.resolve("%s_%s".formatted(uuid, name)).toAbsolutePath();
@@ -69,6 +69,8 @@ public class LocalFileStorage implements FileStorage {
     }
 
     private Path resolveFilePath(final String key) {
+        requireNonNull(key, "key must not be null");
+
         final Path filePath = baseDirPath.resolve(key).normalize().toAbsolutePath();
         if (!filePath.startsWith(baseDirPath)) {
             throw new IllegalStateException("""

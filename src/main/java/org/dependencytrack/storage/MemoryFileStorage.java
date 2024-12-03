@@ -26,6 +26,8 @@ import java.nio.file.NoSuchFileException;
 import java.util.Map;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 class MemoryFileStorage implements FileStorage {
 
     static final String EXTENSION_NAME = "memory";
@@ -33,11 +35,14 @@ class MemoryFileStorage implements FileStorage {
     private final Map<String, StoredFile> storedFileByKey;
 
     MemoryFileStorage(final Map<String, StoredFile> storedFileByKey) {
-        this.storedFileByKey = storedFileByKey;
+        this.storedFileByKey = requireNonNull(storedFileByKey);
     }
 
     @Override
     public FileMetadata store(final String name, final byte[] content) throws IOException {
+        requireNonNull(name, "name must not be null");
+        requireNonNull(content, "content must not be null");
+
         final String key = "%s-%s".formatted(UUID.randomUUID().toString(), name);
         final String sha256 = DigestUtils.sha256Hex(content);
 
@@ -47,6 +52,8 @@ class MemoryFileStorage implements FileStorage {
 
     @Override
     public byte[] get(final String key) throws IOException {
+        requireNonNull(key, "key must not be null");
+
         final StoredFile storedFile = storedFileByKey.get(key);
         if (storedFile == null) {
             throw new NoSuchFileException(key);
@@ -57,6 +64,8 @@ class MemoryFileStorage implements FileStorage {
 
     @Override
     public boolean delete(final String key) throws IOException {
+        requireNonNull(key, "key must not be null");
+
         return storedFileByKey.remove(key) != null;
     }
 
