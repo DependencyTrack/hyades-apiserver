@@ -119,6 +119,12 @@ public class TagResourceTest extends ResourceTest {
         qm.bind(notificationRuleA, List.of(tagFoo));
         // NB: Not assigning notificationRuleB
 
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("vuln-a");
+        vulnA.setSource(Vulnerability.Source.INTERNAL);
+        qm.persist(vulnA);
+        qm.bind(vulnA, List.of(tagFoo));
+
         final Response response = jersey.target(V1_TAG)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -139,7 +145,7 @@ public class TagResourceTest extends ResourceTest {
                     "projectCount": 2,
                     "policyCount": 0,
                     "notificationRuleCount": 1,
-                    "vulnerabilityCount": 0
+                    "vulnerabilityCount": 1
                   }
                 ]
                 """);
@@ -1720,7 +1726,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1765,7 +1771,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -1830,7 +1836,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
                 .request()
@@ -1843,7 +1849,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
         final Response response = jersey.target(V1_TAG + "/Foo/vulnerability")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1855,7 +1861,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1886,7 +1892,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1912,7 +1918,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithNoVulnerabilityUuidsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         qm.createTag("foo");
 
@@ -1937,7 +1943,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithTooManyVulnerabilityUuidsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         qm.createTag("foo");
 
@@ -1967,7 +1973,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWhenNotTaggedTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1989,7 +1995,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToVulnerabilityTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT, Permissions.TAG_MANAGEMENT);
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -2014,7 +2020,7 @@ public class TagResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteTagsWhenAssignedToVulnerabilityWithoutPortfolioManagementPermissionTest() {
+    public void deleteTagsWhenAssignedToVulnerabilityWithoutVulnerabilityManagementPermissionTest() {
         initializeWithPermissions(Permissions.TAG_MANAGEMENT);
 
         final Tag unusedTag = qm.createTag("foo");
@@ -2040,7 +2046,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the PORTFOLIO_MANAGEMENT or PORTFOLIO_MANAGEMENT_UPDATE permission."
+                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the VULNERABILITY_MANAGEMENT or VULNERABILITY_MANAGEMENT_UPDATE permission."
                   }
                 }
                 """);

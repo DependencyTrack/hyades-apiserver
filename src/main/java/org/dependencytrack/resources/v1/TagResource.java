@@ -509,7 +509,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all vulnerabilities assigned to the given tag.",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>VULNERABILITY_MANAGEMENT</strong> or <strong>VULNERABILITY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -520,7 +520,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_MANAGEMENT, Permissions.Constants.VULNERABILITY_MANAGEMENT_READ})
     public Response getTaggedVulnerabilities(
             @Parameter(description = "Name of the tag to get vulnerabilities for.", required = true)
             @PathParam("name") final String tagName
@@ -547,7 +547,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Untags one or more vulnerabilities.",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>VULNERABILITY_MANAGEMENT</strong> or <strong>VULNERABILITY_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -560,7 +560,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.VIEW_PORTFOLIO, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_MANAGEMENT, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE})
     public Response untagVulnerabilities(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
