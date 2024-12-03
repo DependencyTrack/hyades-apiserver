@@ -30,4 +30,23 @@ public interface FileStorage extends ExtensionPoint {
 
     boolean delete(final String key) throws IOException;
 
+    class ExtensionPointMetadata implements org.dependencytrack.plugin.api.ExtensionPointMetadata<FileStorage> {
+
+        @Override
+        public String name() {
+            return "file.storage";
+        }
+
+        @Override
+        public boolean required() {
+            return true;
+        }
+
+        @Override
+        public Class<FileStorage> extensionPointClass() {
+            return FileStorage.class;
+        }
+
+    }
+
 }
