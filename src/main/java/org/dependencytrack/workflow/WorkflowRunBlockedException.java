@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.workflow;
 
-public class WorkflowRunBlockedException extends RuntimeException {
+public class WorkflowRunBlockedException extends WorkflowException {
 
-    public WorkflowRunBlockedException() {
+    WorkflowRunBlockedException() {
         super();
     }
 

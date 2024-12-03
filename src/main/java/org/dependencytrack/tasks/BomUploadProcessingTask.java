@@ -243,14 +243,20 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
-            if (!isWorkflowEngineEnabled) {
-                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
-            }
-
             // TODO: If workflow engine is enabled, perform the dispatch in a side effect
             //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
-            return;
+
+            if (isWorkflowEngineEnabled) {
+                if (e instanceof final RuntimeException re) {
+                    throw re;
+                }
+
+                throw new RuntimeException(e);
+            } else {
+                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
+                return;
+            }
         }
 
         if (!isWorkflowEngineEnabled) {
@@ -275,14 +281,20 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
-            if (!isWorkflowEngineEnabled) {
-                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
-            }
-
             // TODO: If workflow engine is enabled, perform the dispatch in a side effect
             //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
-            return;
+
+            if (isWorkflowEngineEnabled) {
+                if (e instanceof final RuntimeException re) {
+                    throw re;
+                }
+
+                throw new RuntimeException(e);
+            } else {
+                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
+                return;
+            }
         }
 
         if (!isWorkflowEngineEnabled) {
