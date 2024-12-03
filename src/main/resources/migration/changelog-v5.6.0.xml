@@ -123,4 +123,13 @@
             <column name="IS_LATEST"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-8" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln-source'
+               AND "PROPERTYNAME" = 'nvd.feeds.url';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

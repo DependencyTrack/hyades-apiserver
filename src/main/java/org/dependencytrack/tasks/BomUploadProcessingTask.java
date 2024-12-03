@@ -62,6 +62,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
@@ -113,6 +114,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertSe
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
@@ -180,8 +182,10 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void processEvent(final Context ctx, final BomUploadEvent event) {
-        startBomConsumptionWorkflowStep(ctx);
-
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
+        });
         final ConsumedBom consumedBom;
         try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
             final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
@@ -204,7 +208,12 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        startBomProcessingWorkflowStep(ctx);
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
+            workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
+        });
+
         dispatchBomConsumedNotification(ctx);
 
         final ProcessedBom processedBom;
@@ -222,7 +231,11 @@ public class BomUploadProcessingTask implements Subscriber {
             return;
         }
 
-        completeBomProcessingWorkflowStep(ctx);
+        useJdbiTransaction(handle -> {
+            final var workflowDao = handle.attach(WorkflowDao.class);
+            workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
+        });
+
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {
@@ -830,45 +843,6 @@ public class BomUploadProcessingTask implements Subscriber {
         };
     }
 
-    private static void startBomConsumptionWorkflowStep(final Context ctx) {
-        // TODO: This should be a single UPDATE query.
-        try (final var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomConsumptionState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_CONSUMPTION);
-                bomConsumptionState.setStartedAt(Date.from(Instant.now()));
-            });
-        }
-    }
-
-    private static void startBomProcessingWorkflowStep(final Context ctx) {
-        // TODO: This should be a batched UPDATE query.
-        try (var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomConsumptionState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_CONSUMPTION);
-                bomConsumptionState.setStatus(WorkflowStatus.COMPLETED);
-                bomConsumptionState.setUpdatedAt(Date.from(Instant.now()));
-
-                final WorkflowState bomProcessingState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_PROCESSING);
-                bomProcessingState.setStartedAt(Date.from(Instant.now()));
-            });
-        }
-    }
-
-    private static void completeBomProcessingWorkflowStep(final Context ctx) {
-        // TODO: This should be a single UPDATE query.
-        try (final var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final WorkflowState bomProcessingState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.BOM_PROCESSING);
-                bomProcessingState.setStatus(WorkflowStatus.COMPLETED);
-                bomProcessingState.setUpdatedAt(new Date());
-            });
-        }
-    }
-
     private static void failWorkflowStepAndCancelDescendants(
             final Context ctx,
             final WorkflowStep step,
@@ -1058,9 +1032,9 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static boolean prepareIntegrityMetaComponent(final QueryManager qm, final Component component) {
-        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurlCoordinates().toString());
+        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
         if (integrityMetaComponent == null) {
-            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurlCoordinates().toString()));
+            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
             return true;
         } else if (integrityMetaComponent.getStatus() == null
                 || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
