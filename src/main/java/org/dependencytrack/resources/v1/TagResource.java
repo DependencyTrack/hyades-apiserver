@@ -509,7 +509,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all vulnerabilities assigned to the given tag.",
-            description = "<p>Requires permission <strong>VULNERABILITY_MANAGEMENT</strong> or <strong>VULNERABILITY_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>VULNERABILITY_MANAGEMENT</strong> or <strong>VULNERABILITY_MANAGEMENT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
