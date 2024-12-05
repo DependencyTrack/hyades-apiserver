@@ -45,6 +45,7 @@ import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 
@@ -60,7 +61,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -121,6 +124,31 @@ public class WorkflowResource extends AlpineResource {
             int historySize,
             int pendingEvents,
             int pendingActivities) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record WorkflowRunStats(Map<String, Map<WorkflowRunStatus, Long>> statuses) {
+    }
+
+    @GET
+    @Path("/run/stats")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired
+    public Response getWorkflowRunStats() {
+        return withJdbiHandle(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final Map<String, Map<WorkflowRunStatus, Long>> statusesByName =
+                    dao.getWorkflowRunCountByNameAndStatus().stream()
+                            .collect(Collectors.groupingBy(
+                                    WorkflowRunCountByNameAndStatusRow::workflowName,
+                                    Collectors.toMap(
+                                            WorkflowRunCountByNameAndStatusRow::status,
+                                            WorkflowRunCountByNameAndStatusRow::count)));
+
+            final var stats = new WorkflowRunStats(statusesByName);
+            return Response.ok(stats).build();
+        });
     }
 
     @GET

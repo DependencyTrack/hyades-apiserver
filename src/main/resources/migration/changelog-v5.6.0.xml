@@ -125,7 +125,7 @@
     </changeSet>
     
     <changeSet id="v5.6.0-8" author="nscuro">
-        <sql>
+        <sql splitStatements="true">
             DELETE
               FROM "CONFIGPROPERTY"
              WHERE "GROUPNAME" = 'vuln-source'
@@ -149,42 +149,69 @@
             , 'CANCELLED'
             , 'COMPLETED'
             , 'FAILED'
-            )
-        </sql>
+            );
 
-        <createTable tableName="WORKFLOW_RUN">
-            <column name="ID" type="UUID">
-                <constraints primaryKey="true" primaryKeyName="WORKFLOW_RUN_PK"/>
-            </column>
-            <column name="PARENT_ID" type="UUID"/>
-            <column name="WORKFLOW_NAME" type="TEXT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="WORKFLOW_VERSION" type="SMALLINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="STATUS" type="WORKFLOW_RUN_STATUS">
-                <constraints nullable="false"/>
-            </column>
-            <column name="CUSTOM_STATUS" type="TEXT"/>
-            <column name="PRIORITY" type="SMALLINT"/>
-            <column name="LOCKED_BY" type="TEXT"/>
-            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(3)"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-            <column name="COMPLETED_AT" type="TIMESTAMPTZ(3)"/>
-        </createTable>
+            CREATE TABLE "WORKFLOW_RUN" (
+              "ID" UUID
+            , "PARENT_ID" UUID
+            , "WORKFLOW_NAME" TEXT NOT NULL
+            , "WORKFLOW_VERSION" SMALLINT NOT NULL
+            , "STATUS" WORKFLOW_RUN_STATUS NOT NULL DEFAULT 'PENDING'
+            , "CUSTOM_STATUS" TEXT
+            , "PRIORITY" SMALLINT
+            , "LOCKED_BY" TEXT
+            , "LOCKED_UNTIL" TIMESTAMPTZ(3)
+            , "CREATED_AT" TIMESTAMPTZ(3) NOT NULL DEFAULT NOW()
+            , "UPDATED_AT" TIMESTAMPTZ(3)
+            , "COMPLETED_AT" TIMESTAMPTZ(3)
+            , CONSTRAINT "WORKFLOW_RUN_PK" PRIMARY KEY ("ID")
+            , CONSTRAINT "WORKFLOW_RUN_PARENT_FK" FOREIGN KEY ("PARENT_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            );
 
-        <addForeignKeyConstraint
-                baseTableName="WORKFLOW_RUN"
-                baseColumnNames="PARENT_ID"
-                referencedTableName="WORKFLOW_RUN"
-                referencedColumnNames="ID"
-                onDelete="CASCADE"
-                constraintName="WORKFLOW_RUN_PARENT_ID_FK"/>
-        <sql>
+            <!--
+              NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
+              It's mostly append-only and doesn't accumulate lots of bloat, unless records are deleted (i.e. as part of workflow run retention).
+            -->
+            CREATE TABLE "WORKFLOW_EVENT_LOG" (
+              "WORKFLOW_RUN_ID" UUID
+            , "SEQUENCE_NUMBER" INT
+            , "EVENT" BYTEA NOT NULL
+            , CONSTRAINT "WORKFLOW_EVENT_LOG_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SEQUENCE_NUMBER")
+            , CONSTRAINT "WORKFLOW_EVENT_LOG_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            );
+
+            <!--
+              NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
+              It will usually hold ~1 record per active workflow run and thus will not get that huge.
+              But since records are deleted frequently, it might accumulate quite a bit of bloat.
+              Partitioning might help with that, but this remains to be verified.
+            -->
+            CREATE TABLE "WORKFLOW_EVENT_INBOX" (
+              "ID" BIGINT GENERATED ALWAYS AS IDENTITY
+            , "WORKFLOW_RUN_ID" UUID NOT NULL
+            , "VISIBLE_FROM" TIMESTAMPTZ(3)
+            , "LOCKED_BY" TEXT
+            , "DEQUEUE_COUNT" SMALLINT
+            , "EVENT" BYTEA NOT NULL
+            , CONSTRAINT "WORKFLOW_EVENT_INBOX_PK" PRIMARY KEY ("ID")
+            , CONSTRAINT "WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            );
+
+            CREATE TABLE "WORKFLOW_ACTIVITY_TASK" (
+              "WORKFLOW_RUN_ID" UUID
+            , "SCHEDULED_EVENT_ID" INT
+            , "ACTIVITY_NAME" TEXT NOT NULL
+            , "PRIORITY" SMALLINT
+            , "ARGUMENT" BYTEA
+            , "VISIBLE_FROM" TIMESTAMPTZ(3)
+            , "LOCKED_BY" TEXT
+            , "LOCKED_UNTIL" TIMESTAMPTZ(3)
+            , "CREATED_AT" TIMESTAMPTZ(3) NOT NULL DEFAULT NOW()
+            , "UPDATED_AT" TIMESTAMPTZ(3)
+            , CONSTRAINT "WORKFLOW_ACTIVITY_TASK_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID")
+            , CONSTRAINT "WORKFLOW_ACTIVITY_TASK_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            );
+
             CREATE INDEX "WORKFLOW_RUN_POLL_IDX"
                 ON "WORKFLOW_RUN" (
                      "PRIORITY" DESC NULLS LAST
@@ -193,95 +220,23 @@
                    , "LOCKED_UNTIL")
             INCLUDE ("ID")
               WHERE "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]);
+
+            CREATE INDEX "WORKFLOW_EVENT_INBOX_POLL_IDX"
+                ON "WORKFLOW_EVENT_INBOX" ("WORKFLOW_RUN_ID", "VISIBLE_FROM");
+
+            <!-- TODO: Verify if all these columns are indeed needed for an index-only scan. -->
+            CREATE INDEX "WORKFLOW_ACTIVITY_TASK_POLL_IDX"
+                ON "WORKFLOW_ACTIVITY_TASK" (
+                     "PRIORITY" DESC NULLS LAST
+                   , "CREATED_AT"
+                   , "ACTIVITY_NAME"
+                   , "LOCKED_UNTIL"
+                   , "VISIBLE_FROM")
+            INCLUDE ("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID");
+
+            ALTER TABLE "WORKFLOW_RUN" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+            ALTER TABLE "WORKFLOW_EVENT_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+            ALTER TABLE "WORKFLOW_ACTIVITY_TASK" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
         </sql>
-
-        <createTable tableName="WORKFLOW_EVENT_LOG">
-            <column name="WORKFLOW_RUN_ID" type="UUID"/>
-            <column name="SEQUENCE_NUMBER" type="INT"/>
-            <column name="EVENT" type="BYTEA">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addPrimaryKey
-                tableName="WORKFLOW_EVENT_LOG"
-                columnNames="WORKFLOW_RUN_ID, SEQUENCE_NUMBER"
-                constraintName="WORKFLOW_EVENT_LOG_PK"/>
-        <addForeignKeyConstraint
-                baseTableName="WORKFLOW_EVENT_LOG"
-                baseColumnNames="WORKFLOW_RUN_ID"
-                referencedTableName="WORKFLOW_RUN"
-                referencedColumnNames="ID"
-                onDelete="CASCADE"
-                constraintName="WORKFLOW_EVENT_LOG_WORKFLOW_RUN_ID_FK"/>
-
-        <createTable tableName="WORKFLOW_EVENT_INBOX">
-            <column autoIncrement="true" name="ID" type="BIGINT">
-                <constraints primaryKey="true" primaryKeyName="WORKFLOW_EVENT_INBOX_PK"/>
-            </column>
-            <column name="WORKFLOW_RUN_ID" type="UUID">
-                <constraints nullable="false"/>
-            </column>
-            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(3)"/>
-            <column name="LOCKED_BY" type="TEXT"/>
-            <column name="DEQUEUE_COUNT" type="SMALLINT"/>
-            <column name="EVENT" type="BYTEA">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-                baseTableName="WORKFLOW_EVENT_INBOX"
-                baseColumnNames="WORKFLOW_RUN_ID"
-                referencedTableName="WORKFLOW_RUN"
-                referencedColumnNames="ID"
-                onDelete="CASCADE"
-                constraintName="WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_ID_FK"/>
-
-        <createIndex
-                tableName="WORKFLOW_EVENT_INBOX"
-                indexName="WORKFLOW_EVENT_INBOX_POLL_IDX">
-            <column name="WORKFLOW_RUN_ID"/>
-            <column name="VISIBLE_FROM"/>
-        </createIndex>
-
-        <createTable tableName="WORKFLOW_ACTIVITY_TASK">
-            <column name="WORKFLOW_RUN_ID" type="UUID">
-                <constraints nullable="false"/>
-            </column>
-            <column name="SCHEDULED_EVENT_ID" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="ACTIVITY_NAME" type="TEXT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="PRIORITY" type="SMALLINT"/>
-            <column name="ARGUMENT" type="BYTEA"/>
-            <column name="VISIBLE_FROM" type="TIMESTAMPTZ(3)"/>
-            <column name="LOCKED_BY" type="TEXT"/>
-            <column name="LOCKED_UNTIL" type="TIMESTAMPTZ(3)"/>
-            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
-        </createTable>
-
-        <addPrimaryKey
-                tableName="WORKFLOW_ACTIVITY_TASK"
-                columnNames="WORKFLOW_RUN_ID, SCHEDULED_EVENT_ID"
-                constraintName="WORKFLOW_ACTIVITY_TASK_PK"/>
-        <addForeignKeyConstraint
-                baseTableName="WORKFLOW_ACTIVITY_TASK"
-                baseColumnNames="WORKFLOW_RUN_ID"
-                referencedTableName="WORKFLOW_RUN"
-                referencedColumnNames="ID"
-                onDelete="CASCADE"
-                constraintName="WORKFLOW_ACTIVITY_TASK_WORKFLOW_RUN_ID_FK"/>
-        <createIndex
-                tableName="WORKFLOW_ACTIVITY_TASK"
-                indexName="WORKFLOW_ACTIVITY_TASK_VISIBLE_FROM_IDX">
-            <column name="VISIBLE_FROM"/>
-        </createIndex>
-
     </changeSet>
 </databaseChangeLog>
