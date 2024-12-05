@@ -32,12 +32,12 @@ public class KafkaTopicsTest {
     @Test
     public void testTopicNameWithPrefix() {
         environmentVariables.set("DT_KAFKA_TOPIC_PREFIX", "foo-bar.baz.");
-        assertThat(KafkaTopics.VULN_ANALYSIS_RESULT.name()).isEqualTo("foo-bar.baz.dtrack.vuln-analysis.result");
+        assertThat(KafkaTopics.TOPIC_VULN_ANALYSIS_RESULT.name()).isEqualTo("foo-bar.baz.dtrack.vuln-analysis.result");
     }
 
     @Test
     public void testTopicNameWithoutPrefix() {
-        assertThat(KafkaTopics.VULN_ANALYSIS_RESULT.name()).isEqualTo("dtrack.vuln-analysis.result");
+        assertThat(KafkaTopics.TOPIC_VULN_ANALYSIS_RESULT.name()).isEqualTo("dtrack.vuln-analysis.result");
     }
 
 }

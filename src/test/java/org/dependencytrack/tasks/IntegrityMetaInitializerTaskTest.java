@@ -64,7 +64,7 @@ public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
         new IntegrityMetaInitializerTask().inform(new IntegrityMetaInitializerEvent());
         assertThat(qm.getIntegrityMetaComponentCount()).isEqualTo(1);
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
+                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name())
         );
     }
 
