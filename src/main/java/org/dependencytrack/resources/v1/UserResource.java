@@ -458,7 +458,7 @@ public class UserResource extends AlpineResource {
             if (user != null) {
                 final LdapUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                 qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + detachedUser);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + detachedUser.getUsername());
                 dispatchUserDeletedNotification("LDAP user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
@@ -586,7 +586,7 @@ public class UserResource extends AlpineResource {
             if (user != null) {
                 final ManagedUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                 qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + detachedUser);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + detachedUser.getUsername());
                 dispatchUserDeletedNotification("Managed user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
@@ -651,7 +651,7 @@ public class UserResource extends AlpineResource {
             if (user != null) {
                 final OidcUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                 qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + detachedUser);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + detachedUser.getUsername());
                 dispatchUserDeletedNotification("OpenID Connect user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
