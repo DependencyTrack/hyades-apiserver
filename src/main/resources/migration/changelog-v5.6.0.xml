@@ -132,4 +132,15 @@
                AND "PROPERTYNAME" = 'nvd.feeds.url';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-9" author="nscuro">
+        <dropIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_COMPONENT_IDX"/>
+        <dropIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_POLICYCONDITION_ID_IDX"/>
+        <dropIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_PROJECT_IDX"/>
+        <createIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_IDENTITY_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="PROJECT_ID"/>
+            <column name="POLICYCONDITION_ID"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
