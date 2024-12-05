@@ -92,9 +92,11 @@
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>9.0.5</lib.cyclonedx-java.version>
+        <lib.cyclonedx-java.version>9.1.0</lib.cyclonedx-java.version>
         <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
+        <lib.jackson.version>2.18.0</lib.jackson.version>
+        <lib.jackson-databind.version>2.18.0</lib.jackson-databind.version>
         <lib.jdbi.version>3.47.0</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
