@@ -32,6 +32,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.Vulnerability;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -79,6 +80,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             long projectCount,
             long policyCount,
             long notificationRuleCount,
+            long vulnerabilityCount,
             long totalCount
     ) {
     }
@@ -107,6 +109,9 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                      , (SELECT COUNT(*)
                             FROM "NOTIFICATIONRULE_TAGS"
                          WHERE "NOTIFICATIONRULE_TAGS"."TAG_ID" = "TAG"."ID") AS "notificationRuleCount"
+                     , (SELECT COUNT(*)
+                            FROM "VULNERABILITIES_TAGS"
+                         WHERE "VULNERABILITIES_TAGS"."TAG_ID" = "TAG"."ID") AS "vulnerabilityCount"
                      , COUNT(*) OVER() AS "totalCount"
                   FROM "TAG"
                 """.formatted(projectAclCondition);
@@ -123,7 +128,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
         } else if ("name".equals(orderBy)
                 || "projectCount".equals(orderBy)
                 || "policyCount".equals(orderBy)
-                || "notificationRuleCount".equals(orderBy)) {
+                || "notificationRuleCount".equals(orderBy)
+                || "vulnerabilityCount".equals(orderBy)) {
             sqlQuery += " ORDER BY \"%s\" %s, \"ID\" ASC".formatted(orderBy,
                     orderDirection == OrderDirection.DESCENDING ? "DESC" : "ASC");
         } else {
@@ -151,7 +157,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
             long projectCount,
             long accessibleProjectCount,
             long policyCount,
-            long notificationRuleCount
+            long notificationRuleCount,
+            long vulnerabilityCount
     ) {
     }
 
@@ -198,6 +205,11 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                              INNER JOIN "NOTIFICATIONRULE"
                                 ON "NOTIFICATIONRULE"."ID" = "NOTIFICATIONRULE_TAGS"."NOTIFICATIONRULE_ID"
                              WHERE "NOTIFICATIONRULE_TAGS"."TAG_ID" = "TAG"."ID") AS "notificationRuleCount"
+                         , (SELECT COUNT(*)
+                              FROM "VULNERABILITIES_TAGS"
+                             INNER JOIN "VULNERABILITY"
+                                ON "VULNERABILITY"."ID" = "VULNERABILITIES_TAGS"."VULNERABILITY_ID"
+                             WHERE "VULNERABILITIES_TAGS"."TAG_ID" = "TAG"."ID") AS "vulnerabilityCount"
                       FROM "TAG"
                      WHERE %s
                     """.formatted(projectAclCondition, String.join(" OR ", tagNameFilters)));
@@ -222,10 +234,12 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
 
             boolean hasPortfolioManagementUpdatePermission = false;
             boolean hasPolicyManagementUpdatePermission = false;
+            boolean hasvulnerabilityManagementUpdatePermission = false;
             boolean hasSystemConfigurationUpdatePermission = false;
             if (principal == null) {
                 hasPortfolioManagementUpdatePermission = true;
                 hasPolicyManagementUpdatePermission = true;
+                hasvulnerabilityManagementUpdatePermission = true;
                 hasSystemConfigurationUpdatePermission = true;
             } else {
                 if (principal instanceof final ApiKey apiKey) {
@@ -235,6 +249,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                                                           || hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT_UPDATE);
                     hasSystemConfigurationUpdatePermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION)
                                                              || hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT)
+                            || hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE);
                 } else if (principal instanceof final UserPrincipal user) {
                     hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true)
                                                              || hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE, /* includeTeams */ true);
@@ -242,6 +258,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                                                           || hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT_UPDATE, /* includeTeams */ true);
                     hasSystemConfigurationUpdatePermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true)
                                                              || hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE, /* includeTeams */ true);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(user, Permissions.Constants.VULNERABILITY_MANAGEMENT, /* includeTeams */ true)
+                            || hasPermission(user, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE, /* includeTeams */ true);
                 }
             }
 
@@ -275,6 +293,13 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                             The tag is assigned to %d notification rules, but the authenticated principal \
                             is missing the %s or %s permission.""".formatted(row.notificationRuleCount(),
                             Permissions.SYSTEM_CONFIGURATION, Permissions.SYSTEM_CONFIGURATION_UPDATE));
+                }
+
+                if (row.vulnerabilityCount() > 0 && !hasvulnerabilityManagementUpdatePermission) {
+                    errorByTagName.put(row.name(), """
+                            The tag is assigned to %d vulnerabilities, but the authenticated principal \
+                            is missing the %s or %s permission.""".formatted(row.vulnerabilityCount(),
+                            Permissions.VULNERABILITY_MANAGEMENT, Permissions.VULNERABILITY_MANAGEMENT_UPDATE));
                 }
             }
 
@@ -697,6 +722,70 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 }
 
                 notificationRule.getTags().remove(tag);
+            }
+        });
+    }
+
+    public record TaggedVulnerabilityRow(UUID uuid, String vulnId, String source, long totalCount) {
+    }
+
+    @Override
+    public List<TaggedVulnerabilityRow> getTaggedVulnerabilities(final String tagName) {
+        // language=SQL
+        var sqlQuery = """
+                SELECT "VULNERABILITY"."UUID" AS "uuid"
+                     , "VULNERABILITY"."VULNID" AS "vulnId"
+                     , "VULNERABILITY"."SOURCE" AS "source"
+                     , COUNT(*) OVER() AS "totalCount"
+                  FROM "VULNERABILITY"
+                 INNER JOIN "VULNERABILITIES_TAGS"
+                    ON "VULNERABILITIES_TAGS"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
+                 INNER JOIN "TAG"
+                    ON "TAG"."ID" = "VULNERABILITIES_TAGS"."TAG_ID"
+                 WHERE "TAG"."NAME" = :tag
+                """;
+
+        final var params = new HashMap<String, Object>();
+        params.put("tag", tagName);
+
+        if (filter != null) {
+            sqlQuery += " AND \"VULNERABILITY\".\"VULNID\" LIKE :vulnIdFilter";
+            params.put("vulnIdFilter", "%" + filter + "%");
+        }
+
+        if (orderBy == null) {
+            sqlQuery += " ORDER BY \"vulnId\" ASC";
+        } else if ("vulnId".equals(orderBy)) {
+            sqlQuery += " ORDER BY \"%s\" %s".formatted(orderBy,
+                    orderDirection == OrderDirection.DESCENDING ? "DESC" : "ASC");
+        } else {
+            throw new NotSortableException("TaggedVulnerability", orderBy, "Field does not exist or is not sortable");
+        }
+
+        sqlQuery += " " + getOffsetLimitSqlClause();
+
+        final Query<?> query = pm.newQuery(Query.SQL, sqlQuery);
+        query.setNamedParameters(params);
+        return executeAndCloseResultList(query, TaggedVulnerabilityRow.class);
+    }
+
+    @Override
+    public void untagVulnerabilities(final String tagName, final Collection<String> vulnerabilityUuids) {
+        runInTransaction(() -> {
+            final Tag tag = getTagByName(tagName);
+            if (tag == null) {
+                throw new NoSuchElementException("A tag with name %s does not exist".formatted(tagName));
+            }
+            final Query<Vulnerability> vulnerabilityQuery = pm.newQuery(Vulnerability.class);
+            vulnerabilityQuery.setFilter(":uuids.contains(uuid)");
+            vulnerabilityQuery.setParameters(vulnerabilityUuids);
+            final List<Vulnerability> vulnerabilities = executeAndCloseList(vulnerabilityQuery);
+
+            for (final Vulnerability vulnerability : vulnerabilities) {
+                if (vulnerability.getTags() == null || vulnerability.getTags().isEmpty()) {
+                    continue;
+                }
+                vulnerability.getTags().remove(tag);
             }
         });
     }

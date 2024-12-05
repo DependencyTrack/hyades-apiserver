@@ -1505,6 +1505,14 @@ public class QueryManager extends AlpineQueryManager {
         getTagQueryManager().untagNotificationRules(tagName, notificationRuleUuids);
     }
 
+    public List<TagQueryManager.TaggedVulnerabilityRow> getTaggedVulnerabilities(final String tagName) {
+        return getTagQueryManager().getTaggedVulnerabilities(tagName);
+    }
+
+    public void untagVulnerabilities(final String tagName, final Collection<String> vulnerabilityUuids) {
+        getTagQueryManager().untagVulnerabilities(tagName, vulnerabilityUuids);
+    }
+
     /**
      * Fetch multiple objects from the data store by their ID.
      *
