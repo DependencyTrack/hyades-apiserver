@@ -69,16 +69,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         engine = new WorkflowEngine();
         engine.start();
 
-        engine.registerWorkflowRunner("test", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowRunner("test", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity("foo", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("bar", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("baz", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("foo", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityRunner("bar", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityRunner("baz", 5, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("foo", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
     }
 
     @After

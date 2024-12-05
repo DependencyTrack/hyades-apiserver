@@ -37,6 +37,7 @@ import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
@@ -144,6 +145,21 @@ public final class WorkflowDao {
                                 new ApiRequestConfig.OrderingColumn("pendingEvents"),
                                 new ApiRequestConfig.OrderingColumn("pendingActivities"))))
                 .map(ConstructorMapper.of(WorkflowRunListRow.class))
+                .list();
+    }
+
+    public List<WorkflowRunCountByNameAndStatusRow> getWorkflowRunCountByNameAndStatus() {
+        final Query query = jdbiHandle.createQuery("""
+                SELECT "WORKFLOW_NAME"
+                     , "STATUS"
+                     , COUNT(*)
+                  FROM "WORKFLOW_RUN"
+                 GROUP BY "WORKFLOW_NAME"
+                        , "STATUS";
+                """);
+
+        return query
+                .map(ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
                 .list();
     }
 

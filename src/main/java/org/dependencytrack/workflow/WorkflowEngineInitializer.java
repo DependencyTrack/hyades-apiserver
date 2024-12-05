@@ -60,32 +60,32 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         engine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflowRunner(),
-                /* maxConcurrency */ 5,
+                /* maxConcurrency */ 50,
                 /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
 
         engine.registerActivityRunner(
                 new BomUploadProcessingTask(),
-                /* maxConcurrency */ 5,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(IngestBomArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new VulnerabilityAnalysisTask(),
-                /* maxConcurrency */ 5,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(TriggerProjectVulnAnalysisArgs.class),
                 /* resultConverter */ protoConverter(TriggerProjectVulnAnalysisResult.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new PolicyEvaluationTask(),
-                /* maxConcurrency */ 5,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(EvalProjectPoliciesArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new ProjectMetricsUpdateTask(),
-                /* maxConcurrency */ 5,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
