@@ -314,7 +314,10 @@ public class WorkflowEngine implements Closeable {
         for (final ScheduleWorkflowRunOptions option : options) {
             final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(new NewWorkflowRunRow(
-                    runId, option.workflowName(), option.workflowVersion()));
+                    runId,
+                    option.workflowName(),
+                    option.workflowVersion(),
+                    option.priority()));
 
             final var runStartedBuilder = RunStarted.newBuilder()
                     .setWorkflowName(option.workflowName())
@@ -557,7 +560,8 @@ public class WorkflowEngine implements Closeable {
                     newWorkflowRuns.add(new NewWorkflowRunRow(
                             message.recipientRunId(),
                             message.event().getRunStarted().getWorkflowName(),
-                            message.event().getRunStarted().getWorkflowVersion()));
+                            message.event().getRunStarted().getWorkflowVersion(),
+                            /* TODO: priority */ null));
                 }
                 newInboxEvents.add(new NewWorkflowEventInboxRow(
                         message.recipientRunId(),

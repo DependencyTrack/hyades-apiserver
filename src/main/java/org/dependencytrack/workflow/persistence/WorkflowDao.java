@@ -74,14 +74,12 @@ public final class WorkflowDao {
                   "ID"
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
-                , "STATUS"
-                , "CREATED_AT"
+                , "PRIORITY"
                 ) VALUES (
                   :id
                 , :workflowName
                 , :workflowVersion
-                , 'PENDING'
-                , NOW()
+                , :priority
                 )
                 RETURNING "ID"
                 """);
@@ -246,7 +244,7 @@ public final class WorkflowDao {
                                       AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW()))
                      ORDER BY "PRIORITY" DESC NULLS LAST
                             , "CREATED_AT"
-                       FOR UPDATE
+                       FOR NO KEY UPDATE
                       SKIP LOCKED
                      LIMIT :limit)
                 UPDATE "WORKFLOW_RUN"
@@ -327,7 +325,9 @@ public final class WorkflowDao {
                       FROM "WORKFLOW_EVENT_INBOX"
                      WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
                        AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
-                     ORDER BY "ID")
+                     ORDER BY "ID"
+                       FOR NO KEY UPDATE
+                      SKIP LOCKED)
                 UPDATE "WORKFLOW_EVENT_INBOX"
                    SET "LOCKED_BY" = :workerInstanceId
                      , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
@@ -501,7 +501,7 @@ public final class WorkflowDao {
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                      ORDER BY "PRIORITY" DESC NULLS LAST
                             , "CREATED_AT"
-                       FOR UPDATE
+                       FOR NO KEY UPDATE
                       SKIP LOCKED
                      LIMIT :limit)
                 UPDATE "WORKFLOW_ACTIVITY_TASK"
