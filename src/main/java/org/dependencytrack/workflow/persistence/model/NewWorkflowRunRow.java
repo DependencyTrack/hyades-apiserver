@@ -23,5 +23,6 @@ import java.util.UUID;
 public record NewWorkflowRunRow(
         UUID id,
         String workflowName,
-        int workflowVersion) {
+        int workflowVersion,
+        Integer priority) {
 }

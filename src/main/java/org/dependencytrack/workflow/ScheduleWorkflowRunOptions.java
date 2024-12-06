@@ -31,9 +31,14 @@ public record ScheduleWorkflowRunOptions(
         this(workflowName, workflowVersion, null, null);
     }
 
+    public ScheduleWorkflowRunOptions withPriority(final Integer priority) {
+        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+                priority, this.argument);
+    }
+
     public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
-        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion, this.priority,
-                converter.convertToPayload(argument));
+        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+                this.priority, converter.convertToPayload(argument));
     }
 
 }
