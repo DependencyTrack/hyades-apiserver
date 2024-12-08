@@ -29,6 +29,7 @@ public record WorkflowRunRowUpdate(
         String customStatus,
         Instant createdAt,
         Instant updatedAt,
+        Instant startedAt,
         Instant completedAt) {
 
 }

@@ -36,11 +36,12 @@ message WorkflowEvent {
     RunnerStarted runner_started = 25;
     RunnerCompleted Runner_completed = 26;
 
-    RunStarted run_started = 50;
-    RunCancelled run_cancelled = 51;
-    RunSuspended run_suspended = 52;
-    RunResumed run_resumed = 53;
-    RunCompleted run_completed = 54;
+    RunScheduled run_scheduled = 50;
+    RunStarted run_started = 51;
+    RunCancelled run_cancelled = 52;
+    RunSuspended run_suspended = 53;
+    RunResumed run_resumed = 54;
+    RunCompleted run_completed = 55;
 
     ActivityTaskScheduled activity_task_scheduled = 75;
     ActivityTaskCompleted activity_task_completed = 76;
@@ -72,12 +73,15 @@ message RunnerStarted {
 message RunnerCompleted {
 }
 
-message RunStarted {
+message RunScheduled {
   string workflow_name = 1;
-  int32 workflow_version= 2;
+  int32 workflow_version = 2;
   optional WorkflowPayload argument = 3;
   optional ParentWorkflowRun parent_run = 4;
   // TODO: Principal?
+}
+
+message RunStarted {
 }
 
 message RunCancelled {

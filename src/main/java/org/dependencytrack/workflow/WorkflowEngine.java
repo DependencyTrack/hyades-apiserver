@@ -33,7 +33,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.v1alpha1.RunCancelled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
-import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
+import org.dependencytrack.proto.workflow.v1alpha1.RunScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
@@ -319,7 +319,7 @@ public class WorkflowEngine implements Closeable {
                     option.workflowVersion(),
                     option.priority()));
 
-            final var runStartedBuilder = RunStarted.newBuilder()
+            final var runStartedBuilder = RunScheduled.newBuilder()
                     .setWorkflowName(option.workflowName())
                     .setWorkflowVersion(option.workflowVersion());
             if (option.argument() != null) {
@@ -330,7 +330,7 @@ public class WorkflowEngine implements Closeable {
                     WorkflowEvent.newBuilder()
                             .setId(-1)
                             .setTimestamp(now)
-                            .setRunStarted(runStartedBuilder.build())
+                            .setRunScheduled(runStartedBuilder.build())
                             .build()));
         }
 
@@ -531,6 +531,7 @@ public class WorkflowEngine implements Closeable {
                                 run.customStatus().orElse(null),
                                 run.createdAt().orElse(null),
                                 run.updatedAt().orElse(null),
+                                run.startedAt().orElse(null),
                                 run.completedAt().orElse(null)))
                         .toList());
         assert updatedRuns == actions.size();
@@ -554,13 +555,13 @@ public class WorkflowEngine implements Closeable {
             }
 
             for (final WorkflowMessage message : workflowRun.pendingWorkflowMessages()) {
-                // If the outbound message is a RunStarted event, the recipient
+                // If the outbound message is a RunScheduled event, the recipient
                 // workflow run will need to be created first.
-                if (message.event().hasRunStarted()) {
+                if (message.event().hasRunScheduled()) {
                     newWorkflowRuns.add(new NewWorkflowRunRow(
                             message.recipientRunId(),
-                            message.event().getRunStarted().getWorkflowName(),
-                            message.event().getRunStarted().getWorkflowVersion(),
+                            message.event().getRunScheduled().getWorkflowName(),
+                            message.event().getRunScheduled().getWorkflowVersion(),
                             /* TODO: priority */ null));
                 }
                 newInboxEvents.add(new NewWorkflowEventInboxRow(

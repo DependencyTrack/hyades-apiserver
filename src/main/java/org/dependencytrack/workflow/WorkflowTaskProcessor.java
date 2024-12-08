@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunnerCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunnerStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
@@ -105,6 +106,8 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
             return;
         }
 
+        // Inject a RunnerStarted event.
+        // Its timestamp will be used as deterministic "now" timestamp while processing new events.
         workflowRun.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -115,6 +118,19 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
         for (final WorkflowEvent newEvent : task.inboxEvents()) {
             workflowRun.onEvent(newEvent);
             eventsAdded++;
+
+            // Inject a RunStarted event when encountering a RunScheduled event.
+            // This is mainly to populate the run's startedAt timestamp,
+            // so we can differentiate between when a run was scheduled vs.
+            // when it was eventually picked up.
+            if (newEvent.hasRunScheduled()) {
+                workflowRun.onEvent(WorkflowEvent.newBuilder()
+                        .setId(-1)
+                        .setTimestamp(Timestamps.now())
+                        .setRunStarted(RunStarted.newBuilder().build())
+                        .build());
+                eventsAdded++;
+            }
         }
 
         if (eventsAdded == 0) {

@@ -35,5 +35,6 @@ public record WorkflowRunRow(
         @Nullable Instant lockedUntil,
         Instant createdAt,
         @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
         @Nullable Instant completedAt) {
 }
