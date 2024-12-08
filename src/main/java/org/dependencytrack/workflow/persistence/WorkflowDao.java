@@ -111,6 +111,7 @@ public final class WorkflowDao {
                      , "PRIORITY" AS "priority"
                      , "CREATED_AT" AS "createdAt"
                      , "UPDATED_AT" AS "updatedAt"
+                     , "STARTED_AT" AS "startedAt"
                      , "COMPLETED_AT" AS "completedAt"
                      , (SELECT COUNT(*)
                           FROM "WORKFLOW_EVENT_LOG" AS "WEL"
@@ -172,6 +173,7 @@ public final class WorkflowDao {
                      , "LOCKED_UNTIL" = NULL
                      , "CREATED_AT" = COALESCE(:createdAt, "CREATED_AT")
                      , "UPDATED_AT" = COALESCE(:updatedAt, "UPDATED_AT")
+                     , "STARTED_AT" = COALESCE(:startedAt, "STARTED_AT")
                      , "COMPLETED_AT" = COALESCE(:completedAt, "COMPLETED_AT")
                  WHERE "ID" = :id
                    AND "LOCKED_BY" = :workerInstanceId

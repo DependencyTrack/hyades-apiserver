@@ -25,6 +25,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.RunCancelled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
+import org.dependencytrack.proto.workflow.v1alpha1.RunScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
@@ -348,6 +349,7 @@ public final class WorkflowRunContext<A, R> {
 
         switch (event.getSubjectCase()) {
             case RUNNER_STARTED -> onRunnerStarted(event.getTimestamp());
+            case RUN_SCHEDULED -> onRunScheduled(event.getRunScheduled());
             case RUN_STARTED -> onRunStarted(event.getRunStarted());
             case RUN_CANCELLED -> onRunCancelled(event.getRunCancelled());
             case RUN_SUSPENDED -> onRunSuspended(event.getRunSuspended());
@@ -381,12 +383,16 @@ public final class WorkflowRunContext<A, R> {
         currentTime = WorkflowEngine.toInstant(timestamp);
     }
 
-    private void onRunStarted(final RunStarted runStarted) {
-        logger().debug("Started");
+    private void onRunScheduled(final RunScheduled runScheduled) {
+        logger().debug("Scheduled");
 
-        if (runStarted.hasArgument()) {
-            this.argument = argumentConverter.convertFromPayload(runStarted.getArgument());
+        if (runScheduled.hasArgument()) {
+            this.argument = argumentConverter.convertFromPayload(runScheduled.getArgument());
         }
+    }
+
+    private void onRunStarted(final RunStarted ignored) {
+        logger().debug("Started");
 
         final Optional<R> result;
         try {

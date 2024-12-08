@@ -33,6 +33,7 @@ public record WorkflowRunListRow(
         @Nullable Integer priority,
         Instant createdAt,
         @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
         @Nullable Instant completedAt,
         int historySize,
         int pendingEvents,

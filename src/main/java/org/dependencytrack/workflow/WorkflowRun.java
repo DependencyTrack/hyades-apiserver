@@ -22,7 +22,7 @@ import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.ParentWorkflowRun;
 import org.dependencytrack.proto.workflow.v1alpha1.RunCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
+import org.dependencytrack.proto.workflow.v1alpha1.RunScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
@@ -57,6 +57,7 @@ public class WorkflowRun {
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
     private final List<WorkflowEvent> pendingTimerFiredEvents;
     private final List<WorkflowMessage> pendingWorkflowMessages;
+    private WorkflowEvent scheduledEvent;
     private WorkflowEvent startedEvent;
     private WorkflowEvent completedEvent;
     private WorkflowPayload argument;
@@ -66,6 +67,7 @@ public class WorkflowRun {
     private String customStatus;
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant startedAt;
     private Instant completedAt;
 
     WorkflowRun(
@@ -143,6 +145,10 @@ public class WorkflowRun {
         return Optional.ofNullable(updatedAt);
     }
 
+    Optional<Instant> startedAt() {
+        return Optional.ofNullable(startedAt);
+    }
+
     Optional<Instant> completedAt() {
         return Optional.ofNullable(completedAt);
     }
@@ -153,6 +159,18 @@ public class WorkflowRun {
 
     private void onEvent(final WorkflowEvent event, final boolean isNew) {
         switch (event.getSubjectCase()) {
+            case RUN_SCHEDULED -> {
+                if (scheduledEvent != null) {
+                    throw new IllegalStateException("""
+                            %s/%s: Duplicate RunScheduled event; Previous event is: %s; \
+                            New event is: %s""".formatted(this.workflowName, this.workflowRunId, scheduledEvent, event));
+                }
+                scheduledEvent = event;
+                argument = event.getRunScheduled().hasArgument()
+                        ? event.getRunScheduled().getArgument()
+                        : null;
+                createdAt = WorkflowEngine.toInstant(event.getTimestamp());
+            }
             case RUN_STARTED -> {
                 if (startedEvent != null) {
                     throw new IllegalStateException("""
@@ -161,10 +179,7 @@ public class WorkflowRun {
                 }
                 startedEvent = event;
                 setStatus(WorkflowRunStatus.RUNNING);
-                argument = event.getRunStarted().hasArgument()
-                        ? event.getRunStarted().getArgument()
-                        : null;
-                createdAt = WorkflowEngine.toInstant(event.getTimestamp());
+                startedAt = WorkflowEngine.toInstant(event.getTimestamp());
             }
             case RUN_COMPLETED -> {
                 if (completedEvent != null) {
@@ -214,8 +229,8 @@ public class WorkflowRun {
     }
 
     private void executeCompleteRunCommand(final CompleteRunCommand command) {
-        if (startedEvent.getRunStarted().hasParentRun()) {
-            final ParentWorkflowRun parentRun = startedEvent.getRunStarted().getParentRun();
+        if (scheduledEvent.getRunScheduled().hasParentRun()) {
+            final ParentWorkflowRun parentRun = scheduledEvent.getRunScheduled().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
 
             final var subWorkflowEventBuilder = WorkflowEvent.newBuilder()
@@ -304,7 +319,7 @@ public class WorkflowRun {
                 .setRunId(subWorkflowRunId.toString())
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion());
-        final var subWorkflowRunStartedBuilder = RunStarted.newBuilder()
+        final var subWorkflowRunScheduledBuilder = RunScheduled.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
                 .setParentRun(ParentWorkflowRun.newBuilder()
@@ -318,7 +333,7 @@ public class WorkflowRun {
         }
         if (command.argument() != null) {
             subWorkflowScheduledBuilder.setArgument(command.argument());
-            subWorkflowRunStartedBuilder.setArgument(command.argument());
+            subWorkflowRunScheduledBuilder.setArgument(command.argument());
         }
 
         onEvent(WorkflowEvent.newBuilder()
@@ -332,7 +347,7 @@ public class WorkflowRun {
                 WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
-                        .setRunStarted(subWorkflowRunStartedBuilder.build())
+                        .setRunScheduled(subWorkflowRunScheduledBuilder.build())
                         .build()));
     }
 
