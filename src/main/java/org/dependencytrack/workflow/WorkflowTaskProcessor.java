@@ -94,6 +94,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 task.workflowRunId(),
                 task.workflowName(),
                 task.workflowVersion(),
+                task.concurrencyGroupId(),
                 task.eventLog());
         if (workflowRun.status().isTerminal()) {
             LOGGER.warn("""

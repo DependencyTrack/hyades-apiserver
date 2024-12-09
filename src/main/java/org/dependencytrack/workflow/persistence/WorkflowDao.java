@@ -35,6 +35,7 @@ import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
@@ -42,6 +43,7 @@ import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.result.ResultIterator;
 import org.jdbi.v3.core.statement.PreparedBatch;
@@ -74,11 +76,13 @@ public final class WorkflowDao {
                   "ID"
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
+                , "CONCURRENCY_GROUP_ID"
                 , "PRIORITY"
                 ) VALUES (
                   :id
                 , :workflowName
                 , :workflowVersion
+                , :concurrencyGroupId
                 , :priority
                 )
                 RETURNING "ID"
@@ -94,6 +98,83 @@ public final class WorkflowDao {
                 .executePreparedBatch("ID")
                 .mapTo(UUID.class)
                 .list();
+    }
+
+    public int createOrUpdateWorkflowConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
+        // TODO: Use createdAt and priority instead of ID to determine next run.
+        final Update update = jdbiHandle.createUpdate("""
+                INSERT INTO "WORKFLOW_CONCURRENCY_GROUP" (
+                  "ID"
+                , "NEXT_RUN_ID"
+                )
+                SELECT * FROM UNNEST(:groupIds, :nextRunIds)
+                ON CONFLICT ("ID")
+                DO UPDATE SET "NEXT_RUN_ID" = LEAST("WORKFLOW_CONCURRENCY_GROUP"."NEXT_RUN_ID", EXCLUDED."NEXT_RUN_ID")
+                """);
+
+        final var groupIds = new ArrayList<String>(concurrencyGroups.size());
+        final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
+        for (final WorkflowConcurrencyGroupRow concurrencyGroup : concurrencyGroups) {
+            groupIds.add(concurrencyGroup.id());
+            nextRunIds.add(concurrencyGroup.nextRunId());
+        }
+
+        return update
+                .bindArray("groupIds", String.class, groupIds)
+                .bindArray("nextRunIds", UUID.class, nextRunIds)
+                .execute();
+    }
+
+    public int updateConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
+        final Update update = jdbiHandle.createUpdate("""
+                UPDATE "WORKFLOW_CONCURRENCY_GROUP"
+                   SET "NEXT_RUN_ID" = "GROUP_UPDATES"."NEXT_RUN_ID"
+                  FROM UNNEST(:groupIds, :nextRunIds) AS "GROUP_UPDATES"("GROUP_ID", "NEXT_RUN_ID")
+                 WHERE "WORKFLOW_CONCURRENCY_GROUP"."ID" = "GROUP_UPDATES"."GROUP_ID"
+                """);
+
+        final var groupIds = new ArrayList<String>(concurrencyGroups.size());
+        final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
+        for (final WorkflowConcurrencyGroupRow concurrencyGroup : concurrencyGroups) {
+            groupIds.add(concurrencyGroup.id());
+            nextRunIds.add(concurrencyGroup.nextRunId());
+        }
+
+        return update
+                .bindArray("groupIds", String.class, groupIds)
+                .bindArray("nextRunIds", UUID.class, nextRunIds)
+                .execute();
+    }
+
+    public Map<String, UUID> getNextRunIdByConcurrencyGroupId(final Collection<String> concurrencyGroupIds) {
+        // TODO: Use createdAt and priority instead of ID to determine next run.
+        final Query query = jdbiHandle.createQuery("""
+                SELECT "CONCURRENCY_GROUP_ID"
+                     , MIN("ID") AS "NEXT_RUN_ID"
+                  FROM "WORKFLOW_RUN"
+                 WHERE "CONCURRENCY_GROUP_ID" = ANY(:concurrencyGroupIds)
+                   AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
+                 GROUP BY "CONCURRENCY_GROUP_ID"
+                """);
+
+        return query
+                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
+                .setMapKeyColumn("CONCURRENCY_GROUP_ID")
+                .setMapValueColumn("NEXT_RUN_ID")
+                .collectInto(new GenericType<>() {
+                });
+    }
+
+    public int deleteConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
+        final Update update = jdbiHandle.createUpdate("""
+                DELETE
+                  FROM "WORKFLOW_CONCURRENCY_GROUP"
+                 WHERE "ID" = ANY(:concurrencyGroupIds)
+                """);
+
+        return update
+                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
+                .execute();
     }
 
     public List<WorkflowRunListRow> getWorkflowRuns() {
@@ -239,6 +320,10 @@ public final class WorkflowDao {
                       FROM "WORKFLOW_RUN"
                      WHERE "WORKFLOW_NAME" = :workflowName
                        AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
+                       AND ("CONCURRENCY_GROUP_ID" IS NULL
+                            OR "ID" = (SELECT "NEXT_RUN_ID"
+                                         FROM "WORKFLOW_CONCURRENCY_GROUP" AS "WCG"
+                                        WHERE "WCG"."ID" = "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"))
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                        AND EXISTS (SELECT 1
                                      FROM "WORKFLOW_EVENT_INBOX"
@@ -257,6 +342,7 @@ public final class WorkflowDao {
                 RETURNING "WORKFLOW_RUN"."ID"
                         , "WORKFLOW_RUN"."WORKFLOW_NAME"
                         , "WORKFLOW_RUN"."WORKFLOW_VERSION"
+                        , "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"
                         , "WORKFLOW_RUN"."PRIORITY"
                 """);
 
@@ -269,6 +355,7 @@ public final class WorkflowDao {
                         "ID",
                         "WORKFLOW_NAME",
                         "WORKFLOW_VERSION",
+                        "CONCURRENCY_GROUP_ID",
                         "PRIORITY")
                 .map(new PolledWorkflowRunRowMapper())
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());

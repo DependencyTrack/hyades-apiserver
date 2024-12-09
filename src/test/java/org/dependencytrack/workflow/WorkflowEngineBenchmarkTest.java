@@ -106,9 +106,13 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
     @Test
     public void test() {
-        final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(10_000);
-        for (int i = 0; i < 10_000; i++) {
-            scheduleOptions.add(new ScheduleWorkflowRunOptions("test", 1));
+        final int numRuns = 25_000;
+
+        final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(numRuns);
+        for (int i = 0; i < numRuns; i++) {
+            final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
+            scheduleOptions.add(new ScheduleWorkflowRunOptions("test", 1)
+                   .withConcurrencyGroupId(concurrencyGroupId));
         }
 
         engine.scheduleWorkflowRuns(scheduleOptions);
@@ -125,7 +129,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                                     .mapTo(Long.class)
                                     .one());
                     LOGGER.info("Completed workflows: " + completedWorkflows);
-                    assertThat(completedWorkflows).isEqualTo(10_000);
+                    assertThat(completedWorkflows).isEqualTo(numRuns);
                 });
     }
 

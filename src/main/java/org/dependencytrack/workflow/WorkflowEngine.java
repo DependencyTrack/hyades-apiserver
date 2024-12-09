@@ -54,6 +54,7 @@ import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
@@ -68,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -311,12 +313,14 @@ public class WorkflowEngine implements Closeable {
         final var now = Timestamps.now();
         final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
         final var newInboxEventRows = new ArrayList<NewWorkflowEventInboxRow>(options.size());
+        final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
         for (final ScheduleWorkflowRunOptions option : options) {
             final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(new NewWorkflowRunRow(
                     runId,
                     option.workflowName(),
                     option.workflowVersion(),
+                    option.concurrencyGroupId(),
                     option.priority()));
 
             final var runStartedBuilder = RunScheduled.newBuilder()
@@ -332,7 +336,24 @@ public class WorkflowEngine implements Closeable {
                             .setTimestamp(now)
                             .setRunScheduled(runStartedBuilder.build())
                             .build()));
+
+            if (option.concurrencyGroupId() != null) {
+                nextRunIdByConcurrencyGroupId.compute(option.concurrencyGroupId(), (ignored, previous) -> {
+                    if (previous == null) {
+                        return runId;
+                    }
+
+                    return runId.compareTo(previous) < 0 ? runId : previous;
+                });
+            }
         }
+
+        final List<WorkflowConcurrencyGroupRow> concurrencyGroupUpdates =
+                nextRunIdByConcurrencyGroupId.entrySet().stream()
+                        .map(entry -> new WorkflowConcurrencyGroupRow(
+                                /* id */ entry.getKey(),
+                                /* nextRunId */ entry.getValue()))
+                        .toList();
 
         return inJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -342,6 +363,11 @@ public class WorkflowEngine implements Closeable {
 
             final int createdInboxEvents = dao.createInboxEvents(newInboxEventRows);
             assert createdInboxEvents == newInboxEventRows.size();
+
+            if (!concurrencyGroupUpdates.isEmpty()) {
+                final int updatedConcurrencyGroups = dao.createOrUpdateWorkflowConcurrencyGroups(concurrencyGroupUpdates);
+                assert updatedConcurrencyGroups == concurrencyGroupUpdates.size();
+            }
 
             return createdRunIds;
         });
@@ -481,6 +507,7 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.id(),
                                 polledRun.workflowName(),
                                 polledRun.workflowVersion(),
+                                polledRun.concurrencyGroupId(),
                                 polledRun.priority(),
                                 maxDequeueCount,
                                 eventLog,
@@ -521,6 +548,7 @@ public class WorkflowEngine implements Closeable {
         final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(actions.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
         final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
+        final var concurrencyGroupsToUpdate = new HashSet<String>();
 
         final int updatedRuns = dao.updateWorkflowRuns(this.instanceId,
                 actions.stream()
@@ -562,6 +590,7 @@ public class WorkflowEngine implements Closeable {
                             message.recipientRunId(),
                             message.event().getRunScheduled().getWorkflowName(),
                             message.event().getRunScheduled().getWorkflowVersion(),
+                            /* TODO: concurrencyGroupId */ null,
                             /* TODO: priority */ null));
                 }
                 newInboxEvents.add(new NewWorkflowEventInboxRow(
@@ -601,6 +630,10 @@ public class WorkflowEngine implements Closeable {
                                 ? toInstant(newEvent.getActivityTaskScheduled().getScheduledFor())
                                 : null));
             }
+
+            if (workflowRun.status().isTerminal() && workflowRun.concurrencyGroupId().isPresent()) {
+                concurrencyGroupsToUpdate.add(workflowRun.concurrencyGroupId().get());
+            }
         }
 
         if (!newEventLogEntries.isEmpty()) {
@@ -629,6 +662,26 @@ public class WorkflowEngine implements Closeable {
                         .map(WorkflowRun::workflowRunId)
                         .toList());
         assert deletedInboxEvents >= actions.size();
+
+        if (!concurrencyGroupsToUpdate.isEmpty()) {
+            final Map<String, UUID> nextRunIdByConcurrencyGroupId =
+                    dao.getNextRunIdByConcurrencyGroupId(concurrencyGroupsToUpdate);
+
+            final var concurrencyGroupUpdates = new ArrayList<WorkflowConcurrencyGroupRow>(nextRunIdByConcurrencyGroupId.size());
+            for (final Map.Entry<String, UUID> entry : nextRunIdByConcurrencyGroupId.entrySet()) {
+                concurrencyGroupUpdates.add(new WorkflowConcurrencyGroupRow(entry.getKey(), entry.getValue()));
+            }
+
+            final int updatedConcurrencyGroups = dao.updateConcurrencyGroups(concurrencyGroupUpdates);
+            assert updatedConcurrencyGroups == concurrencyGroupUpdates.size();
+
+            final Set<String> concurrencyGroupsToDelete = new HashSet<>(concurrencyGroupsToUpdate);
+            concurrencyGroupsToDelete.removeAll(nextRunIdByConcurrencyGroupId.keySet());
+            if (!concurrencyGroupsToDelete.isEmpty()) {
+                final int deletedConcurrencyGroups = dao.deleteConcurrencyGroups(concurrencyGroupsToDelete);
+                assert deletedConcurrencyGroups == concurrencyGroupsToDelete.size();
+            }
+        }
     }
 
     List<ActivityTask> pollActivityTasks(final String activityName, final int limit, final Duration lockTimeout) {

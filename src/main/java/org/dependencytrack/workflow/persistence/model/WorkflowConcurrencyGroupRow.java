@@ -20,10 +20,5 @@ package org.dependencytrack.workflow.persistence.model;
 
 import java.util.UUID;
 
-public record NewWorkflowRunRow(
-        UUID id,
-        String workflowName,
-        int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority) {
+public record WorkflowConcurrencyGroupRow(String id, UUID nextRunId) {
 }

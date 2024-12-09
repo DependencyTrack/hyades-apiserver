@@ -36,6 +36,7 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRo
                 rs.getObject("ID", UUID.class),
                 rs.getString("WORKFLOW_NAME"),
                 rs.getInt("WORKFLOW_VERSION"),
+                rs.getString("CONCURRENCY_GROUP_ID"),
                 nullableInt(rs, "PRIORITY"));
     }
 
