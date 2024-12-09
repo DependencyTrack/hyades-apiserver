@@ -276,10 +276,15 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
              var ignoredMdcBomSpecVersion = MDC.putCloseable(MDC_BOM_SPEC_VERSION, ctx.bomSpecVersion);
              var ignoredMdcBomSerialNumber = MDC.putCloseable(MDC_BOM_SERIAL_NUMBER, ctx.bomSerialNumber);
              var ignoredMdcBomVersion = MDC.putCloseable(MDC_BOM_VERSION, String.valueOf(ctx.bomVersion))) {
-            // Prevent BOMs for the same project to be processed concurrently.
-            // Note that this is an edge case, we're not expecting any lock waits under normal circumstances.
-            final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
-            processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
+            if (!isWorkflowEngineEnabled) {
+                // Prevent BOMs for the same project to be processed concurrently.
+                // Note that this is an edge case, we're not expecting any lock waits under normal circumstances.
+                final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
+                processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
+            } else {
+                // Concurrency is managed by the workflow engine, based on the workflow run's concurrencyGroupId.
+                processedBom = processBom(ctx, consumedBom);
+            }
         } catch (Throwable e) {
             // TODO: If workflow engine is enabled, perform the dispatch in a side effect
             //  as part of the workflow.
