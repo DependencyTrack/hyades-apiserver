@@ -52,6 +52,7 @@ public class WorkflowRun {
     private final UUID workflowRunId;
     private final String workflowName;
     private final int workflowVersion;
+    private final String concurrencyGroupId;
     private final List<WorkflowEvent> eventLog;
     private final List<WorkflowEvent> inboxEvents;
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
@@ -74,10 +75,12 @@ public class WorkflowRun {
             final UUID workflowRunId,
             final String workflowName,
             final int workflowVersion,
+            final String concurrencyGroupId,
             final List<WorkflowEvent> eventLog) {
         this.workflowRunId = workflowRunId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
+        this.concurrencyGroupId = concurrencyGroupId;
         this.eventLog = new ArrayList<>();
         this.inboxEvents = new ArrayList<>();
         this.pendingActivityTaskScheduledEvents = new ArrayList<>();
@@ -91,6 +94,10 @@ public class WorkflowRun {
 
     UUID workflowRunId() {
         return workflowRunId;
+    }
+
+    Optional<String> concurrencyGroupId() {
+        return Optional.ofNullable(concurrencyGroupId);
     }
 
     List<WorkflowEvent> eventLog() {

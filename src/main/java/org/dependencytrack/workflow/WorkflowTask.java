@@ -27,6 +27,7 @@ record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,
+        String concurrencyGroupId,
         Integer priority,
         int attempt,
         List<WorkflowEvent> eventLog,

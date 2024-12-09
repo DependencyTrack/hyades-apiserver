@@ -24,21 +24,27 @@ import org.dependencytrack.workflow.payload.PayloadConverter;
 public record ScheduleWorkflowRunOptions(
         String workflowName,
         int workflowVersion,
+        String concurrencyGroupId,
         Integer priority,
         WorkflowPayload argument) {
 
     public ScheduleWorkflowRunOptions(final String workflowName, final int workflowVersion) {
-        this(workflowName, workflowVersion, null, null);
+        this(workflowName, workflowVersion, null, null, null);
+    }
+
+    public ScheduleWorkflowRunOptions withConcurrencyGroupId(final String concurrencyGroupId) {
+        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+                concurrencyGroupId, this.priority, this.argument);
     }
 
     public ScheduleWorkflowRunOptions withPriority(final Integer priority) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                priority, this.argument);
+                this.concurrencyGroupId, priority, this.argument);
     }
 
     public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.priority, converter.convertToPayload(argument));
+                this.concurrencyGroupId, this.priority, converter.convertToPayload(argument));
     }
 
 }

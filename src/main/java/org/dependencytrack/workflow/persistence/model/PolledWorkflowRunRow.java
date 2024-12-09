@@ -25,5 +25,6 @@ public record PolledWorkflowRunRow(
         UUID id,
         String workflowName,
         int workflowVersion,
+        @Nullable String concurrencyGroupId,
         @Nullable Integer priority) {
 }

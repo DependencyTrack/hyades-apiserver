@@ -158,6 +158,7 @@
             , "WORKFLOW_VERSION" SMALLINT NOT NULL
             , "STATUS" WORKFLOW_RUN_STATUS NOT NULL DEFAULT 'PENDING'
             , "CUSTOM_STATUS" TEXT
+            , "CONCURRENCY_GROUP_ID" TEXT
             , "PRIORITY" SMALLINT
             , "LOCKED_BY" TEXT
             , "LOCKED_UNTIL" TIMESTAMPTZ(3)
@@ -167,6 +168,21 @@
             , "COMPLETED_AT" TIMESTAMPTZ(3)
             , CONSTRAINT "WORKFLOW_RUN_PK" PRIMARY KEY ("ID")
             , CONSTRAINT "WORKFLOW_RUN_PARENT_FK" FOREIGN KEY ("PARENT_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            );
+
+            <!--
+              For workflow runs with concurrency group, maintain a sequence for the next run.
+              This adds additional overhead to creation and completion of workflow runs,
+              but performs magnitudes better than using a PARTITION BY window function
+              in the poll query.
+
+              https://docs.hatchet.run/blog/multi-tenant-queues#first-attempt-partition-by
+              https://blog.sequinstream.com/build-your-own-sqs-or-kafka-with-postgres/
+            -->
+            CREATE TABLE "WORKFLOW_CONCURRENCY_GROUP" (
+              "ID" TEXT
+            , "NEXT_RUN_ID" UUID NOT NULL
+            , CONSTRAINT "WORKFLOW_RUN_CONCURRENCY_GROUP_PK" PRIMARY KEY ("ID")
             );
 
             <!--
@@ -236,8 +252,26 @@
             INCLUDE ("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID");
 
             ALTER TABLE "WORKFLOW_RUN" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+            ALTER TABLE "WORKFLOW_CONCURRENCY_GROUP" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_EVENT_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_ACTIVITY_TASK" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+
+            <!--
+              (Temporary?) workaround b/c Postgres has no native MIN(UUID) function.
+              https://dba.stackexchange.com/a/305274
+            -->
+            CREATE FUNCTION MIN(UUID, UUID)
+            RETURNS UUID IMMUTABLE PARALLEL SAFE LANGUAGE SQL AS
+            $$
+            SELECT LEAST($1, $2)
+            $$;
+            CREATE AGGREGATE MIN(UUID) (
+              SFUNC = MIN
+            , STYPE = UUID
+            , COMBINEFUNC = MIN
+            , PARALLEL = SAFE
+            , SORTOP = OPERATOR(&lt;)
+            );
         </sql>
     </changeSet>
 </databaseChangeLog>

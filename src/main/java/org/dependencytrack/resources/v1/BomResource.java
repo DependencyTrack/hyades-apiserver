@@ -488,6 +488,7 @@ public class BomResource extends AlpineResource {
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
                 workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
                         new ScheduleWorkflowRunOptions("process-bom-upload", 1)
+                                .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                 .withArgument(ProcessBomUploadArgs.newBuilder()
                                                 .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                         .setUuid(project.getUuid().toString())
@@ -542,6 +543,7 @@ public class BomResource extends AlpineResource {
                     //  be picked up by another API server instance.
                     workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
                             new ScheduleWorkflowRunOptions("process-bom-upload", 1)
+                                    .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                     .withArgument(ProcessBomUploadArgs.newBuilder()
                                                     .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                             .setUuid(project.getUuid().toString())
