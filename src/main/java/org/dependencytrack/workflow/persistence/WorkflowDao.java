@@ -20,13 +20,16 @@ package org.dependencytrack.workflow.persistence;
 
 import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventInboxRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventLogRowMapper;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadArgumentFactory;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowEventSqlArrayType;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
@@ -45,8 +48,6 @@ import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
-import org.jdbi.v3.core.result.ResultIterator;
-import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
@@ -71,36 +72,49 @@ public final class WorkflowDao {
     }
 
     public List<UUID> createWorkflowRuns(final Collection<NewWorkflowRunRow> newWorkflowRuns) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+        final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_RUN" (
                   "ID"
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
                 , "CONCURRENCY_GROUP_ID"
                 , "PRIORITY"
-                ) VALUES (
-                  :id
-                , :workflowName
-                , :workflowVersion
-                , :concurrencyGroupId
-                , :priority
                 )
+                SELECT *
+                  FROM UNNEST (
+                         :ids
+                       , :workflowNames
+                       , :workflowVersions
+                       , :concurrencyGroupIds
+                       , :priorities)
                 RETURNING "ID"
                 """);
 
+        final var ids = new ArrayList<UUID>(newWorkflowRuns.size());
+        final var workflowNames = new ArrayList<String>(newWorkflowRuns.size());
+        final var workflowVersions = new ArrayList<Integer>(newWorkflowRuns.size());
+        final var concurrencyGroupIds = new ArrayList<String>(newWorkflowRuns.size());
+        final var priorities = new ArrayList<Integer>(newWorkflowRuns.size());
         for (final NewWorkflowRunRow newWorkflowRun : newWorkflowRuns) {
-            preparedBatch
-                    .bindMethods(newWorkflowRun)
-                    .add();
+            ids.add(newWorkflowRun.id());
+            workflowNames.add(newWorkflowRun.workflowName());
+            workflowVersions.add(newWorkflowRun.workflowVersion());
+            concurrencyGroupIds.add(newWorkflowRun.concurrencyGroupId());
+            priorities.add(newWorkflowRun.priority());
         }
 
-        return preparedBatch
-                .executePreparedBatch("ID")
+        return update
+                .bindArray("ids", UUID.class, ids)
+                .bindArray("workflowNames", String.class, workflowNames)
+                .bindArray("workflowVersions", Integer.class, workflowVersions)
+                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
+                .bindArray("priorities", Integer.class, priorities)
+                .executeAndReturnGeneratedKeys("ID")
                 .mapTo(UUID.class)
                 .list();
     }
 
-    public int createOrUpdateWorkflowConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
+    public int maybeCreateConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
         // TODO: Use createdAt and priority instead of ID to determine next run.
         final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_CONCURRENCY_GROUP" (
@@ -108,8 +122,7 @@ public final class WorkflowDao {
                 , "NEXT_RUN_ID"
                 )
                 SELECT * FROM UNNEST(:groupIds, :nextRunIds)
-                ON CONFLICT ("ID")
-                DO UPDATE SET "NEXT_RUN_ID" = LEAST("WORKFLOW_CONCURRENCY_GROUP"."NEXT_RUN_ID", EXCLUDED."NEXT_RUN_ID")
+                ON CONFLICT ("ID") DO NOTHING
                 """);
 
         final var groupIds = new ArrayList<String>(concurrencyGroups.size());
@@ -246,37 +259,65 @@ public final class WorkflowDao {
     public int updateWorkflowRuns(
             final UUID workerInstanceId,
             final Collection<WorkflowRunRowUpdate> runUpdates) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+        final Update update = jdbiHandle.createUpdate("""
                 UPDATE "WORKFLOW_RUN"
-                   SET "STATUS" = COALESCE(:status, "STATUS")
-                     , "CUSTOM_STATUS" = COALESCE(:customStatus, "CUSTOM_STATUS")
+                   SET "STATUS" = COALESCE("RUN_UPDATE"."STATUS", "WORKFLOW_RUN"."STATUS")
+                     , "CUSTOM_STATUS" = COALESCE("RUN_UPDATE"."CUSTOM_STATUS", "WORKFLOW_RUN"."CUSTOM_STATUS")
                      , "LOCKED_BY" = NULL
                      , "LOCKED_UNTIL" = NULL
-                     , "CREATED_AT" = COALESCE(:createdAt, "CREATED_AT")
-                     , "UPDATED_AT" = COALESCE(:updatedAt, "UPDATED_AT")
-                     , "STARTED_AT" = COALESCE(:startedAt, "STARTED_AT")
-                     , "COMPLETED_AT" = COALESCE(:completedAt, "COMPLETED_AT")
-                 WHERE "ID" = :id
-                   AND "LOCKED_BY" = :workerInstanceId
+                     , "CREATED_AT" = COALESCE("RUN_UPDATE"."CREATED_AT", "WORKFLOW_RUN"."CREATED_AT")
+                     , "UPDATED_AT" = COALESCE("RUN_UPDATE"."UPDATED_AT", "WORKFLOW_RUN"."UPDATED_AT")
+                     , "STARTED_AT" = COALESCE("RUN_UPDATE"."STARTED_AT", "WORKFLOW_RUN"."STARTED_AT")
+                     , "COMPLETED_AT" = COALESCE("RUN_UPDATE"."COMPLETED_AT", "WORKFLOW_RUN"."COMPLETED_AT")
+                  FROM UNNEST (
+                         :ids
+                       , :statuses
+                       , :customStatuses
+                       , :createdAts
+                       , :updatedAts
+                       , :startedAts
+                       , :completedAts
+                       ) AS "RUN_UPDATE" (
+                         "ID"
+                       , "STATUS"
+                       , "CUSTOM_STATUS"
+                       , "CREATED_AT"
+                       , "UPDATED_AT"
+                       , "STARTED_AT"
+                       , "COMPLETED_AT")
+                 WHERE "WORKFLOW_RUN"."ID" = "RUN_UPDATE"."ID"
+                   AND "WORKFLOW_RUN"."LOCKED_BY" = :workerInstanceId
                 """);
 
+        final var ids = new ArrayList<UUID>(runUpdates.size());
+        final var statuses = new ArrayList<WorkflowRunStatus>(runUpdates.size());
+        final var customStatuses = new ArrayList<String>(runUpdates.size());
+        final var createdAts = new ArrayList<Instant>(runUpdates.size());
+        final var updatedAts = new ArrayList<Instant>(runUpdates.size());
+        final var startedAts = new ArrayList<Instant>(runUpdates.size());
+        final var completedAts = new ArrayList<Instant>(runUpdates.size());
         for (final WorkflowRunRowUpdate runUpdate : runUpdates) {
-            preparedBatch
-                    .bind("workerInstanceId", workerInstanceId.toString())
-                    .bindMethods(runUpdate)
-                    .add();
+            ids.add(runUpdate.id());
+            statuses.add(runUpdate.status());
+            customStatuses.add(runUpdate.customStatus());
+            createdAts.add(runUpdate.createdAt());
+            updatedAts.add(runUpdate.updatedAt());
+            startedAts.add(runUpdate.startedAt());
+            completedAts.add(runUpdate.completedAt());
         }
 
-        final ResultIterator<Integer> modCountIterator = preparedBatch
-                .registerArgument(new WorkflowPayloadArgumentFactory())
-                .executeAndGetModCount();
-
-        int modCount = 0;
-        while (modCountIterator.hasNext()) {
-            modCount += modCountIterator.next();
-        }
-
-        return modCount;
+        return update
+                .registerArrayType(Instant.class, "TIMESTAMPTZ")
+                .registerArrayType(WorkflowRunStatus.class, "WORKFLOW_RUN_STATUS")
+                .bind("workerInstanceId", workerInstanceId.toString())
+                .bindArray("ids", UUID.class, ids)
+                .bindArray("statuses", WorkflowRunStatus.class, statuses)
+                .bindArray("customStatuses", String.class, customStatuses)
+                .bindArray("createdAts", Instant.class, createdAts)
+                .bindArray("updatedAts", Instant.class, updatedAts)
+                .bindArray("startedAts", Instant.class, startedAts)
+                .bindArray("completedAts", Instant.class, completedAts)
+                .execute();
     }
 
     public WorkflowRunRow getWorkflowRun(final UUID id) {
@@ -377,32 +418,32 @@ public final class WorkflowDao {
     }
 
     public int createInboxEvents(final SequencedCollection<NewWorkflowEventInboxRow> newEvents) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+        final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_EVENT_INBOX" (
                   "WORKFLOW_RUN_ID"
                 , "VISIBLE_FROM"
                 , "EVENT"
-                ) VALUES (
-                  :workflowRunId
-                , :visibleFrom
-                , :event
                 )
-                RETURNING 1
+                SELECT * FROM UNNEST(:runIds, :visibleFroms, :events)
                 """);
 
+        final var runIds = new ArrayList<UUID>(newEvents.size());
+        final var visibleFroms = new ArrayList<Instant>(newEvents.size());
+        final var events = new ArrayList<WorkflowEvent>(newEvents.size());
         for (final NewWorkflowEventInboxRow newEvent : newEvents) {
-            preparedBatch
-                    .bindMethods(newEvent)
-                    .add();
+            runIds.add(newEvent.workflowRunId());
+            visibleFroms.add(newEvent.visibleFrom());
+            events.add(newEvent.event());
         }
 
-        return preparedBatch
+        return update
+                .registerArrayType(Instant.class, "TIMESTAMPTZ")
+                .registerArrayType(new WorkflowEventSqlArrayType())
+                .bindArray("runIds", UUID.class, runIds)
+                .bindArray("visibleFroms", Instant.class, visibleFroms)
+                .bindArray("events", WorkflowEvent.class, events)
                 .registerArgument(new WorkflowEventArgumentFactory())
-                .executePreparedBatch("1")
-                .mapTo(Integer.class)
-                .stream()
-                .mapToInt(Integer::intValue)
-                .sum();
+                .execute();
     }
 
     public Map<UUID, List<PolledInboxEventRow>> pollAndLockInboxEvents(
@@ -482,28 +523,31 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public void createWorkflowEventLogEntries(final Collection<NewWorkflowEventLogRow> newEventLogEntries) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+    public int createWorkflowEventLogEntries(final Collection<NewWorkflowEventLogRow> newEventLogEntries) {
+        final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_EVENT_LOG" (
                   "WORKFLOW_RUN_ID"
                 , "SEQUENCE_NUMBER"
                 , "EVENT"
-                ) VALUES (
-                  :workflowRunId
-                , :sequenceNumber
-                , :event
                 )
+                SELECT * FROM UNNEST(:runIds, :sequenceNumbers, :events)
                 """);
 
+        final var runIds = new ArrayList<UUID>(newEventLogEntries.size());
+        final var sequenceNumbers = new ArrayList<Integer>(newEventLogEntries.size());
+        final var events = new ArrayList<WorkflowEvent>(newEventLogEntries.size());
         for (final NewWorkflowEventLogRow newLogEntry : newEventLogEntries) {
-            preparedBatch
-                    .bindMethods(newLogEntry)
-                    .add();
+            runIds.add(newLogEntry.workflowRunId());
+            sequenceNumbers.add(newLogEntry.sequenceNumber());
+            events.add(newLogEntry.event());
         }
 
-        preparedBatch
-                .registerArgument(new WorkflowEventArgumentFactory())
-                .executeAndGetModCount();
+        return update
+                .registerArrayType(new WorkflowEventSqlArrayType())
+                .bindArray("runIds", UUID.class, runIds)
+                .bindArray("sequenceNumbers", Integer.class, sequenceNumbers)
+                .bindArray("events", WorkflowEvent.class, events)
+                .execute();
     }
 
     public List<WorkflowEvent> getWorkflowRunEventLog(final UUID workflowRunId) {
@@ -539,7 +583,7 @@ public final class WorkflowDao {
     }
 
     public int createActivityTasks(final Collection<NewActivityTaskRow> newTasks) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+        final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_ACTIVITY_TASK" (
                   "WORKFLOW_RUN_ID"
                 , "SCHEDULED_EVENT_ID"
@@ -548,31 +592,43 @@ public final class WorkflowDao {
                 , "ARGUMENT"
                 , "VISIBLE_FROM"
                 , "CREATED_AT"
-                ) VALUES (
-                  :workflowRunId
-                , :scheduledEventId
-                , :activityName
-                , :priority
-                , :argument
-                , :visibleFrom
-                , NOW()
                 )
-                RETURNING 1
+                SELECT *
+                     , NOW()
+                  FROM UNNEST (
+                         :runIds
+                       , :scheduledEventIds
+                       , :activityNames
+                       , :priorities
+                       , :arguments
+                       , :visibleFroms)
                 """);
 
+        final var runIds = new ArrayList<UUID>(newTasks.size());
+        final var scheduledEventIds = new ArrayList<Integer>(newTasks.size());
+        final var activityNames = new ArrayList<String>(newTasks.size());
+        final var priorities = new ArrayList<Integer>(newTasks.size());
+        final var arguments = new ArrayList<WorkflowPayload>(newTasks.size());
+        final var visibleFroms = new ArrayList<Instant>(newTasks.size());
         for (final NewActivityTaskRow newTask : newTasks) {
-            preparedBatch
-                    .bindMethods(newTask)
-                    .add();
+            runIds.add(newTask.workflowRunId());
+            scheduledEventIds.add(newTask.scheduledEventId());
+            activityNames.add(newTask.activityName());
+            priorities.add(newTask.priority());
+            arguments.add(newTask.argument());
+            visibleFroms.add(newTask.visibleFrom());
         }
 
-        return preparedBatch
-                .registerArgument(new WorkflowPayloadArgumentFactory())
-                .executePreparedBatch("1")
-                .mapTo(Integer.class)
-                .stream()
-                .mapToInt(Integer::intValue)
-                .sum();
+        return update
+                .registerArrayType(Instant.class, "TIMESTAMPTZ")
+                .registerArrayType(new WorkflowPayloadSqlArrayType())
+                .bindArray("runIds", UUID.class, runIds)
+                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .bindArray("activityNames", String.class, activityNames)
+                .bindArray("priorities", Integer.class, priorities)
+                .bindArray("arguments", WorkflowPayload.class, arguments)
+                .bindArray("visibleFroms", Instant.class, visibleFroms)
+                .execute();
     }
 
     public List<PolledActivityTaskRow> pollAndLockActivityTasks(
