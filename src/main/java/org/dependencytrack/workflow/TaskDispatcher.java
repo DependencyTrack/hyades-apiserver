@@ -21,17 +21,21 @@ package org.dependencytrack.workflow;
 import alpine.Config;
 import alpine.common.metrics.Metrics;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 final class TaskDispatcher<T extends Task> implements Runnable {
 
@@ -47,19 +51,24 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private final ExecutorService taskExecutorService;
     private final TaskProcessor<T> taskProcessor;
     private final Semaphore taskSemaphore;
+    private final Duration minPollInterval;
+    private Instant lastPolledAt;
     private Timer taskPollLatencyTimer;
     private DistributionSummary taskPollDistribution;
-    private Timer taskProcessingLatencyTimer;
+    private Function<Task, Counter> tasksProcessedCounter;
+    private Function<Task, Timer> taskProcessLatencyTimer;
 
     TaskDispatcher(
             final WorkflowEngine engine,
             final ExecutorService taskExecutorService,
             final TaskProcessor<T> taskProcessor,
-            final int maxConcurrency) {
+            final int maxConcurrency,
+            final Duration minPollInterval) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
         this.taskProcessor = taskProcessor;
         this.taskSemaphore = new Semaphore(maxConcurrency);
+        this.minPollInterval = minPollInterval;
     }
 
     @Override
@@ -69,6 +78,8 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         int pollsWithoutResults = 0;
 
         while (engine.state().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
+            maybeSleepUntilNextPollIsDue();
+
             // Attempt to acquire a permit from the semaphore, blocking for up to 5 seconds.
             // If acquisition was successful, immediately release the permit again.
             // This is a poor-man's alternative to busy-waiting on taskSemaphore.availablePermits() > 0.
@@ -95,6 +106,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             final Timer.Sample taskPollLatencySample = Timer.start();
             try {
                 polledTasks = taskProcessor.poll(tasksToPoll);
+                lastPolledAt = Instant.now();
             } finally {
                 if (taskPollLatencyTimer != null) {
                     taskPollLatencySample.stop(taskPollLatencyTimer);
@@ -137,25 +149,50 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         }
     }
 
-    private void executeTask(final T polledTask, final CountDownLatch permitAcquiredLatch) {
+    private void executeTask(final T task, final CountDownLatch permitAcquiredLatch) {
         try {
             taskSemaphore.acquire();
             permitAcquiredLatch.countDown();
 
             final Timer.Sample taskProcessingLatencySample = Timer.start();
             try {
-                taskProcessor.process(polledTask);
+                taskProcessor.process(task);
+
+                if (tasksProcessedCounter != null) {
+                    tasksProcessedCounter.apply(task).increment();
+                }
             } finally {
-                if (taskProcessingLatencyTimer != null) {
-                    taskProcessingLatencySample.stop(taskProcessingLatencyTimer);
+                if (taskProcessLatencyTimer != null) {
+                    taskProcessingLatencySample.stop(
+                            taskProcessLatencyTimer.apply(task));
                 }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for semaphore permit", e);
-            taskProcessor.abandon(polledTask);
+            taskProcessor.abandon(task);
         } finally {
             taskSemaphore.release();
+        }
+    }
+
+    private void maybeSleepUntilNextPollIsDue() {
+        if (lastPolledAt == null) {
+            return;
+        }
+
+        final Instant now = Instant.now();
+        final Instant nextPollAt = lastPolledAt.plus(minPollInterval);
+        if (now.isAfter(nextPollAt)) {
+            return;
+        }
+
+        final Duration nextPollDueIn = Duration.between(now, nextPollAt);
+        try {
+            Thread.sleep(nextPollDueIn.toMillis());
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while waiting for next poll at {}", nextPollAt, e);
         }
     }
 
@@ -180,9 +217,16 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                 .tags(commonTags)
                 .register(Metrics.getRegistry());
 
-        taskProcessingLatencyTimer = Timer
+        tasksProcessedCounter = task -> Counter
+                .builder("dtrack.workflow.tasks.processed")
+                .tags(commonTags)
+                .tag("taskName", task.taskName())
+                .register(Metrics.getRegistry());
+
+        taskProcessLatencyTimer = task -> Timer
                 .builder("dtrack.workflow.task.process.latency")
                 .tags(commonTags)
+                .tag("taskName", task.taskName())
                 .register(Metrics.getRegistry());
     }
 

@@ -161,8 +161,8 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                             summary.getId().getTag("taskType"), summary.mean(), summary.max()));
                 }
                 for (final Timer timer : taskProcessLatencies) {
-                    LOGGER.info("Task Process Latency: taskType=%s, mean=%.2f, max=%.2f".formatted(
-                            timer.getId().getTag("taskType"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                    LOGGER.info("Task Process Latency: taskType=%s, taskName=%s, mean=%.2f, max=%.2f".formatted(
+                            timer.getId().getTag("taskType"), timer.getId().getTag("taskName"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
                 }
 
                 for (final Timer timer : bufferFlushLatencies) {
