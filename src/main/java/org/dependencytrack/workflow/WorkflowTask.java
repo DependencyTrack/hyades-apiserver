@@ -32,4 +32,10 @@ record WorkflowTask(
         int attempt,
         List<WorkflowEvent> eventLog,
         List<WorkflowEvent> inboxEvents) implements Task {
+
+    @Override
+    public String taskName() {
+        return "%s:%d".formatted(workflowName, workflowVersion);
+    }
+
 }

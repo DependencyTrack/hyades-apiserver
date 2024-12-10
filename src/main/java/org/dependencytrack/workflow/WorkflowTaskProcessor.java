@@ -68,7 +68,8 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
         try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
              var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
              var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()));
-             var ignoredMdcWorkflowPriority = MDC.putCloseable("workflowPriority", String.valueOf(task.priority()))) {
+             var ignoredMdcWorkflowPriority = MDC.putCloseable("workflowPriority", String.valueOf(task.priority()));
+             var ignoredMdcWorkflowConcurrencyGroupId = MDC.putCloseable("workflowConcurrencyGroupId", String.valueOf(task.concurrencyGroupId()))) {
             processInternal(task);
         } catch (RuntimeException e) {
             LOGGER.error("Failed to process task; Abandoning it", e);

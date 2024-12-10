@@ -84,6 +84,11 @@ import java.util.stream.Stream;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -133,7 +138,8 @@ public class WorkflowEngine implements Closeable {
     private final UUID instanceId = UUID.randomUUID();
     private final ReentrantLock stateLock = new ReentrantLock();
     private State state = State.CREATED;
-    private ExecutorService dispatcherExecutor;
+    private ExecutorService taskDispatcherExecutor;
+    private Duration taskDispatcherMinPollInterval;
     private Map<String, ExecutorService> executorServiceByName;
     private Buffer<NewExternalEvent> externalEventBuffer;
     private Buffer<TaskAction> taskActionBuffer;
@@ -145,35 +151,52 @@ public class WorkflowEngine implements Closeable {
     public void start() {
         setState(State.STARTING);
 
+        // TODO: Decouple from Alpine's config to make the engine more modular.
+        //  Use a dedicated configuration class instead that DT can populate on startup.
+        final Duration externalEventBufferFlushInterval = Duration.ofMillis(Config.getInstance()
+                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS));
+        final int externalEventBufferMaxBatchSize = Config.getInstance()
+                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE);
+
         externalEventBuffer = new Buffer<>(
                 "workflow-external-event",
                 this::flushExternalEvents,
-                Duration.ofMillis(10),
-                100);
+                externalEventBufferFlushInterval,
+                externalEventBufferMaxBatchSize);
         externalEventBuffer.start();
 
         // The buffer's flush interval should be long enough to allow
         // for more than one task result to be included, but short enough
         // to not block task execution unnecessarily. In a worst-case scenario,
         // task workers can be blocked for an entire flush interval.
+        // TODO: Separate buffer for workflow actions from buffer for activity actions?
+        //  Workflow tasks usually complete a lot faster than activity tasks.
+        final Duration taskActionBufferFlushInterval = Duration.ofMillis(Config.getInstance()
+                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS));
+        final int taskActionBufferMaxBatchSize = Config.getInstance()
+                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE);
+
         taskActionBuffer = new Buffer<>(
                 "workflow-task-action",
                 this::processTaskActions,
-                /* flushInterval */ Duration.ofMillis(5),
-                /* maxBatchSize */ 100);
+                taskActionBufferFlushInterval,
+                taskActionBufferMaxBatchSize);
         taskActionBuffer.start();
 
         executorServiceByName = new HashMap<>();
 
-        dispatcherExecutor = Executors.newThreadPerTaskExecutor(
+        taskDispatcherExecutor = Executors.newThreadPerTaskExecutor(
                 new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .namingPattern("WorkflowEngine-TaskDispatcher-%d")
                         .build());
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            new ExecutorServiceMetrics(dispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
+            new ExecutorServiceMetrics(taskDispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
                     .bindTo(Metrics.getRegistry());
         }
+
+        taskDispatcherMinPollInterval = Duration.ofMillis(Config.getInstance()
+                .getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS));
 
         setState(State.RUNNING);
     }
@@ -183,8 +206,8 @@ public class WorkflowEngine implements Closeable {
         setState(State.STOPPING);
 
         LOGGER.debug("Waiting for task dispatcher to stop");
-        dispatcherExecutor.close();
-        dispatcherExecutor = null;
+        taskDispatcherExecutor.close();
+        taskDispatcherExecutor = null;
 
         LOGGER.debug("Waiting for task executors to stop");
         executorServiceByName.values().forEach(ExecutorService::close);
@@ -249,8 +272,8 @@ public class WorkflowEngine implements Closeable {
         final var taskProcessor = new WorkflowTaskProcessor<>(
                 this, workflowName, workflowRunner, argumentConverter, resultConverter, taskLockTimeout);
 
-        dispatcherExecutor.execute(new TaskDispatcher<>(
-                this, executorService, taskProcessor, maxConcurrency));
+        taskDispatcherExecutor.execute(new TaskDispatcher<>(
+                this, executorService, taskProcessor, maxConcurrency, taskDispatcherMinPollInterval));
     }
 
     public <A, R> void registerActivityRunner(
@@ -303,8 +326,8 @@ public class WorkflowEngine implements Closeable {
         final var taskProcessor = new ActivityTaskProcessor<>(
                 this, activityName, activityRunner, argumentConverter, resultConverter, taskLockTimeout);
 
-        dispatcherExecutor.execute(new TaskDispatcher<>(
-                this, executorService, taskProcessor, maxConcurrency));
+        taskDispatcherExecutor.execute(new TaskDispatcher<>(
+                this, executorService, taskProcessor, maxConcurrency, taskDispatcherMinPollInterval));
     }
 
     public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
