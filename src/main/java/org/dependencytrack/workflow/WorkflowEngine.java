@@ -388,8 +388,7 @@ public class WorkflowEngine implements Closeable {
             assert createdInboxEvents == newInboxEventRows.size();
 
             if (!concurrencyGroupUpdates.isEmpty()) {
-                final int updatedConcurrencyGroups = dao.createOrUpdateWorkflowConcurrencyGroups(concurrencyGroupUpdates);
-                assert updatedConcurrencyGroups == concurrencyGroupUpdates.size();
+                dao.maybeCreateConcurrencyGroups(concurrencyGroupUpdates);
             }
 
             return createdRunIds;
