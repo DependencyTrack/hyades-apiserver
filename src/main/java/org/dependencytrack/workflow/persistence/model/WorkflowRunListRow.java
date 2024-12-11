@@ -30,6 +30,7 @@ public record WorkflowRunListRow(
         int workflowVersion,
         WorkflowRunStatus status,
         @Nullable String customStatus,
+        @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
         Instant createdAt,
         @Nullable Instant updatedAt,

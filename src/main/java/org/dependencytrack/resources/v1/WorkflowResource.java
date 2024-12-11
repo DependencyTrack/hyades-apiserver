@@ -117,6 +117,7 @@ public class WorkflowResource extends AlpineResource {
             int workflowVersion,
             String status,
             WorkflowRunStatus runtimeStatus,
+            String concurrencyGroupId,
             Integer priority,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
@@ -156,11 +157,17 @@ public class WorkflowResource extends AlpineResource {
     @Path("/run")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired
-    public Response getWorkflowRuns() {
+    public Response getWorkflowRuns(
+            @QueryParam("workflowName") final String workflowNameFilter,
+            @QueryParam("status") final WorkflowRunStatus statusFilter,
+            @QueryParam("concurrencyGroupId") final String concurrencyGroupIdFilter) {
         assertWorkflowEngineEnabled();
 
         final List<WorkflowRunListRow> runRows = withJdbiHandle(getAlpineRequest(),
-                handle -> new WorkflowDao(handle).getWorkflowRuns());
+                handle -> new WorkflowDao(handle).getWorkflowRuns(
+                        workflowNameFilter,
+                        statusFilter,
+                        concurrencyGroupIdFilter));
         final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
                 .map(runRow -> new WorkflowRunListResponseItem(
                         runRow.id(),
@@ -168,6 +175,7 @@ public class WorkflowResource extends AlpineResource {
                         runRow.workflowVersion(),
                         runRow.customStatus(),
                         runRow.status(),
+                        runRow.concurrencyGroupId(),
                         runRow.priority(),
                         runRow.createdAt(),
                         runRow.updatedAt(),
