@@ -185,18 +185,25 @@ public final class WorkflowDao {
                 });
     }
 
-    public List<WorkflowRunListRow> getWorkflowRuns() {
+    public List<WorkflowRunListRow> getWorkflowRuns(
+            final String workflowNameFilter,
+            final WorkflowRunStatus statusFilter,
+            final String concurrencyGroupIdFilter) {
         // TODO: Make apiFilterParameter work with ID, without risking type errors
         //  in case the provided value is not a valid UUID.
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="apiFilterParameter" type="String" -->
                 <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
                 <#-- @ftlvariable name="apiOrderByClause" type="String" -->
+                <#-- @ftlvariable name="workflowNameFilter" type="Boolean" -->
+                <#-- @ftlvariable name="statusFilter" type="Boolean" -->
+                <#-- @ftlvariable name="concurrencyGroupIdFilter" type="Boolean" -->
                 SELECT "ID" AS "id"
                      , "WORKFLOW_NAME" AS "workflowName"
                      , "WORKFLOW_VERSION" AS "workflowVersion"
                      , "STATUS" AS "status"
                      , "CUSTOM_STATUS" AS "customStatus"
+                     , "CONCURRENCY_GROUP_ID" AS "concurrencyGroupId"
                      , "PRIORITY" AS "priority"
                      , "CREATED_AT" AS "createdAt"
                      , "UPDATED_AT" AS "updatedAt"
@@ -213,8 +220,18 @@ public final class WorkflowDao {
                          WHERE "WAT"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "pendingActivities"
                      , COUNT(*) OVER() AS "totalCount"
                   FROM "WORKFLOW_RUN"
+                 WHERE 1 = 1
                 <#if apiFilterParameter??>
-                 WHERE "WORKFLOW_NAME" LIKE ('%' || ${apiFilterParameter} || '%')
+                   AND "WORKFLOW_NAME" LIKE ('%' || ${apiFilterParameter} || '%')
+                </#if>
+                <#if workflowNameFilter>
+                   AND "WORKFLOW_NAME" = :workflowNameFilter
+                </#if>
+                <#if statusFilter>
+                   AND "STATUS" = :statusFilter
+                </#if>
+                <#if concurrencyGroupIdFilter>
+                   AND "CONCURRENCY_GROUP_ID" = :concurrencyGroupIdFilter
                 </#if>
                 ${apiOrderByClause!}
                 ${apiOffsetLimitClause!}
@@ -226,12 +243,17 @@ public final class WorkflowDao {
                                 new ApiRequestConfig.OrderingColumn("id"),
                                 new ApiRequestConfig.OrderingColumn("workflowName"),
                                 new ApiRequestConfig.OrderingColumn("priority"),
+                                new ApiRequestConfig.OrderingColumn("concurrencyGroupId"),
                                 new ApiRequestConfig.OrderingColumn("createdAt"),
                                 new ApiRequestConfig.OrderingColumn("updatedAt"),
                                 new ApiRequestConfig.OrderingColumn("completedAt"),
                                 new ApiRequestConfig.OrderingColumn("historySize"),
                                 new ApiRequestConfig.OrderingColumn("pendingEvents"),
                                 new ApiRequestConfig.OrderingColumn("pendingActivities"))))
+                .bind("workflowNameFilter", workflowNameFilter)
+                .bind("statusFilter", statusFilter)
+                .bind("concurrencyGroupIdFilter", concurrencyGroupIdFilter)
+                .defineNamedBindings()
                 .map(ConstructorMapper.of(WorkflowRunListRow.class))
                 .list();
     }
