@@ -60,6 +60,7 @@ sealed interface WorkflowCommand permits
             int eventId,
             String workflowName,
             int workflowVersion,
+            String concurrencyGroupId,
             Integer priority,
             WorkflowPayload argument) implements WorkflowCommand {
     }

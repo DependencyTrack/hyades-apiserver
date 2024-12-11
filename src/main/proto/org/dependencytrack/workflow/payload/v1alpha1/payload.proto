@@ -27,6 +27,10 @@ message IngestBomArgs {
   FileMetadata bom_file_metadata = 2;
 }
 
+message AnalyzeProjectArgs {
+  Project project = 1;
+}
+
 message TriggerProjectVulnAnalysisArgs {
   Project project = 1;
 }

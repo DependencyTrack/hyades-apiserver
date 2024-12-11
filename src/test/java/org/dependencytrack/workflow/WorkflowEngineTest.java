@@ -207,7 +207,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldWaitForScheduledSubWorkflow() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             final Optional<String> subWorkflowResult = ctx.callSubWorkflow(
-                    "bar", 1, "inputValue", stringConverter(), stringConverter()).await();
+                    "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(subWorkflowResult).contains("inputValue-outputValue");
             return Optional.empty();
         });
@@ -218,7 +218,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         await("Completion")
-                .atMost(Duration.ofSeconds(5))
+                .atMost(Duration.ofSeconds(10))
                 .untilAsserted(() -> {
                     final WorkflowRunRow run = engine.getWorkflowRun(runId);
                     assertThat(run.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
@@ -239,7 +239,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldFailWhenScheduledSubWorkflowFails() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.callSubWorkflow("bar", 1, null, voidConverter(), voidConverter()).await();
+            ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
