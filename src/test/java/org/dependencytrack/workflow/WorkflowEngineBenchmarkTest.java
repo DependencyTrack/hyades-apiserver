@@ -25,6 +25,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -35,10 +37,13 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -64,7 +69,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         environmentVariables.set("ALPINE_METRICS_ENABLED", "true");
 
         statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
-        statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 1, 5, TimeUnit.SECONDS);
+        statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 3, 5, TimeUnit.SECONDS);
 
         engine = new WorkflowEngine();
         engine.start();
@@ -93,12 +98,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         }
 
         if (statsPrinterExecutor != null) {
-            statsPrinterExecutor.shutdown();
-            try {
-                statsPrinterExecutor.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            statsPrinterExecutor.close();
         }
 
         super.after();
@@ -112,7 +112,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         for (int i = 0; i < numRuns; i++) {
             final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
             scheduleOptions.add(new ScheduleWorkflowRunOptions("test", 1)
-                   .withConcurrencyGroupId(concurrencyGroupId));
+                    .withConcurrencyGroupId(concurrencyGroupId));
         }
 
         engine.scheduleWorkflowRuns(scheduleOptions);
@@ -122,14 +122,16 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 .atMost(Duration.ofMinutes(5))
                 .pollInterval(Duration.ofSeconds(3))
                 .untilAsserted(() -> {
-                    final long completedWorkflows = withJdbiHandle(
+                    final boolean isAllRunsCompleted = withJdbiHandle(
                             handle -> handle.createQuery("""
-                                            SELECT COUNT(*) FROM "WORKFLOW_RUN" WHERE "STATUS" = 'COMPLETED'
+                                            SELECT NOT EXISTS (
+                                                SELECT 1
+                                                  FROM "WORKFLOW_RUN"
+                                                 WHERE "STATUS" != 'COMPLETED')
                                             """)
-                                    .mapTo(Long.class)
+                                    .mapTo(Boolean.class)
                                     .one());
-                    LOGGER.info("Completed workflows: " + completedWorkflows);
-                    assertThat(completedWorkflows).isEqualTo(numRuns);
+                    assertThat(isAllRunsCompleted).isTrue();
                 });
     }
 
@@ -139,7 +141,17 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
         @Override
         public void run() {
+            LOGGER.info("==========");
+
             try {
+                final List<WorkflowRunCountByNameAndStatusRow> statusRows =
+                        withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunCountByNameAndStatus());
+                final Map<WorkflowRunStatus, Long> countByStatus = statusRows.stream()
+                        .collect(Collectors.toMap(
+                                WorkflowRunCountByNameAndStatusRow::status,
+                                WorkflowRunCountByNameAndStatusRow::count));
+                LOGGER.info("Statuses: %s".formatted(countByStatus));
+
                 final MeterRegistry meterRegistry = Metrics.getRegistry();
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
                         "dtrack.workflow.task.dispatcher.poll.latency").timers();

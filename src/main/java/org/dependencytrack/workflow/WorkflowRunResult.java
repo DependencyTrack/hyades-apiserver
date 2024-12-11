@@ -20,5 +20,5 @@ package org.dependencytrack.workflow;
 
 import java.util.List;
 
-public record WorkflowRunResult(List<WorkflowCommand> commands, String customStatus) {
+record WorkflowRunResult(List<WorkflowCommand> commands, String customStatus) {
 }

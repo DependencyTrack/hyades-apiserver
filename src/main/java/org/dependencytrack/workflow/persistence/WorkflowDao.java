@@ -115,7 +115,9 @@ public final class WorkflowDao {
     }
 
     public int maybeCreateConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
-        // TODO: Use createdAt and priority instead of ID to determine next run.
+        // NB: We must *not* use ON CONFLICT DO UPDATE here, since we have to assume that the
+        // existing NEXT_RUN_ID is already being worked on, even if it technically orders
+        // *after* the run ID we're trying to insert here.
         final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_CONCURRENCY_GROUP" (
                   "ID"
@@ -138,56 +140,49 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int updateConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
-        final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_CONCURRENCY_GROUP"
-                   SET "NEXT_RUN_ID" = "GROUP_UPDATES"."NEXT_RUN_ID"
-                  FROM UNNEST(:groupIds, :nextRunIds) AS "GROUP_UPDATES"("GROUP_ID", "NEXT_RUN_ID")
-                 WHERE "WORKFLOW_CONCURRENCY_GROUP"."ID" = "GROUP_UPDATES"."GROUP_ID"
-                """);
-
-        final var groupIds = new ArrayList<String>(concurrencyGroups.size());
-        final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
-        for (final WorkflowConcurrencyGroupRow concurrencyGroup : concurrencyGroups) {
-            groupIds.add(concurrencyGroup.id());
-            nextRunIds.add(concurrencyGroup.nextRunId());
-        }
-
-        return update
-                .bindArray("groupIds", String.class, groupIds)
-                .bindArray("nextRunIds", UUID.class, nextRunIds)
-                .execute();
-    }
-
-    public Map<String, UUID> getNextRunIdByConcurrencyGroupId(final Collection<String> concurrencyGroupIds) {
-        // TODO: Use createdAt and priority instead of ID to determine next run.
+    public Map<String, String> updateConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT "CONCURRENCY_GROUP_ID"
-                     , MIN("ID") AS "NEXT_RUN_ID"
-                  FROM "WORKFLOW_RUN"
-                 WHERE "CONCURRENCY_GROUP_ID" = ANY(:concurrencyGroupIds)
-                   AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
-                 GROUP BY "CONCURRENCY_GROUP_ID"
+                WITH
+                "CTE_NEXT_RUN" AS (
+                    SELECT DISTINCT ON ("CONCURRENCY_GROUP_ID")
+                           "CONCURRENCY_GROUP_ID"
+                         , "ID"
+                      FROM "WORKFLOW_RUN"
+                     WHERE "CONCURRENCY_GROUP_ID" = ANY(:groupIds)
+                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
+                     ORDER BY "CONCURRENCY_GROUP_ID"
+                            , "PRIORITY" DESC NULLS LAST
+                            , "CREATED_AT"
+                ),
+                "CTE_UPDATED_GROUP" AS (
+                    UPDATE "WORKFLOW_CONCURRENCY_GROUP"
+                       SET "NEXT_RUN_ID" = "CTE_NEXT_RUN"."ID"
+                      FROM "CTE_NEXT_RUN"
+                     WHERE "WORKFLOW_CONCURRENCY_GROUP"."ID" = "CTE_NEXT_RUN"."CONCURRENCY_GROUP_ID"
+                    RETURNING "WORKFLOW_CONCURRENCY_GROUP"."ID"
+                ),
+                "CTE_DELETED_GROUP" AS (
+                   DELETE
+                     FROM "WORKFLOW_CONCURRENCY_GROUP"
+                    WHERE "ID" = ANY(:groupIds)
+                      AND "ID" != ALL(SELECT "ID" FROM "CTE_UPDATED_GROUP")
+                   RETURNING "ID"
+                )
+                SELECT "ID"
+                     , 'UPDATED' AS "STATUS"
+                  FROM "CTE_UPDATED_GROUP"
+                 UNION ALL
+                SELECT "ID"
+                     , 'DELETED' AS "STATUS"
+                  FROM "CTE_DELETED_GROUP"
                 """);
 
         return query
-                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
-                .setMapKeyColumn("CONCURRENCY_GROUP_ID")
-                .setMapValueColumn("NEXT_RUN_ID")
+                .setMapKeyColumn("ID")
+                .setMapValueColumn("STATUS")
+                .bindArray("groupIds", String.class, concurrencyGroupIds)
                 .collectInto(new GenericType<>() {
                 });
-    }
-
-    public int deleteConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
-        final Update update = jdbiHandle.createUpdate("""
-                DELETE
-                  FROM "WORKFLOW_CONCURRENCY_GROUP"
-                 WHERE "ID" = ANY(:concurrencyGroupIds)
-                """);
-
-        return update
-                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
-                .execute();
     }
 
     public List<WorkflowRunListRow> getWorkflowRuns() {
