@@ -346,18 +346,24 @@ public class WorkflowEngine implements Closeable {
                     option.concurrencyGroupId(),
                     option.priority()));
 
-            final var runStartedBuilder = RunScheduled.newBuilder()
+            final var runScheduledBuilder = RunScheduled.newBuilder()
                     .setWorkflowName(option.workflowName())
                     .setWorkflowVersion(option.workflowVersion());
+            if (option.concurrencyGroupId() != null) {
+                runScheduledBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
+            }
+            if (option.priority() != null) {
+                runScheduledBuilder.setPriority(option.priority());
+            }
             if (option.argument() != null) {
-                runStartedBuilder.setArgument(option.argument());
+                runScheduledBuilder.setArgument(option.argument());
             }
 
             newInboxEventRows.add(new NewWorkflowEventInboxRow(runId, null,
                     WorkflowEvent.newBuilder()
                             .setId(-1)
                             .setTimestamp(now)
-                            .setRunScheduled(runStartedBuilder.build())
+                            .setRunScheduled(runScheduledBuilder.build())
                             .build()));
 
             if (option.concurrencyGroupId() != null) {
@@ -371,7 +377,7 @@ public class WorkflowEngine implements Closeable {
             }
         }
 
-        final List<WorkflowConcurrencyGroupRow> concurrencyGroupUpdates =
+        final List<WorkflowConcurrencyGroupRow> newConcurrencyGroupRows =
                 nextRunIdByConcurrencyGroupId.entrySet().stream()
                         .map(entry -> new WorkflowConcurrencyGroupRow(
                                 /* id */ entry.getKey(),
@@ -387,8 +393,8 @@ public class WorkflowEngine implements Closeable {
             final int createdInboxEvents = dao.createInboxEvents(newInboxEventRows);
             assert createdInboxEvents == newInboxEventRows.size();
 
-            if (!concurrencyGroupUpdates.isEmpty()) {
-                dao.maybeCreateConcurrencyGroups(concurrencyGroupUpdates);
+            if (!newConcurrencyGroupRows.isEmpty()) {
+                dao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
             }
 
             return createdRunIds;
@@ -570,6 +576,7 @@ public class WorkflowEngine implements Closeable {
         final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(actions.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
         final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
+        final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
 
         final int updatedRuns = dao.updateWorkflowRuns(this.instanceId,
@@ -612,9 +619,28 @@ public class WorkflowEngine implements Closeable {
                             message.recipientRunId(),
                             message.event().getRunScheduled().getWorkflowName(),
                             message.event().getRunScheduled().getWorkflowVersion(),
-                            /* TODO: concurrencyGroupId */ null,
-                            /* TODO: priority */ null));
+                            message.event().getRunScheduled().hasConcurrencyGroupId()
+                                    ? message.event().getRunScheduled().getConcurrencyGroupId()
+                                    : null,
+                            message.event().getRunScheduled().hasPriority()
+                                    ? message.event().getRunScheduled().getPriority()
+                                    : null));
+
+                    if (message.event().getRunScheduled().hasConcurrencyGroupId()) {
+                        nextRunIdByNewConcurrencyGroupId.compute(
+                                message.event().getRunScheduled().getConcurrencyGroupId(),
+                                (ignored, previous) -> {
+                            if (previous == null) {
+                                return message.recipientRunId();
+                            }
+
+                            return message.recipientRunId().compareTo(previous) < 0
+                                    ? message.recipientRunId()
+                                    : previous;
+                        });
+                    }
                 }
+
                 newInboxEvents.add(new NewWorkflowEventInboxRow(
                         message.recipientRunId(),
                         toInstant(message.event().getTimestamp()),
@@ -663,6 +689,8 @@ public class WorkflowEngine implements Closeable {
         }
 
         if (!newWorkflowRuns.isEmpty()) {
+            // TODO: Call ScheduleWorkflowRuns instead so concurrency groups are updated, too.
+            //  Ensure it can participate in this transaction!
             final List<UUID> createdRunIds = dao.createWorkflowRuns(newWorkflowRuns);
             assert createdRunIds.size() == newWorkflowRuns.size();
         }
@@ -684,6 +712,16 @@ public class WorkflowEngine implements Closeable {
                         .map(WorkflowRun::workflowRunId)
                         .toList());
         assert deletedInboxEvents >= actions.size();
+
+        if (!nextRunIdByNewConcurrencyGroupId.isEmpty()) {
+            final List<WorkflowConcurrencyGroupRow> newConcurrencyGroupRows =
+                    nextRunIdByNewConcurrencyGroupId.entrySet().stream()
+                            .map(entry -> new WorkflowConcurrencyGroupRow(
+                                    /* id */ entry.getKey(),
+                                    /* nextRunId */ entry.getValue()))
+                            .toList();
+            dao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
+        }
 
         if (!concurrencyGroupsToUpdate.isEmpty()) {
             final Map<String, String> statusByGroupId = dao.updateConcurrencyGroups(concurrencyGroupsToUpdate);

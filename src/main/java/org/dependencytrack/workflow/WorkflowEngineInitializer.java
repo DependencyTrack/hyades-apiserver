@@ -21,6 +21,7 @@ package org.dependencytrack.workflow;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
@@ -58,8 +59,14 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         engine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflowRunner(),
-                /* maxConcurrency */ 50,
+                /* maxConcurrency */ 25,
                 /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
+        engine.registerWorkflowRunner(
+                new AnalyzeProjectWorkflowRunner(),
+                /* maxConcurrency */ 25,
+                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
 

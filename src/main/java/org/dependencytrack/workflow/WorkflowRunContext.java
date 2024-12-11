@@ -196,6 +196,7 @@ public final class WorkflowRunContext<A, R> {
     public <WA, WR> Awaitable<WR> callSubWorkflow(
             final String name,
             final int version,
+            final String concurrencyGroupId,
             final WA argument,
             final PayloadConverter<WA> argumentConverter,
             final PayloadConverter<WR> resultConverter) {
@@ -203,7 +204,7 @@ public final class WorkflowRunContext<A, R> {
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new ScheduleSubWorkflowCommand(
-                eventId, name, version, this.priority, argumentConverter.convertToPayload(argument)));
+                eventId, name, version, concurrencyGroupId, this.priority, argumentConverter.convertToPayload(argument)));
 
         final var awaitable = new Awaitable<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);

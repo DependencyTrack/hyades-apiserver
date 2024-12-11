@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.About;
@@ -37,17 +38,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.text.WordUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
@@ -58,8 +51,20 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.WorkflowEngine;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -69,6 +74,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 
 /**
  * JAX-RS resources for processing findings.
@@ -234,13 +241,31 @@ public class FindingResource extends AlpineResource {
                 if (qm.hasAccess(super.getPrincipal(), project)) {
                     LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
-                    final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
-                    qm.createReanalyzeSteps(vae.getChainIdentifier());
-                    Event.dispatch(vae);
-                    final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
-                    Event.dispatch(projectRepositoryMetaAnalysisEvent);
+                    final UUID token;
+                    if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+                        token = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                                new ScheduleWorkflowRunOptions("analyze-project", 1)
+                                        .withConcurrencyGroupId("analyze-project-" + project.getUuid())
+                                        .withPriority(100) // TODO: Something higher than the scheduled analysis.
+                                        .withArgument(
+                                                AnalyzeProjectArgs.newBuilder()
+                                                        .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                                                .setUuid(project.getUuid().toString())
+                                                                .setName(project.getName())
+                                                                .setVersion(project.getVersion())
+                                                                .build())
+                                                        .build(),
+                                                protoConverter(AnalyzeProjectArgs.class)));
+                    } else {
+                        final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                        qm.createReanalyzeSteps(vae.getChainIdentifier());
+                        Event.dispatch(vae);
+                        final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
+                        Event.dispatch(projectRepositoryMetaAnalysisEvent);
+                        token = vae.getChainIdentifier();
+                    }
 
-                    return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
+                    return Response.ok(Collections.singletonMap("token", token)).build();
                 } else {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }

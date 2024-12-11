@@ -335,8 +335,13 @@ public class WorkflowRun {
                         .setWorkflowName(this.workflowName)
                         .setWorkflowVersion(this.workflowVersion)
                         .build());
+        if (command.concurrencyGroupId() != null) {
+            subWorkflowScheduledBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
+            subWorkflowRunScheduledBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
+        }
         if (command.priority() != null) {
             subWorkflowScheduledBuilder.setPriority(command.priority());
+            subWorkflowRunScheduledBuilder.setPriority(command.priority());
         }
         if (command.argument() != null) {
             subWorkflowScheduledBuilder.setArgument(command.argument());
