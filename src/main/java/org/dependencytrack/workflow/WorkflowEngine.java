@@ -686,22 +686,13 @@ public class WorkflowEngine implements Closeable {
         assert deletedInboxEvents >= actions.size();
 
         if (!concurrencyGroupsToUpdate.isEmpty()) {
-            final Map<String, UUID> nextRunIdByConcurrencyGroupId =
-                    dao.getNextRunIdByConcurrencyGroupId(concurrencyGroupsToUpdate);
+            final Map<String, String> statusByGroupId = dao.updateConcurrencyGroups(concurrencyGroupsToUpdate);
+            assert statusByGroupId.size() == concurrencyGroupsToUpdate.size();
 
-            final var concurrencyGroupUpdates = new ArrayList<WorkflowConcurrencyGroupRow>(nextRunIdByConcurrencyGroupId.size());
-            for (final Map.Entry<String, UUID> entry : nextRunIdByConcurrencyGroupId.entrySet()) {
-                concurrencyGroupUpdates.add(new WorkflowConcurrencyGroupRow(entry.getKey(), entry.getValue()));
-            }
-
-            final int updatedConcurrencyGroups = dao.updateConcurrencyGroups(concurrencyGroupUpdates);
-            assert updatedConcurrencyGroups == concurrencyGroupUpdates.size();
-
-            final Set<String> concurrencyGroupsToDelete = new HashSet<>(concurrencyGroupsToUpdate);
-            concurrencyGroupsToDelete.removeAll(nextRunIdByConcurrencyGroupId.keySet());
-            if (!concurrencyGroupsToDelete.isEmpty()) {
-                final int deletedConcurrencyGroups = dao.deleteConcurrencyGroups(concurrencyGroupsToDelete);
-                assert deletedConcurrencyGroups == concurrencyGroupsToDelete.size();
+            if (LOGGER.isDebugEnabled()) {
+                for (final Map.Entry<String, String> entry : statusByGroupId.entrySet()) {
+                    LOGGER.debug("Concurrency group {}: {}", entry.getKey(), entry.getValue());
+                }
             }
         }
     }

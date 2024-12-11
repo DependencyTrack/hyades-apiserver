@@ -34,9 +34,7 @@ import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Optional;
 
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
@@ -103,30 +101,6 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         } catch (Exception e) {
             LOGGER.warn("Failed to stop workflow engine", e);
         }
-    }
-
-    public static class RandomlyFailingActivityRunner implements ActivityRunner<Void, Void> {
-
-        private static final Logger LOGGER = Logger.getLogger(RandomlyFailingActivityRunner.class);
-        private final SecureRandom random;
-
-        public RandomlyFailingActivityRunner(final SecureRandom random) {
-            this.random = random;
-        }
-
-        @Override
-        public Optional<Void> run(final ActivityRunContext<Void> ctx) throws Exception {
-            LOGGER.debug("Processing " + ctx);
-
-            Thread.sleep(random.nextInt(10, 1000));
-
-            if (random.nextDouble() < 0.1) {
-                throw new IllegalStateException("Oh no, this looks permanently broken!");
-            }
-
-            return Optional.empty();
-        }
-
     }
 
 }
