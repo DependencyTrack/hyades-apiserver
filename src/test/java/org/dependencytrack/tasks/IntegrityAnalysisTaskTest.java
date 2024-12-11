@@ -52,7 +52,7 @@ public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
     @Test
     public void shouldPerformIntegrityAnalysisIfMetaDataExists() {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -84,7 +84,7 @@ public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
     @Test
     public void shouldNotPerformAnalysisIfComponentUuidIsMissing() {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);

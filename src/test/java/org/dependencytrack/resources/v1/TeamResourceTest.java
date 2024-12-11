@@ -217,7 +217,7 @@ public class TeamResourceTest extends ResourceTest {
             aclToogle.setPropertyValue("true");
             qm.persist(aclToogle);
         }
-        Project project = qm.createProject("Acme Example", null, "1", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1", null, null, null, null, false);
         project.addAccessTeam(team);
         qm.persist(project);
         Response response = jersey.target(V1_TEAM).request()

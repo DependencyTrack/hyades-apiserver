@@ -37,7 +37,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testCloneProjectTask() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.1", false, false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         new CloneProjectTask().inform(cloneProjectEvent);
@@ -73,7 +73,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testCloneProjectVersionExist() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         // Clone request with project version already existing.
         CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.0", false, false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);

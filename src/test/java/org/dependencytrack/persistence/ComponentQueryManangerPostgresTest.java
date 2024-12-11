@@ -76,7 +76,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     private Project prepareProject() throws MalformedPackageURLException {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
@@ -136,7 +136,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         project.setName("projectName");
         project.setVersion("projectVersion");
         project.setClassifier(Classifier.APPLICATION);
-        project.setActive(true);
+        project.setInactiveSince(null);
         project.setCpe("projectCpe");
         project.setPurl("projectPurl");
         project.setSwidTagId("projectSwidTagId");

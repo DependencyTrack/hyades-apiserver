@@ -97,7 +97,7 @@ public class PolicyQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testRemoveProjectFromPolicies() {
-        final Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
 
         // Create multiple policies that all reference the project
         final Policy policy1 = qm.createPolicy("Test Policy 1", Policy.Operator.ANY, Policy.ViolationState.INFO);

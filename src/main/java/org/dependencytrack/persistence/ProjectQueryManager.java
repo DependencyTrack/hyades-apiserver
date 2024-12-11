@@ -427,8 +427,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
-                                 PackageURL purl, boolean active, boolean commitIndex) {
-        return createProject(name, description, version, tags, parent, purl, active, false, commitIndex);
+                                 PackageURL purl, Date inactiveSince, boolean commitIndex) {
+        return createProject(name, description, version, tags, parent, purl, inactiveSince, false, commitIndex);
     }
 
     /**
@@ -440,21 +440,21 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param tags        a List of Tags - these will be resolved if necessary
      * @param parent      an optional parent Project
      * @param purl        an optional Package URL
-     * @param active      specified if the project is active
+     * @param inactiveSince      date when the project is deactivated
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      * @param isLatest    specified if the project version is latest
      * @return the created Project
      */
     @Override
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
-                                 PackageURL purl, boolean active, boolean isLatest, boolean commitIndex) {
+                                 PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         final Project project = new Project();
         project.setName(name);
         project.setDescription(description);
         project.setVersion(version);
         project.setParent(parent);
         project.setPurl(purl);
-        project.setActive(active);
+        project.setInactiveSince(inactiveSince);
         project.setIsLatest(isLatest);
         return createProject(project, tags, commitIndex);
     }
@@ -521,7 +521,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
-        project.setActive(transientProject.isActive());
+        project.setInactiveSince(transientProject.getInactiveSince());
 
         final Project oldLatestProject;
         if(Boolean.TRUE.equals(transientProject.isLatest()) && Boolean.FALSE.equals(project.isLatest())) {
@@ -605,7 +605,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             project.setDescription(source.getDescription());
             project.setVersion(newVersion);
             project.setClassifier(source.getClassifier());
-            project.setActive(source.isActive());
+            project.setInactiveSince(source.getInactiveSince());
             project.setIsLatest(makeCloneLatest);
             project.setCpe(source.getCpe());
             project.setPurl(source.getPurl());
