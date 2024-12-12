@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import jakarta.annotation.Nullable;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -27,6 +26,7 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
+import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -182,6 +182,13 @@ public interface ProjectDao {
             @Bind UUID parentUuidFilter,
             @Define boolean includeMetrics
     );
+
+    @SqlQuery("""
+            SELECT ${apiProjectAclCondition!"TRUE"}
+              FROM "PROJECT"
+             WHERE "UUID" = :uuid
+            """)
+    Boolean isAccessible(@Bind UUID uuid);
 
     record ConciseProjectListRow(
             UUID uuid,

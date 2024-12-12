@@ -344,7 +344,8 @@ public class WorkflowEngine implements Closeable {
                     option.workflowName(),
                     option.workflowVersion(),
                     option.concurrencyGroupId(),
-                    option.priority()));
+                    option.priority(),
+                    option.tags()));
 
             final var runScheduledBuilder = RunScheduled.newBuilder()
                     .setWorkflowName(option.workflowName())
@@ -354,6 +355,9 @@ public class WorkflowEngine implements Closeable {
             }
             if (option.priority() != null) {
                 runScheduledBuilder.setPriority(option.priority());
+            }
+            if (option.tags() != null) {
+                runScheduledBuilder.addAllTags(option.tags());
             }
             if (option.argument() != null) {
                 runScheduledBuilder.setArgument(option.argument());
@@ -537,6 +541,7 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.workflowVersion(),
                                 polledRun.concurrencyGroupId(),
                                 polledRun.priority(),
+                                polledRun.tags(),
                                 maxDequeueCount,
                                 eventLog,
                                 inboxEvents);
@@ -624,6 +629,9 @@ public class WorkflowEngine implements Closeable {
                                     : null,
                             message.event().getRunScheduled().hasPriority()
                                     ? message.event().getRunScheduled().getPriority()
+                                    : null,
+                            message.event().getRunScheduled().getTagsCount() > 0
+                                    ? Set.copyOf(message.event().getRunScheduled().getTagsList())
                                     : null));
 
                     if (message.event().getRunScheduled().hasConcurrencyGroupId()) {

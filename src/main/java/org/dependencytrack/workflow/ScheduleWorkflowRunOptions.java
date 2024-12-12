@@ -21,30 +21,38 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 
+import java.util.Set;
+
 public record ScheduleWorkflowRunOptions(
         String workflowName,
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
+        Set<String> tags,
         WorkflowPayload argument) {
 
     public ScheduleWorkflowRunOptions(final String workflowName, final int workflowVersion) {
-        this(workflowName, workflowVersion, null, null, null);
+        this(workflowName, workflowVersion, null, null, null, null);
     }
 
     public ScheduleWorkflowRunOptions withConcurrencyGroupId(final String concurrencyGroupId) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                concurrencyGroupId, this.priority, this.argument);
+                concurrencyGroupId, this.priority, this.tags, this.argument);
     }
 
     public ScheduleWorkflowRunOptions withPriority(final Integer priority) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, priority, this.argument);
+                this.concurrencyGroupId, priority, this.tags, this.argument);
+    }
+
+    public ScheduleWorkflowRunOptions withTags(final Set<String> tags) {
+        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+                this.concurrencyGroupId, this.priority, tags, this.argument);
     }
 
     public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, this.priority, converter.convertToPayload(argument));
+                this.concurrencyGroupId, this.priority, this.tags, converter.convertToPayload(argument));
     }
 
 }

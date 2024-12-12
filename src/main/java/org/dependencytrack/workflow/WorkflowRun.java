@@ -326,7 +326,7 @@ public class WorkflowRun {
                 .setRunId(subWorkflowRunId.toString())
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion());
-        final var subWorkflowRunScheduledBuilder = RunScheduled.newBuilder()
+        final var runScheduledBuilder = RunScheduled.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
                 .setParentRun(ParentWorkflowRun.newBuilder()
@@ -337,15 +337,19 @@ public class WorkflowRun {
                         .build());
         if (command.concurrencyGroupId() != null) {
             subWorkflowScheduledBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
-            subWorkflowRunScheduledBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
+            runScheduledBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
         }
         if (command.priority() != null) {
             subWorkflowScheduledBuilder.setPriority(command.priority());
-            subWorkflowRunScheduledBuilder.setPriority(command.priority());
+            runScheduledBuilder.setPriority(command.priority());
+        }
+        if (command.tags() != null && !command.tags().isEmpty()) {
+            subWorkflowScheduledBuilder.addAllTags(command.tags());
+            runScheduledBuilder.addAllTags(command.tags());
         }
         if (command.argument() != null) {
             subWorkflowScheduledBuilder.setArgument(command.argument());
-            subWorkflowRunScheduledBuilder.setArgument(command.argument());
+            runScheduledBuilder.setArgument(command.argument());
         }
 
         onEvent(WorkflowEvent.newBuilder()
@@ -359,7 +363,7 @@ public class WorkflowRun {
                 WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
-                        .setRunScheduled(subWorkflowRunScheduledBuilder.build())
+                        .setRunScheduled(runScheduledBuilder.build())
                         .build()));
     }
 

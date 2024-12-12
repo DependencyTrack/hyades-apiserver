@@ -51,6 +51,7 @@ import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
+import jakarta.json.Json;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -79,14 +80,29 @@ public final class WorkflowDao {
                 , "WORKFLOW_VERSION"
                 , "CONCURRENCY_GROUP_ID"
                 , "PRIORITY"
+                , "TAGS"
                 )
-                SELECT *
+                SELECT "ID"
+                     , "WORKFLOW_NAME"
+                     , "WORKFLOW_VERSION"
+                     , "CONCURRENCY_GROUP_ID"
+                     , "PRIORITY"
+                     , (SELECT ARRAY_AGG("TAG")
+                          FROM JSON_ARRAY_ELEMENTS_TEXT("TAGS") AS "TAG") AS "TAGS"
                   FROM UNNEST (
                          :ids
                        , :workflowNames
                        , :workflowVersions
                        , :concurrencyGroupIds
-                       , :priorities)
+                       , :priorities
+                       , CAST(:tagsJsons AS JSON[])
+                       ) AS "NEW_RUN" (
+                         "ID"
+                       , "WORKFLOW_NAME"
+                       , "WORKFLOW_VERSION"
+                       , "CONCURRENCY_GROUP_ID"
+                       , "PRIORITY"
+                       , "TAGS")
                 RETURNING "ID"
                 """);
 
@@ -95,12 +111,26 @@ public final class WorkflowDao {
         final var workflowVersions = new ArrayList<Integer>(newWorkflowRuns.size());
         final var concurrencyGroupIds = new ArrayList<String>(newWorkflowRuns.size());
         final var priorities = new ArrayList<Integer>(newWorkflowRuns.size());
+        final var tagsJsons = new ArrayList<String>(newWorkflowRuns.size());
         for (final NewWorkflowRunRow newWorkflowRun : newWorkflowRuns) {
+            // Workaround for JDBC getting confused with nested arrays.
+            // Transmit tags as JSON array instead, and convert it to
+            // a native TEXT[] array before inserting it.
+            final String tagsJson;
+            if (newWorkflowRun.tags() == null || newWorkflowRun.tags().isEmpty()) {
+                tagsJson = null;
+            } else {
+                final var tagsJsonArray = Json.createArrayBuilder();
+                newWorkflowRun.tags().forEach(tagsJsonArray::add);
+                tagsJson = tagsJsonArray.build().toString();
+            }
+
             ids.add(newWorkflowRun.id());
             workflowNames.add(newWorkflowRun.workflowName());
             workflowVersions.add(newWorkflowRun.workflowVersion());
             concurrencyGroupIds.add(newWorkflowRun.concurrencyGroupId());
             priorities.add(newWorkflowRun.priority());
+            tagsJsons.add(tagsJson);
         }
 
         return update
@@ -109,6 +139,7 @@ public final class WorkflowDao {
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
+                .bindArray("tagsJsons", String.class, tagsJsons)
                 .executeAndReturnGeneratedKeys("ID")
                 .mapTo(UUID.class)
                 .list();
@@ -188,7 +219,8 @@ public final class WorkflowDao {
     public List<WorkflowRunListRow> getWorkflowRuns(
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
-            final String concurrencyGroupIdFilter) {
+            final String concurrencyGroupIdFilter,
+            final Set<String> tagsFilter) {
         // TODO: Make apiFilterParameter work with ID, without risking type errors
         //  in case the provided value is not a valid UUID.
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
@@ -198,6 +230,7 @@ public final class WorkflowDao {
                 <#-- @ftlvariable name="workflowNameFilter" type="Boolean" -->
                 <#-- @ftlvariable name="statusFilter" type="Boolean" -->
                 <#-- @ftlvariable name="concurrencyGroupIdFilter" type="Boolean" -->
+                <#-- @ftlvariable name="tagsFilter" type="Boolean" -->
                 SELECT "ID" AS "id"
                      , "WORKFLOW_NAME" AS "workflowName"
                      , "WORKFLOW_VERSION" AS "workflowVersion"
@@ -205,6 +238,7 @@ public final class WorkflowDao {
                      , "CUSTOM_STATUS" AS "customStatus"
                      , "CONCURRENCY_GROUP_ID" AS "concurrencyGroupId"
                      , "PRIORITY" AS "priority"
+                     , "TAGS" AS "tags"
                      , "CREATED_AT" AS "createdAt"
                      , "UPDATED_AT" AS "updatedAt"
                      , "STARTED_AT" AS "startedAt"
@@ -233,6 +267,9 @@ public final class WorkflowDao {
                 <#if concurrencyGroupIdFilter>
                    AND "CONCURRENCY_GROUP_ID" = :concurrencyGroupIdFilter
                 </#if>
+                <#if tagsFilter>
+                   AND "TAGS" @> CAST(:tagsFilter AS TEXT[])
+                </#if>
                 ${apiOrderByClause!}
                 ${apiOffsetLimitClause!}
                 """);
@@ -253,6 +290,7 @@ public final class WorkflowDao {
                 .bind("workflowNameFilter", workflowNameFilter)
                 .bind("statusFilter", statusFilter)
                 .bind("concurrencyGroupIdFilter", concurrencyGroupIdFilter)
+                .bindArray("tagsFilter", String.class, tagsFilter)
                 .defineNamedBindings()
                 .map(ConstructorMapper.of(WorkflowRunListRow.class))
                 .list();
@@ -402,6 +440,7 @@ public final class WorkflowDao {
                         , "WORKFLOW_RUN"."WORKFLOW_VERSION"
                         , "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"
                         , "WORKFLOW_RUN"."PRIORITY"
+                        , "WORKFLOW_RUN"."TAGS"
                 """);
 
         return update
@@ -414,7 +453,8 @@ public final class WorkflowDao {
                         "WORKFLOW_NAME",
                         "WORKFLOW_VERSION",
                         "CONCURRENCY_GROUP_ID",
-                        "PRIORITY")
+                        "PRIORITY",
+                        "TAGS")
                 .map(new PolledWorkflowRunRowMapper())
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }

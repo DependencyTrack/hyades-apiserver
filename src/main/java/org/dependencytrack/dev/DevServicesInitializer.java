@@ -20,12 +20,12 @@ package org.dependencytrack.dev;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.event.kafka.KafkaTopics;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -37,6 +37,7 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import static alpine.Config.AlpineKey.BCRYPT_ROUNDS;
 import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
 import static alpine.Config.AlpineKey.DATABASE_URL;
 import static alpine.Config.AlpineKey.DATABASE_USERNAME;
@@ -48,6 +49,7 @@ import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
 
 /**
  * @since 5.5.0
@@ -134,10 +136,12 @@ public class DevServicesInitializer implements ServletContextListener {
                 """);
 
         final var configOverrides = new Properties();
+        configOverrides.put(BCRYPT_ROUNDS.getPropertyName(), "4");
         configOverrides.put(DATABASE_URL.getPropertyName(), postgresJdbcUrl);
         configOverrides.put(DATABASE_USERNAME.getPropertyName(), postgresUsername);
         configOverrides.put(DATABASE_PASSWORD.getPropertyName(), postgresPassword);
         configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), kafkaBootstrapServers);
+        configOverrides.put(WORKFLOW_ENGINE_ENABLED.getPropertyName(), "true");
 
         try {
             LOGGER.info("Applying config overrides: %s".formatted(configOverrides));

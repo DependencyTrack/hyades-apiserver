@@ -160,6 +160,7 @@
             , "CUSTOM_STATUS" TEXT
             , "CONCURRENCY_GROUP_ID" TEXT
             , "PRIORITY" SMALLINT
+            , "TAGS" TEXT[]
             , "LOCKED_BY" TEXT
             , "LOCKED_UNTIL" TIMESTAMPTZ(3)
             , "CREATED_AT" TIMESTAMPTZ(3) NOT NULL DEFAULT NOW()
@@ -237,6 +238,10 @@
                    , "LOCKED_UNTIL")
             INCLUDE ("ID")
               WHERE "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]);
+
+            CREATE INDEX "WORKFLOW_RUN_TAGS_IDX"
+                ON "WORKFLOW_RUN" USING GIN ("TAGS")
+             WHERE "TAGS" IS NOT NULL;
 
             CREATE INDEX "WORKFLOW_EVENT_INBOX_POLL_IDX"
                 ON "WORKFLOW_EVENT_INBOX" ("WORKFLOW_RUN_ID", "VISIBLE_FROM");
