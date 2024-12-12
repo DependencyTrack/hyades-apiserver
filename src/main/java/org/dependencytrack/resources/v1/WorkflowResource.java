@@ -40,6 +40,7 @@ import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.workflow.WorkflowEngine;
@@ -62,6 +63,7 @@ import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -119,6 +121,7 @@ public class WorkflowResource extends AlpineResource {
             WorkflowRunStatus runtimeStatus,
             String concurrencyGroupId,
             Integer priority,
+            Set<String> tags,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant startedAt,
@@ -135,7 +138,7 @@ public class WorkflowResource extends AlpineResource {
     @GET
     @Path("/run/stats")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response getWorkflowRunStats() {
         return withJdbiHandle(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -156,18 +159,62 @@ public class WorkflowResource extends AlpineResource {
     @GET
     @Path("/run")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response getWorkflowRuns(
             @QueryParam("workflowName") final String workflowNameFilter,
             @QueryParam("status") final WorkflowRunStatus statusFilter,
             @QueryParam("concurrencyGroupId") final String concurrencyGroupIdFilter) {
         assertWorkflowEngineEnabled();
 
-        final List<WorkflowRunListRow> runRows = withJdbiHandle(getAlpineRequest(),
-                handle -> new WorkflowDao(handle).getWorkflowRuns(
+        return withJdbiHandle(getAlpineRequest(), handle -> getWorkflowRunsInternal(
+                new WorkflowDao(handle),
+                workflowNameFilter,
+                statusFilter,
+                concurrencyGroupIdFilter,
+                /* tagsFilter */ null));
+    }
+
+    @GET
+    @Path("/run/project/{uuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired // TODO
+    public Response getWorkflowRunsForProject(
+            @PathParam("uuid") @ValidUuid final String projectUuid,
+            @QueryParam("workflowName") final String workflowNameFilter,
+            @QueryParam("status") final WorkflowRunStatus statusFilter,
+            @QueryParam("concurrencyGroupId") final String concurrencyGroupIdFilter) {
+        assertWorkflowEngineEnabled();
+
+        return withJdbiHandle(handle -> {
+            final var projectDao = handle.attach(ProjectDao.class);
+            final Boolean isProjectAccessible = projectDao.isAccessible(UUID.fromString(projectUuid));
+            if (isProjectAccessible == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            } else if (!isProjectAccessible) {
+                return Response.status(Response.Status.FORBIDDEN).build();
+            }
+
+            final var workflowDao = new WorkflowDao(handle);
+            return getWorkflowRunsInternal(
+                    workflowDao,
+                    workflowNameFilter,
+                    statusFilter,
+                    concurrencyGroupIdFilter,
+                    Set.of("project=" + projectUuid));
+        });
+    }
+
+    private Response getWorkflowRunsInternal(
+            final WorkflowDao dao,
+            final String workflowNameFilter,
+            final WorkflowRunStatus statusFilter,
+            final String concurrencyGroupIdFilter,
+            final Set<String> tagsFilter) {
+        final List<WorkflowRunListRow> runRows = dao.getWorkflowRuns(
                         workflowNameFilter,
                         statusFilter,
-                        concurrencyGroupIdFilter));
+                        concurrencyGroupIdFilter,
+                        tagsFilter);
         final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
                 .map(runRow -> new WorkflowRunListResponseItem(
                         runRow.id(),
@@ -177,6 +224,7 @@ public class WorkflowResource extends AlpineResource {
                         runRow.status(),
                         runRow.concurrencyGroupId(),
                         runRow.priority(),
+                        runRow.tags(),
                         runRow.createdAt(),
                         runRow.updatedAt(),
                         runRow.startedAt(),
@@ -198,6 +246,7 @@ public class WorkflowResource extends AlpineResource {
             String status,
             WorkflowRunStatus runtimeStatus,
             Integer priority,
+            Set<String> tags,
             String lockedBy,
             Instant lockedUntil,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
@@ -210,7 +259,7 @@ public class WorkflowResource extends AlpineResource {
     @GET
     @Path("/run/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response getWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
         assertWorkflowEngineEnabled();
 
@@ -232,6 +281,7 @@ public class WorkflowResource extends AlpineResource {
                     runRow.customStatus(),
                     runRow.status(),
                     runRow.priority(),
+                    runRow.tags(),
                     runRow.lockedBy(),
                     runRow.lockedUntil(),
                     runRow.createdAt(),
@@ -247,7 +297,7 @@ public class WorkflowResource extends AlpineResource {
     @POST
     @Path("/run/{id}/cancel")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response cancelWorkflowRun(
             @PathParam("id") @ValidUuid final String runId,
             @QueryParam("reason") @NotBlank final String reason) {
@@ -260,7 +310,7 @@ public class WorkflowResource extends AlpineResource {
     @POST
     @Path("/run/{id}/suspend")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response suspendWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
         assertWorkflowEngineEnabled();
 
@@ -271,7 +321,7 @@ public class WorkflowResource extends AlpineResource {
     @POST
     @Path("/run/{id}/resume")
     @Produces(MediaType.APPLICATION_JSON)
-    @AuthenticationNotRequired
+    @AuthenticationNotRequired // TODO
     public Response resumeWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
         assertWorkflowEngineEnabled();
 

@@ -22,6 +22,7 @@ import org.dependencytrack.workflow.WorkflowRunStatus;
 
 import jakarta.annotation.Nullable;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 public record WorkflowRunListRow(
@@ -32,6 +33,7 @@ public record WorkflowRunListRow(
         @Nullable String customStatus,
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
+        @Nullable Set<String> tags,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,

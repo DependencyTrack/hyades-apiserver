@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -65,6 +66,7 @@ public final class WorkflowRunContext<A, R> {
     private final String workflowName;
     private final int workflowVersion;
     private final Integer priority;
+    private final Set<String> tags;
     private final WorkflowRunner<A, R> workflowRunner;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
@@ -89,6 +91,7 @@ public final class WorkflowRunContext<A, R> {
             final String workflowName,
             final int workflowVersion,
             final Integer priority,
+            final Set<String> tags,
             final WorkflowRunner<A, R> workflowRunner,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -98,6 +101,7 @@ public final class WorkflowRunContext<A, R> {
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.priority = priority;
+        this.tags = tags;
         this.workflowRunner = workflowRunner;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
@@ -120,6 +124,10 @@ public final class WorkflowRunContext<A, R> {
 
     public int workflowVersion() {
         return workflowVersion;
+    }
+
+    public Set<String> tags() {
+        return tags;
     }
 
     public Optional<A> argument() {
@@ -204,7 +212,7 @@ public final class WorkflowRunContext<A, R> {
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new ScheduleSubWorkflowCommand(
-                eventId, name, version, concurrencyGroupId, this.priority, argumentConverter.convertToPayload(argument)));
+                eventId, name, version, concurrencyGroupId, this.priority, this.tags, argumentConverter.convertToPayload(argument)));
 
         final var awaitable = new Awaitable<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);

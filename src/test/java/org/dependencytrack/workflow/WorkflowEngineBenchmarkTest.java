@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -111,8 +112,10 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(numRuns);
         for (int i = 0; i < numRuns; i++) {
             final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
+            final Set<String> tags = (i % 5 == 0) ? Set.of("foo=test-" + i) : null;
             scheduleOptions.add(new ScheduleWorkflowRunOptions("test", 1)
-                    .withConcurrencyGroupId(concurrencyGroupId));
+                    .withConcurrencyGroupId(concurrencyGroupId)
+                    .withTags(tags));
         }
 
         engine.scheduleWorkflowRuns(scheduleOptions);

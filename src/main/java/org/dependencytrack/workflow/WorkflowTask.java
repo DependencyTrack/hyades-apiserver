@@ -21,6 +21,7 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 record WorkflowTask(
@@ -29,6 +30,7 @@ record WorkflowTask(
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
+        Set<String> tags,
         int attempt,
         List<WorkflowEvent> eventLog,
         List<WorkflowEvent> inboxEvents) implements Task {

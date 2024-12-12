@@ -24,9 +24,11 @@ import org.jdbi.v3.core.statement.StatementContext;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullableInt;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.stringArray;
 
 public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRow> {
 
@@ -37,7 +39,8 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRo
                 rs.getString("WORKFLOW_NAME"),
                 rs.getInt("WORKFLOW_VERSION"),
                 rs.getString("CONCURRENCY_GROUP_ID"),
-                nullableInt(rs, "PRIORITY"));
+                nullableInt(rs, "PRIORITY"),
+                Set.copyOf(stringArray(rs, "TAGS")));
     }
 
 }

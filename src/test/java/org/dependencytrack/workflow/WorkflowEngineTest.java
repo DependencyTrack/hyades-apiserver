@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -483,6 +484,47 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+    }
+
+    @Test
+    public void shouldPropagateTags() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
+            ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+            return Optional.empty();
+        });
+
+        engine.registerWorkflowRunner("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
+            return Optional.empty();
+        });
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
+                .withTags(Set.of("oof", "rab")));
+
+        await("Completion")
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> {
+                    final WorkflowRunRow run = engine.getWorkflowRun(runId);
+                    assertThat(run.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                });
+
+        assertThat(engine.getWorkflowEventLog(runId)).satisfiesExactly(
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
+                    assertThat(entry.getRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
+                },
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_SCHEDULED);
+                    assertThat(entry.getSubWorkflowRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
+                },
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
     }

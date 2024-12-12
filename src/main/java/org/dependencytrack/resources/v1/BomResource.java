@@ -489,6 +489,9 @@ public class BomResource extends AlpineResource {
                 workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
                         new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                 .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
+                                .withTags(Set.of(
+                                        "project=" + project.getUuid(),
+                                        "initiator=" + getPrincipal().getName()))
                                 .withArgument(ProcessBomUploadArgs.newBuilder()
                                                 .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                         .setUuid(project.getUuid().toString())
@@ -544,6 +547,9 @@ public class BomResource extends AlpineResource {
                     workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
                             new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                     .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
+                                    .withTags(Set.of(
+                                            "project=" + project.getUuid(),
+                                            "initiator=" + getPrincipal().getName()))
                                     .withArgument(ProcessBomUploadArgs.newBuilder()
                                                     .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                             .setUuid(project.getUuid().toString())

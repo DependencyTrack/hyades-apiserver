@@ -79,7 +79,8 @@ message RunScheduled {
   optional WorkflowPayload argument = 3;
   optional string concurrency_group_id = 4;
   optional int32 priority = 5;
-  optional ParentWorkflowRun parent_run = 6;
+  repeated string tags = 6;
+  optional ParentWorkflowRun parent_run = 7;
   // TODO: Principal?
 }
 
@@ -127,7 +128,8 @@ message SubWorkflowRunScheduled {
   int32 workflow_version = 3;
   optional string concurrency_group_id = 4;
   optional int32 priority = 5;
-  optional WorkflowPayload argument = 6;
+  repeated string tags = 6;
+  optional WorkflowPayload argument = 7;
 }
 
 message SubWorkflowRunCompleted {
