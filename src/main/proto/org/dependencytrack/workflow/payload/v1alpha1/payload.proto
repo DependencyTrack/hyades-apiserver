@@ -6,6 +6,7 @@ option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.workflow.payload.v1alpha1";
 
 import "org/cyclonedx/v1_6/cyclonedx.proto";
+import "org/dependencytrack/storage/v1alpha1/storage.proto";
 
 message Project {
   string uuid = 1;
@@ -13,20 +14,14 @@ message Project {
   string version = 3;
 }
 
-message FileMetadata {
-  string key = 1;
-  string storage = 2;
-  string sha256 = 3;
-}
-
 message ProcessBomUploadArgs {
   Project project = 1;
-  FileMetadata bom_file_metadata = 2;
+  org.dependencytrack.storage.v1alpha1.FileMetadata bom_file_metadata = 2;
 }
 
 message IngestBomArgs {
   Project project = 1;
-  FileMetadata bom_file_metadata = 2;
+  org.dependencytrack.storage.v1alpha1.FileMetadata bom_file_metadata = 2;
 }
 
 message AnalyzeProjectArgs {
@@ -48,7 +43,7 @@ message AnalyzeProjectVulnsResult {
 // TODO: Find better name.
 // TODO: Move this to separate package.
 message AnalyzeProjectVulnsResultX {
-  optional FileMetadata results_file_metadata = 1;
+  optional org.dependencytrack.storage.v1alpha1.FileMetadata results_file_metadata = 1;
 }
 
 // TODO: Find better name.

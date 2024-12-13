@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package org.dependencytrack.storage.v1alpha1;
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.storage.v1alpha1";
+
+message FileMetadata {
+  string key = 1;
+  string storage = 2;
+  string sha256 = 3;
+}

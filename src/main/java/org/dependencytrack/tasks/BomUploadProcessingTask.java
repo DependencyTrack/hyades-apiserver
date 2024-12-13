@@ -182,7 +182,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         project.setName(args.getProject().getName());
         project.setVersion(args.getProject().getVersion());
 
-        final org.dependencytrack.proto.workflow.payload.v1alpha1.FileMetadata bomFileMetadata = args.getBomFileMetadata();
+        final org.dependencytrack.proto.storage.v1alpha1.FileMetadata bomFileMetadata = args.getBomFileMetadata();
 
         final var bomUploadEvent = new BomUploadEvent(project,
                 new FileMetadata(
