@@ -157,7 +157,7 @@ public class OssIndexAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
         }
 
         return Optional.of(AnalyzeProjectVulnsResultX.newBuilder()
-                .setResultsFileMetadata(org.dependencytrack.proto.workflow.payload.v1alpha1.FileMetadata.newBuilder()
+                .setResultsFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
                         .setKey(resultFileMetadata.key())
                         .setSha256(resultFileMetadata.sha256())
                         .setStorage(resultFileMetadata.storage())
