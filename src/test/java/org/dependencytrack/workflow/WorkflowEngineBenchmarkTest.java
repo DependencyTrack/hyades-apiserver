@@ -107,7 +107,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
     @Test
     public void test() {
-        final int numRuns = 25_000;
+        final int numRuns = 100_000;
 
         final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(numRuns);
         for (int i = 0; i < numRuns; i++) {
