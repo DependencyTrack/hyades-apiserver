@@ -477,6 +477,8 @@ public class WorkflowEngine implements Closeable {
             final WorkflowPayload content) {
         state.assertRunning();
 
+        // TODO: Write content to file storage instead. We don't know how large the payload is.
+
         try {
             return externalEventBuffer.add(new NewExternalEvent(workflowRunId, eventId, content));
         } catch (InterruptedException | TimeoutException e) {
