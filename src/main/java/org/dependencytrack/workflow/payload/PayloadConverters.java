@@ -22,6 +22,10 @@ import com.google.protobuf.Message;
 
 public class PayloadConverters {
 
+    public static PayloadConverter<Boolean> booleanConverter() {
+        return new BooleanPayloadConverter();
+    }
+
     public static <T extends Message> PayloadConverter<T> protoConverter(final Class<T> clazz) {
         return new ProtobufPayloadConverter<>(clazz);
     }

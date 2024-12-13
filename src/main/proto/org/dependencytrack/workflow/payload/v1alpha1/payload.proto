@@ -5,6 +5,8 @@ package org.dependencytrack.workflow.payload.v1alpha1;
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.workflow.payload.v1alpha1";
 
+import "org/cyclonedx/v1_6/cyclonedx.proto";
+
 message Project {
   string uuid = 1;
   string name = 2;
@@ -29,6 +31,30 @@ message IngestBomArgs {
 
 message AnalyzeProjectArgs {
   Project project = 1;
+}
+
+// TODO: Find better name.
+// TODO: Move this to separate package.
+// TODO: Consider project-level findings?
+message AnalyzeProjectVulnsResult {
+  repeated ComponentResult results = 1;
+
+  message ComponentResult {
+    int64 component_id = 1;
+    repeated org.cyclonedx.v1_6.Vulnerability vulns = 2;
+  }
+}
+
+// TODO: Find better name.
+// TODO: Move this to separate package.
+message AnalyzeProjectVulnsResultX {
+  optional FileMetadata results_file_metadata = 1;
+}
+
+// TODO: Find better name.
+// TODO: Move this to separate package.
+message ProcessProjectAnalysisResultsArgs {
+  repeated AnalyzeProjectVulnsResultX results = 1;
 }
 
 message TriggerProjectVulnAnalysisArgs {

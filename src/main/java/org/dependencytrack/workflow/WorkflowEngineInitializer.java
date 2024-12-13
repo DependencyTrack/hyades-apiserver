@@ -22,15 +22,14 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.TriggerProjectVulnAnalysisResult;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
-import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 
 import jakarta.servlet.ServletContextEvent;
@@ -77,10 +76,16 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new VulnerabilityAnalysisTask(),
+                new OssIndexAnalysisActivity(),
                 /* maxConcurrency */ 10,
-                /* argumentConverter */ protoConverter(TriggerProjectVulnAnalysisArgs.class),
-                /* resultConverter */ protoConverter(TriggerProjectVulnAnalysisResult.class),
+                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
+                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
+                /* lockTimeout */ Duration.ofSeconds(30));
+        engine.registerActivityRunner(
+                new ProcessProjectAnalysisResultsActivity(),
+                /* maxConcurrency */ 10,
+                /* argumentConverter */ protoConverter(ProcessProjectAnalysisResultsArgs.class),
+                /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new PolicyEvaluationTask(),
