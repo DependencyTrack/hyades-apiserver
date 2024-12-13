@@ -48,11 +48,12 @@ import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
+import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
-import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
+import org.dependencytrack.workflow.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
@@ -514,26 +515,12 @@ public class WorkflowEngine implements Closeable {
                 return Collections.emptyList();
             }
 
-            final Map<UUID, List<WorkflowEvent>> eventLogByRunId =
-                    dao.getWorkflowEventLogs(polledRunById.keySet());
-
-            final Map<UUID, List<PolledInboxEventRow>> polledInboxEventsByRunId =
-                    dao.pollAndLockInboxEvents(this.instanceId, polledRunById.keySet());
+            final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
+                    dao.pollEvents(this.instanceId, polledRunById.keySet());
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
-                        final List<WorkflowEvent> eventLog = eventLogByRunId.getOrDefault(
-                                polledRun.id(), Collections.emptyList());
-
-                        final List<PolledInboxEventRow> polledInboxEventRows =
-                                polledInboxEventsByRunId.getOrDefault(polledRun.id(), Collections.emptyList());
-
-                        int maxDequeueCount = 0;
-                        final var inboxEvents = new ArrayList<WorkflowEvent>(polledInboxEventRows.size());
-                        for (final PolledInboxEventRow polledEvent : polledInboxEventRows) {
-                            maxDequeueCount = Math.max(maxDequeueCount, polledEvent.dequeueCount());
-                            inboxEvents.add(polledEvent.event());
-                        }
+                        final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
 
                         return new WorkflowTask(
                                 polledRun.id(),
@@ -542,9 +529,9 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.concurrencyGroupId(),
                                 polledRun.priority(),
                                 polledRun.tags(),
-                                maxDequeueCount,
-                                eventLog,
-                                inboxEvents);
+                                polledEvents.maxInboxEventDequeueCount(),
+                                polledEvents.eventLog(),
+                                polledEvents.inboxEvents());
                     })
                     .toList();
         });
@@ -713,11 +700,13 @@ public class WorkflowEngine implements Closeable {
             assert createdActivityTasks == newActivityTasks.size();
         }
 
-        final int deletedInboxEvents = dao.deleteLockedInboxEvents(
+        final int deletedInboxEvents = dao.deleteInboxEvents(
                 this.instanceId,
                 actions.stream()
                         .map(CompleteWorkflowTaskAction::workflowRun)
-                        .map(WorkflowRun::workflowRunId)
+                        .map(run -> new DeleteInboxEventsCommand(
+                                run.workflowRunId(),
+                                /* onlyLocked */ !run.status().isTerminal()))
                         .toList());
         assert deletedInboxEvents >= actions.size();
 
