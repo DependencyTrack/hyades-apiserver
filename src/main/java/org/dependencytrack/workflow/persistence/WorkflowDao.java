@@ -23,24 +23,23 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowEventRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowEventInboxRowMapper;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowEventLogRowMapper;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowEventSqlArrayType;
 import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
+import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
-import org.dependencytrack.workflow.persistence.model.PolledInboxEventRow;
+import org.dependencytrack.workflow.persistence.model.PolledWorkflowEventRow;
+import org.dependencytrack.workflow.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
-import org.dependencytrack.workflow.persistence.model.WorkflowEventInboxRow;
-import org.dependencytrack.workflow.persistence.model.WorkflowEventLogRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
@@ -56,13 +55,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public final class WorkflowDao {
 
@@ -503,37 +503,86 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public Map<UUID, List<PolledInboxEventRow>> pollAndLockInboxEvents(
+    public Map<UUID, PolledWorkflowEvents> pollEvents(
             final UUID workerInstanceId,
             final Collection<UUID> workflowRunIds) {
-        final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE" AS (
+        final Query query = jdbiHandle.createQuery("""
+                WITH
+                "CTE_LOG" AS (
+                    SELECT "WORKFLOW_RUN_ID"
+                         , "EVENT"
+                      FROM "WORKFLOW_EVENT_LOG"
+                     WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
+                     ORDER BY "SEQUENCE_NUMBER"
+                ),
+                "CTE_INBOX_POLL_CANDIDATE" AS (
                     SELECT "ID"
                       FROM "WORKFLOW_EVENT_INBOX"
                      WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
                        AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
                      ORDER BY "ID"
                        FOR NO KEY UPDATE
-                      SKIP LOCKED)
-                UPDATE "WORKFLOW_EVENT_INBOX"
-                   SET "LOCKED_BY" = :workerInstanceId
-                     , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
-                  FROM "CTE"
-                 WHERE "CTE"."ID" = "WORKFLOW_EVENT_INBOX"."ID"
-                RETURNING "WORKFLOW_EVENT_INBOX".*
+                      SKIP LOCKED
+                ),
+                "CTE_POLLED_INBOX" AS (
+                    UPDATE "WORKFLOW_EVENT_INBOX"
+                       SET "LOCKED_BY" = :workerInstanceId
+                         , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
+                      FROM "CTE_INBOX_POLL_CANDIDATE"
+                     WHERE "CTE_INBOX_POLL_CANDIDATE"."ID" = "WORKFLOW_EVENT_INBOX"."ID"
+                    RETURNING "WORKFLOW_EVENT_INBOX"."WORKFLOW_RUN_ID"
+                            , "WORKFLOW_EVENT_INBOX"."EVENT"
+                            , "WORKFLOW_EVENT_INBOX"."DEQUEUE_COUNT"
+                )
+                SELECT 'LOG' AS "EVENT_TYPE"
+                     , "WORKFLOW_RUN_ID"
+                     , "EVENT"
+                     , NULL AS "DEQUEUE_COUNT"
+                  FROM "CTE_LOG"
+                 UNION ALL
+                SELECT 'INBOX' AS "EVENT_TYPE"
+                     , "WORKFLOW_RUN_ID"
+                     , "EVENT"
+                     , "DEQUEUE_COUNT"
+                  FROM "CTE_POLLED_INBOX"
                 """);
 
-        return update
+        final List<PolledWorkflowEventRow> polledEventRows = query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .executeAndReturnGeneratedKeys("*")
-                .map(new WorkflowEventInboxRowMapper())
-                .stream()
-                .collect(Collectors.groupingBy(
-                        WorkflowEventInboxRow::workflowRunId,
-                        Collectors.mapping(
-                                row -> new PolledInboxEventRow(row.event(), row.dequeueCount()),
-                                Collectors.toList())));
+                .map(new PolledWorkflowEventRowMapper())
+                .list();
+
+        final var eventLogByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
+        final var inboxEventsByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
+        final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(workflowRunIds.size());
+
+        for (final PolledWorkflowEventRow row : polledEventRows) {
+            switch (row.eventType()) {
+                case LOG -> eventLogByRunId.computeIfAbsent(
+                        row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
+                case INBOX -> {
+                    inboxEventsByRunId.computeIfAbsent(
+                            row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
+
+                    maxInboxEventDequeueCountByRunId.compute(
+                            row.workflowRunId(),
+                            (ignored, previousMax) -> (previousMax == null || previousMax < row.dequeueCount())
+                                    ? row.dequeueCount()
+                                    : previousMax);
+                }
+            }
+        }
+
+        final var polledEventsByRunId = new HashMap<UUID, PolledWorkflowEvents>(workflowRunIds.size());
+        for (final UUID runId : workflowRunIds) {
+            polledEventsByRunId.put(runId, new PolledWorkflowEvents(
+                    eventLogByRunId.getOrDefault(runId, Collections.emptyList()),
+                    inboxEventsByRunId.getOrDefault(runId, Collections.emptyList()),
+                    maxInboxEventDequeueCountByRunId.getOrDefault(runId, 0)));
+        }
+
+        return polledEventsByRunId;
     }
 
     public List<WorkflowEvent> getInboxEvents(final UUID workflowRunId) {
@@ -566,16 +615,26 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int deleteLockedInboxEvents(final UUID workerInstanceId, final Collection<UUID> workflowRunIds) {
+    public int deleteInboxEvents(final UUID workerInstanceId, final Collection<DeleteInboxEventsCommand> deleteCommands) {
         final Update update = jdbiHandle.createUpdate("""
                 DELETE
                   FROM "WORKFLOW_EVENT_INBOX"
-                 WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
-                   AND "LOCKED_BY" = :workerInstanceId
+                 USING UNNEST(:workflowRunIds, :onlyLockeds) AS "DELETE_COMMAND" ("WORKFLOW_RUN_ID", "ONLY_LOCKED")
+                 WHERE "WORKFLOW_EVENT_INBOX"."WORKFLOW_RUN_ID" = "DELETE_COMMAND"."WORKFLOW_RUN_ID"
+                   AND (NOT "DELETE_COMMAND"."ONLY_LOCKED"
+                         OR "WORKFLOW_EVENT_INBOX"."LOCKED_BY" = :workerInstanceId)
                 """);
 
+        final var runIds = new ArrayList<UUID>(deleteCommands.size());
+        final var onlyLockeds = new ArrayList<Boolean>(deleteCommands.size());
+        for (final DeleteInboxEventsCommand command : deleteCommands) {
+            runIds.add(command.workflowRunId());
+            onlyLockeds.add(command.onlyLocked());
+        }
+
         return update
-                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
+                .bindArray("workflowRunIds", UUID.class, runIds)
+                .bindArray("onlyLockeds", Boolean.class, onlyLockeds)
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .execute();
     }
@@ -619,24 +678,6 @@ public final class WorkflowDao {
                 .bind("workflowRunId", workflowRunId)
                 .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .list();
-    }
-
-    public Map<UUID, List<WorkflowEvent>> getWorkflowEventLogs(final Collection<UUID> workflowRunIds) {
-        final Query query = jdbiHandle.createQuery("""
-                SELECT *
-                  FROM "WORKFLOW_EVENT_LOG"
-                 WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
-                 ORDER BY "SEQUENCE_NUMBER"
-                """);
-
-        return query
-                .registerColumnMapper(WorkflowEvent.class, new ProtobufColumnMapper<>(WorkflowEvent.parser()))
-                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .map(new WorkflowEventLogRowMapper())
-                .stream()
-                .collect(Collectors.groupingBy(
-                        WorkflowEventLogRow::workflowRunId,
-                        Collectors.mapping(WorkflowEventLogRow::event, Collectors.toList())));
     }
 
     public int createActivityTasks(final Collection<NewActivityTaskRow> newTasks) {

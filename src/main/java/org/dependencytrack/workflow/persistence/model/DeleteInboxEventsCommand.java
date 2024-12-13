@@ -16,9 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.persistence.mapping;
+package org.dependencytrack.workflow.persistence.model;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import java.util.UUID;
 
-public final class WorkflowPayloadArgumentFactory extends ProtobufArgumentFactory<WorkflowPayload> {
+public record DeleteInboxEventsCommand(UUID workflowRunId, boolean onlyLocked) {
 }
