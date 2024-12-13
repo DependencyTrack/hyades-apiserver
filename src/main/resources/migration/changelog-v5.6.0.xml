@@ -236,7 +236,7 @@
                    , "CREATED_AT"
                    , "WORKFLOW_NAME"
                    , "LOCKED_UNTIL")
-            INCLUDE ("ID")
+            INCLUDE ("ID", "CONCURRENCY_GROUP_ID")
               WHERE "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]);
 
             CREATE INDEX "WORKFLOW_RUN_TAGS_IDX"
@@ -260,23 +260,6 @@
             ALTER TABLE "WORKFLOW_CONCURRENCY_GROUP" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_EVENT_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_ACTIVITY_TASK" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
-
-            <!--
-              (Temporary?) workaround b/c Postgres has no native MIN(UUID) function.
-              https://dba.stackexchange.com/a/305274
-            -->
-            CREATE FUNCTION MIN(UUID, UUID)
-            RETURNS UUID IMMUTABLE PARALLEL SAFE LANGUAGE SQL AS
-            $$
-            SELECT LEAST($1, $2)
-            $$;
-            CREATE AGGREGATE MIN(UUID) (
-              SFUNC = MIN
-            , STYPE = UUID
-            , COMBINEFUNC = MIN
-            , PARALLEL = SAFE
-            , SORTOP = OPERATOR(&lt;)
-            );
         </sql>
     </changeSet>
 </databaseChangeLog>
