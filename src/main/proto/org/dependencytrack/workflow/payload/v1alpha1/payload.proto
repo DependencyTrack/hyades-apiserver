@@ -52,6 +52,13 @@ message ProcessProjectAnalysisResultsArgs {
   repeated AnalyzeProjectVulnsResultX results = 1;
 }
 
+// TODO: Find better name.
+// TODO: Move this to separate package.
+message AnalyzerStatuses {
+  bool internal_enabled = 1;
+  bool oss_index_enabled = 2;
+}
+
 message TriggerProjectVulnAnalysisArgs {
   Project project = 1;
 }
