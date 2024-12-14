@@ -162,9 +162,16 @@ public final class WorkflowRunContext<A, R> {
             final int attempt,
             final Duration delay) {
         final IntervalFunction retryIntervalFunction = IntervalFunction.ofExponentialRandomBackoff(
-                retryPolicy.initialDelay(), retryPolicy.multiplier(), retryPolicy.randomizationFactor(), retryPolicy.maxDelay());
-        return new RetryingAwaitable<>(this, resultConverter,
-                () -> callActivityInternalWithNoRetries(name, argument, argumentConverter, resultConverter, delay),
+                retryPolicy.initialDelay(),
+                retryPolicy.multiplier(),
+                retryPolicy.randomizationFactor(),
+                retryPolicy.maxDelay());
+        final Awaitable<AR> initialAwaitable = callActivityInternalWithNoRetries(
+                name, argument, argumentConverter, resultConverter, delay);
+        return new RetryingAwaitable<>(
+                this,
+                resultConverter,
+                initialAwaitable,
                 exception -> {
                     if (exception instanceof TerminalActivityException) {
                         throw exception;
@@ -294,7 +301,7 @@ public final class WorkflowRunContext<A, R> {
             return awaitables;
         });
 
-        scheduleTimer("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
+        scheduleTimer("External event %s wait timeout" .formatted(externalEventId), timeout).onComplete(ignored -> {
             awaitable.cancel();
 
             pendingAwaitablesByExternalEventId.computeIfPresent(externalEventId, (ignoredKey, awaitables) -> {
@@ -347,8 +354,8 @@ public final class WorkflowRunContext<A, R> {
         if (isSuspended && !event.hasRunResumed() && !event.hasRunCancelled()) {
             if (event.hasRunSuspended()) {
                 logger().warn("""
-                    Encountered RunSuspended event at index {}, \
-                    but run is already suspended. Ignoring.""", currentEventIndex);
+                        Encountered RunSuspended event at index {}, \
+                        but run is already suspended. Ignoring.""", currentEventIndex);
                 return;
             }
 
