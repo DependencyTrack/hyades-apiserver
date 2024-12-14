@@ -58,6 +58,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 public final class WorkflowRunContext<A, R> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunContext.class);
@@ -242,10 +244,13 @@ public final class WorkflowRunContext<A, R> {
     }
 
     public <SA, SR> Awaitable<SR> sideEffect(
+            final String name,
             final SA argument,
             final PayloadConverter<SR> resultConverter,
             final Function<SA, SR> sideEffectFunction) {
         assertNotInSideEffect("Nested side effects are not allowed");
+        requireNonNull(name, "name must not be null");
+        requireNonNull(sideEffectFunction, "sideEffectFunction must not be null");
 
         final int eventId = currentEventId++;
 
@@ -258,7 +263,7 @@ public final class WorkflowRunContext<A, R> {
                 final SR result = sideEffectFunction.apply(argument);
                 final WorkflowPayload resultPayload = resultConverter.convertToPayload(result);
                 pendingCommandByEventId.put(eventId, new RecordSideEffectResultCommand(
-                        eventId, resultPayload));
+                        name, eventId, resultPayload));
                 awaitable.complete(resultPayload);
             } catch (RuntimeException e) {
                 awaitable.completeExceptionally(e);

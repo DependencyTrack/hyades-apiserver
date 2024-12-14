@@ -154,7 +154,8 @@ message TimerFired {
 
 message SideEffectExecuted {
   int32 side_effect_event_id = 1;
-  optional WorkflowPayload result = 2;
+  string name = 2;
+  optional WorkflowPayload result = 3;
 }
 
 message ExternalEventReceived {

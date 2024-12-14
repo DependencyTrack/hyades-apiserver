@@ -347,7 +347,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final var sideEffectInvocationCounter = new AtomicInteger();
 
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.sideEffect(null, voidConverter(), ignored -> {
+            ctx.sideEffect("sideEffect", null, voidConverter(), ignored -> {
                 sideEffectInvocationCounter.incrementAndGet();
                 return null;
             }).await();
@@ -371,7 +371,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SIDE_EFFECT_EXECUTED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SIDE_EFFECT_EXECUTED);
+                    assertThat(entry.getSideEffectExecuted().getName()).isEqualTo("sideEffect");
+                },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
@@ -383,8 +386,8 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldNotAllowNestedSideEffects() {
         engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.sideEffect(null, voidConverter(), ignored -> {
-                ctx.sideEffect(null, voidConverter(), ignored2 -> null).await();
+            ctx.sideEffect("outerSideEffect", null, voidConverter(), ignored -> {
+                ctx.sideEffect("nestedSideEffect", null, voidConverter(), ignored2 -> null).await();
                 return null;
             }).await();
 

@@ -44,6 +44,7 @@ sealed interface WorkflowCommand permits
     }
 
     record RecordSideEffectResultCommand(
+            String name,
             int eventId,
             WorkflowPayload result) implements WorkflowCommand {
     }

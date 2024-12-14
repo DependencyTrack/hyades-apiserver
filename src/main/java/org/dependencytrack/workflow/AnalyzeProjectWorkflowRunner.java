@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzerStatuses;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
@@ -35,7 +35,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_INTERNAL
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_OSSINDEX_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.payload.PayloadConverters.booleanConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
@@ -54,21 +53,17 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
 
         ctx.setStatus(STATUS_ANALYZING_VULNS);
 
-        // TODO: Fetch enabled status for all scanners in one go.
         // Using side effect here because it's not worth scheduling
         // an asynchronous activity for this.
-        final boolean isInternalAnalyzerEnabled = ctx.sideEffect(
-                null,
-                booleanConverter(),
-                ignored -> isEnabled(SCANNER_INTERNAL_ENABLED)).await().orElse(false);
-        final boolean isOssIndexAnalyzerEnabled = ctx.sideEffect(
-                null,
-                booleanConverter(),
-                ignored -> isEnabled(SCANNER_OSSINDEX_ENABLED)).await().orElse(false);
+        final AnalyzerStatuses analyzerStatuses = ctx.sideEffect(
+                "analyzer-statuses",
+                /* argument */ null,
+                protoConverter(AnalyzerStatuses.class),
+                ignored -> getAnalyzerStatuses()).await().orElseThrow();
 
         final RetryPolicy scannerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
         final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResultX>>();
-        if (isInternalAnalyzerEnabled) {
+        if (analyzerStatuses.getInternalEnabled()) {
             ctx.logger().info("Scheduling internal analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
@@ -78,7 +73,7 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
                             protoConverter(AnalyzeProjectVulnsResultX.class),
                             scannerRetryPolicy));
         }
-        if (isOssIndexAnalyzerEnabled) {
+        if (analyzerStatuses.getOssIndexEnabled()) {
             ctx.logger().info("Scheduling OSS Index analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
@@ -141,10 +136,17 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
         return Optional.empty();
     }
 
-    private Boolean isEnabled(final ConfigPropertyConstants property) {
-        return withJdbiHandle(handle -> handle.attach(ConfigPropertyDao.class)
-                .getOptionalValue(property, Boolean.class))
-                .orElse(false);
+    private AnalyzerStatuses getAnalyzerStatuses() {
+        return withJdbiHandle(handle -> {
+            final var dao = handle.attach(ConfigPropertyDao.class);
+
+            return AnalyzerStatuses.newBuilder()
+                    .setInternalEnabled(dao.getOptionalValue(
+                            SCANNER_INTERNAL_ENABLED, Boolean.class).orElse(false))
+                    .setOssIndexEnabled(dao.getOptionalValue(
+                            SCANNER_OSSINDEX_ENABLED, Boolean.class).orElse(false))
+                    .build();
+        });
     }
 
 }

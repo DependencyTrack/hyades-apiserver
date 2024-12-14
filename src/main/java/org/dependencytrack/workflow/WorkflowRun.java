@@ -284,7 +284,8 @@ public class WorkflowRun {
 
     private void executeRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {
         final var subjectBuilder = SideEffectExecuted.newBuilder()
-                .setSideEffectEventId(command.eventId());
+                .setSideEffectEventId(command.eventId())
+                .setName(command.name());
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }
@@ -394,7 +395,7 @@ public class WorkflowRun {
         }
 
         throw new IllegalStateException(
-                "Can not transition from state %s to %s".formatted(this.status, newStatus));
+                "Can not transition from state %s to %s" .formatted(this.status, newStatus));
     }
 
 }
