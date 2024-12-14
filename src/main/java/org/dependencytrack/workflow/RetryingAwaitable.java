@@ -22,27 +22,28 @@ import org.dependencytrack.workflow.payload.PayloadConverter;
 
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Supplier;
+
+import static java.util.Objects.requireNonNull;
 
 final class RetryingAwaitable<T> extends Awaitable<T> {
 
-    private final Supplier<Awaitable<T>> initialAwaitableSupplier;
+    private final Awaitable<T> initialAwaitable;
     private final Function<RuntimeException, Awaitable<T>> retryAwaitableFunction;
 
     RetryingAwaitable(
             final WorkflowRunContext<?, ?> executionContext,
             final PayloadConverter<T> resultConverter,
-            final Supplier<Awaitable<T>> initialAwaitableSupplier,
+            final Awaitable<T> initialAwaitable,
             final Function<RuntimeException, Awaitable<T>> retryAwaitableFunction) {
         super(executionContext, resultConverter);
-        this.initialAwaitableSupplier = initialAwaitableSupplier;
-        this.retryAwaitableFunction = retryAwaitableFunction;
+        this.initialAwaitable = requireNonNull(initialAwaitable, "initialAwaitable must not be null");
+        this.retryAwaitableFunction = requireNonNull(retryAwaitableFunction, "retryAwaitableFunction must not be null");
     }
 
     @Override
     public Optional<T> await() {
         try {
-            return initialAwaitableSupplier.get().await();
+            return initialAwaitable.await();
         } catch (RuntimeException e) {
             if (e instanceof WorkflowRunBlockedException) {
                 throw e;
