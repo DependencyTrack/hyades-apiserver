@@ -76,6 +76,12 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
+                new InternalAnalysisActivity(),
+                /* maxConcurrency */ 10,
+                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
+                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
+                /* lockTimeout */ Duration.ofSeconds(30));
+        engine.registerActivityRunner(
                 new OssIndexAnalysisActivity(),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),

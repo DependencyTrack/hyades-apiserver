@@ -78,7 +78,10 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         int pollsWithoutResults = 0;
 
         while (engine.state().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
-            maybeSleepUntilNextPollIsDue();
+            final boolean interruptedDuringSleep = maybeSleepUntilNextPollIsDue();
+            if (interruptedDuringSleep) {
+                break;
+            }
 
             // Attempt to acquire a permit from the semaphore, blocking for up to 5 seconds.
             // If acquisition was successful, immediately release the permit again.
@@ -176,15 +179,15 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         }
     }
 
-    private void maybeSleepUntilNextPollIsDue() {
+    private boolean maybeSleepUntilNextPollIsDue() {
         if (lastPolledAt == null) {
-            return;
+            return false;
         }
 
         final Instant now = Instant.now();
         final Instant nextPollAt = lastPolledAt.plus(minPollInterval);
         if (now.isAfter(nextPollAt)) {
-            return;
+            return false;
         }
 
         final Duration nextPollDueIn = Duration.between(now, nextPollAt);
@@ -193,7 +196,10 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for next poll at {}", nextPollAt, e);
+            return true;
         }
+
+        return false;
     }
 
     private void maybeInitializeMeters() {
