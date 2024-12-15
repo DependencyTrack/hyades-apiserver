@@ -21,6 +21,7 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
+import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.util.Optional;
@@ -30,7 +31,7 @@ import static org.dependencytrack.workflow.payload.PayloadConverters.protoConver
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "process-bom-upload")
-public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBomUploadArgs, Void> {
+public class ProcessBomUploadWorkflow implements WorkflowRunner<ProcessBomUploadArgs, Void> {
 
     private static final String STATUS_INGESTING_BOM = "INGESTING_BOM";
     private static final String STATUS_ANALYZING = "ANALYZING";
@@ -44,7 +45,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.logger().info("Scheduling BOM ingestion");
         ctx.setStatus(STATUS_INGESTING_BOM);
         ctx.callActivity(
-                "ingest-bom",
+                BomUploadProcessingTask.class,
                 IngestBomArgs.newBuilder()
                         .setProject(args.getProject())
                         .setBomFileMetadata(args.getBomFileMetadata())
@@ -57,8 +58,7 @@ public class ProcessBomUploadWorkflowRunner implements WorkflowRunner<ProcessBom
         ctx.logger().info("Triggering project analysis");
         ctx.setStatus(STATUS_ANALYZING);
         ctx.callSubWorkflow(
-                "analyze-project",
-                /* version */ 1,
+                AnalyzeProjectWorkflow.class,
                 /* concurrencyGroupId */ "analyze-project-" + args.getProject().getUuid(),
                 AnalyzeProjectArgs.newBuilder()
                         .setProject(args.getProject())

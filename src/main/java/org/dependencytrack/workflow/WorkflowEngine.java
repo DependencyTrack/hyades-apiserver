@@ -424,7 +424,8 @@ public class WorkflowEngine implements Closeable {
                         .build())
                 .build();
 
-        // TODO: Assert that current run status is not terminal.
+        // TODO: Assert that current run status is not terminal,
+        //  and no runCancelled event is pending already.
 
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -442,7 +443,8 @@ public class WorkflowEngine implements Closeable {
                 .setRunSuspended(RunSuspended.newBuilder().build())
                 .build();
 
-        // TODO: Assert that current run status is not suspended or terminal.
+        // TODO: Assert that current run status is not suspended or terminal,
+        //  and no runSuspended event is pending already.
 
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -460,7 +462,8 @@ public class WorkflowEngine implements Closeable {
                 .setRunResumed(RunResumed.newBuilder().build())
                 .build();
 
-        // TODO: Assert that current run status is suspended.
+        // TODO: Assert that current run status is suspended,
+        //  and no runResumed event is pending already.
 
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);

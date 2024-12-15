@@ -39,6 +39,8 @@ import org.dependencytrack.workflow.WorkflowCommand.RecordSideEffectResultComman
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.WorkflowCommand.ScheduleTimerCommand;
+import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.payload.VoidPayloadConverter;
 import org.slf4j.Logger;
@@ -145,6 +147,30 @@ public final class WorkflowRunContext<A, R> {
     }
 
     public <AA, AR> Awaitable<AR> callActivity(
+            final Class<? extends ActivityRunner<AA, AR>> activityClass,
+            final AA argument,
+            final PayloadConverter<AA> argumentConverter,
+            final PayloadConverter<AR> resultConverter,
+            final RetryPolicy retryPolicy) {
+        assertNotInSideEffect("Activities can not be called from within a side effect");
+        requireNonNull(activityClass, "activityClass must not be null");
+
+        final Activity activityAnnotation = activityClass.getAnnotation(Activity.class);
+        if (activityAnnotation == null) {
+            throw new IllegalArgumentException();
+        }
+
+        return callActivityInternal(
+                activityAnnotation.name(),
+                argument,
+                argumentConverter,
+                resultConverter,
+                retryPolicy,
+                /* attempt */ 1,
+                /* delay */ null);
+    }
+
+    <AA, AR> Awaitable<AR> callActivity(
             final String name,
             final AA argument,
             final PayloadConverter<AA> argumentConverter,
@@ -152,7 +178,14 @@ public final class WorkflowRunContext<A, R> {
             final RetryPolicy retryPolicy) {
         assertNotInSideEffect("Activities can not be called from within a side effect");
 
-        return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, /* attempt */ 1, /* delay */ null);
+        return callActivityInternal(
+                name,
+                argument,
+                argumentConverter,
+                resultConverter,
+                retryPolicy,
+                /* attempt */ 1,
+                /* delay */ null);
     }
 
     private <AA, AR> Awaitable<AR> callActivityInternal(
@@ -185,7 +218,14 @@ public final class WorkflowRunContext<A, R> {
                     final Duration nextDelay = Duration.ofMillis(retryIntervalFunction.apply(attempt + 1));
                     logger().info("Scheduling retry attempt #{} in {}", attempt, nextDelay);
 
-                    return callActivityInternal(name, argument, argumentConverter, resultConverter, retryPolicy, attempt + 1, nextDelay);
+                    return callActivityInternal(
+                            name,
+                            argument,
+                            argumentConverter,
+                            resultConverter,
+                            retryPolicy,
+                            attempt + 1,
+                            nextDelay);
                 });
     }
 
@@ -211,6 +251,30 @@ public final class WorkflowRunContext<A, R> {
     }
 
     public <WA, WR> Awaitable<WR> callSubWorkflow(
+            final Class<? extends WorkflowRunner<WA, WR>> workflowClass,
+            final String concurrencyGroupId,
+            final WA argument,
+            final PayloadConverter<WA> argumentConverter,
+            final PayloadConverter<WR> resultConverter) {
+        assertNotInSideEffect("Sub workflows can not be called from within a side effect");
+        requireNonNull(workflowClass, "workflowClass must not be null");
+
+
+        final Workflow workflowAnnotation = workflowClass.getAnnotation(Workflow.class);
+        if (workflowAnnotation == null) {
+            throw new IllegalArgumentException();
+        }
+
+        return callSubWorkflow(
+                workflowAnnotation.name(),
+                workflowAnnotation.version(),
+                concurrencyGroupId,
+                argument,
+                argumentConverter,
+                resultConverter);
+    }
+
+    <WA, WR> Awaitable<WR> callSubWorkflow(
             final String name,
             final int version,
             final String concurrencyGroupId,
@@ -219,9 +283,11 @@ public final class WorkflowRunContext<A, R> {
             final PayloadConverter<WR> resultConverter) {
         assertNotInSideEffect("Sub workflows can not be called from within a side effect");
 
+        final WorkflowPayload convertedArgument = argumentConverter.convertToPayload(argument);
+
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new ScheduleSubWorkflowCommand(
-                eventId, name, version, concurrencyGroupId, this.priority, this.tags, argumentConverter.convertToPayload(argument)));
+                eventId, name, version, concurrencyGroupId, this.priority, this.tags, convertedArgument));
 
         final var awaitable = new Awaitable<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);
@@ -306,7 +372,7 @@ public final class WorkflowRunContext<A, R> {
             return awaitables;
         });
 
-        scheduleTimer("External event %s wait timeout" .formatted(externalEventId), timeout).onComplete(ignored -> {
+        scheduleTimer("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
             awaitable.cancel();
 
             pendingAwaitablesByExternalEventId.computeIfPresent(externalEventId, (ignoredKey, awaitables) -> {
