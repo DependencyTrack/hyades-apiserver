@@ -57,13 +57,13 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         engine.start();
 
         engine.registerWorkflowRunner(
-                new ProcessBomUploadWorkflowRunner(),
+                new ProcessBomUploadWorkflow(),
                 /* maxConcurrency */ 25,
                 /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerWorkflowRunner(
-                new AnalyzeProjectWorkflowRunner(),
+                new AnalyzeProjectWorkflow(),
                 /* maxConcurrency */ 25,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ voidConverter(),

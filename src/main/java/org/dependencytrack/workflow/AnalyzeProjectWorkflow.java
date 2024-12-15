@@ -25,6 +25,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzerStatuses;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
+import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.annotation.Workflow;
 
 import java.util.ArrayList;
@@ -39,7 +41,7 @@ import static org.dependencytrack.workflow.payload.PayloadConverters.protoConver
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "analyze-project")
-public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProjectArgs, Void> {
+public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs, Void> {
 
     private static final String STATUS_ANALYZING_VULNS = "ANALYZING_VULNS";
     private static final String STATUS_PROCESSING_VULN_ANALYSIS_RESULTS = "PROCESSING_VULN_ANALYSIS_RESULTS";
@@ -67,7 +69,7 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
             ctx.logger().info("Scheduling internal analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
-                            "internal-analysis",
+                            InternalAnalysisActivity.class,
                             args,
                             protoConverter(AnalyzeProjectArgs.class),
                             protoConverter(AnalyzeProjectVulnsResultX.class),
@@ -77,7 +79,7 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
             ctx.logger().info("Scheduling OSS Index analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
-                            "ossindex-analysis",
+                            OssIndexAnalysisActivity.class,
                             args,
                             protoConverter(AnalyzeProjectArgs.class),
                             protoConverter(AnalyzeProjectVulnsResultX.class),
@@ -102,16 +104,16 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
         ctx.callActivity(
-                "process-project-analysis-results",
+                ProcessProjectAnalysisResultsActivity.class,
                 processResultsArgsBuilder.build(),
                 protoConverter(ProcessProjectAnalysisResultsArgs.class),
                 voidConverter(),
-                RetryPolicy.defaultRetryPolicy()).await();
+                defaultRetryPolicy()).await();
 
         ctx.logger().info("Scheduling policy evaluation");
         ctx.setStatus(STATUS_EVALUATING_POLICIES);
         ctx.callActivity(
-                "eval-project-policies",
+                PolicyEvaluationTask.class,
                 EvalProjectPoliciesArgs.newBuilder()
                         .setProject(args.getProject())
                         .build(),
@@ -123,7 +125,7 @@ public class AnalyzeProjectWorkflowRunner implements WorkflowRunner<AnalyzeProje
         ctx.logger().info("Scheduling metrics update");
         ctx.setStatus(STATUS_UPDATING_METRICS);
         ctx.callActivity(
-                "update-project-metrics",
+                ProjectMetricsUpdateTask.class,
                 UpdateProjectMetricsArgs.newBuilder()
                         .setProject(args.getProject())
                         .build(),
