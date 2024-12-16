@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
+import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.ParentWorkflowRun;
@@ -27,7 +28,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunScheduled;
-import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
+import org.dependencytrack.proto.workflow.v1alpha1.TimerElapsed;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
@@ -49,14 +50,14 @@ import static org.dependencytrack.workflow.WorkflowEngine.toTimestamp;
 
 public class WorkflowRun {
 
-    private final UUID workflowRunId;
+    private final UUID id;
     private final String workflowName;
     private final int workflowVersion;
     private final String concurrencyGroupId;
     private final List<WorkflowEvent> journal;
     private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
-    private final List<WorkflowEvent> pendingTimerFiredEvents;
+    private final List<WorkflowEvent> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
     private WorkflowEvent scheduledEvent;
     private WorkflowEvent startedEvent;
@@ -72,19 +73,19 @@ public class WorkflowRun {
     private Instant completedAt;
 
     WorkflowRun(
-            final UUID workflowRunId,
+            final UUID id,
             final String workflowName,
             final int workflowVersion,
             final String concurrencyGroupId,
             final List<WorkflowEvent> journal) {
-        this.workflowRunId = workflowRunId;
+        this.id = id;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.concurrencyGroupId = concurrencyGroupId;
         this.journal = new ArrayList<>();
         this.inbox = new ArrayList<>();
         this.pendingActivityTaskScheduledEvents = new ArrayList<>();
-        this.pendingTimerFiredEvents = new ArrayList<>();
+        this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
 
         for (final WorkflowEvent event : journal) {
@@ -92,8 +93,8 @@ public class WorkflowRun {
         }
     }
 
-    UUID workflowRunId() {
-        return workflowRunId;
+    UUID id() {
+        return id;
     }
 
     Optional<String> concurrencyGroupId() {
@@ -112,8 +113,8 @@ public class WorkflowRun {
         return pendingActivityTaskScheduledEvents;
     }
 
-    List<WorkflowEvent> pendingTimerFiredEvents() {
-        return pendingTimerFiredEvents;
+    List<WorkflowEvent> pendingTimerElapsedEvents() {
+        return pendingTimerElapsedEvents;
     }
 
     List<WorkflowRunMessage> pendingWorkflowMessages() {
@@ -168,9 +169,12 @@ public class WorkflowRun {
         switch (event.getSubjectCase()) {
             case RUN_SCHEDULED -> {
                 if (scheduledEvent != null) {
-                    throw new IllegalStateException("""
-                            %s/%s: Duplicate RunScheduled event; Previous event is: %s; \
-                            New event is: %s""".formatted(this.workflowName, this.workflowRunId, scheduledEvent, event));
+                    final String previousEventStr = DebugFormat.singleLine().toString(scheduledEvent);
+                    final String nextEventStr = DebugFormat.singleLine().toString(event);
+
+                    throw new IllegalStateException(
+                            "%s/%s: Duplicate RunScheduled event; Previous event is: %s; New event is: %s".formatted(
+                                    this.workflowName, this.id, previousEventStr, nextEventStr));
                 }
                 scheduledEvent = event;
                 argument = event.getRunScheduled().hasArgument()
@@ -180,9 +184,12 @@ public class WorkflowRun {
             }
             case RUN_STARTED -> {
                 if (startedEvent != null) {
-                    throw new IllegalStateException("""
-                            %s/%s: Duplicate RunStarted event; Previous event is: %s; \
-                            New event is: %s""".formatted(this.workflowName, this.workflowRunId, startedEvent, event));
+                    final String previousEventStr = DebugFormat.singleLine().toString(startedEvent);
+                    final String nextEventStr = DebugFormat.singleLine().toString(event);
+
+                    throw new IllegalStateException(
+                            "%s/%s: Duplicate RunStarted event; Previous event is: %s; New event is: %s".formatted(
+                                    this.workflowName, this.id, previousEventStr, nextEventStr));
                 }
                 startedEvent = event;
                 setStatus(WorkflowRunStatus.RUNNING);
@@ -190,9 +197,12 @@ public class WorkflowRun {
             }
             case RUN_COMPLETED -> {
                 if (completedEvent != null) {
-                    throw new IllegalStateException("""
-                            %s/%s: Duplicate RunCompleted event; Previous event is: %s; \
-                            Next event is: %s""".formatted(this.workflowName, this.workflowRunId, completedEvent, event));
+                    final String previousEventStr = DebugFormat.singleLine().toString(completedEvent);
+                    final String nextEventStr = DebugFormat.singleLine().toString(event);
+
+                    throw new IllegalStateException(
+                            "%s/%s: Duplicate RunCompleted event; Previous event is: %s; Next event is: %s".formatted(
+                                    this.workflowName, this.id, previousEventStr, nextEventStr));
                 }
                 completedEvent = event;
                 setStatus(WorkflowRunStatus.fromProto(completedEvent.getRunCompleted().getStatus()));
@@ -332,7 +342,7 @@ public class WorkflowRun {
                 .setWorkflowVersion(command.workflowVersion())
                 .setParentRun(ParentWorkflowRun.newBuilder()
                         .setSubWorkflowRunScheduledEventId(command.eventId())
-                        .setRunId(this.workflowRunId.toString())
+                        .setRunId(this.id.toString())
                         .setWorkflowName(this.workflowName)
                         .setWorkflowVersion(this.workflowVersion)
                         .build());
@@ -378,10 +388,10 @@ public class WorkflowRun {
                         .build())
                 .build(), /* isNew */ true);
 
-        pendingTimerFiredEvents.add(WorkflowEvent.newBuilder()
+        pendingTimerElapsedEvents.add(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
-                .setTimerFired(TimerFired.newBuilder()
+                .setTimerElapsed(TimerElapsed.newBuilder()
                         .setTimerScheduledEventId(command.eventId())
                         .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
@@ -395,7 +405,7 @@ public class WorkflowRun {
         }
 
         throw new IllegalStateException(
-                "Can not transition from state %s to %s" .formatted(this.status, newStatus));
+                "Can not transition from state %s to %s".formatted(this.status, newStatus));
     }
 
 }

@@ -52,7 +52,7 @@ message WorkflowEvent {
     SubWorkflowRunFailed sub_workflow_run_failed = 102;
 
     TimerScheduled timer_scheduled = 125;
-    TimerFired timer_fired = 126;
+    TimerElapsed timer_elapsed = 126;
 
     SideEffectExecuted side_effect_executed = 150;
 
@@ -147,7 +147,7 @@ message TimerScheduled {
   google.protobuf.Timestamp elapse_at = 2;
 }
 
-message TimerFired {
+message TimerElapsed {
   int32 timer_scheduled_event_id = 1;
   google.protobuf.Timestamp elapse_at = 2;
 }
