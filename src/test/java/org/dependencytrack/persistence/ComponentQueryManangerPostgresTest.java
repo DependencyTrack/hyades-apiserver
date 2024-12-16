@@ -84,7 +84,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
             component.setProject(project);
             component.setGroup("component-group");
             component.setName("component-name-" + i);
-            component.setVersion(String.valueOf(i) + ".0");
+            component.setVersion(i + ".0");
             if (i == 0) {
                 var er = new ExternalReference();
                 er.setUrl("https://github.com/thinkcmf/thinkcmf/issues/736");

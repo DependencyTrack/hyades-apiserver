@@ -33,7 +33,7 @@ public interface MetricsDao {
               FROM "DEPENDENCYMETRICS"
              USING "PROJECT"
              WHERE "PROJECT"."ID" = "DEPENDENCYMETRICS"."PROJECT_ID"
-               AND "PROJECT"."ACTIVE"
+               AND "PROJECT"."INACTIVE_SINCE" IS NULL
                AND NOW() - "DEPENDENCYMETRICS"."LAST_OCCURRENCE" > :duration
             """)
     int deleteComponentMetricsForRetentionDuration(@Bind Duration duration);
@@ -43,7 +43,7 @@ public interface MetricsDao {
               FROM "PROJECTMETRICS"
              USING "PROJECT"
              WHERE "PROJECT"."ID" = "PROJECTMETRICS"."PROJECT_ID"
-               AND "PROJECT"."ACTIVE"
+               AND "PROJECT"."INACTIVE_SINCE" IS NULL
                AND NOW() - "PROJECTMETRICS"."LAST_OCCURRENCE" > :duration
             """)
     int deleteProjectMetricsForRetentionDuration(@Bind Duration duration);

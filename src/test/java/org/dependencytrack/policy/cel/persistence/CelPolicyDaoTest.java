@@ -68,6 +68,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         project.setPurl("projectPurl");
         project.setSwidTagId("projectSwidTagId");
         project.setLastBomImport(new Date());
+        project.setInactiveSince(new Date());
         qm.persist(project);
 
         qm.createProjectProperty(project, "propertyGroup", "propertyName", "propertyValue", PropertyType.STRING, null);
@@ -108,7 +109,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                           "name": "projectName",
                           "version": "projectVersion",
                           "classifier": "APPLICATION",
-                          "isActive": true,
+                          "inactiveSince":"${json-unit.any-string}",
                           "tags": [
                             "projecttaga",
                             "projecttagb"
