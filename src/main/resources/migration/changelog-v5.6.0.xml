@@ -190,12 +190,12 @@
               NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
               It's mostly append-only and doesn't accumulate lots of bloat, unless records are deleted (i.e. as part of workflow run retention).
             -->
-            CREATE TABLE "WORKFLOW_EVENT_LOG" (
+            CREATE TABLE "WORKFLOW_RUN_JOURNAL" (
               "WORKFLOW_RUN_ID" UUID
             , "SEQUENCE_NUMBER" INT
             , "EVENT" BYTEA NOT NULL
-            , CONSTRAINT "WORKFLOW_EVENT_LOG_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SEQUENCE_NUMBER")
-            , CONSTRAINT "WORKFLOW_EVENT_LOG_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            , CONSTRAINT "WORKFLOW_RUN_JOURNAL_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SEQUENCE_NUMBER")
+            , CONSTRAINT "WORKFLOW_RUN_JOURNAL_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
             );
 
             <!--
@@ -204,15 +204,15 @@
               But since records are deleted frequently, it might accumulate quite a bit of bloat.
               Partitioning might help with that, but this remains to be verified.
             -->
-            CREATE TABLE "WORKFLOW_EVENT_INBOX" (
+            CREATE TABLE "WORKFLOW_RUN_INBOX" (
               "ID" BIGINT GENERATED ALWAYS AS IDENTITY
             , "WORKFLOW_RUN_ID" UUID NOT NULL
             , "VISIBLE_FROM" TIMESTAMPTZ(3)
             , "LOCKED_BY" TEXT
             , "DEQUEUE_COUNT" SMALLINT
             , "EVENT" BYTEA NOT NULL
-            , CONSTRAINT "WORKFLOW_EVENT_INBOX_PK" PRIMARY KEY ("ID")
-            , CONSTRAINT "WORKFLOW_EVENT_INBOX_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            , CONSTRAINT "WORKFLOW_RUN_INBOX_PK" PRIMARY KEY ("ID")
+            , CONSTRAINT "WORKFLOW_RUN_INBOX_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
             );
 
             CREATE TABLE "WORKFLOW_ACTIVITY_TASK" (
@@ -243,8 +243,8 @@
                 ON "WORKFLOW_RUN" USING GIN ("TAGS")
              WHERE "TAGS" IS NOT NULL;
 
-            CREATE INDEX "WORKFLOW_EVENT_INBOX_POLL_IDX"
-                ON "WORKFLOW_EVENT_INBOX" ("WORKFLOW_RUN_ID", "VISIBLE_FROM");
+            CREATE INDEX "WORKFLOW_RUN_INBOX_POLL_IDX"
+                ON "WORKFLOW_RUN_INBOX" ("WORKFLOW_RUN_ID", "VISIBLE_FROM");
 
             <!-- TODO: Verify if all these columns are indeed needed for an index-only scan. -->
             CREATE INDEX "WORKFLOW_ACTIVITY_TASK_POLL_IDX"
@@ -258,7 +258,7 @@
 
             ALTER TABLE "WORKFLOW_RUN" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_CONCURRENCY_GROUP" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
-            ALTER TABLE "WORKFLOW_EVENT_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+            ALTER TABLE "WORKFLOW_RUN_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
             ALTER TABLE "WORKFLOW_ACTIVITY_TASK" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
         </sql>
     </changeSet>

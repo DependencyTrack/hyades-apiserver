@@ -125,10 +125,7 @@ public class WorkflowResource extends AlpineResource {
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant startedAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
-            int historySize,
-            int pendingEvents,
-            int pendingActivities) {
+            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -144,7 +141,7 @@ public class WorkflowResource extends AlpineResource {
             final var dao = new WorkflowDao(handle);
 
             final Map<String, Map<WorkflowRunStatus, Long>> statusesByName =
-                    dao.getWorkflowRunCountByNameAndStatus().stream()
+                    dao.getRunCountByNameAndStatus().stream()
                             .collect(Collectors.groupingBy(
                                     WorkflowRunCountByNameAndStatusRow::workflowName,
                                     Collectors.toMap(
@@ -210,7 +207,7 @@ public class WorkflowResource extends AlpineResource {
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
             final Set<String> tagsFilter) {
-        final List<WorkflowRunListRow> runRows = dao.getWorkflowRuns(
+        final List<WorkflowRunListRow> runRows = dao.getRunListPage(
                         workflowNameFilter,
                         statusFilter,
                         concurrencyGroupIdFilter,
@@ -228,10 +225,7 @@ public class WorkflowResource extends AlpineResource {
                         runRow.createdAt(),
                         runRow.updatedAt(),
                         runRow.startedAt(),
-                        runRow.completedAt(),
-                        runRow.historySize(),
-                        runRow.pendingEvents(),
-                        runRow.pendingActivities()))
+                        runRow.completedAt()))
                 .toList();
 
         final long totalCount = runRows.isEmpty() ? 0 : runRows.getFirst().totalCount();
@@ -252,27 +246,29 @@ public class WorkflowResource extends AlpineResource {
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
             @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
-            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventLog,
-            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> eventInbox) {
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> journal,
+            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> inbox) {
     }
 
     @GET
     @Path("/run/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired // TODO
-    public Response getWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
+    public Response getWorkflowRun(@PathParam("id") @ValidUuid final String runIdStr) {
         assertWorkflowEngineEnabled();
+
+        final UUID runId = UUID.fromString(runIdStr);
 
         final WorkflowRunResponse run = withJdbiHandle(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunRow runRow = dao.getWorkflowRun(UUID.fromString(runId));
+            final WorkflowRunRow runRow = dao.getRun(runId);
             if (runRow == null) {
                 throw new ClientErrorException(Response.Status.NOT_FOUND);
             }
 
-            final List<WorkflowEvent> eventLog = dao.getWorkflowRunEventLog(UUID.fromString(runId));
-            final List<WorkflowEvent> eventInbox = dao.getInboxEvents(UUID.fromString(runId));
+            final List<WorkflowEvent> journal = dao.getRunJournal(runId);
+            final List<WorkflowEvent> inbox = dao.getRunInbox(runId);
 
             return new WorkflowRunResponse(
                     runRow.id(),
@@ -287,8 +283,8 @@ public class WorkflowResource extends AlpineResource {
                     runRow.createdAt(),
                     runRow.updatedAt(),
                     runRow.completedAt(),
-                    eventLog,
-                    eventInbox);
+                    journal,
+                    inbox);
         });
 
         return Response.ok(run).build();

@@ -30,7 +30,7 @@ public record PolledWorkflowEventRow(
 
     public enum EventType {
         INBOX,
-        LOG
+        JOURNAL
     }
 
 }

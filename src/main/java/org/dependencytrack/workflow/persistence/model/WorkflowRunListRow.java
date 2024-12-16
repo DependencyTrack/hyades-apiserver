@@ -38,8 +38,5 @@ public record WorkflowRunListRow(
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
         @Nullable Instant completedAt,
-        int historySize,
-        int pendingEvents,
-        int pendingActivities,
         long totalCount) {
 }

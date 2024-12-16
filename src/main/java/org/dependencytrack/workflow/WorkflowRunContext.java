@@ -74,8 +74,8 @@ public final class WorkflowRunContext<A, R> {
     private final WorkflowRunner<A, R> workflowRunner;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final List<WorkflowEvent> eventLog;
-    private final List<WorkflowEvent> inboxEvents;
+    private final List<WorkflowEvent> journal;
+    private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> suspendedEvents;
     private final Map<Integer, WorkflowCommand> pendingCommandByEventId;
     private final Map<Integer, Awaitable<?>> pendingAwaitableByEventId;
@@ -99,8 +99,8 @@ public final class WorkflowRunContext<A, R> {
             final WorkflowRunner<A, R> workflowRunner,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final List<WorkflowEvent> eventLog,
-            final List<WorkflowEvent> inboxEvents) {
+            final List<WorkflowEvent> journal,
+            final List<WorkflowEvent> inbox) {
         this.workflowRunId = workflowRunId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
@@ -109,8 +109,8 @@ public final class WorkflowRunContext<A, R> {
         this.workflowRunner = workflowRunner;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
-        this.eventLog = eventLog;
-        this.inboxEvents = inboxEvents;
+        this.journal = journal;
+        this.inbox = inbox;
         this.suspendedEvents = new ArrayList<>();
         this.pendingCommandByEventId = new HashMap<>();
         this.pendingAwaitableByEventId = new HashMap<>();
@@ -455,12 +455,12 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private WorkflowEvent nextEvent() {
-        if (currentEventIndex < eventLog.size()) {
+        if (currentEventIndex < journal.size()) {
             isReplaying = true;
-            return eventLog.get(currentEventIndex++);
-        } else if (currentEventIndex < (eventLog.size() + inboxEvents.size())) {
+            return journal.get(currentEventIndex++);
+        } else if (currentEventIndex < (journal.size() + inbox.size())) {
             isReplaying = false;
-            return inboxEvents.get(currentEventIndex++ - eventLog.size());
+            return inbox.get(currentEventIndex++ - journal.size());
         }
 
         return null;

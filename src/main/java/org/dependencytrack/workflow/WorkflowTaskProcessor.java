@@ -96,11 +96,11 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 task.workflowName(),
                 task.workflowVersion(),
                 task.concurrencyGroupId(),
-                task.eventLog());
+                task.journal());
         if (workflowRun.status().isTerminal()) {
             LOGGER.warn("""
                     Task was scheduled despite the workflow run already being in terminal state {}. \
-                    Discarding {} events in the run's inbox.""", workflowRun.status(), task.inboxEvents().size());
+                    Discarding {} events in the run's inbox.""", workflowRun.status(), task.inbox().size());
 
             // TODO: Discard the inbox events without modifying the workflow run.
             // TODO: Consider logging discarded events.
@@ -117,7 +117,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 .build());
 
         int eventsAdded = 0;
-        for (final WorkflowEvent newEvent : task.inboxEvents()) {
+        for (final WorkflowEvent newEvent : task.inbox()) {
             workflowRun.onEvent(newEvent);
             eventsAdded++;
 
@@ -149,8 +149,8 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 workflowRunner,
                 argumentConverter,
                 resultConverter,
-                workflowRun.eventLog(),
-                workflowRun.inboxEvents());
+                workflowRun.journal(),
+                workflowRun.inbox());
         final WorkflowRunResult runResult = ctx.runWorkflow();
 
         workflowRun.setCustomStatus(runResult.customStatus());

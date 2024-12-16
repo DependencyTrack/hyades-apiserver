@@ -20,5 +20,10 @@ package org.dependencytrack.workflow.persistence.model;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
-public record PolledInboxEventRow(WorkflowEvent event, int dequeueCount) {
+import java.util.UUID;
+
+public record NewWorkflowRunJournalRow(
+        UUID workflowRunId,
+        int sequenceNumber,
+        WorkflowEvent event) {
 }

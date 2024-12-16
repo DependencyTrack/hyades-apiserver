@@ -32,8 +32,8 @@ record WorkflowTask(
         Integer priority,
         Set<String> tags,
         int attempt,
-        List<WorkflowEvent> eventLog,
-        List<WorkflowEvent> inboxEvents) implements Task {
+        List<WorkflowEvent> journal,
+        List<WorkflowEvent> inbox) implements Task {
 
     @Override
     public String taskName() {

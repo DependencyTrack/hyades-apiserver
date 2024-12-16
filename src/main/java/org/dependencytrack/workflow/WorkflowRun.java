@@ -53,11 +53,11 @@ public class WorkflowRun {
     private final String workflowName;
     private final int workflowVersion;
     private final String concurrencyGroupId;
-    private final List<WorkflowEvent> eventLog;
-    private final List<WorkflowEvent> inboxEvents;
+    private final List<WorkflowEvent> journal;
+    private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
     private final List<WorkflowEvent> pendingTimerFiredEvents;
-    private final List<WorkflowMessage> pendingWorkflowMessages;
+    private final List<WorkflowRunMessage> pendingMessages;
     private WorkflowEvent scheduledEvent;
     private WorkflowEvent startedEvent;
     private WorkflowEvent completedEvent;
@@ -76,18 +76,18 @@ public class WorkflowRun {
             final String workflowName,
             final int workflowVersion,
             final String concurrencyGroupId,
-            final List<WorkflowEvent> eventLog) {
+            final List<WorkflowEvent> journal) {
         this.workflowRunId = workflowRunId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.concurrencyGroupId = concurrencyGroupId;
-        this.eventLog = new ArrayList<>();
-        this.inboxEvents = new ArrayList<>();
+        this.journal = new ArrayList<>();
+        this.inbox = new ArrayList<>();
         this.pendingActivityTaskScheduledEvents = new ArrayList<>();
         this.pendingTimerFiredEvents = new ArrayList<>();
-        this.pendingWorkflowMessages = new ArrayList<>();
+        this.pendingMessages = new ArrayList<>();
 
-        for (final WorkflowEvent event : eventLog) {
+        for (final WorkflowEvent event : journal) {
             onEvent(event, /* isNew */ false);
         }
     }
@@ -100,12 +100,12 @@ public class WorkflowRun {
         return Optional.ofNullable(concurrencyGroupId);
     }
 
-    List<WorkflowEvent> eventLog() {
-        return eventLog;
+    List<WorkflowEvent> journal() {
+        return journal;
     }
 
-    List<WorkflowEvent> inboxEvents() {
-        return inboxEvents;
+    List<WorkflowEvent> inbox() {
+        return inbox;
     }
 
     List<WorkflowEvent> pendingActivityTaskScheduledEvents() {
@@ -116,8 +116,8 @@ public class WorkflowRun {
         return pendingTimerFiredEvents;
     }
 
-    List<WorkflowMessage> pendingWorkflowMessages() {
-        return pendingWorkflowMessages;
+    List<WorkflowRunMessage> pendingWorkflowMessages() {
+        return pendingMessages;
     }
 
     WorkflowRunStatus status() {
@@ -209,9 +209,9 @@ public class WorkflowRun {
         }
 
         if (isNew) {
-            inboxEvents.add(event);
+            inbox.add(event);
         } else {
-            eventLog.add(event);
+            journal.add(event);
         }
 
         updatedAt = WorkflowEngine.toInstant(event.getTimestamp());
@@ -263,7 +263,7 @@ public class WorkflowRun {
                 throw new IllegalStateException("Unexpected command status: " + command.status());
             }
 
-            pendingWorkflowMessages.add(new WorkflowMessage(parentRunId, subWorkflowEventBuilder.build()));
+            pendingMessages.add(new WorkflowRunMessage(parentRunId, subWorkflowEventBuilder.build()));
         }
 
         final var subjectBuilder = RunCompleted.newBuilder()
@@ -359,7 +359,7 @@ public class WorkflowRun {
                 .setSubWorkflowRunScheduled(subWorkflowScheduledBuilder.build())
                 .build(), /* isNew */ true);
 
-        pendingWorkflowMessages.add(new WorkflowMessage(
+        pendingMessages.add(new WorkflowRunMessage(
                 subWorkflowRunId,
                 WorkflowEvent.newBuilder()
                         .setId(-1)

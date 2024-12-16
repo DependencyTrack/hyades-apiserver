@@ -46,19 +46,17 @@ import org.dependencytrack.workflow.annotation.Activity;
 import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
-import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
-import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
-import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
+import org.dependencytrack.workflow.persistence.model.NewWorkflowRunInboxRow;
+import org.dependencytrack.workflow.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -336,7 +334,7 @@ public class WorkflowEngine implements Closeable {
 
         final var now = Timestamps.now();
         final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
-        final var newInboxEventRows = new ArrayList<NewWorkflowEventInboxRow>(options.size());
+        final var newInboxEventRows = new ArrayList<NewWorkflowRunInboxRow>(options.size());
         final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
         for (final ScheduleWorkflowRunOptions option : options) {
             final UUID runId = randomUUIDv7();
@@ -364,7 +362,7 @@ public class WorkflowEngine implements Closeable {
                 runScheduledBuilder.setArgument(option.argument());
             }
 
-            newInboxEventRows.add(new NewWorkflowEventInboxRow(runId, null,
+            newInboxEventRows.add(new NewWorkflowRunInboxRow(runId, null,
                     WorkflowEvent.newBuilder()
                             .setId(-1)
                             .setTimestamp(now)
@@ -392,10 +390,10 @@ public class WorkflowEngine implements Closeable {
         return inJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final List<UUID> createdRunIds = dao.createWorkflowRuns(newWorkflowRunRows);
+            final List<UUID> createdRunIds = dao.createRuns(newWorkflowRunRows);
             assert createdRunIds.size() == newWorkflowRunRows.size();
 
-            final int createdInboxEvents = dao.createInboxEvents(newInboxEventRows);
+            final int createdInboxEvents = dao.createRunInboxEvents(newInboxEventRows);
             assert createdInboxEvents == newInboxEventRows.size();
 
             if (!newConcurrencyGroupRows.isEmpty()) {
@@ -430,8 +428,8 @@ public class WorkflowEngine implements Closeable {
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final int createdInboxEvents = dao.createInboxEvents(List.of(
-                    new NewWorkflowEventInboxRow(runId, null, cancellationEvent)));
+            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
+                    new NewWorkflowRunInboxRow(runId, null, cancellationEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -449,8 +447,8 @@ public class WorkflowEngine implements Closeable {
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final int createdInboxEvents = dao.createInboxEvents(List.of(
-                    new NewWorkflowEventInboxRow(runId, null, suspensionEvent)));
+            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
+                    new NewWorkflowRunInboxRow(runId, null, suspensionEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -468,8 +466,8 @@ public class WorkflowEngine implements Closeable {
         useJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final int createdInboxEvents = dao.createInboxEvents(List.of(
-                    new NewWorkflowEventInboxRow(runId, null, resumeEvent)));
+            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
+                    new NewWorkflowRunInboxRow(runId, null, resumeEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -494,8 +492,8 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             final var now = Timestamps.now();
-            dao.createInboxEvents(externalEvents.stream()
-                    .map(externalEvent -> new NewWorkflowEventInboxRow(
+            dao.createRunInboxEvents(externalEvents.stream()
+                    .map(externalEvent -> new NewWorkflowRunInboxRow(
                             externalEvent.workflowRunId(),
                             null,
                             WorkflowEvent.newBuilder()
@@ -515,13 +513,13 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             final Map<UUID, PolledWorkflowRunRow> polledRunById =
-                    dao.pollAndLockWorkflowRuns(this.instanceId, workflowName, taskLockTimeout, limit);
+                    dao.pollAndLockRuns(this.instanceId, workflowName, taskLockTimeout, limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
 
             final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
-                    dao.pollEvents(this.instanceId, polledRunById.keySet());
+                    dao.pollRunEvents(this.instanceId, polledRunById.keySet());
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
@@ -535,8 +533,8 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.priority(),
                                 polledRun.tags(),
                                 polledEvents.maxInboxEventDequeueCount(),
-                                polledEvents.eventLog(),
-                                polledEvents.inboxEvents());
+                                polledEvents.journal(),
+                                polledEvents.inbox());
                     })
                     .toList();
         });
@@ -554,10 +552,10 @@ public class WorkflowEngine implements Closeable {
                 Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
         final Duration abandonDelay = Duration.ofMillis(abandonDelayIntervalFunction.apply(task.attempt() + 1));
 
-        final int unlockedEvents = dao.unlockInboxEvents(this.instanceId, task.workflowRunId(), abandonDelay);
-        assert unlockedEvents == task.inboxEvents().size();
+        final int unlockedEvents = dao.unlockRunInboxEvents(this.instanceId, task.workflowRunId(), abandonDelay);
+        assert unlockedEvents == task.inbox().size();
 
-        final int unlockedWorkflowRuns = dao.unlockWorkflowRun(this.instanceId, task.workflowRunId());
+        final int unlockedWorkflowRuns = dao.unlockRun(this.instanceId, task.workflowRunId());
         assert unlockedWorkflowRuns == 1;
     }
 
@@ -569,14 +567,14 @@ public class WorkflowEngine implements Closeable {
     private void completeWorkflowTasksInternal(
             final WorkflowDao dao,
             final Collection<CompleteWorkflowTaskAction> actions) {
-        final var newEventLogEntries = new ArrayList<NewWorkflowEventLogRow>(actions.size() * 2);
-        final var newInboxEvents = new ArrayList<NewWorkflowEventInboxRow>(actions.size() * 2);
+        final var newJournalEntries = new ArrayList<NewWorkflowRunJournalRow>(actions.size() * 2);
+        final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(actions.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
         final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
         final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
 
-        final int updatedRuns = dao.updateWorkflowRuns(this.instanceId,
+        final int updatedRuns = dao.updateRuns(this.instanceId,
                 actions.stream()
                         .map(CompleteWorkflowTaskAction::workflowRun)
                         .map(run -> new WorkflowRunRowUpdate(
@@ -593,22 +591,22 @@ public class WorkflowEngine implements Closeable {
         for (final CompleteWorkflowTaskAction action : actions) {
             final WorkflowRun workflowRun = action.workflowRun();
 
-            int sequenceNumber = workflowRun.eventLog().size();
-            for (final WorkflowEvent newEvent : workflowRun.inboxEvents()) {
-                newEventLogEntries.add(new NewWorkflowEventLogRow(
+            int sequenceNumber = workflowRun.journal().size();
+            for (final WorkflowEvent newEvent : workflowRun.inbox()) {
+                newJournalEntries.add(new NewWorkflowRunJournalRow(
                         workflowRun.workflowRunId(),
                         sequenceNumber++,
                         newEvent));
             }
 
             for (final WorkflowEvent newEvent : workflowRun.pendingTimerFiredEvents()) {
-                newInboxEvents.add(new NewWorkflowEventInboxRow(
+                newInboxEvents.add(new NewWorkflowRunInboxRow(
                         workflowRun.workflowRunId(),
                         toInstant(newEvent.getTimerFired().getElapseAt()),
                         newEvent));
             }
 
-            for (final WorkflowMessage message : workflowRun.pendingWorkflowMessages()) {
+            for (final WorkflowRunMessage message : workflowRun.pendingWorkflowMessages()) {
                 // If the outbound message is a RunScheduled event, the recipient
                 // workflow run will need to be created first.
                 if (message.event().hasRunScheduled()) {
@@ -641,7 +639,7 @@ public class WorkflowEngine implements Closeable {
                     }
                 }
 
-                newInboxEvents.add(new NewWorkflowEventInboxRow(
+                newInboxEvents.add(new NewWorkflowRunInboxRow(
                         message.recipientRunId(),
                         toInstant(message.event().getTimestamp()),
                         message.event()));
@@ -650,7 +648,7 @@ public class WorkflowEngine implements Closeable {
             // If there are pending sub workflow runs, make sure those are cancelled, too.
             if (workflowRun.status() == WorkflowRunStatus.CANCELLED) {
                 for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(workflowRun)) {
-                    newInboxEvents.add(new NewWorkflowEventInboxRow(
+                    newInboxEvents.add(new NewWorkflowRunInboxRow(
                             subWorkflowRunId,
                             null,
                             WorkflowEvent.newBuilder()
@@ -684,19 +682,19 @@ public class WorkflowEngine implements Closeable {
             }
         }
 
-        if (!newEventLogEntries.isEmpty()) {
-            dao.createWorkflowEventLogEntries(newEventLogEntries);
+        if (!newJournalEntries.isEmpty()) {
+            dao.createRunJournalEntries(newJournalEntries);
         }
 
         if (!newWorkflowRuns.isEmpty()) {
             // TODO: Call ScheduleWorkflowRuns instead so concurrency groups are updated, too.
             //  Ensure it can participate in this transaction!
-            final List<UUID> createdRunIds = dao.createWorkflowRuns(newWorkflowRuns);
+            final List<UUID> createdRunIds = dao.createRuns(newWorkflowRuns);
             assert createdRunIds.size() == newWorkflowRuns.size();
         }
 
         if (!newInboxEvents.isEmpty()) {
-            final int createdInboxEvents = dao.createInboxEvents(newInboxEvents);
+            final int createdInboxEvents = dao.createRunInboxEvents(newInboxEvents);
             assert createdInboxEvents == newInboxEvents.size();
         }
 
@@ -705,7 +703,7 @@ public class WorkflowEngine implements Closeable {
             assert createdActivityTasks == newActivityTasks.size();
         }
 
-        final int deletedInboxEvents = dao.deleteInboxEvents(
+        final int deletedInboxEvents = dao.deleteRunInboxEvents(
                 this.instanceId,
                 actions.stream()
                         .map(CompleteWorkflowTaskAction::workflowRun)
@@ -780,7 +778,7 @@ public class WorkflowEngine implements Closeable {
             final WorkflowDao dao,
             final Collection<CompleteActivityTaskAction> actions) {
         final var tasksToDelete = new ArrayList<ActivityTaskId>(actions.size());
-        final var inboxEventsToCreate = new ArrayList<NewWorkflowEventInboxRow>(actions.size());
+        final var inboxEventsToCreate = new ArrayList<NewWorkflowRunInboxRow>(actions.size());
 
         for (final CompleteActivityTaskAction action : actions) {
             tasksToDelete.add(new ActivityTaskId(action.task().workflowRunId(), action.task().scheduledEventId()));
@@ -790,7 +788,7 @@ public class WorkflowEngine implements Closeable {
             if (action.result() != null) {
                 taskCompletedBuilder.setResult(action.result());
             }
-            inboxEventsToCreate.add(new NewWorkflowEventInboxRow(
+            inboxEventsToCreate.add(new NewWorkflowRunInboxRow(
                     action.task().workflowRunId(),
                     null,
                     WorkflowEvent.newBuilder()
@@ -803,18 +801,18 @@ public class WorkflowEngine implements Closeable {
         final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
         assert deletedTasks == tasksToDelete.size();
 
-        final int createdInboxEvents = dao.createInboxEvents(inboxEventsToCreate);
+        final int createdInboxEvents = dao.createRunInboxEvents(inboxEventsToCreate);
         assert createdInboxEvents == inboxEventsToCreate.size();
     }
 
     private void failActivityTasksInternal(final WorkflowDao dao, final Collection<FailActivityTaskAction> actions) {
         final var tasksToDelete = new ArrayList<ActivityTaskId>(actions.size());
-        final var inboxEventsToCreate = new ArrayList<NewWorkflowEventInboxRow>(actions.size());
+        final var inboxEventsToCreate = new ArrayList<NewWorkflowRunInboxRow>(actions.size());
 
         for (final FailActivityTaskAction action : actions) {
             tasksToDelete.add(new ActivityTaskId(action.task().workflowRunId(), action.task().scheduledEventId()));
 
-            inboxEventsToCreate.add(new NewWorkflowEventInboxRow(
+            inboxEventsToCreate.add(new NewWorkflowRunInboxRow(
                     action.task().workflowRunId(),
                     null,
                     WorkflowEvent.newBuilder()
@@ -830,7 +828,7 @@ public class WorkflowEngine implements Closeable {
         final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
         assert deletedTasks == tasksToDelete.size();
 
-        final int createdInboxEvents = dao.createInboxEvents(inboxEventsToCreate);
+        final int createdInboxEvents = dao.createRunInboxEvents(inboxEventsToCreate);
         assert createdInboxEvents == inboxEventsToCreate.size();
     }
 
@@ -873,27 +871,19 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    WorkflowRunRow getWorkflowRun(final UUID workflowRunId) {
-        return withJdbiHandle(handle -> handle.createQuery("""
-                        SELECT *
-                          FROM "WORKFLOW_RUN"
-                         WHERE "ID" = :id
-                        """)
-                .bind("id", workflowRunId)
-                .registerColumnMapper(WorkflowPayload.class, new ProtobufColumnMapper<>(WorkflowPayload.parser()))
-                .map(ConstructorMapper.of(WorkflowRunRow.class))
-                .findOne()
-                .orElse(null));
+    // TODO: This should not return an internal persistence model.
+    WorkflowRunRow getRun(final UUID runId) {
+        return withJdbiHandle(handle -> new WorkflowDao(handle).getRun(runId));
     }
 
-    List<WorkflowEvent> getWorkflowEventLog(final UUID runId) {
-        return withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunEventLog(runId));
+    List<WorkflowEvent> getRunJournal(final UUID runId) {
+        return withJdbiHandle(handle -> new WorkflowDao(handle).getRunJournal(runId));
     }
 
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRun run) {
         final var runIdByEventId = new HashMap<Integer, UUID>();
 
-        Stream.concat(run.eventLog().stream(), run.inboxEvents().stream()).forEach(event -> {
+        Stream.concat(run.journal().stream(), run.inbox().stream()).forEach(event -> {
             switch (event.getSubjectCase()) {
                 case SUB_WORKFLOW_RUN_SCHEDULED -> {
                     final String runId = event.getSubWorkflowRunScheduled().getRunId();
