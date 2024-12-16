@@ -56,10 +56,10 @@ public class WorkflowEngineConfig {
 
         private Duration minPollInterval = Duration.ofMillis(5);
         private IntervalFunction pollBackoffIntervalFunction = ofExponentialRandomBackoff(
-                /* initialIntervalMillis */ 500,
-                /* multiplier */ 1.5,
+                /* initialIntervalMillis */ 100,
+                /* multiplier */ 2,
                 /* randomizationFactor */ 0.3,
-                /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(5));
+                /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(3));
 
         public Duration minPollInterval() {
             return minPollInterval;

@@ -20,28 +20,37 @@ package org.dependencytrack.workflow;
 
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 import org.eclipse.microprofile.health.Liveness;
+
+import java.util.function.Supplier;
 
 @Liveness
 public class WorkflowEngineHealthCheck implements HealthCheck {
 
-    private final WorkflowEngine workflowEngine;
+    private final Supplier<WorkflowEngine> workflowEngineSupplier;
 
-    WorkflowEngineHealthCheck(final WorkflowEngine workflowEngine) {
-        this.workflowEngine = workflowEngine;
+    WorkflowEngineHealthCheck(final Supplier<WorkflowEngine> workflowEngineSupplier) {
+        this.workflowEngineSupplier = workflowEngineSupplier;
     }
 
     public WorkflowEngineHealthCheck() {
-        this(WorkflowEngineInitializer.workflowEngine());
+        // NB: Health check can be called before the engine was initialized.
+        this(WorkflowEngineInitializer::workflowEngine);
     }
 
     @Override
     public HealthCheckResponse call() {
-        final WorkflowEngine.State engineState = workflowEngine.state();
-        return HealthCheckResponse.named("workflow-engine")
-                .status(engineState == WorkflowEngine.State.RUNNING)
-                .withData("state", engineState.name())
-                .build();
+        final WorkflowEngine engine = workflowEngineSupplier.get();
+
+        final HealthCheckResponseBuilder responseBuilder = HealthCheckResponse
+                .named("workflow-engine")
+                .status(engine != null && engine.state() == WorkflowEngine.State.RUNNING);
+        if (engine != null) {
+            responseBuilder.withData("state", engine.state().name());
+        }
+
+        return responseBuilder.build();
     }
 
 }
