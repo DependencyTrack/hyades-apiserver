@@ -125,7 +125,7 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
 
         final var project = new Project();
         project.setName("name");
-        project.setActive(true);
+        project.setInactiveSince(null);
 
         final var metaComponent = new RepositoryMetaComponent();
         metaComponent.setRepositoryType(RepositoryType.MAVEN);

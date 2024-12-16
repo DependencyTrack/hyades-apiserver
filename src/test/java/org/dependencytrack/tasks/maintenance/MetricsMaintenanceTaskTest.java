@@ -123,7 +123,7 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
         final var project = new Project();
         project.setName("acme-app");
-        project.setActive(false);
+        project.setInactiveSince(new Date());
         qm.persist(project);
 
         final var component = new Component();

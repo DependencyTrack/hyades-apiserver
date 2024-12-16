@@ -124,7 +124,7 @@ public class ComponentProjection {
 
     public String projectClassifier;
 
-    public Boolean projectActive;
+    public Date projectInactiveSince;
 
     public String projectAuthors;
 
@@ -217,8 +217,8 @@ public class ComponentProjection {
             final var converter = new OrganizationalContactsJsonConverter();
             project.setAuthors(converter.convertToAttribute(result.projectAuthors));
         }
-        if (result.projectActive != null) {
-            project.setActive(result.projectActive);
+        if (result.projectInactiveSince != null) {
+            project.setInactiveSince(result.projectInactiveSince);
         }
         project.setDescription(result.projectDescription);
         project.setCpe(result.projectCpe);

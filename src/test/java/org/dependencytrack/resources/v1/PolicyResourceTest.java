@@ -193,7 +193,7 @@ public class PolicyResourceTest extends ResourceTest {
      */
     @Test
     public void deletePolicyCascadingTest() {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component = new Component();
         component.setProject(project);
@@ -223,7 +223,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void addProjectToPolicyTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
                 .request()
@@ -240,7 +240,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void addProjectToPolicyProjectAlreadyAddedTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         policy.setProjects(singletonList(project));
         qm.persist(policy);
@@ -256,7 +256,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void removeProjectFromPolicyTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         policy.setProjects(singletonList(project));
         qm.persist(policy);
@@ -272,7 +272,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void removeProjectFromPolicyProjectAlreadyRemovedTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
                 .request()

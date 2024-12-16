@@ -25,6 +25,7 @@ import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +37,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
     @Test
     public void testPortfolioRepositoryMetaAnalysis() {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         componentProjectA.setProject(projectA);
         componentProjectA.setName("acme-lib-a");
@@ -46,7 +47,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         qm.persist(componentProjectA);
 
         // Create another active project with one component.
-        final var projectB = qm.createProject("acme-app-b", null, "2.0.0", null, null, null, true, false);
+        final var projectB = qm.createProject("acme-app-b", null, "2.0.0", null, null, null, null, false);
         final var componentProjectB = new Component();
         componentProjectB.setProject(projectB);
         componentProjectB.setName("acme-lib-b");
@@ -55,7 +56,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         qm.persist(componentProjectB);
 
         // Create an inactive project with one component.
-        final var projectC = qm.createProject("acme-app-c", null, "3.0.0", null, null, null, false, false);
+        final var projectC = qm.createProject("acme-app-c", null, "3.0.0", null, null, null, new Date(), false);
         final var componentProjectC = new Component();
         componentProjectC.setProject(projectC);
         componentProjectC.setName("acme-lib-c");
@@ -65,7 +66,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         qm.persist(componentProjectC);
 
         // Create an active project with a component that has identical purlCoordinates as componentProjectA.
-        final var projectD = qm.createProject("acme-app-d", null, "4.0.0", null, null, null, true, false);
+        final var projectD = qm.createProject("acme-app-d", null, "4.0.0", null, null, null, null, false);
         final var componentProjectD = new Component();
         componentProjectD.setProject(projectD);
         componentProjectD.setName("acme-lib-a");
@@ -75,7 +76,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         qm.persist(componentProjectD);
 
         // Create an active project with a component that has identical purlCoordinates as componentProjectA, but is internal.
-        final var projectE = qm.createProject("acme-app-e", null, "5.0.0", null, null, null, true, false);
+        final var projectE = qm.createProject("acme-app-e", null, "5.0.0", null, null, null, null, false);
         final var componentProjectE = new Component();
         componentProjectE.setProject(projectE);
         componentProjectE.setName("acme-lib-a");
@@ -113,7 +114,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testProjectRepositoryMetaAnalysis() {
-        final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentA = new Component();
         componentA.setProject(project);
         componentA.setGroup("acme");
@@ -185,7 +186,7 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testProjectRepositoryMetaAnalysisWithInactiveProject() {
-        final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, false, false);
+        final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, new Date(), false);
         final var componentA = new Component();
         componentA.setProject(project);
         componentA.setName("acme-lib-a");
