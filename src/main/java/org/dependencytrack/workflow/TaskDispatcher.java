@@ -18,11 +18,10 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
@@ -40,18 +39,14 @@ import java.util.function.Function;
 final class TaskDispatcher<T extends Task> implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskDispatcher.class);
-    private static final IntervalFunction POLL_BACKOFF_INTERVAL_FUNCTION =
-            IntervalFunction.ofExponentialRandomBackoff(
-                    /* initialIntervalMillis */ 500,
-                    /* multiplier */ 1.5,
-                    /* randomizationFactor */ 0.3,
-                    /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(5));
 
     private final WorkflowEngine engine;
     private final ExecutorService taskExecutorService;
     private final TaskProcessor<T> taskProcessor;
     private final Semaphore taskSemaphore;
     private final Duration minPollInterval;
+    private final IntervalFunction pollBackoffIntervalFunction;
+    private final MeterRegistry meterRegistry;
     private Instant lastPolledAt;
     private Timer taskPollLatencyTimer;
     private DistributionSummary taskPollDistribution;
@@ -63,12 +58,16 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             final ExecutorService taskExecutorService,
             final TaskProcessor<T> taskProcessor,
             final int maxConcurrency,
-            final Duration minPollInterval) {
+            final Duration minPollInterval,
+            final IntervalFunction pollBackoffIntervalFunction,
+            final MeterRegistry meterRegistry) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
         this.taskProcessor = taskProcessor;
         this.taskSemaphore = new Semaphore(maxConcurrency);
         this.minPollInterval = minPollInterval;
+        this.pollBackoffIntervalFunction = pollBackoffIntervalFunction;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -121,11 +120,15 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             }
 
             if (polledTasks.isEmpty()) {
-                final long backoffMs = POLL_BACKOFF_INTERVAL_FUNCTION.apply(++pollsWithoutResults);
-                LOGGER.debug("Backing off for {}ms", backoffMs);
+                if (pollBackoffIntervalFunction == null) {
+                    continue;
+                }
+
+                final long backoffMillis = pollBackoffIntervalFunction.apply(++pollsWithoutResults);
+                LOGGER.debug("Backing off for {}ms", backoffMillis);
                 try {
                     //noinspection BusyWait
-                    Thread.sleep(backoffMs);
+                    Thread.sleep(backoffMillis);
                     continue;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -180,7 +183,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     }
 
     private boolean maybeSleepUntilNextPollIsDue() {
-        if (lastPolledAt == null) {
+        if (lastPolledAt == null || minPollInterval == null || minPollInterval.isZero()) {
             return false;
         }
 
@@ -203,7 +206,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     }
 
     private void maybeInitializeMeters() {
-        if (!Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+        if (meterRegistry == null) {
             return;
         }
 
@@ -216,24 +219,24 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         taskPollLatencyTimer = Timer
                 .builder("dtrack.workflow.task.dispatcher.poll.latency")
                 .tags(commonTags)
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
 
         taskPollDistribution = DistributionSummary
                 .builder("dtrack.workflow.task.dispatcher.poll.tasks")
                 .tags(commonTags)
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
 
         tasksProcessedCounter = task -> Counter
                 .builder("dtrack.workflow.tasks.processed")
                 .tags(commonTags)
                 .tag("taskName", task.taskName())
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
 
         taskProcessLatencyTimer = task -> Timer
                 .builder("dtrack.workflow.task.process.latency")
                 .tags(commonTags)
                 .tag("taskName", task.taskName())
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
     }
 
 }

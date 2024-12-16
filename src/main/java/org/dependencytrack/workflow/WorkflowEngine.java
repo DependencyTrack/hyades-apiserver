@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
@@ -84,11 +82,6 @@ import java.util.stream.Stream;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -133,36 +126,28 @@ public class WorkflowEngine implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngine.class);
     private static final Pattern WORKFLOW_NAME_PATTERN = Pattern.compile("^[\\w-]+");
     private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
-    private static final WorkflowEngine INSTANCE = new WorkflowEngine();
 
-    private final UUID instanceId = UUID.randomUUID();
+    private final WorkflowEngineConfig config;
     private final ReentrantLock stateLock = new ReentrantLock();
     private State state = State.CREATED;
     private ExecutorService taskDispatcherExecutor;
-    private Duration taskDispatcherMinPollInterval;
     private Map<String, ExecutorService> executorServiceByName;
     private Buffer<NewExternalEvent> externalEventBuffer;
     private Buffer<TaskAction> taskActionBuffer;
 
-    public static WorkflowEngine getInstance() {
-        return INSTANCE;
+    public WorkflowEngine(final WorkflowEngineConfig config) {
+        this.config = requireNonNull(config);
     }
 
     public void start() {
         setState(State.STARTING);
 
-        // TODO: Decouple from Alpine's config to make the engine more modular.
-        //  Use a dedicated configuration class instead that DT can populate on startup.
-        final Duration externalEventBufferFlushInterval = Duration.ofMillis(Config.getInstance()
-                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS));
-        final int externalEventBufferMaxBatchSize = Config.getInstance()
-                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE);
-
         externalEventBuffer = new Buffer<>(
                 "workflow-external-event",
                 this::flushExternalEvents,
-                externalEventBufferFlushInterval,
-                externalEventBufferMaxBatchSize);
+                config.externalEventBuffer().flushInterval(),
+                config.externalEventBuffer().maxBatchSize(),
+                config.meterRegistry());
         externalEventBuffer.start();
 
         // The buffer's flush interval should be long enough to allow
@@ -171,16 +156,12 @@ public class WorkflowEngine implements Closeable {
         // task workers can be blocked for an entire flush interval.
         // TODO: Separate buffer for workflow actions from buffer for activity actions?
         //  Workflow tasks usually complete a lot faster than activity tasks.
-        final Duration taskActionBufferFlushInterval = Duration.ofMillis(Config.getInstance()
-                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS));
-        final int taskActionBufferMaxBatchSize = Config.getInstance()
-                .getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE);
-
         taskActionBuffer = new Buffer<>(
                 "workflow-task-action",
                 this::processTaskActions,
-                taskActionBufferFlushInterval,
-                taskActionBufferMaxBatchSize);
+                config.taskActionBuffer().flushInterval(),
+                config.taskActionBuffer().maxBatchSize(),
+                config.meterRegistry());
         taskActionBuffer.start();
 
         executorServiceByName = new HashMap<>();
@@ -190,13 +171,10 @@ public class WorkflowEngine implements Closeable {
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .namingPattern("WorkflowEngine-TaskDispatcher-%d")
                         .build());
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+        if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(taskDispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
-                    .bindTo(Metrics.getRegistry());
+                    .bindTo(config.meterRegistry());
         }
-
-        taskDispatcherMinPollInterval = Duration.ofMillis(Config.getInstance()
-                .getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS));
 
         setState(State.RUNNING);
     }
@@ -263,17 +241,25 @@ public class WorkflowEngine implements Closeable {
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .name("WorkflowEngine-WorkflowRunner-" + workflowName + "-", 0)
                         .factory());
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+        if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowRunner-" + workflowName, null)
-                    .bindTo(Metrics.getRegistry());
+                    .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
         final var taskProcessor = new WorkflowTaskProcessor<>(
                 this, workflowName, workflowRunner, argumentConverter, resultConverter, taskLockTimeout);
 
-        taskDispatcherExecutor.execute(new TaskDispatcher<>(
-                this, executorService, taskProcessor, maxConcurrency, taskDispatcherMinPollInterval));
+        final var taskDispatcher = new TaskDispatcher<>(
+                this,
+                executorService,
+                taskProcessor,
+                maxConcurrency,
+                config.taskDispatcher().minPollInterval(),
+                config.taskDispatcher().pollBackoffIntervalFunction(),
+                config.meterRegistry());
+
+        taskDispatcherExecutor.execute(taskDispatcher);
     }
 
     public <A, R> void registerActivityRunner(
@@ -317,17 +303,25 @@ public class WorkflowEngine implements Closeable {
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                         .name("WorkflowEngine-ActivityRunner-" + activityName + "-", 0)
                         .factory());
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+        if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityRunner-" + activityName, null)
-                    .bindTo(Metrics.getRegistry());
+                    .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
         final var taskProcessor = new ActivityTaskProcessor<>(
                 this, activityName, activityRunner, argumentConverter, resultConverter, taskLockTimeout);
 
-        taskDispatcherExecutor.execute(new TaskDispatcher<>(
-                this, executorService, taskProcessor, maxConcurrency, taskDispatcherMinPollInterval));
+        final var taskDispatcher = new TaskDispatcher<>(
+                this,
+                executorService,
+                taskProcessor,
+                maxConcurrency,
+                config.taskDispatcher().minPollInterval(),
+                config.taskDispatcher().pollBackoffIntervalFunction(),
+                config.meterRegistry());
+
+        taskDispatcherExecutor.execute(taskDispatcher);
     }
 
     public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
@@ -519,13 +513,13 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             final Map<UUID, PolledWorkflowRunRow> polledRunById =
-                    dao.pollAndLockRuns(this.instanceId, workflowName, taskLockTimeout, limit);
+                    dao.pollAndLockRuns(this.config.instanceId(), workflowName, taskLockTimeout, limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
 
             final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
-                    dao.pollRunEvents(this.instanceId, polledRunById.keySet());
+                    dao.pollRunEvents(this.config.instanceId(), polledRunById.keySet());
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
@@ -558,10 +552,10 @@ public class WorkflowEngine implements Closeable {
                 Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
         final Duration abandonDelay = Duration.ofMillis(abandonDelayIntervalFunction.apply(task.attempt() + 1));
 
-        final int unlockedEvents = dao.unlockRunInboxEvents(this.instanceId, task.workflowRunId(), abandonDelay);
+        final int unlockedEvents = dao.unlockRunInboxEvents(this.config.instanceId(), task.workflowRunId(), abandonDelay);
         assert unlockedEvents == task.inbox().size();
 
-        final int unlockedWorkflowRuns = dao.unlockRun(this.instanceId, task.workflowRunId());
+        final int unlockedWorkflowRuns = dao.unlockRun(this.config.instanceId(), task.workflowRunId());
         assert unlockedWorkflowRuns == 1;
     }
 
@@ -578,7 +572,7 @@ public class WorkflowEngine implements Closeable {
                 .collect(Collectors.toList());
 
         final List<UUID> updatedRunIds = dao.updateRuns(
-                this.instanceId,
+                this.config.instanceId(),
                 actionableRuns.stream()
                         .map(run -> new WorkflowRunRowUpdate(
                                 run.id(),
@@ -735,7 +729,7 @@ public class WorkflowEngine implements Closeable {
         }
 
         final int deletedInboxEvents = dao.deleteRunInboxEvents(
-                this.instanceId,
+                this.config.instanceId(),
                 actionableRuns.stream()
                         .map(run -> new DeleteInboxEventsCommand(
                                 run.id(),
@@ -773,7 +767,7 @@ public class WorkflowEngine implements Closeable {
         return inJdbiTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            return dao.pollAndLockActivityTasks(this.instanceId, activityName, lockTimeout, limit).stream()
+            return dao.pollAndLockActivityTasks(this.config.instanceId(), activityName, lockTimeout, limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
                             polledTask.scheduledEventId(),
@@ -791,7 +785,7 @@ public class WorkflowEngine implements Closeable {
 
     // TODO: Make this a batch operation.
     private void abandonActivityTask(final WorkflowDao dao, final ActivityTask task) {
-        final int unlockedTasks = dao.unlockActivityTasks(this.instanceId,
+        final int unlockedTasks = dao.unlockActivityTasks(this.config.instanceId(),
                 Stream.of(task)
                         .map(t -> new ActivityTaskId(t.workflowRunId(), t.scheduledEventId()))
                         .toList());
@@ -833,7 +827,7 @@ public class WorkflowEngine implements Closeable {
                             .build()));
         }
 
-        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
+        final int deletedTasks = dao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
         assert deletedTasks == tasksToDelete.size()
                 : "Deleted activity tasks: actual=%d, expected=%d".formatted(
                 deletedTasks, tasksToDelete.size());
@@ -864,7 +858,7 @@ public class WorkflowEngine implements Closeable {
                             .build()));
         }
 
-        final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
+        final int deletedTasks = dao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
         assert deletedTasks == tasksToDelete.size()
                 : "Deleted activity tasks: actual=%d, expected=%d".formatted(
                 deletedTasks, tasksToDelete.size());
@@ -878,7 +872,7 @@ public class WorkflowEngine implements Closeable {
     Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
         final Instant newLockTimeout = inJdbiTransaction(
                 handle -> new WorkflowDao(handle).extendActivityTaskLock(
-                        this.instanceId, taskId, lockTimeout));
+                        this.config.instanceId(), taskId, lockTimeout));
         assert newLockTimeout != null;
         return newLockTimeout;
     }

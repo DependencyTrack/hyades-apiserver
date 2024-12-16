@@ -18,9 +18,8 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -57,6 +56,7 @@ public class Buffer<T> implements Closeable {
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
+    private final MeterRegistry meterRegistry;
     private DistributionSummary batchSizeDistribution;
     private Timer flushLatencyTimer;
 
@@ -64,7 +64,8 @@ public class Buffer<T> implements Closeable {
             final String name,
             final Consumer<List<T>> batchConsumer,
             final Duration flushInterval,
-            final int maxBatchSize) {
+            final int maxBatchSize,
+            final MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
@@ -72,6 +73,7 @@ public class Buffer<T> implements Closeable {
         this.flushExecutor = Executors.newSingleThreadScheduledExecutor();
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
+        this.meterRegistry = meterRegistry;
     }
 
     public void start() {
@@ -151,7 +153,7 @@ public class Buffer<T> implements Closeable {
     }
 
     private void maybeInitializeMeters() {
-        if (!Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+        if (meterRegistry == null) {
             return;
         }
 
@@ -160,15 +162,15 @@ public class Buffer<T> implements Closeable {
         batchSizeDistribution = DistributionSummary
                 .builder("dtrack.buffer.flush.batch.size")
                 .tags(commonTags)
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
 
         flushLatencyTimer = Timer
                 .builder("dtrack.buffer.flush.latency")
                 .tags(commonTags)
-                .register(Metrics.getRegistry());
+                .register(meterRegistry);
 
         new ExecutorServiceMetrics(flushExecutor, "dtrack.buffer.%s".formatted(name), null)
-                .bindTo(Metrics.getRegistry());
+                .bindTo(meterRegistry);
     }
 
 }

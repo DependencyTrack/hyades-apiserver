@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.common.metrics.Metrics;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
@@ -43,18 +44,60 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngineInitializer.class);
 
-    private WorkflowEngine engine;
+    private static WorkflowEngine engine;
 
-    @Override
-    public void contextInitialized(final ServletContextEvent event) {
-        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
-            return;
+    public static WorkflowEngine workflowEngine() {
+        return engine;
+    }
+
+    public void startWorkflowEngine() {
+        if (engine != null
+            && engine.state() != WorkflowEngine.State.CREATED
+            && engine.state() != WorkflowEngine.State.STOPPED) {
+            throw new IllegalStateException("Workflow engine is already started");
         }
 
-        LOGGER.info("Starting workflow engine");
+        final var config = new WorkflowEngineConfig();
 
-        engine = WorkflowEngine.getInstance();
+        final int externalEventBufferFlushIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS);
+        final int externalEventBufferMaxBatchSize = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE);
+        if (externalEventBufferFlushIntervalMillis >= 0) {
+            config.externalEventBuffer().setFlushInterval(
+                    Duration.ofMillis(externalEventBufferFlushIntervalMillis));
+        }
+        if (externalEventBufferMaxBatchSize > 0) {
+            config.externalEventBuffer().setMaxBatchSize(externalEventBufferMaxBatchSize);
+        }
+
+        final int taskActionBufferFlushIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS);
+        final int taskActionBufferMaxBatchSize = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE);
+        if (taskActionBufferFlushIntervalMillis >= 0) {
+            config.taskActionBuffer().setFlushInterval(
+                    Duration.ofMillis(taskActionBufferFlushIntervalMillis));
+        }
+        if (taskActionBufferMaxBatchSize > 0) {
+            config.taskActionBuffer().setMaxBatchSize(taskActionBufferMaxBatchSize);
+        }
+
+        final int taskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
+        if (taskDispatcherMinPollIntervalMillis >= 0) {
+            config.taskDispatcher().setMinPollInterval(Duration.ofMillis(taskDispatcherMinPollIntervalMillis));
+        }
+
+        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
+            config.setMeterRegistry(Metrics.getRegistry());
+        }
+
+        engine = new WorkflowEngine(config);
         engine.start();
+
+        // TODO: Make configurable which runners are registered,
+        //  their max concurrency, and their lock timeout.
 
         engine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflow(),
@@ -107,18 +150,32 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* lockTimeout */ Duration.ofSeconds(30));
     }
 
-    @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public static void stopWorkflowEngine() {
         if (engine == null) {
             return;
         }
 
-        LOGGER.info("Stopping workflow engine");
         try {
             engine.close();
         } catch (Exception e) {
             LOGGER.warn("Failed to stop workflow engine", e);
         }
+    }
+
+    @Override
+    public void contextInitialized(final ServletContextEvent event) {
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            return;
+        }
+
+        LOGGER.info("Starting workflow engine");
+        startWorkflowEngine();
+    }
+
+    @Override
+    public void contextDestroyed(final ServletContextEvent event) {
+        LOGGER.info("Stopping workflow engine");
+        stopWorkflowEngine();
     }
 
 }

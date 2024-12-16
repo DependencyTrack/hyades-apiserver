@@ -50,7 +50,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void before() throws Exception {
         super.before();
 
-        engine = new WorkflowEngine();
+        engine = new WorkflowEngine(new WorkflowEngineConfig());
         engine.start();
     }
 

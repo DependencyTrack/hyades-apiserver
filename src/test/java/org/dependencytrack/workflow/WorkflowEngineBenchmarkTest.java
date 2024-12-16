@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -57,7 +58,8 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngineBenchmarkTest.class);
 
     @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("ALPINE_METRICS_ENABLED", "true");
 
     private WorkflowEngine engine;
     private ScheduledExecutorService statsPrinterExecutor;
@@ -67,24 +69,30 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     public void before() throws Exception {
         super.before();
 
-        environmentVariables.set("ALPINE_METRICS_ENABLED", "true");
-
         statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
         statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 3, 5, TimeUnit.SECONDS);
 
-        engine = new WorkflowEngine();
+        final var engineConfig = new WorkflowEngineConfig();
+        engineConfig.taskActionBuffer().setFlushInterval(Duration.ofMillis(3));
+        engineConfig.taskActionBuffer().setMaxBatchSize(250);
+        engineConfig.taskDispatcher().setMinPollInterval(Duration.ofMillis(5));
+        engineConfig.taskDispatcher().setPollBackoffIntervalFunction(
+                IntervalFunction.of(Duration.ofMillis(50)));
+        engineConfig.setMeterRegistry(Metrics.getRegistry());
+
+        engine = new WorkflowEngine(engineConfig);
         engine.start();
 
-        engine.registerWorkflowRunner("test", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowRunner("test", 100, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity("foo", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("bar", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             ctx.callActivity("baz", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("foo", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityRunner("bar", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityRunner("baz", 10, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("foo", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("bar", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerActivityRunner("baz", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
     }
 
     @After
@@ -122,7 +130,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         LOGGER.info("All workflows started");
 
         await("Workflow completion")
-                .atMost(Duration.ofMinutes(5))
+                .atMost(Duration.ofMinutes(10))
                 .pollInterval(Duration.ofSeconds(3))
                 .untilAsserted(() -> {
                     final boolean isAllRunsCompleted = withJdbiHandle(
