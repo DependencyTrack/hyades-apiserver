@@ -43,7 +43,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
-import org.dependencytrack.workflow.WorkflowEngine;
 import org.dependencytrack.workflow.WorkflowRunStatus;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
@@ -68,6 +67,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 
 @Path("/v1/workflow")
 @Tag(name = "workflow")
@@ -299,7 +299,7 @@ public class WorkflowResource extends AlpineResource {
             @QueryParam("reason") @NotBlank final String reason) {
         assertWorkflowEngineEnabled();
 
-        WorkflowEngine.getInstance().cancelWorkflowRun(UUID.fromString(runId), reason);
+        workflowEngine().cancelWorkflowRun(UUID.fromString(runId), reason);
         return Response.noContent().build();
     }
 
@@ -310,7 +310,7 @@ public class WorkflowResource extends AlpineResource {
     public Response suspendWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
         assertWorkflowEngineEnabled();
 
-        WorkflowEngine.getInstance().suspendWorkflowRun(UUID.fromString(runId));
+        workflowEngine().suspendWorkflowRun(UUID.fromString(runId));
         return Response.noContent().build();
     }
 
@@ -321,7 +321,7 @@ public class WorkflowResource extends AlpineResource {
     public Response resumeWorkflowRun(@PathParam("id") @ValidUuid final String runId) {
         assertWorkflowEngineEnabled();
 
-        WorkflowEngine.getInstance().resumeWorkflowRun(UUID.fromString(runId));
+        workflowEngine().resumeWorkflowRun(UUID.fromString(runId));
         return Response.noContent().build();
     }
 

@@ -66,7 +66,6 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.storage.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
-import org.dependencytrack.workflow.WorkflowEngine;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -103,6 +102,7 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 
 /**
@@ -486,7 +486,7 @@ public class BomResource extends AlpineResource {
 
             final UUID workflowRunId;
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
-                workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                workflowRunId = workflowEngine().scheduleWorkflowRun(
                         new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                 .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                 .withTags(Set.of(
@@ -544,7 +544,7 @@ public class BomResource extends AlpineResource {
                 if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
                     // TODO: The BOM will need to be stored somewhere else since the workflow can
                     //  be picked up by another API server instance.
-                    workflowRunId = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                    workflowRunId = workflowEngine().scheduleWorkflowRun(
                             new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                     .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                     .withTags(Set.of(

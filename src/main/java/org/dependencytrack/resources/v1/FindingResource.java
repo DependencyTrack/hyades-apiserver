@@ -54,7 +54,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
-import org.dependencytrack.workflow.WorkflowEngine;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
@@ -76,6 +75,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 
 /**
@@ -244,7 +244,7 @@ public class FindingResource extends AlpineResource {
 
                     final UUID token;
                     if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
-                        token = WorkflowEngine.getInstance().scheduleWorkflowRun(
+                        token = workflowEngine().scheduleWorkflowRun(
                                 new ScheduleWorkflowRunOptions("analyze-project", 1)
                                         .withConcurrencyGroupId("analyze-project-" + project.getUuid())
                                         .withPriority(100) // TODO: Something higher than the scheduled analysis.

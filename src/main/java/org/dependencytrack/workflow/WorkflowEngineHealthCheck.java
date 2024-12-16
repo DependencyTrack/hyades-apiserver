@@ -32,7 +32,7 @@ public class WorkflowEngineHealthCheck implements HealthCheck {
     }
 
     public WorkflowEngineHealthCheck() {
-        this(WorkflowEngine.getInstance());
+        this(WorkflowEngineInitializer.workflowEngine());
     }
 
     @Override
