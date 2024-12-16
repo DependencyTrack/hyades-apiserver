@@ -128,10 +128,10 @@ public interface ProjectDao {
                   WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
                     AND "TEAM"."NAME" = :teamFilter)
             </#if>
-            <#if activeFilter?? && activeFilter == true>
-               AND "PROJECT"."INACTIVE_SINCE" IS NULL
+            <#if activeFilter && activeFilter == true>
+                AND "PROJECT"."INACTIVE_SINCE" IS NULL
             </#if>
-            <#if activeFilter?? && activeFilter == false>
+            <#if activeFilter && activeFilter == false>
                 AND "PROJECT"."INACTIVE_SINCE" IS NOT NULL
             </#if>
             <#if onlyRootFilter>

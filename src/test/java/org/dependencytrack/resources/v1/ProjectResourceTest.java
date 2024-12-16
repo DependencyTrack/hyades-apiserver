@@ -680,33 +680,33 @@ public class ProjectResourceTest extends ResourceTest {
         projectB.setName("acme-app-b");
         qm.persist(projectB);
 
-//        // Should return both when active is not set at all.
-//        Response response = jersey.target(V1_PROJECT + "/concise")
-//                .request()
-//                .header(X_API_KEY, apiKey)
-//                .get();
-//        assertThat(response.getStatus()).isEqualTo(200);
-//        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
-//        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-//                [
-//                  {
-//                    "uuid": "${json-unit.any-string}",
-//                    "name": "acme-app-a",
-//                    "inactiveSince": "${json-unit.any-number}",
-//                    "isLatest": false,
-//                    "hasChildren": false
-//                  },
-//                  {
-//                    "uuid": "${json-unit.any-string}",
-//                    "name": "acme-app-b",
-//                    "isLatest": false,
-//                    "hasChildren": false
-//                  }
-//                ]
-//                """);
+        // Should return both when active is not set.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-a",
+                    "inactiveSince": "${json-unit.any-number}",
+                    "isLatest": false,
+                    "hasChildren": false
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "isLatest": false,
+                    "hasChildren": false
+                  }
+                ]
+                """);
 
         // Should return only active when active=true
-        Response response = jersey.target(V1_PROJECT + "/concise")
+        response = jersey.target(V1_PROJECT + "/concise")
                 .queryParam("active", "true")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -724,7 +724,7 @@ public class ProjectResourceTest extends ResourceTest {
                 ]
                 """);
 
-        // Should return only inactive when active=false.
+        // Should return only inactive when active=false
         response = jersey.target(V1_PROJECT + "/concise")
                 .queryParam("active", "false")
                 .request()
@@ -873,7 +873,6 @@ public class ProjectResourceTest extends ResourceTest {
                             "name": "acme-child-app",
                             "version": "2.0.0",
                             "classifier": "APPLICATION",
-                            "active": true,
                             "isLatest": false,
                             "tags": [
                               {
@@ -929,7 +928,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-a",
-                    "active": true,
                     "isLatest": false,
                     "teams": [
                       {
@@ -1005,14 +1003,12 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-1",
-                    "active": true,
                     "isLatest": false,
                     "hasChildren": false
                   },
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-2",
-                    "active": true,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -1032,7 +1028,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-3",
-                    "active": true,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -1054,6 +1049,7 @@ public class ProjectResourceTest extends ResourceTest {
         final var childProjectB = new Project();
         childProjectB.setParent(parentProject);
         childProjectB.setName("acme-child-app-b");
+        childProjectB.setInactiveSince(new Date());
         qm.persist(childProjectB);
 
         // Should not return results for partial matches.
@@ -1079,8 +1075,8 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
-                    "active": true,
                     "isLatest": false,
+                    "inactiveSince": "${json-unit.any-number}",
                     "hasChildren": false
                   }
                 ]
@@ -1128,7 +1124,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
-                    "active": true,
                     "isLatest": false,
                     "tags": [
                       {
@@ -1182,7 +1177,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
-                    "active": true,
                     "isLatest": false,
                     "teams": [
                       {
@@ -1251,7 +1245,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app",
-                    "active": true,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -1271,7 +1264,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app",
-                    "active": true,
                     "isLatest": false,
                     "hasChildren": false,
                     "metrics": {
@@ -1313,6 +1305,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProject.setName("acme-app-child");
         childProject.setVersion("1.0.0");
         childProject.setParent(project);
+        childProject.setInactiveSince(new Date());
         qm.persist(childProject);
 
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
@@ -1340,19 +1333,17 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "acme-app-child",
                               "version": "1.0.0",
                               "uuid": "${json-unit.matches:childUuid}",
-                              "active": true,
-                              "isLatest": false
+                              "isLatest": false,
+                              "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest": false,
                           "versions": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
-                              "version": "1.0.0",
-                              "active":true
+                              "version": "1.0.0"
                             }
                           ]
                         }
@@ -3242,7 +3233,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest":false
                         }
                         """);
