@@ -76,6 +76,7 @@ public final class WorkflowDao {
         final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_RUN" (
                   "ID"
+                , "PARENT_ID"
                 , "WORKFLOW_NAME"
                 , "WORKFLOW_VERSION"
                 , "CONCURRENCY_GROUP_ID"
@@ -83,6 +84,7 @@ public final class WorkflowDao {
                 , "TAGS"
                 )
                 SELECT "ID"
+                     , "PARENT_ID"
                      , "WORKFLOW_NAME"
                      , "WORKFLOW_VERSION"
                      , "CONCURRENCY_GROUP_ID"
@@ -91,6 +93,7 @@ public final class WorkflowDao {
                           FROM JSON_ARRAY_ELEMENTS_TEXT("TAGS") AS "TAG") AS "TAGS"
                   FROM UNNEST (
                          :ids
+                       , :parentIds
                        , :workflowNames
                        , :workflowVersions
                        , :concurrencyGroupIds
@@ -98,6 +101,7 @@ public final class WorkflowDao {
                        , CAST(:tagsJsons AS JSON[])
                        ) AS "NEW_RUN" (
                          "ID"
+                       , "PARENT_ID"
                        , "WORKFLOW_NAME"
                        , "WORKFLOW_VERSION"
                        , "CONCURRENCY_GROUP_ID"
@@ -107,6 +111,7 @@ public final class WorkflowDao {
                 """);
 
         final var ids = new ArrayList<UUID>(newRuns.size());
+        final var parentIds = new ArrayList<UUID>(newRuns.size());
         final var workflowNames = new ArrayList<String>(newRuns.size());
         final var workflowVersions = new ArrayList<Integer>(newRuns.size());
         final var concurrencyGroupIds = new ArrayList<String>(newRuns.size());
@@ -127,6 +132,7 @@ public final class WorkflowDao {
             }
 
             ids.add(newRun.id());
+            parentIds.add(newRun.parentId());
             workflowNames.add(newRun.workflowName());
             workflowVersions.add(newRun.workflowVersion());
             concurrencyGroupIds.add(newRun.concurrencyGroupId());
@@ -136,6 +142,7 @@ public final class WorkflowDao {
 
         return update
                 .bindArray("ids", UUID.class, ids)
+                .bindArray("parentIds", UUID.class, parentIds)
                 .bindArray("workflowNames", String.class, workflowNames)
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
@@ -299,7 +306,7 @@ public final class WorkflowDao {
                 .list();
     }
 
-    public int updateRuns(
+    public List<UUID> updateRuns(
             final UUID workerInstanceId,
             final Collection<WorkflowRunRowUpdate> runUpdates) {
         final Update update = jdbiHandle.createUpdate("""
@@ -330,6 +337,7 @@ public final class WorkflowDao {
                        , "COMPLETED_AT")
                  WHERE "WORKFLOW_RUN"."ID" = "RUN_UPDATE"."ID"
                    AND "WORKFLOW_RUN"."LOCKED_BY" = :workerInstanceId
+                RETURNING "WORKFLOW_RUN"."ID"
                 """);
 
         final var ids = new ArrayList<UUID>(runUpdates.size());
@@ -360,7 +368,9 @@ public final class WorkflowDao {
                 .bindArray("updatedAts", Instant.class, updatedAts)
                 .bindArray("startedAts", Instant.class, startedAts)
                 .bindArray("completedAts", Instant.class, completedAts)
-                .execute();
+                .executeAndReturnGeneratedKeys("ID")
+                .mapTo(UUID.class)
+                .list();
     }
 
     public WorkflowRunRow getRun(final UUID id) {

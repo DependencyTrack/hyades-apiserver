@@ -23,6 +23,7 @@ import java.util.UUID;
 
 public record NewWorkflowRunRow(
         UUID id,
+        UUID parentId,
         String workflowName,
         int workflowVersion,
         String concurrencyGroupId,

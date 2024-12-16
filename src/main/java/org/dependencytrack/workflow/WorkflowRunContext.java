@@ -31,7 +31,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
-import org.dependencytrack.proto.workflow.v1alpha1.TimerFired;
+import org.dependencytrack.proto.workflow.v1alpha1.TimerElapsed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowCommand.CompleteRunCommand;
@@ -448,7 +448,7 @@ public final class WorkflowRunContext<A, R> {
             case SUB_WORKFLOW_RUN_COMPLETED -> onSubWorkflowRunCompleted(event.getSubWorkflowRunCompleted());
             case SUB_WORKFLOW_RUN_FAILED -> onSubWorkflowRunFailed(event.getSubWorkflowRunFailed());
             case TIMER_SCHEDULED -> onTimerScheduled(event.getId());
-            case TIMER_FIRED -> onTimerFired(event.getTimerFired());
+            case TIMER_ELAPSED -> onTimerElapsed(event.getTimerElapsed());
             case SIDE_EFFECT_EXECUTED -> onSideEffectExecuted(event.getSideEffectExecuted());
             case EXTERNAL_EVENT_RECEIVED -> onExternalEventReceived(event);
         }
@@ -639,14 +639,14 @@ public final class WorkflowRunContext<A, R> {
         pendingCommandByEventId.remove(eventId);
     }
 
-    private void onTimerFired(final TimerFired subject) {
+    private void onTimerElapsed(final TimerElapsed subject) {
         final int eventId = subject.getTimerScheduledEventId();
-        logger().debug("Timer fired for event ID {}", eventId);
+        logger().debug("Timer elapsed for event ID {}", eventId);
 
         final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
             throw new NonDeterministicWorkflowException("""
-                    Encountered TimerFired event for event ID %d, \
+                    Encountered TimerElapsed event for event ID %d, \
                     but no pending awaitable was found for it""".formatted(eventId));
         }
 

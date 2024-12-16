@@ -79,6 +79,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
@@ -340,6 +341,7 @@ public class WorkflowEngine implements Closeable {
             final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(new NewWorkflowRunRow(
                     runId,
+                    /* parentId */ null,
                     option.workflowName(),
                     option.workflowVersion(),
                     option.concurrencyGroupId(),
@@ -391,10 +393,14 @@ public class WorkflowEngine implements Closeable {
             final var dao = new WorkflowDao(handle);
 
             final List<UUID> createdRunIds = dao.createRuns(newWorkflowRunRows);
-            assert createdRunIds.size() == newWorkflowRunRows.size();
+            assert createdRunIds.size() == newWorkflowRunRows.size()
+                    : "Created runs: actual=%d, expected=%d".formatted(
+                    createdRunIds.size(), newWorkflowRunRows.size());
 
             final int createdInboxEvents = dao.createRunInboxEvents(newInboxEventRows);
-            assert createdInboxEvents == newInboxEventRows.size();
+            assert createdInboxEvents == newInboxEventRows.size()
+                    : "Created inbox events: actual=%d, expected=%d".formatted(
+                    createdInboxEvents, newInboxEventRows.size());
 
             if (!newConcurrencyGroupRows.isEmpty()) {
                 dao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
@@ -567,18 +573,15 @@ public class WorkflowEngine implements Closeable {
     private void completeWorkflowTasksInternal(
             final WorkflowDao dao,
             final Collection<CompleteWorkflowTaskAction> actions) {
-        final var newJournalEntries = new ArrayList<NewWorkflowRunJournalRow>(actions.size() * 2);
-        final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(actions.size() * 2);
-        final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
-        final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
-        final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
-        final var concurrencyGroupsToUpdate = new HashSet<String>();
+        final List<WorkflowRun> actionableRuns = actions.stream()
+                .map(CompleteWorkflowTaskAction::workflowRun)
+                .collect(Collectors.toList());
 
-        final int updatedRuns = dao.updateRuns(this.instanceId,
-                actions.stream()
-                        .map(CompleteWorkflowTaskAction::workflowRun)
+        final List<UUID> updatedRunIds = dao.updateRuns(
+                this.instanceId,
+                actionableRuns.stream()
                         .map(run -> new WorkflowRunRowUpdate(
-                                run.workflowRunId(),
+                                run.id(),
                                 run.status(),
                                 run.customStatus().orElse(null),
                                 run.createdAt().orElse(null),
@@ -586,32 +589,51 @@ public class WorkflowEngine implements Closeable {
                                 run.startedAt().orElse(null),
                                 run.completedAt().orElse(null)))
                         .toList());
-        assert updatedRuns == actions.size();
 
-        for (final CompleteWorkflowTaskAction action : actions) {
-            final WorkflowRun workflowRun = action.workflowRun();
+        if (updatedRunIds.size() != actions.size()) {
+            final Set<UUID> notUpdatedRunIds = actions.stream()
+                    .map(CompleteWorkflowTaskAction::workflowRun)
+                    .map(WorkflowRun::id)
+                    .filter(runId -> !updatedRunIds.contains(runId))
+                    .collect(Collectors.toSet());
+            LOGGER.warn("{}/{} workflow runs were not updated, indicating modification by another worker instance: {}",
+                    notUpdatedRunIds.size(), actions.size(), notUpdatedRunIds);
 
-            int sequenceNumber = workflowRun.journal().size();
-            for (final WorkflowEvent newEvent : workflowRun.inbox()) {
+            // Since we lost the lock on these runs, we can't act upon them anymore.
+            // Note that this is expected behavior and not necessarily reason for concern.
+            actionableRuns.removeIf(run -> notUpdatedRunIds.contains(run.id()));
+        }
+
+        final var newJournalEntries = new ArrayList<NewWorkflowRunJournalRow>(actions.size() * 2);
+        final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(actions.size() * 2);
+        final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
+        final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
+        final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
+        final var concurrencyGroupsToUpdate = new HashSet<String>();
+
+        for (final WorkflowRun run : actionableRuns) {
+            int sequenceNumber = run.journal().size();
+            for (final WorkflowEvent newEvent : run.inbox()) {
                 newJournalEntries.add(new NewWorkflowRunJournalRow(
-                        workflowRun.workflowRunId(),
+                        run.id(),
                         sequenceNumber++,
                         newEvent));
             }
 
-            for (final WorkflowEvent newEvent : workflowRun.pendingTimerFiredEvents()) {
+            for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
                 newInboxEvents.add(new NewWorkflowRunInboxRow(
-                        workflowRun.workflowRunId(),
-                        toInstant(newEvent.getTimerFired().getElapseAt()),
+                        run.id(),
+                        toInstant(newEvent.getTimerElapsed().getElapseAt()),
                         newEvent));
             }
 
-            for (final WorkflowRunMessage message : workflowRun.pendingWorkflowMessages()) {
+            for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
                 // If the outbound message is a RunScheduled event, the recipient
                 // workflow run will need to be created first.
                 if (message.event().hasRunScheduled()) {
                     newWorkflowRuns.add(new NewWorkflowRunRow(
                             message.recipientRunId(),
+                            /* parentId */ run.id(),
                             message.event().getRunScheduled().getWorkflowName(),
                             message.event().getRunScheduled().getWorkflowVersion(),
                             message.event().getRunScheduled().hasConcurrencyGroupId()
@@ -628,14 +650,14 @@ public class WorkflowEngine implements Closeable {
                         nextRunIdByNewConcurrencyGroupId.compute(
                                 message.event().getRunScheduled().getConcurrencyGroupId(),
                                 (ignored, previous) -> {
-                            if (previous == null) {
-                                return message.recipientRunId();
-                            }
+                                    if (previous == null) {
+                                        return message.recipientRunId();
+                                    }
 
-                            return message.recipientRunId().compareTo(previous) < 0
-                                    ? message.recipientRunId()
-                                    : previous;
-                        });
+                                    return message.recipientRunId().compareTo(previous) < 0
+                                            ? message.recipientRunId()
+                                            : previous;
+                                });
                     }
                 }
 
@@ -646,11 +668,11 @@ public class WorkflowEngine implements Closeable {
             }
 
             // If there are pending sub workflow runs, make sure those are cancelled, too.
-            if (workflowRun.status() == WorkflowRunStatus.CANCELLED) {
-                for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(workflowRun)) {
+            if (run.status() == WorkflowRunStatus.CANCELLED) {
+                for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(run)) {
                     newInboxEvents.add(new NewWorkflowRunInboxRow(
                             subWorkflowRunId,
-                            null,
+                            /* visibleFrom */ null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(Timestamps.now())
@@ -661,9 +683,9 @@ public class WorkflowEngine implements Closeable {
                 }
             }
 
-            for (final WorkflowEvent newEvent : workflowRun.pendingActivityTaskScheduledEvents()) {
+            for (final WorkflowEvent newEvent : run.pendingActivityTaskScheduledEvents()) {
                 newActivityTasks.add(new NewActivityTaskRow(
-                        workflowRun.workflowRunId(),
+                        run.id(),
                         newEvent.getId(),
                         newEvent.getActivityTaskScheduled().getName(),
                         newEvent.getActivityTaskScheduled().hasPriority()
@@ -677,41 +699,51 @@ public class WorkflowEngine implements Closeable {
                                 : null));
             }
 
-            if (workflowRun.status().isTerminal() && workflowRun.concurrencyGroupId().isPresent()) {
-                concurrencyGroupsToUpdate.add(workflowRun.concurrencyGroupId().get());
+            if (run.status().isTerminal() && run.concurrencyGroupId().isPresent()) {
+                concurrencyGroupsToUpdate.add(run.concurrencyGroupId().get());
             }
         }
 
         if (!newJournalEntries.isEmpty()) {
-            dao.createRunJournalEntries(newJournalEntries);
+            final int journalEntriesCreated = dao.createRunJournalEntries(newJournalEntries);
+            assert journalEntriesCreated == newJournalEntries.size()
+                    : "Created journal entries: actual=%d, expected=%d".formatted(
+                    journalEntriesCreated, newJournalEntries.size());
         }
 
         if (!newWorkflowRuns.isEmpty()) {
             // TODO: Call ScheduleWorkflowRuns instead so concurrency groups are updated, too.
             //  Ensure it can participate in this transaction!
             final List<UUID> createdRunIds = dao.createRuns(newWorkflowRuns);
-            assert createdRunIds.size() == newWorkflowRuns.size();
+            assert createdRunIds.size() == newWorkflowRuns.size()
+                    : "Created runs: actual=%d, expected=%d".formatted(
+                    createdRunIds.size(), newWorkflowRuns.size());
         }
 
         if (!newInboxEvents.isEmpty()) {
             final int createdInboxEvents = dao.createRunInboxEvents(newInboxEvents);
-            assert createdInboxEvents == newInboxEvents.size();
+            assert createdInboxEvents == newInboxEvents.size()
+                    : "Created inbox events: actual=%d, expected=%d".formatted(
+                    createdInboxEvents, newInboxEvents.size());
         }
 
         if (!newActivityTasks.isEmpty()) {
             final int createdActivityTasks = dao.createActivityTasks(newActivityTasks);
-            assert createdActivityTasks == newActivityTasks.size();
+            assert createdActivityTasks == newActivityTasks.size()
+                    : "Created activity tasks: actual=%d, expected=%d".formatted(
+                    createdActivityTasks, newActivityTasks.size());
         }
 
         final int deletedInboxEvents = dao.deleteRunInboxEvents(
                 this.instanceId,
-                actions.stream()
-                        .map(CompleteWorkflowTaskAction::workflowRun)
+                actionableRuns.stream()
                         .map(run -> new DeleteInboxEventsCommand(
-                                run.workflowRunId(),
+                                run.id(),
                                 /* onlyLocked */ !run.status().isTerminal()))
                         .toList());
-        assert deletedInboxEvents >= actions.size();
+        assert deletedInboxEvents >= updatedRunIds.size()
+                : "Deleted inbox events: actual=%d, expectedAtLeast=%d".formatted(
+                deletedInboxEvents, updatedRunIds.size());
 
         if (!nextRunIdByNewConcurrencyGroupId.isEmpty()) {
             final List<WorkflowConcurrencyGroupRow> newConcurrencyGroupRows =
@@ -725,7 +757,9 @@ public class WorkflowEngine implements Closeable {
 
         if (!concurrencyGroupsToUpdate.isEmpty()) {
             final Map<String, String> statusByGroupId = dao.updateConcurrencyGroups(concurrencyGroupsToUpdate);
-            assert statusByGroupId.size() == concurrencyGroupsToUpdate.size();
+            assert statusByGroupId.size() == concurrencyGroupsToUpdate.size()
+                    : "Updated concurrency groups: actual=%d, expected=%d".formatted(
+                    statusByGroupId.size(), concurrencyGroupsToUpdate.size());
 
             if (LOGGER.isDebugEnabled()) {
                 for (final Map.Entry<String, String> entry : statusByGroupId.entrySet()) {
@@ -761,7 +795,8 @@ public class WorkflowEngine implements Closeable {
                 Stream.of(task)
                         .map(t -> new ActivityTaskId(t.workflowRunId(), t.scheduledEventId()))
                         .toList());
-        assert unlockedTasks == 1;
+        assert unlockedTasks == 1
+                : "Abandoned tasks: actual=%d, expected=%d".formatted(unlockedTasks, 1);
     }
 
     CompletableFuture<Void> completeActivityTask(
@@ -799,10 +834,14 @@ public class WorkflowEngine implements Closeable {
         }
 
         final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
-        assert deletedTasks == tasksToDelete.size();
+        assert deletedTasks == tasksToDelete.size()
+                : "Deleted activity tasks: actual=%d, expected=%d".formatted(
+                deletedTasks, tasksToDelete.size());
 
         final int createdInboxEvents = dao.createRunInboxEvents(inboxEventsToCreate);
-        assert createdInboxEvents == inboxEventsToCreate.size();
+        assert createdInboxEvents == inboxEventsToCreate.size()
+                : "Created inbox events: actual=%d, expected=%d".formatted(
+                createdInboxEvents, inboxEventsToCreate.size());
     }
 
     private void failActivityTasksInternal(final WorkflowDao dao, final Collection<FailActivityTaskAction> actions) {
@@ -814,7 +853,7 @@ public class WorkflowEngine implements Closeable {
 
             inboxEventsToCreate.add(new NewWorkflowRunInboxRow(
                     action.task().workflowRunId(),
-                    null,
+                    /* visibleFrom */ null,
                     WorkflowEvent.newBuilder()
                             .setId(-1)
                             .setTimestamp(toTimestamp(action.timestamp()))
@@ -826,10 +865,14 @@ public class WorkflowEngine implements Closeable {
         }
 
         final int deletedTasks = dao.deleteLockedActivityTasks(this.instanceId, tasksToDelete);
-        assert deletedTasks == tasksToDelete.size();
+        assert deletedTasks == tasksToDelete.size()
+                : "Deleted activity tasks: actual=%d, expected=%d".formatted(
+                deletedTasks, tasksToDelete.size());
 
         final int createdInboxEvents = dao.createRunInboxEvents(inboxEventsToCreate);
-        assert createdInboxEvents == inboxEventsToCreate.size();
+        assert createdInboxEvents == inboxEventsToCreate.size()
+                : "Created inbox events: actual=%d, expected=%d".formatted(
+                createdInboxEvents, inboxEventsToCreate.size());
     }
 
     Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
