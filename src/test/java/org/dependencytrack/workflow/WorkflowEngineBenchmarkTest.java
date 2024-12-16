@@ -148,7 +148,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
             try {
                 final List<WorkflowRunCountByNameAndStatusRow> statusRows =
-                        withJdbiHandle(handle -> new WorkflowDao(handle).getWorkflowRunCountByNameAndStatus());
+                        withJdbiHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
                 final Map<WorkflowRunStatus, Long> countByStatus = statusRows.stream()
                         .collect(Collectors.toMap(
                                 WorkflowRunCountByNameAndStatusRow::status,

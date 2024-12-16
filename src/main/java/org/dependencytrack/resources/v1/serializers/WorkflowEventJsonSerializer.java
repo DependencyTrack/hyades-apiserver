@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.protobuf.util.JsonFormat;
+import org.dependencytrack.proto.storage.v1alpha1.Storage;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.Payload;
 import org.dependencytrack.proto.workflow.v1alpha1.Workflow;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
@@ -29,6 +30,12 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import java.io.IOException;
 
 public class WorkflowEventJsonSerializer extends StdSerializer<WorkflowEvent> {
+
+    private static final JsonFormat.TypeRegistry TYPE_REGISTRY = JsonFormat.TypeRegistry.newBuilder()
+            .add(Storage.getDescriptor().getMessageTypes())
+            .add(Payload.getDescriptor().getMessageTypes())
+            .add(Workflow.getDescriptor().getMessageTypes())
+            .build();
 
     public WorkflowEventJsonSerializer() {
         super(WorkflowEvent.class);
@@ -41,10 +48,7 @@ public class WorkflowEventJsonSerializer extends StdSerializer<WorkflowEvent> {
             final SerializerProvider serializerProvider) throws IOException {
         jsonGenerator.writeRawValue(JsonFormat.printer()
                 .omittingInsignificantWhitespace()
-                .usingTypeRegistry(JsonFormat.TypeRegistry.newBuilder()
-                        .add(Workflow.getDescriptor().getMessageTypes())
-                        .add(Payload.getDescriptor().getMessageTypes())
-                        .build())
+                .usingTypeRegistry(TYPE_REGISTRY)
                 .print(value));
     }
 

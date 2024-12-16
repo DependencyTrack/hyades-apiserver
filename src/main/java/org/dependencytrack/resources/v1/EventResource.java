@@ -96,7 +96,7 @@ public class EventResource extends AlpineResource {
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
                 isProcessing = withJdbiHandle(getAlpineRequest(),
                         handle -> new org.dependencytrack.workflow.persistence.WorkflowDao(handle)
-                                .existsWorkflowRunWithNonTerminalStatus(token));
+                                .existsRunWithNonTerminalStatus(token));
             } else {
                 isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));

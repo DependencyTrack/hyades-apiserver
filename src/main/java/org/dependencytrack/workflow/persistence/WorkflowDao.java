@@ -32,8 +32,8 @@ import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadSqlArrayT
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
-import org.dependencytrack.workflow.persistence.model.NewWorkflowEventInboxRow;
-import org.dependencytrack.workflow.persistence.model.NewWorkflowEventLogRow;
+import org.dependencytrack.workflow.persistence.model.NewWorkflowRunInboxRow;
+import org.dependencytrack.workflow.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowEventRow;
@@ -72,7 +72,7 @@ public final class WorkflowDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    public List<UUID> createWorkflowRuns(final Collection<NewWorkflowRunRow> newWorkflowRuns) {
+    public List<UUID> createRuns(final Collection<NewWorkflowRunRow> newRuns) {
         final Update update = jdbiHandle.createUpdate("""
                 INSERT INTO "WORKFLOW_RUN" (
                   "ID"
@@ -106,30 +106,31 @@ public final class WorkflowDao {
                 RETURNING "ID"
                 """);
 
-        final var ids = new ArrayList<UUID>(newWorkflowRuns.size());
-        final var workflowNames = new ArrayList<String>(newWorkflowRuns.size());
-        final var workflowVersions = new ArrayList<Integer>(newWorkflowRuns.size());
-        final var concurrencyGroupIds = new ArrayList<String>(newWorkflowRuns.size());
-        final var priorities = new ArrayList<Integer>(newWorkflowRuns.size());
-        final var tagsJsons = new ArrayList<String>(newWorkflowRuns.size());
-        for (final NewWorkflowRunRow newWorkflowRun : newWorkflowRuns) {
+        final var ids = new ArrayList<UUID>(newRuns.size());
+        final var workflowNames = new ArrayList<String>(newRuns.size());
+        final var workflowVersions = new ArrayList<Integer>(newRuns.size());
+        final var concurrencyGroupIds = new ArrayList<String>(newRuns.size());
+        final var priorities = new ArrayList<Integer>(newRuns.size());
+        final var tagsJsons = new ArrayList<String>(newRuns.size());
+
+        for (final NewWorkflowRunRow newRun : newRuns) {
             // Workaround for JDBC getting confused with nested arrays.
             // Transmit tags as JSON array instead, and convert it to
             // a native TEXT[] array before inserting it.
             final String tagsJson;
-            if (newWorkflowRun.tags() == null || newWorkflowRun.tags().isEmpty()) {
+            if (newRun.tags() == null || newRun.tags().isEmpty()) {
                 tagsJson = null;
             } else {
                 final var tagsJsonArray = Json.createArrayBuilder();
-                newWorkflowRun.tags().forEach(tagsJsonArray::add);
+                newRun.tags().forEach(tagsJsonArray::add);
                 tagsJson = tagsJsonArray.build().toString();
             }
 
-            ids.add(newWorkflowRun.id());
-            workflowNames.add(newWorkflowRun.workflowName());
-            workflowVersions.add(newWorkflowRun.workflowVersion());
-            concurrencyGroupIds.add(newWorkflowRun.concurrencyGroupId());
-            priorities.add(newWorkflowRun.priority());
+            ids.add(newRun.id());
+            workflowNames.add(newRun.workflowName());
+            workflowVersions.add(newRun.workflowVersion());
+            concurrencyGroupIds.add(newRun.concurrencyGroupId());
+            priorities.add(newRun.priority());
             tagsJsons.add(tagsJson);
         }
 
@@ -216,7 +217,7 @@ public final class WorkflowDao {
                 });
     }
 
-    public List<WorkflowRunListRow> getWorkflowRuns(
+    public List<WorkflowRunListRow> getRunListPage(
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
@@ -243,16 +244,6 @@ public final class WorkflowDao {
                      , "UPDATED_AT" AS "updatedAt"
                      , "STARTED_AT" AS "startedAt"
                      , "COMPLETED_AT" AS "completedAt"
-                     , (SELECT COUNT(*)
-                          FROM "WORKFLOW_EVENT_LOG" AS "WEL"
-                         WHERE "WEL"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "historySize"
-                     , (SELECT COUNT(*)
-                          FROM "WORKFLOW_EVENT_INBOX" AS "WEI"
-                         WHERE "WEI"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "pendingEvents"
-                     , (SELECT COUNT(*)
-                          FROM "WORKFLOW_ACTIVITY_TASK" AS "WAT"
-                         WHERE "WAT"."WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID") AS "pendingActivities"
-                     , COUNT(*) OVER() AS "totalCount"
                   FROM "WORKFLOW_RUN"
                  WHERE 1 = 1
                 <#if apiFilterParameter??>
@@ -283,10 +274,7 @@ public final class WorkflowDao {
                                 new ApiRequestConfig.OrderingColumn("concurrencyGroupId"),
                                 new ApiRequestConfig.OrderingColumn("createdAt"),
                                 new ApiRequestConfig.OrderingColumn("updatedAt"),
-                                new ApiRequestConfig.OrderingColumn("completedAt"),
-                                new ApiRequestConfig.OrderingColumn("historySize"),
-                                new ApiRequestConfig.OrderingColumn("pendingEvents"),
-                                new ApiRequestConfig.OrderingColumn("pendingActivities"))))
+                                new ApiRequestConfig.OrderingColumn("completedAt"))))
                 .bind("workflowNameFilter", workflowNameFilter)
                 .bind("statusFilter", statusFilter)
                 .bind("concurrencyGroupIdFilter", concurrencyGroupIdFilter)
@@ -296,7 +284,7 @@ public final class WorkflowDao {
                 .list();
     }
 
-    public List<WorkflowRunCountByNameAndStatusRow> getWorkflowRunCountByNameAndStatus() {
+    public List<WorkflowRunCountByNameAndStatusRow> getRunCountByNameAndStatus() {
         final Query query = jdbiHandle.createQuery("""
                 SELECT "WORKFLOW_NAME"
                      , "STATUS"
@@ -311,7 +299,7 @@ public final class WorkflowDao {
                 .list();
     }
 
-    public int updateWorkflowRuns(
+    public int updateRuns(
             final UUID workerInstanceId,
             final Collection<WorkflowRunRowUpdate> runUpdates) {
         final Update update = jdbiHandle.createUpdate("""
@@ -375,7 +363,7 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public WorkflowRunRow getWorkflowRun(final UUID id) {
+    public WorkflowRunRow getRun(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT *
                   FROM "WORKFLOW_RUN"
@@ -389,7 +377,7 @@ public final class WorkflowDao {
                 .orElse(null);
     }
 
-    public boolean existsWorkflowRunWithNonTerminalStatus(final UUID id) {
+    public boolean existsRunWithNonTerminalStatus(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT EXISTS (
                     SELECT 1
@@ -405,7 +393,7 @@ public final class WorkflowDao {
                 .orElse(false);
     }
 
-    public Map<UUID, PolledWorkflowRunRow> pollAndLockWorkflowRuns(
+    public Map<UUID, PolledWorkflowRunRow> pollAndLockRuns(
             final UUID workerInstanceId,
             final String workflowName,
             final Duration lockTimeout,
@@ -422,7 +410,7 @@ public final class WorkflowDao {
                                         WHERE "WCG"."ID" = "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"))
                        AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
                        AND EXISTS (SELECT 1
-                                     FROM "WORKFLOW_EVENT_INBOX"
+                                     FROM "WORKFLOW_RUN_INBOX"
                                     WHERE "WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID"
                                       AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW()))
                      ORDER BY "PRIORITY" DESC NULLS LAST
@@ -459,7 +447,7 @@ public final class WorkflowDao {
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }
 
-    public int unlockWorkflowRun(final UUID workerInstanceId, final UUID workflowRunId) {
+    public int unlockRun(final UUID workerInstanceId, final UUID workflowRunId) {
         final Update update = jdbiHandle.createUpdate("""
                 UPDATE "WORKFLOW_RUN"
                    SET "LOCKED_BY" = NULL
@@ -474,9 +462,9 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int createInboxEvents(final SequencedCollection<NewWorkflowEventInboxRow> newEvents) {
+    public int createRunInboxEvents(final SequencedCollection<NewWorkflowRunInboxRow> newEvents) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_EVENT_INBOX" (
+                INSERT INTO "WORKFLOW_RUN_INBOX" (
                   "WORKFLOW_RUN_ID"
                 , "VISIBLE_FROM"
                 , "EVENT"
@@ -487,7 +475,7 @@ public final class WorkflowDao {
         final var runIds = new ArrayList<UUID>(newEvents.size());
         final var visibleFroms = new ArrayList<Instant>(newEvents.size());
         final var events = new ArrayList<WorkflowEvent>(newEvents.size());
-        for (final NewWorkflowEventInboxRow newEvent : newEvents) {
+        for (final NewWorkflowRunInboxRow newEvent : newEvents) {
             runIds.add(newEvent.workflowRunId());
             visibleFroms.add(newEvent.visibleFrom());
             events.add(newEvent.event());
@@ -503,21 +491,21 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public Map<UUID, PolledWorkflowEvents> pollEvents(
+    public Map<UUID, PolledWorkflowEvents> pollRunEvents(
             final UUID workerInstanceId,
             final Collection<UUID> workflowRunIds) {
         final Query query = jdbiHandle.createQuery("""
                 WITH
-                "CTE_LOG" AS (
+                "CTE_JOURNAL" AS (
                     SELECT "WORKFLOW_RUN_ID"
                          , "EVENT"
-                      FROM "WORKFLOW_EVENT_LOG"
+                      FROM "WORKFLOW_RUN_JOURNAL"
                      WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
                      ORDER BY "SEQUENCE_NUMBER"
                 ),
                 "CTE_INBOX_POLL_CANDIDATE" AS (
                     SELECT "ID"
-                      FROM "WORKFLOW_EVENT_INBOX"
+                      FROM "WORKFLOW_RUN_INBOX"
                      WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
                        AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
                      ORDER BY "ID"
@@ -525,20 +513,20 @@ public final class WorkflowDao {
                       SKIP LOCKED
                 ),
                 "CTE_POLLED_INBOX" AS (
-                    UPDATE "WORKFLOW_EVENT_INBOX"
+                    UPDATE "WORKFLOW_RUN_INBOX"
                        SET "LOCKED_BY" = :workerInstanceId
                          , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
                       FROM "CTE_INBOX_POLL_CANDIDATE"
-                     WHERE "CTE_INBOX_POLL_CANDIDATE"."ID" = "WORKFLOW_EVENT_INBOX"."ID"
-                    RETURNING "WORKFLOW_EVENT_INBOX"."WORKFLOW_RUN_ID"
-                            , "WORKFLOW_EVENT_INBOX"."EVENT"
-                            , "WORKFLOW_EVENT_INBOX"."DEQUEUE_COUNT"
+                     WHERE "CTE_INBOX_POLL_CANDIDATE"."ID" = "WORKFLOW_RUN_INBOX"."ID"
+                    RETURNING "WORKFLOW_RUN_INBOX"."WORKFLOW_RUN_ID"
+                            , "WORKFLOW_RUN_INBOX"."EVENT"
+                            , "WORKFLOW_RUN_INBOX"."DEQUEUE_COUNT"
                 )
-                SELECT 'LOG' AS "EVENT_TYPE"
+                SELECT 'JOURNAL' AS "EVENT_TYPE"
                      , "WORKFLOW_RUN_ID"
                      , "EVENT"
                      , NULL AS "DEQUEUE_COUNT"
-                  FROM "CTE_LOG"
+                  FROM "CTE_JOURNAL"
                  UNION ALL
                 SELECT 'INBOX' AS "EVENT_TYPE"
                      , "WORKFLOW_RUN_ID"
@@ -553,16 +541,16 @@ public final class WorkflowDao {
                 .map(new PolledWorkflowEventRowMapper())
                 .list();
 
-        final var eventLogByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
-        final var inboxEventsByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
+        final var journalByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
+        final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
         final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(workflowRunIds.size());
 
         for (final PolledWorkflowEventRow row : polledEventRows) {
             switch (row.eventType()) {
-                case LOG -> eventLogByRunId.computeIfAbsent(
+                case JOURNAL -> journalByRunId.computeIfAbsent(
                         row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
                 case INBOX -> {
-                    inboxEventsByRunId.computeIfAbsent(
+                    inboxByRunId.computeIfAbsent(
                             row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
 
                     maxInboxEventDequeueCountByRunId.compute(
@@ -577,18 +565,18 @@ public final class WorkflowDao {
         final var polledEventsByRunId = new HashMap<UUID, PolledWorkflowEvents>(workflowRunIds.size());
         for (final UUID runId : workflowRunIds) {
             polledEventsByRunId.put(runId, new PolledWorkflowEvents(
-                    eventLogByRunId.getOrDefault(runId, Collections.emptyList()),
-                    inboxEventsByRunId.getOrDefault(runId, Collections.emptyList()),
+                    journalByRunId.getOrDefault(runId, Collections.emptyList()),
+                    inboxByRunId.getOrDefault(runId, Collections.emptyList()),
                     maxInboxEventDequeueCountByRunId.getOrDefault(runId, 0)));
         }
 
         return polledEventsByRunId;
     }
 
-    public List<WorkflowEvent> getInboxEvents(final UUID workflowRunId) {
+    public List<WorkflowEvent> getRunInbox(final UUID workflowRunId) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT "EVENT"
-                  FROM "WORKFLOW_EVENT_INBOX"
+                  FROM "WORKFLOW_RUN_INBOX"
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
                  ORDER BY "ID"
                 """);
@@ -599,9 +587,12 @@ public final class WorkflowDao {
                 .list();
     }
 
-    public int unlockInboxEvents(final UUID workerInstanceId, final UUID workflowRunId, final Duration visibilityDelay) {
+    public int unlockRunInboxEvents(
+            final UUID workerInstanceId,
+            final UUID workflowRunId,
+            final Duration visibilityDelay) {
         final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_EVENT_INBOX"
+                UPDATE "WORKFLOW_RUN_INBOX"
                    SET "LOCKED_BY" = NULL
                      , "VISIBLE_FROM" = NOW() + :visibilityDelay
                  WHERE "WORKFLOW_RUN_ID" = :workflowRunId
@@ -615,14 +606,16 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int deleteInboxEvents(final UUID workerInstanceId, final Collection<DeleteInboxEventsCommand> deleteCommands) {
+    public int deleteRunInboxEvents(
+            final UUID workerInstanceId,
+            final Collection<DeleteInboxEventsCommand> deleteCommands) {
         final Update update = jdbiHandle.createUpdate("""
                 DELETE
-                  FROM "WORKFLOW_EVENT_INBOX"
+                  FROM "WORKFLOW_RUN_INBOX"
                  USING UNNEST(:workflowRunIds, :onlyLockeds) AS "DELETE_COMMAND" ("WORKFLOW_RUN_ID", "ONLY_LOCKED")
-                 WHERE "WORKFLOW_EVENT_INBOX"."WORKFLOW_RUN_ID" = "DELETE_COMMAND"."WORKFLOW_RUN_ID"
+                 WHERE "WORKFLOW_RUN_INBOX"."WORKFLOW_RUN_ID" = "DELETE_COMMAND"."WORKFLOW_RUN_ID"
                    AND (NOT "DELETE_COMMAND"."ONLY_LOCKED"
-                         OR "WORKFLOW_EVENT_INBOX"."LOCKED_BY" = :workerInstanceId)
+                         OR "WORKFLOW_RUN_INBOX"."LOCKED_BY" = :workerInstanceId)
                 """);
 
         final var runIds = new ArrayList<UUID>(deleteCommands.size());
@@ -639,9 +632,9 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int createWorkflowEventLogEntries(final Collection<NewWorkflowEventLogRow> newEventLogEntries) {
+    public int createRunJournalEntries(final Collection<NewWorkflowRunJournalRow> newJournalEntries) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_EVENT_LOG" (
+                INSERT INTO "WORKFLOW_RUN_JOURNAL" (
                   "WORKFLOW_RUN_ID"
                 , "SEQUENCE_NUMBER"
                 , "EVENT"
@@ -649,13 +642,13 @@ public final class WorkflowDao {
                 SELECT * FROM UNNEST(:runIds, :sequenceNumbers, :events)
                 """);
 
-        final var runIds = new ArrayList<UUID>(newEventLogEntries.size());
-        final var sequenceNumbers = new ArrayList<Integer>(newEventLogEntries.size());
-        final var events = new ArrayList<WorkflowEvent>(newEventLogEntries.size());
-        for (final NewWorkflowEventLogRow newLogEntry : newEventLogEntries) {
-            runIds.add(newLogEntry.workflowRunId());
-            sequenceNumbers.add(newLogEntry.sequenceNumber());
-            events.add(newLogEntry.event());
+        final var runIds = new ArrayList<UUID>(newJournalEntries.size());
+        final var sequenceNumbers = new ArrayList<Integer>(newJournalEntries.size());
+        final var events = new ArrayList<WorkflowEvent>(newJournalEntries.size());
+        for (final NewWorkflowRunJournalRow newJournalEntry : newJournalEntries) {
+            runIds.add(newJournalEntry.workflowRunId());
+            sequenceNumbers.add(newJournalEntry.sequenceNumber());
+            events.add(newJournalEntry.event());
         }
 
         return update
@@ -666,16 +659,16 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public List<WorkflowEvent> getWorkflowRunEventLog(final UUID workflowRunId) {
+    public List<WorkflowEvent> getRunJournal(final UUID runId) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT "EVENT"
-                  FROM "WORKFLOW_EVENT_LOG"
-                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
+                  FROM "WORKFLOW_RUN_JOURNAL"
+                 WHERE "WORKFLOW_RUN_ID" = :runId
                  ORDER BY "SEQUENCE_NUMBER"
                 """);
 
         return query
-                .bind("workflowRunId", workflowRunId)
+                .bind("runId", runId)
                 .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .list();
     }
