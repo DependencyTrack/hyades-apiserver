@@ -357,9 +357,9 @@ public class ProjectResource extends AlpineResource {
     public Response getProjectsByTag(
             @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
-            @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned")
             @QueryParam("excludeInactive") boolean excludeInactive,
-            @Parameter(description = "Optionally excludes children projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes children projects from being returned")
             @QueryParam("onlyRoot") boolean onlyRoot) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Tag tag = qm.getTagByName(tagString);

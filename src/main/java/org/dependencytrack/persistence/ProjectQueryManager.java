@@ -186,7 +186,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public List<Project> getAllProjects(boolean excludeInactive) {
         final Query<Project> query = pm.newQuery(Project.class);
         if (excludeInactive) {
-            query.setFilter("active == true || active == null");
+            query.setFilter("inactiveSince == null");
         }
         query.setOrdering("id asc");
         return query.executeList();
@@ -1361,7 +1361,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<Project> query = pm.newQuery(Project.class);
         query.setFilter("name == :name");
         query.setParameters(project.getName());
-        query.setResult("uuid, version, active");
+        query.setResult("uuid, version, inactiveSince");
         query.setOrdering("id asc"); // Ensure consistent ordering
         return query.executeResultList(ProjectVersion.class);
     }

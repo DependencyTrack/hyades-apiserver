@@ -161,7 +161,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectInvalidTest() {
-        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
@@ -248,7 +248,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectInvalidTest() {
-        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString() + "/export").request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID() + "/export").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
