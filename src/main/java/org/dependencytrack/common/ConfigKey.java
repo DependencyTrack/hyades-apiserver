@@ -62,10 +62,10 @@ public enum ConfigKey implements Config.Key {
 
     WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false),
     WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS("workflow.engine.task.dispatcher.min.poll.interval.ms", null),
-    WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS("workflow.engine.buffer.task.action.flush.interval.ms", 5),
-    WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE("workflow.engine.buffer.task.action.max.batch.size", 100),
-    WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS("workflow.engine.buffer.external.event.flush.interval.ms", 10),
-    WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE("workflow.engine.buffer.external.event.max.batch.size", 100),
+    WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS("workflow.engine.buffer.task.action.flush.interval.ms", null),
+    WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE("workflow.engine.buffer.task.action.max.batch.size", null),
+    WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS("workflow.engine.buffer.external.event.flush.interval.ms", null),
+    WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE("workflow.engine.buffer.external.event.max.batch.size", null),
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
