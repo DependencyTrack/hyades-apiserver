@@ -25,8 +25,6 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -37,6 +35,8 @@ import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -94,6 +94,10 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
 
         if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+                return;
+            }
+
             LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
             System.exit(0);
         }

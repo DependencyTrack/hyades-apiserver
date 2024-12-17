@@ -53,6 +53,8 @@ import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
+import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Jdbi;
@@ -912,12 +914,32 @@ public class WorkflowEngine implements Closeable {
     }
 
     // TODO: This should not return an internal persistence model.
-    WorkflowRunRow getRun(final UUID runId) {
+    public WorkflowRunRow getRun(final UUID runId) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
     }
 
-    List<WorkflowEvent> getRunJournal(final UUID runId) {
+    // TODO: This should not return an internal persistence model.
+    public List<WorkflowRunListRow> getRunListPage(
+            final String workflowNameFilter,
+            final WorkflowRunStatus statusFilter,
+            final String concurrencyGroupIdFilter,
+            final Set<String> tagsFilter,
+            final int offset,
+            final int limit) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunListPage(
+                workflowNameFilter, statusFilter, concurrencyGroupIdFilter, tagsFilter, offset, limit));
+    }
+
+    public List<WorkflowEvent> getRunJournal(final UUID runId) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunJournal(runId));
+    }
+
+    public List<WorkflowEvent> getRunInbox(final UUID runId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunInbox(runId));
+    }
+
+    public List<WorkflowRunCountByNameAndStatusRow> getRunStats() {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
     }
 
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRun run) {

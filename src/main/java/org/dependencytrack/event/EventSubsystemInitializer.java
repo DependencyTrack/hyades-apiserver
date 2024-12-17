@@ -89,6 +89,10 @@ public class EventSubsystemInitializer implements ServletContextListener {
      */
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            return;
+        }
+
         LOGGER.info("Initializing asynchronous event subsystem");
 
         EVENT_SERVICE.subscribe(BomUploadEvent.class, BomUploadProcessingTask.class);

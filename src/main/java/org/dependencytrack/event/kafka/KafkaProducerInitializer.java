@@ -49,6 +49,10 @@ public class KafkaProducerInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            return;
+        }
+
         LOGGER.info("Initializing Kafka producer");
 
         PRODUCER = createProducer();
