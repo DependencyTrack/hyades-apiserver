@@ -55,6 +55,8 @@ import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.postgres.PostgresPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,9 +84,6 @@ import java.util.stream.Stream;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class WorkflowEngine implements Closeable {
 
@@ -128,6 +127,7 @@ public class WorkflowEngine implements Closeable {
     private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
 
     private final WorkflowEngineConfig config;
+    private final Jdbi jdbi;
     private final ReentrantLock stateLock = new ReentrantLock();
     private State state = State.CREATED;
     private ExecutorService taskDispatcherExecutor;
@@ -137,6 +137,9 @@ public class WorkflowEngine implements Closeable {
 
     public WorkflowEngine(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
+        this.jdbi = Jdbi
+                .create(config.dataSource())
+                .installPlugin(new PostgresPlugin());
     }
 
     public void start() {
@@ -383,7 +386,7 @@ public class WorkflowEngine implements Closeable {
                                 /* nextRunId */ entry.getValue()))
                         .toList();
 
-        return inJdbiTransaction(handle -> {
+        return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final List<UUID> createdRunIds = dao.createRuns(newWorkflowRunRows);
@@ -425,7 +428,7 @@ public class WorkflowEngine implements Closeable {
         // TODO: Assert that current run status is not terminal,
         //  and no runCancelled event is pending already.
 
-        useJdbiTransaction(handle -> {
+        jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
@@ -444,7 +447,7 @@ public class WorkflowEngine implements Closeable {
         // TODO: Assert that current run status is not suspended or terminal,
         //  and no runSuspended event is pending already.
 
-        useJdbiTransaction(handle -> {
+        jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
@@ -463,7 +466,7 @@ public class WorkflowEngine implements Closeable {
         // TODO: Assert that current run status is suspended,
         //  and no runResumed event is pending already.
 
-        useJdbiTransaction(handle -> {
+        jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
@@ -488,7 +491,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
-        useJdbiTransaction(handle -> {
+        jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final var now = Timestamps.now();
@@ -509,7 +512,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     List<WorkflowTask> pollWorkflowTasks(final String workflowName, final int limit, final Duration taskLockTimeout) {
-        return inJdbiTransaction(handle -> {
+        return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             final Map<UUID, PolledWorkflowRunRow> polledRunById =
@@ -764,7 +767,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     List<ActivityTask> pollActivityTasks(final String activityName, final int limit, final Duration lockTimeout) {
-        return inJdbiTransaction(handle -> {
+        return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             return dao.pollAndLockActivityTasks(this.config.instanceId(), activityName, lockTimeout, limit).stream()
@@ -870,7 +873,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
-        final Instant newLockTimeout = inJdbiTransaction(
+        final Instant newLockTimeout = jdbi.inTransaction(
                 handle -> new WorkflowDao(handle).extendActivityTaskLock(
                         this.config.instanceId(), taskId, lockTimeout));
         assert newLockTimeout != null;
@@ -878,7 +881,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     private void processTaskActions(final List<TaskAction> actions) {
-        useJdbiTransaction(handle -> {
+        jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
             // TODO: Group by action and process them using batch queries.
@@ -910,11 +913,11 @@ public class WorkflowEngine implements Closeable {
 
     // TODO: This should not return an internal persistence model.
     WorkflowRunRow getRun(final UUID runId) {
-        return withJdbiHandle(handle -> new WorkflowDao(handle).getRun(runId));
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
     }
 
     List<WorkflowEvent> getRunJournal(final UUID runId) {
-        return withJdbiHandle(handle -> new WorkflowDao(handle).getRunJournal(runId));
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunJournal(runId));
     }
 
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRun run) {

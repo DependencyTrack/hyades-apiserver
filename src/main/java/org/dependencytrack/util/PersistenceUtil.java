@@ -19,10 +19,16 @@
 package org.dependencytrack.util;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.datanucleus.store.connection.ConnectionManagerImpl;
+import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
+import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.postgresql.util.PSQLState;
 
 import javax.jdo.JDOHelper;
 import javax.jdo.ObjectState;
+import javax.jdo.PersistenceManager;
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,6 +43,7 @@ import static javax.jdo.ObjectState.PERSISTENT_CLEAN;
 import static javax.jdo.ObjectState.PERSISTENT_DIRTY;
 import static javax.jdo.ObjectState.PERSISTENT_NEW;
 import static javax.jdo.ObjectState.PERSISTENT_NONTRANSACTIONAL_DIRTY;
+import static org.apache.commons.lang3.reflect.FieldUtils.readField;
 
 public final class PersistenceUtil {
 
@@ -166,6 +173,22 @@ public final class PersistenceUtil {
                 || objectState == PERSISTENT_NEW
                 || objectState == PERSISTENT_NONTRANSACTIONAL_DIRTY
                 || objectState == HOLLOW_PERSISTENT_NONTRANSACTIONAL;
+    }
+
+    public static DataSource getDataSource(final PersistenceManager pm) {
+        try {
+            if (pm.getPersistenceManagerFactory() instanceof final JDOPersistenceManagerFactory jdoPmf
+                && jdoPmf.getNucleusContext().getStoreManager() instanceof final RDBMSStoreManager storeManager
+                && storeManager.getConnectionManager() instanceof final ConnectionManagerImpl connectionManager
+                && readField(connectionManager, "primaryConnectionFactory", true) instanceof ConnectionFactoryImpl connectionFactory
+                && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
+                return dataSource;
+            }
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
+        }
+
+        throw new IllegalStateException("Failed to access primary datasource of PMF");
     }
 
 }

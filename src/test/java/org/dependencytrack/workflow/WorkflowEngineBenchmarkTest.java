@@ -26,6 +26,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.util.PersistenceUtil;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.After;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +74,9 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
         statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 3, 5, TimeUnit.SECONDS);
 
-        final var engineConfig = new WorkflowEngineConfig();
+        final var engineConfig = new WorkflowEngineConfig(
+                UUID.randomUUID(),
+                PersistenceUtil.getDataSource(qm.getPersistenceManager()));
         engineConfig.taskActionBuffer().setFlushInterval(Duration.ofMillis(3));
         engineConfig.taskActionBuffer().setMaxBatchSize(250);
         engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));

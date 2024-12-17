@@ -61,6 +61,9 @@ public enum ConfigKey implements Config.Key {
     INIT_AND_EXIT("init.and.exit", false),
 
     WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false),
+    WORKFLOW_ENGINE_DATABASE_URL("workflow.engine.database.url", null),
+    WORKFLOW_ENGINE_DATABASE_USERNAME("workflow.engine.database.username", null),
+    WORKFLOW_ENGINE_DATABASE_PASSWORD("workflow.engine.database.password", null),
     WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS("workflow.engine.workflow.task.dispatcher.min.poll.interval.ms", null),
     WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS("workflow.engine.activity.task.dispatcher.min.poll.interval.ms", null),
     WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS("workflow.engine.buffer.task.action.flush.interval.ms", null),

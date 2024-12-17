@@ -62,6 +62,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
 
         try {
             MigrationInitializer.runMigration(dataSource);
+            org.dependencytrack.workflow.persistence.Migration.run(dataSource);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }
