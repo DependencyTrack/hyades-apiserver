@@ -37,7 +37,6 @@ import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.annotation.Activity;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
-import org.jdbi.v3.json.Json;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.springett.parsers.cpe.Cpe;
@@ -48,6 +47,7 @@ import us.springett.parsers.cpe.values.Part;
 
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -136,6 +136,8 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
     }
 
     private Map<Long, Set<Vulnerability>> analyzeComponents(final List<ScannableComponent> components) {
+        LOGGER.info("Analyzing batch of {} components", components.size());
+
         final var componentIdsByCpe = new HashMap<String, List<Long>>();
         final var componentIdsByPurl = new HashMap<String, List<Long>>();
 
@@ -171,39 +173,59 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             }
         }
 
-        final Map<Integer, List<VulnerabilityCriteria>> criteriaByConditionIndex;
+        final Map<Integer, List<MatchingCriteria>> criteriaByConditionIndex;
         final Timer.Sample criteriaQueryLatencySample = Timer.start();
         try {
-            criteriaByConditionIndex = fetchVulnerabilityCriteria(conditions);
+            criteriaByConditionIndex = fetchMatchingCriteria(conditions);
         } finally {
             if (criteriaQueryLatencyTimer != null) {
                 criteriaQueryLatencySample.stop(criteriaQueryLatencyTimer);
             }
         }
 
-        final var matchedVulnsByConditionIndex = new HashMap<Integer, Set<VulnIdAndSource>>();
-        for (final Map.Entry<Integer, List<VulnerabilityCriteria>> entry : criteriaByConditionIndex.entrySet()) {
+        if (criteriaByConditionIndex == null || criteriaByConditionIndex.isEmpty()) {
+            return components.stream()
+                    .collect(Collectors.toMap(
+                            ScannableComponent::id,
+                            ignored -> Collections.emptySet()));
+        }
+
+        final var matchedCriteriaIdByConditionIndex = new HashMap<Integer, Set<Long>>();
+        for (final Map.Entry<Integer, List<MatchingCriteria>> entry : criteriaByConditionIndex.entrySet()) {
             final int conditionIndex = entry.getKey();
-            final List<VulnerabilityCriteria> criteriaList = entry.getValue();
+            final List<MatchingCriteria> criteriaList = entry.getValue();
 
             final String cpe = cpeByConditionIndex.get(conditionIndex);
             if (cpe != null) {
-                final Set<VulnIdAndSource> matchedVulns = evaluateCriteriaForCpe(cpe, criteriaList);
-                matchedVulnsByConditionIndex.put(conditionIndex, matchedVulns);
+                final Set<Long> matchedCriteriaIds = evaluateCriteriaForCpe(cpe, criteriaList);
+                matchedCriteriaIdByConditionIndex.put(conditionIndex, matchedCriteriaIds);
                 continue;
             }
 
             final String purl = purlByConditionIndex.get(conditionIndex);
             if (purl != null) {
-                final Set<VulnIdAndSource> matchedVulns = evaluateCriteriaForPurl(purl, criteriaList);
-                matchedVulnsByConditionIndex.put(conditionIndex, matchedVulns);
+                final Set<Long> matchedCriteriaIds = evaluateCriteriaForPurl(purl, criteriaList);
+                matchedCriteriaIdByConditionIndex.put(conditionIndex, matchedCriteriaIds);
             }
         }
 
+        if (matchedCriteriaIdByConditionIndex.isEmpty()) {
+            return components.stream()
+                    .collect(Collectors.toMap(
+                            ScannableComponent::id,
+                            ignored -> Collections.emptySet()));
+        }
+
+        final Set<Long> uniqueMatchedCriteriaIds = matchedCriteriaIdByConditionIndex.values().stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+        final Map<Long, List<VulnIdAndSource>> vulnsByCriteriaId = fetchVulnerabilitiesByCriteriaIds(uniqueMatchedCriteriaIds);
+
         final Map<Long, Set<Vulnerability>> vulnsByComponentId = new HashMap<>();
-        for (final Map.Entry<Integer, Set<VulnIdAndSource>> entry : matchedVulnsByConditionIndex.entrySet()) {
+        for (final Map.Entry<Integer, Set<Long>> entry : matchedCriteriaIdByConditionIndex.entrySet()) {
             final int conditionIndex = entry.getKey();
             final List<Vulnerability> matchedVulns = entry.getValue().stream()
+                    .flatMap(criteriaId -> vulnsByCriteriaId.getOrDefault(criteriaId, Collections.emptyList()).stream())
                     .map(vulnIdAndSource -> Vulnerability.newBuilder()
                             .setId(vulnIdAndSource.vulnId())
                             .setSource(Source.newBuilder().setName(vulnIdAndSource.source()).build())
@@ -400,7 +422,7 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
                 params);
     }
 
-    public record VulnerabilityCriteria(
+    public record MatchingCriteria(
             int conditionIndex,
             long id,
             @Nullable String cpe23,
@@ -408,15 +430,10 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             @Nullable String versionEndExcluding,
             @Nullable String versionEndIncluding,
             @Nullable String versionStartExcluding,
-            @Nullable String versionStartIncluding,
-            @Json Set<VulnIdAndSource> vulnerabilities) {
+            @Nullable String versionStartIncluding) {
     }
 
-    public record VulnIdAndSource(String vulnId, String source) {
-    }
-
-    // TODO: Consider getting rid of the subquery and only fetching vulns when the respective criteria matched.
-    private Map<Integer, List<VulnerabilityCriteria>> fetchVulnerabilityCriteria(
+    private Map<Integer, List<MatchingCriteria>> fetchMatchingCriteria(
             final List<QueryFilterCondition> conditions) {
         final var subQueries = new ArrayList<String>(conditions.size());
         final var params = new HashMap<String, Object>();
@@ -431,11 +448,6 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
                          , "VERSIONENDINCLUDING"
                          , "VERSIONSTARTEXCLUDING"
                          , "VERSIONSTARTINCLUDING"
-                         , (SELECT JSON_AGG(JSON_BUILD_OBJECT('vulnId', "V"."VULNID", 'source', "V"."SOURCE"))
-                              FROM "VULNERABLESOFTWARE_VULNERABILITIES" AS "VSV"
-                             INNER JOIN "VULNERABILITY" AS "V"
-                                ON "V"."ID" = "VSV"."VULNERABILITY_ID"
-                             WHERE "VSV"."VULNERABLESOFTWARE_ID" = "VULNERABLESOFTWARE"."ID") AS "VULNERABILITIES"
                       FROM "VULNERABLESOFTWARE"
                      WHERE %s""".formatted(
                     condition.index(), condition.conditionStr()));
@@ -444,10 +456,10 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
 
         final String queryStr = String.join(" UNION ALL ", subQueries);
 
-        final List<VulnerabilityCriteria> criteriaList = withJdbiHandle(
+        final List<MatchingCriteria> criteriaList = withJdbiHandle(
                 handle -> handle.createQuery(queryStr)
                         .bindMap(params)
-                        .map(ConstructorMapper.of(VulnerabilityCriteria.class))
+                        .map(ConstructorMapper.of(MatchingCriteria.class))
                         .list());
 
         if (criteriaCountDistribution != null) {
@@ -456,13 +468,13 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
 
         return criteriaList.stream()
                 .collect(Collectors.groupingBy(
-                        VulnerabilityCriteria::conditionIndex,
+                        MatchingCriteria::conditionIndex,
                         Collectors.toList()));
     }
 
-    private Set<VulnIdAndSource> evaluateCriteriaForCpe(
+    private Set<Long> evaluateCriteriaForCpe(
             final String cpeStr,
-            final List<VulnerabilityCriteria> criteriaList) {
+            final List<MatchingCriteria> criteriaList) {
         final Cpe targetCpe;
         try {
             targetCpe = CpeParser.parse(cpeStr);
@@ -475,13 +487,13 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
         return criteriaList.stream()
                 .filter(criteria -> matchesCpe(criteria, targetCpe))
                 .filter(criteria -> compareVersions(criteria, targetCpe.getVersion()))
-                .flatMap(criteria -> criteria.vulnerabilities().stream())
+                .map(MatchingCriteria::id)
                 .collect(Collectors.toSet());
     }
 
-    private Set<VulnIdAndSource> evaluateCriteriaForPurl(
+    private Set<Long> evaluateCriteriaForPurl(
             final String purlStr,
-            final List<VulnerabilityCriteria> criteriaList) {
+            final List<MatchingCriteria> criteriaList) {
         final PackageURL purl;
         try {
             purl = new PackageURL(purlStr);
@@ -492,11 +504,35 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
 
         return criteriaList.stream()
                 .filter(criteria -> compareVersions(criteria, purl.getVersion()))
-                .flatMap(criteria -> criteria.vulnerabilities().stream())
+                .map(MatchingCriteria::id)
                 .collect(Collectors.toSet());
     }
 
-    private boolean matchesCpe(final VulnerabilityCriteria criteria, final Cpe targetCpe) {
+    public record VulnIdAndSource(long criteriaId, String vulnId, String source) {
+    }
+
+    private Map<Long, List<VulnIdAndSource>> fetchVulnerabilitiesByCriteriaIds(final Collection<Long> criteriaIds) {
+        return withJdbiHandle(handle -> {
+            final Query query = handle.createQuery("""
+                    SELECT "VSV"."VULNERABLESOFTWARE_ID" AS "criteriaId"
+                         , "V"."VULNID" AS "vulnId"
+                         , "V"."SOURCE" AS "source"
+                      FROM "VULNERABLESOFTWARE_VULNERABILITIES" AS "VSV"
+                     INNER JOIN "VULNERABILITY" AS "V"
+                        ON "V"."ID" = "VSV"."VULNERABILITY_ID"
+                     WHERE "VSV"."VULNERABLESOFTWARE_ID" = ANY(:criteriaIds)
+                    """);
+
+            return query
+                    .bindArray("criteriaIds", Long.class, criteriaIds)
+                    .map(ConstructorMapper.of(VulnIdAndSource.class))
+                    .stream()
+                    .collect(Collectors.groupingBy(
+                            VulnIdAndSource::criteriaId));
+        });
+    }
+
+    private boolean matchesCpe(final MatchingCriteria criteria, final Cpe targetCpe) {
         if (targetCpe == null || criteria.cpe23() == null) {
             throw new IllegalArgumentException();
         }
@@ -541,7 +577,7 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
         return isMatch;
     }
 
-    static boolean compareVersions(final VulnerabilityCriteria criteria, final String targetVersion) {
+    static boolean compareVersions(final MatchingCriteria criteria, final String targetVersion) {
         //if any of the four conditions will be evaluated - then true;
         boolean result = (criteria.versionEndExcluding() != null && !criteria.versionEndExcluding().isEmpty())
                          || (criteria.versionStartExcluding() != null && !criteria.versionStartExcluding().isEmpty())
