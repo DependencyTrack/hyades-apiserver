@@ -25,6 +25,7 @@ import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.version.ext.ComponentVersion;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.collections4.ListUtils;
 import org.cyclonedx.proto.v1_6.Source;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
@@ -103,6 +104,38 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             return Optional.empty();
         }
 
+        final var vulnsByComponentId = new HashMap<Long, Set<Vulnerability>>(components.size());
+        final List<List<ScannableComponent>> componentBatches = ListUtils.partition(components, 100);
+        for (final List<ScannableComponent> batch : componentBatches) {
+            final Map<Long, Set<Vulnerability>> batchResult = analyzeComponents(batch);
+            vulnsByComponentId.putAll(batchResult);
+        }
+
+        final var resultBuilder = AnalyzeProjectVulnsResult.newBuilder();
+        for (final Map.Entry<Long, Set<Vulnerability>> entry : vulnsByComponentId.entrySet()) {
+            resultBuilder.addResults(
+                    AnalyzeProjectVulnsResult.ComponentResult.newBuilder()
+                            .setComponentId(entry.getKey())
+                            .addAllVulns(entry.getValue())
+                            .build());
+        }
+
+        final FileMetadata resultFileMetadata;
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            resultFileMetadata = fileStorage.store(
+                    "internal-result", resultBuilder.build().toByteArray());
+        }
+
+        return Optional.of(AnalyzeProjectVulnsResultX.newBuilder()
+                .setResultsFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
+                        .setKey(resultFileMetadata.key())
+                        .setSha256(resultFileMetadata.sha256())
+                        .setStorage(resultFileMetadata.storage())
+                        .build())
+                .build());
+    }
+
+    private Map<Long, Set<Vulnerability>> analyzeComponents(final List<ScannableComponent> components) {
         final var componentIdsByCpe = new HashMap<String, List<Long>>();
         final var componentIdsByPurl = new HashMap<String, List<Long>>();
 
@@ -204,28 +237,7 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             }
         }
 
-        final var resultBuilder = AnalyzeProjectVulnsResult.newBuilder();
-        for (final Map.Entry<Long, Set<Vulnerability>> entry : vulnsByComponentId.entrySet()) {
-            resultBuilder.addResults(
-                    AnalyzeProjectVulnsResult.ComponentResult.newBuilder()
-                            .setComponentId(entry.getKey())
-                            .addAllVulns(entry.getValue())
-                            .build());
-        }
-
-        final FileMetadata resultFileMetadata;
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            resultFileMetadata = fileStorage.store(
-                    "internal-result", resultBuilder.build().toByteArray());
-        }
-
-        return Optional.of(AnalyzeProjectVulnsResultX.newBuilder()
-                .setResultsFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
-                        .setKey(resultFileMetadata.key())
-                        .setSha256(resultFileMetadata.sha256())
-                        .setStorage(resultFileMetadata.storage())
-                        .build())
-                .build());
+        return vulnsByComponentId;
     }
 
     public record ScannableComponent(
@@ -295,7 +307,7 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             // | 9   | i               | i          | EQUAL                |
             // | 10  | i               | k          | DISJOINT             |
             // | 14  | m1 + wild cards | m2         | SUPERSET or DISJOINT |
-            filterParts.add("(\"PART\" = '*' OR \"PART\" = :cpePart%d)" .formatted(conditionIndex));
+            filterParts.add("(\"PART\" = '*' OR \"PART\" = :cpePart%d)".formatted(conditionIndex));
             params.put("cpePart" + conditionIndex, cpe.getPart().getAbbreviation());
 
             // NOTE: Target *could* include wildcard, but the relation
@@ -325,19 +337,19 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             filterParts.add("\"PART\" IS NOT NULL");
         }
 
-        if (!"*" .equals(cpe.getVendor()) && !"-" .equals(cpe.getVendor())) {
-            filterParts.add("(\"VENDOR\" = '*' OR \"VENDOR\" = :cpeVendor%d)" .formatted(conditionIndex));
+        if (!"*".equals(cpe.getVendor()) && !"-".equals(cpe.getVendor())) {
+            filterParts.add("(\"VENDOR\" = '*' OR \"VENDOR\" = :cpeVendor%d)".formatted(conditionIndex));
             params.put("cpeVendor" + conditionIndex, cpe.getVendor());
-        } else if ("-" .equals(cpe.getVendor())) {
+        } else if ("-".equals(cpe.getVendor())) {
             filterParts.add("(\"VENDOR\" = '*' OR \"VENDOR\" = '-')");
         } else {
             filterParts.add("\"VENDOR\" IS NOT NULL");
         }
 
-        if (!"*" .equals(cpe.getProduct()) && !"-" .equals(cpe.getProduct())) {
-            filterParts.add("(\"PRODUCT\" = '*' OR \"PRODUCT\" = :cpeProduct%d)" .formatted(conditionIndex));
+        if (!"*".equals(cpe.getProduct()) && !"-".equals(cpe.getProduct())) {
+            filterParts.add("(\"PRODUCT\" = '*' OR \"PRODUCT\" = :cpeProduct%d)".formatted(conditionIndex));
             params.put("product" + conditionIndex, cpe.getProduct());
-        } else if ("-" .equals(cpe.getProduct())) {
+        } else if ("-".equals(cpe.getProduct())) {
             filterParts.add("(\"PRODUCT\" = '*' OR \"PRODUCT\" = '-')");
         } else {
             filterParts.add("\"PRODUCT\" IS NOT NULL");
@@ -403,7 +415,6 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
     public record VulnIdAndSource(String vulnId, String source) {
     }
 
-    // TODO: Probably best to do this in batches.
     // TODO: Consider getting rid of the subquery and only fetching vulns when the respective criteria matched.
     private Map<Integer, List<VulnerabilityCriteria>> fetchVulnerabilityCriteria(
             final List<QueryFilterCondition> conditions) {
@@ -449,7 +460,9 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
                         Collectors.toList()));
     }
 
-    private Set<VulnIdAndSource> evaluateCriteriaForCpe(final String cpeStr, final List<VulnerabilityCriteria> criteriaList) {
+    private Set<VulnIdAndSource> evaluateCriteriaForCpe(
+            final String cpeStr,
+            final List<VulnerabilityCriteria> criteriaList) {
         final Cpe targetCpe;
         try {
             targetCpe = CpeParser.parse(cpeStr);
@@ -466,7 +479,9 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
                 .collect(Collectors.toSet());
     }
 
-    private Set<VulnIdAndSource> evaluateCriteriaForPurl(final String purlStr, final List<VulnerabilityCriteria> criteriaList) {
+    private Set<VulnIdAndSource> evaluateCriteriaForPurl(
+            final String purlStr,
+            final List<VulnerabilityCriteria> criteriaList) {
         final PackageURL purl;
         try {
             purl = new PackageURL(purlStr);
@@ -569,6 +584,7 @@ public class InternalAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
             final ComponentVersion startIncluding = new ComponentVersion(criteria.versionStartIncluding());
             result &= startIncluding.compareTo(target) <= 0;
         }
+
         return result;
     }
 
