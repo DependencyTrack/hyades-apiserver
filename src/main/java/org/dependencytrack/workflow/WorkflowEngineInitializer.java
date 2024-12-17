@@ -21,6 +21,9 @@ package org.dependencytrack.workflow;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import alpine.server.persistence.PersistenceManagerFactory;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
@@ -32,10 +35,15 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsA
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
+import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.workflow.persistence.Migration;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import javax.jdo.PersistenceManager;
+import javax.sql.DataSource;
 import java.time.Duration;
+import java.util.UUID;
 
 import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
@@ -57,7 +65,16 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             throw new IllegalStateException("Workflow engine is already started");
         }
 
-        final var config = new WorkflowEngineConfig();
+        final DataSource dataSource = getEngineDataSource();
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+            Migration.run(dataSource);
+
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+                return;
+            }
+        }
+
+        final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
 
         final int externalEventBufferFlushIntervalMillis = Config.getInstance().getPropertyAsInt(
                 ConfigKey.WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS);
@@ -181,6 +198,28 @@ public class WorkflowEngineInitializer implements ServletContextListener {
     public void contextDestroyed(final ServletContextEvent event) {
         LOGGER.info("Stopping workflow engine");
         stopWorkflowEngine();
+    }
+
+    private static DataSource getEngineDataSource() {
+        final String dedicatedDatabaseUrl = Config.getInstance().getProperty(
+                ConfigKey.WORKFLOW_ENGINE_DATABASE_URL);
+        if (dedicatedDatabaseUrl != null) {
+            final var hikariConfig = new HikariConfig();
+            hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
+            hikariConfig.setJdbcUrl(dedicatedDatabaseUrl);
+            hikariConfig.setUsername(Config.getInstance().getProperty(ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME));
+            hikariConfig.setPassword(Config.getInstance().getProperty(ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD));
+            // TODO: Some more pool properties?
+
+            // TODO: Use pool properties specific to workflow engine.
+            hikariConfig.setMaximumPoolSize(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_SIZE));
+            hikariConfig.setMinimumIdle(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MIN_IDLE));
+            return new HikariDataSource(hikariConfig);
+        }
+
+        try (final PersistenceManager pm = PersistenceManagerFactory.createPersistenceManager()) {
+            return PersistenceUtil.getDataSource(pm);
+        }
     }
 
 }

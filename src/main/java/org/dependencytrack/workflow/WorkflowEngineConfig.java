@@ -21,11 +21,13 @@ package org.dependencytrack.workflow;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 
+import javax.sql.DataSource;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
+import static java.util.Objects.requireNonNull;
 
 public class WorkflowEngineConfig {
 
@@ -79,19 +81,25 @@ public class WorkflowEngineConfig {
 
     }
 
-    private UUID instanceId = UUID.randomUUID();
+    private final UUID instanceId;
+    private final DataSource dataSource;
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskActionBufferConfig = new BufferConfig();
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
     private MeterRegistry meterRegistry;
 
+    public WorkflowEngineConfig(final UUID instanceId, final DataSource dataSource) {
+        this.instanceId = requireNonNull(instanceId, "instanceId must not be null");
+        this.dataSource = requireNonNull(dataSource, "dataSource must not be null");
+    }
+
     public UUID instanceId() {
         return instanceId;
     }
 
-    public void setInstanceId(final UUID instanceId) {
-        this.instanceId = instanceId;
+    public DataSource dataSource() {
+        return dataSource;
     }
 
     public BufferConfig externalEventBuffer() {

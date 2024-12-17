@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.util.PersistenceUtil;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.junit.After;
 import org.junit.Before;
@@ -50,7 +51,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void before() throws Exception {
         super.before();
 
-        engine = new WorkflowEngine(new WorkflowEngineConfig());
+        engine = new WorkflowEngine(new WorkflowEngineConfig(
+                UUID.randomUUID(),
+                PersistenceUtil.getDataSource(qm.getPersistenceManager())));
         engine.start();
     }
 
