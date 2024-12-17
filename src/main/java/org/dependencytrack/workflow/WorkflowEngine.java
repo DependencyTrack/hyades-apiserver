@@ -255,8 +255,8 @@ public class WorkflowEngine implements Closeable {
                 executorService,
                 taskProcessor,
                 maxConcurrency,
-                config.taskDispatcher().minPollInterval(),
-                config.taskDispatcher().pollBackoffIntervalFunction(),
+                config.workflowTaskDispatcher().minPollInterval(),
+                config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
 
         taskDispatcherExecutor.execute(taskDispatcher);
@@ -317,8 +317,8 @@ public class WorkflowEngine implements Closeable {
                 executorService,
                 taskProcessor,
                 maxConcurrency,
-                config.taskDispatcher().minPollInterval(),
-                config.taskDispatcher().pollBackoffIntervalFunction(),
+                config.activityTaskDispatcher().minPollInterval(),
+                config.activityTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
 
         taskDispatcherExecutor.execute(taskDispatcher);

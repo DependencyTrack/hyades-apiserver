@@ -45,6 +45,7 @@ import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ProjectVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.ScheduleProjectAnalysesEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
@@ -206,6 +207,11 @@ public class FindingResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
     public Response analyzePortfolio() {
         LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            Event.dispatch(new ScheduleProjectAnalysesEvent(super.getPrincipal().getName()));
+            return Response.ok().build();
+        }
+
         if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {
             LOGGER.info("Another portfolio analysis event is already being processed; Dropping");
             return Response.status(Response.Status.NOT_MODIFIED).build();

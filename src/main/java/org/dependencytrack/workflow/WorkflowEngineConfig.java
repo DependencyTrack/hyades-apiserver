@@ -82,7 +82,8 @@ public class WorkflowEngineConfig {
     private UUID instanceId = UUID.randomUUID();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskActionBufferConfig = new BufferConfig();
-    private final TaskDispatcherConfig taskDispatcherConfig = new TaskDispatcherConfig();
+    private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
+    private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
     private MeterRegistry meterRegistry;
 
     public UUID instanceId() {
@@ -101,8 +102,12 @@ public class WorkflowEngineConfig {
         return taskActionBufferConfig;
     }
 
-    public TaskDispatcherConfig taskDispatcher() {
-        return taskDispatcherConfig;
+    public TaskDispatcherConfig workflowTaskDispatcher() {
+        return workflowTaskDispatcherConfig;
+    }
+
+    public TaskDispatcherConfig activityTaskDispatcher() {
+        return activityTaskDispatcherConfig;
     }
 
     public MeterRegistry meterRegistry() {

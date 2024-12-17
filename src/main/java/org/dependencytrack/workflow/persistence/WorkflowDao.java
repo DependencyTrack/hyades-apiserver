@@ -251,6 +251,7 @@ public final class WorkflowDao {
                      , "UPDATED_AT" AS "updatedAt"
                      , "STARTED_AT" AS "startedAt"
                      , "COMPLETED_AT" AS "completedAt"
+                     , COUNT(*) OVER() AS "totalCount"
                   FROM "WORKFLOW_RUN"
                  WHERE 1 = 1
                 <#if apiFilterParameter??>
