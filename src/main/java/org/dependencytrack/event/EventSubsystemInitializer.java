@@ -23,8 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
@@ -47,6 +45,7 @@ import org.dependencytrack.tasks.LdapSyncTaskWrapper;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvMirrorTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
+import org.dependencytrack.tasks.ProjectAnalysisSchedulerTask;
 import org.dependencytrack.tasks.RepositoryMetaAnalysisTask;
 import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
@@ -62,6 +61,8 @@ import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.time.Duration;
 
 /**
@@ -115,6 +116,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, IntegrityAnalysisTask.class);
+        EVENT_SERVICE.subscribe(ScheduleProjectAnalysesEvent.class, ProjectAnalysisSchedulerTask.class);
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
@@ -158,6 +160,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
+        EVENT_SERVICE.unsubscribe(ProjectAnalysisSchedulerTask.class);
         EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
 
         EVENT_SERVICE_ST.unsubscribe(ComponentMetadataMaintenanceTask.class);

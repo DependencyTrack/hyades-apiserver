@@ -83,10 +83,15 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             config.taskActionBuffer().setMaxBatchSize(taskActionBufferMaxBatchSize);
         }
 
-        final int taskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
-                ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
-        if (taskDispatcherMinPollIntervalMillis >= 0) {
-            config.taskDispatcher().setMinPollInterval(Duration.ofMillis(taskDispatcherMinPollIntervalMillis));
+        final int workflowTaskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
+        final int activityTaskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
+        if (workflowTaskDispatcherMinPollIntervalMillis >= 0) {
+            config.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(workflowTaskDispatcherMinPollIntervalMillis));
+        }
+        if (activityTaskDispatcherMinPollIntervalMillis >= 0) {
+            config.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(activityTaskDispatcherMinPollIntervalMillis));
         }
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
@@ -101,13 +106,13 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         engine.registerWorkflowRunner(
                 new ProcessBomUploadWorkflow(),
-                /* maxConcurrency */ 25,
+                /* maxConcurrency */ 50,
                 /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerWorkflowRunner(
                 new AnalyzeProjectWorkflow(),
-                /* maxConcurrency */ 25,
+                /* maxConcurrency */ 50,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
@@ -120,7 +125,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new InternalAnalysisActivity(),
-                /* maxConcurrency */ 10,
+                /* maxConcurrency */ 20,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
@@ -144,7 +149,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 new ProjectMetricsUpdateTask(),
-                /* maxConcurrency */ 10,
+                /* maxConcurrency */ 20,
                 /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
