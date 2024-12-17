@@ -67,10 +67,16 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         final DataSource dataSource = getEngineDataSource();
         if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
-            Migration.run(dataSource);
+            try {
+                Migration.run(dataSource);
+            } catch (Throwable t) {
+                LOGGER.error("Failed execute workflow engine database migrations", t);
+                System.exit(1);
+            }
 
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
-                return;
+                LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
+                System.exit(0);
             }
         }
 

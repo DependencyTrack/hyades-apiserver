@@ -44,7 +44,6 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.workflow.WorkflowRunStatus;
-import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
@@ -66,7 +65,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 
 @Path("/v1/workflow")
@@ -137,20 +136,16 @@ public class WorkflowResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @AuthenticationNotRequired // TODO
     public Response getWorkflowRunStats() {
-        return withJdbiHandle(handle -> {
-            final var dao = new WorkflowDao(handle);
+        final Map<String, Map<WorkflowRunStatus, Long>> statusesByName =
+                workflowEngine().getRunStats().stream()
+                        .collect(Collectors.groupingBy(
+                                WorkflowRunCountByNameAndStatusRow::workflowName,
+                                Collectors.toMap(
+                                        WorkflowRunCountByNameAndStatusRow::status,
+                                        WorkflowRunCountByNameAndStatusRow::count)));
 
-            final Map<String, Map<WorkflowRunStatus, Long>> statusesByName =
-                    dao.getRunCountByNameAndStatus().stream()
-                            .collect(Collectors.groupingBy(
-                                    WorkflowRunCountByNameAndStatusRow::workflowName,
-                                    Collectors.toMap(
-                                            WorkflowRunCountByNameAndStatusRow::status,
-                                            WorkflowRunCountByNameAndStatusRow::count)));
-
-            final var stats = new WorkflowRunStats(statusesByName);
-            return Response.ok(stats).build();
-        });
+        final var stats = new WorkflowRunStats(statusesByName);
+        return Response.ok(stats).build();
     }
 
     @GET
@@ -163,12 +158,11 @@ public class WorkflowResource extends AlpineResource {
             @QueryParam("concurrencyGroupId") final String concurrencyGroupIdFilter) {
         assertWorkflowEngineEnabled();
 
-        return withJdbiHandle(getAlpineRequest(), handle -> getWorkflowRunsInternal(
-                new WorkflowDao(handle),
+        return getWorkflowRunsInternal(
                 workflowNameFilter,
                 statusFilter,
                 concurrencyGroupIdFilter,
-                /* tagsFilter */ null));
+                /* tagsFilter */ null);
     }
 
     @GET
@@ -182,36 +176,35 @@ public class WorkflowResource extends AlpineResource {
             @QueryParam("concurrencyGroupId") final String concurrencyGroupIdFilter) {
         assertWorkflowEngineEnabled();
 
-        return withJdbiHandle(handle -> {
+        useJdbiHandle(handle -> {
             final var projectDao = handle.attach(ProjectDao.class);
             final Boolean isProjectAccessible = projectDao.isAccessible(UUID.fromString(projectUuid));
             if (isProjectAccessible == null) {
-                return Response.status(Response.Status.NOT_FOUND).build();
+                throw new ClientErrorException(Response.status(Response.Status.NOT_FOUND).build());
             } else if (!isProjectAccessible) {
-                return Response.status(Response.Status.FORBIDDEN).build();
+                throw new ClientErrorException(Response.status(Response.Status.FORBIDDEN).build());
             }
-
-            final var workflowDao = new WorkflowDao(handle);
-            return getWorkflowRunsInternal(
-                    workflowDao,
-                    workflowNameFilter,
-                    statusFilter,
-                    concurrencyGroupIdFilter,
-                    Set.of("project=" + projectUuid));
         });
+
+        return getWorkflowRunsInternal(
+                workflowNameFilter,
+                statusFilter,
+                concurrencyGroupIdFilter,
+                Set.of("project=" + projectUuid));
     }
 
     private Response getWorkflowRunsInternal(
-            final WorkflowDao dao,
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
             final Set<String> tagsFilter) {
-        final List<WorkflowRunListRow> runRows = dao.getRunListPage(
-                        workflowNameFilter,
-                        statusFilter,
-                        concurrencyGroupIdFilter,
-                        tagsFilter);
+        final List<WorkflowRunListRow> runRows = workflowEngine().getRunListPage(
+                workflowNameFilter,
+                statusFilter,
+                concurrencyGroupIdFilter,
+                tagsFilter,
+                getAlpineRequest().getPagination().getOffset(),
+                getAlpineRequest().getPagination().getLimit());
         final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
                 .map(runRow -> new WorkflowRunListResponseItem(
                         runRow.id(),
@@ -259,35 +252,29 @@ public class WorkflowResource extends AlpineResource {
 
         final UUID runId = UUID.fromString(runIdStr);
 
-        final WorkflowRunResponse run = withJdbiHandle(handle -> {
-            final var dao = new WorkflowDao(handle);
+        final WorkflowRunRow runRow = workflowEngine().getRun(runId);
+        if (runRow == null) {
+            throw new ClientErrorException(Response.Status.NOT_FOUND);
+        }
 
-            final WorkflowRunRow runRow = dao.getRun(runId);
-            if (runRow == null) {
-                throw new ClientErrorException(Response.Status.NOT_FOUND);
-            }
+        final List<WorkflowEvent> journal = workflowEngine().getRunJournal(runId);
+        final List<WorkflowEvent> inbox = workflowEngine().getRunInbox(runId);
 
-            final List<WorkflowEvent> journal = dao.getRunJournal(runId);
-            final List<WorkflowEvent> inbox = dao.getRunInbox(runId);
-
-            return new WorkflowRunResponse(
-                    runRow.id(),
-                    runRow.workflowName(),
-                    runRow.workflowVersion(),
-                    runRow.customStatus(),
-                    runRow.status(),
-                    runRow.priority(),
-                    runRow.tags(),
-                    runRow.lockedBy(),
-                    runRow.lockedUntil(),
-                    runRow.createdAt(),
-                    runRow.updatedAt(),
-                    runRow.completedAt(),
-                    journal,
-                    inbox);
-        });
-
-        return Response.ok(run).build();
+        return Response.ok(new WorkflowRunResponse(
+                runRow.id(),
+                runRow.workflowName(),
+                runRow.workflowVersion(),
+                runRow.customStatus(),
+                runRow.status(),
+                runRow.priority(),
+                runRow.tags(),
+                runRow.lockedBy(),
+                runRow.lockedUntil(),
+                runRow.createdAt(),
+                runRow.updatedAt(),
+                runRow.completedAt(),
+                journal,
+                inbox)).build();
     }
 
     @POST

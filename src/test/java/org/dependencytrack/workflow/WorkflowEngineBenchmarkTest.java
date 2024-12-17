@@ -139,10 +139,10 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 .untilAsserted(() -> {
                     final boolean isAllRunsCompleted = withJdbiHandle(
                             handle -> handle.createQuery("""
-                                            SELECT NOT EXISTS (
-                                                SELECT 1
-                                                  FROM "WORKFLOW_RUN"
-                                                 WHERE "STATUS" != 'COMPLETED')
+                                            select not exists (
+                                                select 1
+                                                  from workflow_run
+                                                 where status != 'COMPLETED')
                                             """)
                                     .mapTo(Boolean.class)
                                     .one());

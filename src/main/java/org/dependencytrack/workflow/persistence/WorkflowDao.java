@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.persistence;
 
-import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowRunStatus;
@@ -74,40 +73,40 @@ public final class WorkflowDao {
 
     public List<UUID> createRuns(final Collection<NewWorkflowRunRow> newRuns) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_RUN" (
-                  "ID"
-                , "PARENT_ID"
-                , "WORKFLOW_NAME"
-                , "WORKFLOW_VERSION"
-                , "CONCURRENCY_GROUP_ID"
-                , "PRIORITY"
-                , "TAGS"
+                insert into workflow_run (
+                  id
+                , parent_id
+                , workflow_name
+                , workflow_version
+                , concurrency_group_id
+                , priority
+                , tags
                 )
-                SELECT "ID"
-                     , "PARENT_ID"
-                     , "WORKFLOW_NAME"
-                     , "WORKFLOW_VERSION"
-                     , "CONCURRENCY_GROUP_ID"
-                     , "PRIORITY"
-                     , (SELECT ARRAY_AGG("TAG")
-                          FROM JSON_ARRAY_ELEMENTS_TEXT("TAGS") AS "TAG") AS "TAGS"
-                  FROM UNNEST (
+                select id
+                     , parent_id
+                     , workflow_name
+                     , workflow_version
+                     , concurrency_group_id
+                     , priority
+                     , (select array_agg(tag)
+                          from json_array_elements_text(tags) as tag) as tags
+                  from unnest (
                          :ids
                        , :parentIds
                        , :workflowNames
                        , :workflowVersions
                        , :concurrencyGroupIds
                        , :priorities
-                       , CAST(:tagsJsons AS JSON[])
-                       ) AS "NEW_RUN" (
-                         "ID"
-                       , "PARENT_ID"
-                       , "WORKFLOW_NAME"
-                       , "WORKFLOW_VERSION"
-                       , "CONCURRENCY_GROUP_ID"
-                       , "PRIORITY"
-                       , "TAGS")
-                RETURNING "ID"
+                       , cast(:tagsJsons as json[])
+                       ) as new_run (
+                         id
+                       , parent_id
+                       , workflow_name
+                       , workflow_version
+                       , concurrency_group_id
+                       , priority
+                       , tags)
+                returning id
                 """);
 
         final var ids = new ArrayList<UUID>(newRuns.size());
@@ -148,7 +147,7 @@ public final class WorkflowDao {
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
                 .bindArray("tagsJsons", String.class, tagsJsons)
-                .executeAndReturnGeneratedKeys("ID")
+                .executeAndReturnGeneratedKeys("id")
                 .mapTo(UUID.class)
                 .list();
     }
@@ -158,12 +157,12 @@ public final class WorkflowDao {
         // existing NEXT_RUN_ID is already being worked on, even if it technically orders
         // *after* the run ID we're trying to insert here.
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_CONCURRENCY_GROUP" (
-                  "ID"
-                , "NEXT_RUN_ID"
+                insert into workflow_concurrency_group (
+                  id
+                , next_run_id
                 )
-                SELECT * FROM UNNEST(:groupIds, :nextRunIds)
-                ON CONFLICT ("ID") DO NOTHING
+                select * from unnest(:groupIds, :nextRunIds)
+                on conflict (id) do nothing
                 """);
 
         final var groupIds = new ArrayList<String>(concurrencyGroups.size());
@@ -181,44 +180,44 @@ public final class WorkflowDao {
 
     public Map<String, String> updateConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
         final Query query = jdbiHandle.createQuery("""
-                WITH
-                "CTE_NEXT_RUN" AS (
-                    SELECT DISTINCT ON ("CONCURRENCY_GROUP_ID")
-                           "CONCURRENCY_GROUP_ID"
-                         , "ID"
-                      FROM "WORKFLOW_RUN"
-                     WHERE "CONCURRENCY_GROUP_ID" = ANY(:groupIds)
-                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
-                     ORDER BY "CONCURRENCY_GROUP_ID"
-                            , "PRIORITY" DESC NULLS LAST
-                            , "CREATED_AT"
+                with
+                cte_next_run as (
+                    select distinct on (concurrency_group_id)
+                           concurrency_group_id
+                         , id
+                      from workflow_run
+                     where concurrency_group_id = any(:groupIds)
+                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[])
+                     order by concurrency_group_id
+                            , priority desc nulls last
+                            , created_at
                 ),
-                "CTE_UPDATED_GROUP" AS (
-                    UPDATE "WORKFLOW_CONCURRENCY_GROUP"
-                       SET "NEXT_RUN_ID" = "CTE_NEXT_RUN"."ID"
-                      FROM "CTE_NEXT_RUN"
-                     WHERE "WORKFLOW_CONCURRENCY_GROUP"."ID" = "CTE_NEXT_RUN"."CONCURRENCY_GROUP_ID"
-                    RETURNING "WORKFLOW_CONCURRENCY_GROUP"."ID"
+                cte_updated_group as (
+                    update workflow_concurrency_group
+                       set next_run_id = cte_next_run.id
+                      from cte_next_run
+                     where workflow_concurrency_group.id = cte_next_run.concurrency_group_id
+                    returning workflow_concurrency_group.id
                 ),
-                "CTE_DELETED_GROUP" AS (
-                   DELETE
-                     FROM "WORKFLOW_CONCURRENCY_GROUP"
-                    WHERE "ID" = ANY(:groupIds)
-                      AND "ID" != ALL(SELECT "ID" FROM "CTE_UPDATED_GROUP")
-                   RETURNING "ID"
+                cte_deleted_group as (
+                   delete
+                     from workflow_concurrency_group
+                    where id = any(:groupIds)
+                      and id != all(select id from cte_updated_group)
+                   returning id
                 )
-                SELECT "ID"
-                     , 'UPDATED' AS "STATUS"
-                  FROM "CTE_UPDATED_GROUP"
-                 UNION ALL
-                SELECT "ID"
-                     , 'DELETED' AS "STATUS"
-                  FROM "CTE_DELETED_GROUP"
+                select id
+                     , 'UPDATED' as status
+                  from cte_updated_group
+                 union all
+                select id
+                     , 'DELETED' as status
+                  from cte_deleted_group
                 """);
 
         return query
-                .setMapKeyColumn("ID")
-                .setMapValueColumn("STATUS")
+                .setMapKeyColumn("id")
+                .setMapValueColumn("status")
                 .bindArray("groupIds", String.class, concurrencyGroupIds)
                 .collectInto(new GenericType<>() {
                 });
@@ -228,78 +227,53 @@ public final class WorkflowDao {
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
-            final Set<String> tagsFilter) {
-        // TODO: Make apiFilterParameter work with ID, without risking type errors
-        //  in case the provided value is not a valid UUID.
-        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
-                <#-- @ftlvariable name="apiFilterParameter" type="String" -->
-                <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-                <#-- @ftlvariable name="apiOrderByClause" type="String" -->
-                <#-- @ftlvariable name="workflowNameFilter" type="Boolean" -->
-                <#-- @ftlvariable name="statusFilter" type="Boolean" -->
-                <#-- @ftlvariable name="concurrencyGroupIdFilter" type="Boolean" -->
-                <#-- @ftlvariable name="tagsFilter" type="Boolean" -->
-                SELECT "ID" AS "id"
-                     , "WORKFLOW_NAME" AS "workflowName"
-                     , "WORKFLOW_VERSION" AS "workflowVersion"
-                     , "STATUS" AS "status"
-                     , "CUSTOM_STATUS" AS "customStatus"
-                     , "CONCURRENCY_GROUP_ID" AS "concurrencyGroupId"
-                     , "PRIORITY" AS "priority"
-                     , "TAGS" AS "tags"
-                     , "CREATED_AT" AS "createdAt"
-                     , "UPDATED_AT" AS "updatedAt"
-                     , "STARTED_AT" AS "startedAt"
-                     , "COMPLETED_AT" AS "completedAt"
-                     , COUNT(*) OVER() AS "totalCount"
-                  FROM "WORKFLOW_RUN"
-                 WHERE 1 = 1
-                <#if apiFilterParameter??>
-                   AND "WORKFLOW_NAME" LIKE ('%' || ${apiFilterParameter} || '%')
-                </#if>
-                <#if workflowNameFilter>
-                   AND "WORKFLOW_NAME" = :workflowNameFilter
-                </#if>
-                <#if statusFilter>
-                   AND "STATUS" = :statusFilter
-                </#if>
-                <#if concurrencyGroupIdFilter>
-                   AND "CONCURRENCY_GROUP_ID" = :concurrencyGroupIdFilter
-                </#if>
-                <#if tagsFilter>
-                   AND "TAGS" @> CAST(:tagsFilter AS TEXT[])
-                </#if>
-                ${apiOrderByClause!}
-                ${apiOffsetLimitClause!}
+            final Set<String> tagsFilter,
+            final int offset,
+            final int limit) {
+        // TODO: Ordering by user-defined field.
+        final Query query = jdbiHandle.createQuery("""
+                select id as id
+                     , workflow_name
+                     , workflow_version
+                     , status
+                     , custom_status
+                     , concurrency_group_id
+                     , priority
+                     , tags
+                     , created_at
+                     , updated_at
+                     , started_at
+                     , completed_at
+                     , count(*) over() as total_count
+                  from workflow_run
+                 where 1 = 1
+                   and (:workflowNameFilter IS NULL OR workflow_name = :workflowNameFilter)
+                   and (cast(:statusFilter as workflow_run_status) IS NULL OR status = cast(:statusFilter as workflow_run_status))
+                   and (:concurrencyGroupIdFilter IS NULL OR concurrency_group_id = :concurrencyGroupIdFilter)
+                   and (cast(:tagsFilter as text[]) IS NULL OR tags @> cast(:tagsFilter as text[]))
+                 order by updated_at desc nulls last
+                offset :offset fetch next :limit rows only
                 """);
 
         return query
-                .configure(ApiRequestConfig.class, apiRequestConfig ->
-                        apiRequestConfig.setOrderingAllowedColumns(Set.of(
-                                new ApiRequestConfig.OrderingColumn("id"),
-                                new ApiRequestConfig.OrderingColumn("workflowName"),
-                                new ApiRequestConfig.OrderingColumn("priority"),
-                                new ApiRequestConfig.OrderingColumn("concurrencyGroupId"),
-                                new ApiRequestConfig.OrderingColumn("createdAt"),
-                                new ApiRequestConfig.OrderingColumn("updatedAt"),
-                                new ApiRequestConfig.OrderingColumn("completedAt"))))
                 .bind("workflowNameFilter", workflowNameFilter)
                 .bind("statusFilter", statusFilter)
                 .bind("concurrencyGroupIdFilter", concurrencyGroupIdFilter)
                 .bindArray("tagsFilter", String.class, tagsFilter)
-                .defineNamedBindings()
+                .bind("offset", offset)
+                .bind("limit", limit)
                 .map(ConstructorMapper.of(WorkflowRunListRow.class))
                 .list();
     }
 
     public List<WorkflowRunCountByNameAndStatusRow> getRunCountByNameAndStatus() {
         final Query query = jdbiHandle.createQuery("""
-                SELECT "WORKFLOW_NAME"
-                     , "STATUS"
-                     , COUNT(*)
-                  FROM "WORKFLOW_RUN"
-                 GROUP BY "WORKFLOW_NAME"
-                        , "STATUS";
+                select workflow_name
+                     , status
+                     , count(*)
+                  from workflow_run
+                 group by workflow_name
+                        , status
                 """);
 
         return query
@@ -311,16 +285,16 @@ public final class WorkflowDao {
             final UUID workerInstanceId,
             final Collection<WorkflowRunRowUpdate> runUpdates) {
         final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_RUN"
-                   SET "STATUS" = COALESCE("RUN_UPDATE"."STATUS", "WORKFLOW_RUN"."STATUS")
-                     , "CUSTOM_STATUS" = COALESCE("RUN_UPDATE"."CUSTOM_STATUS", "WORKFLOW_RUN"."CUSTOM_STATUS")
-                     , "LOCKED_BY" = NULL
-                     , "LOCKED_UNTIL" = NULL
-                     , "CREATED_AT" = COALESCE("RUN_UPDATE"."CREATED_AT", "WORKFLOW_RUN"."CREATED_AT")
-                     , "UPDATED_AT" = COALESCE("RUN_UPDATE"."UPDATED_AT", "WORKFLOW_RUN"."UPDATED_AT")
-                     , "STARTED_AT" = COALESCE("RUN_UPDATE"."STARTED_AT", "WORKFLOW_RUN"."STARTED_AT")
-                     , "COMPLETED_AT" = COALESCE("RUN_UPDATE"."COMPLETED_AT", "WORKFLOW_RUN"."COMPLETED_AT")
-                  FROM UNNEST (
+                update workflow_run
+                   set status = coalesce(run_update.status, workflow_run.status)
+                     , custom_status = coalesce(run_update.custom_status, workflow_run.custom_status)
+                     , locked_by = null
+                     , locked_until = null
+                     , created_at = coalesce(run_update.created_at, workflow_run.created_at)
+                     , updated_at = coalesce(run_update.updated_at, workflow_run.updated_at)
+                     , started_at = coalesce(run_update.started_at, workflow_run.started_at)
+                     , completed_at = coalesce(run_update.completed_at, workflow_run.completed_at)
+                  from unnest (
                          :ids
                        , :statuses
                        , :customStatuses
@@ -328,17 +302,17 @@ public final class WorkflowDao {
                        , :updatedAts
                        , :startedAts
                        , :completedAts
-                       ) AS "RUN_UPDATE" (
-                         "ID"
-                       , "STATUS"
-                       , "CUSTOM_STATUS"
-                       , "CREATED_AT"
-                       , "UPDATED_AT"
-                       , "STARTED_AT"
-                       , "COMPLETED_AT")
-                 WHERE "WORKFLOW_RUN"."ID" = "RUN_UPDATE"."ID"
-                   AND "WORKFLOW_RUN"."LOCKED_BY" = :workerInstanceId
-                RETURNING "WORKFLOW_RUN"."ID"
+                       ) as run_update (
+                         id
+                       , status
+                       , custom_status
+                       , created_at
+                       , updated_at
+                       , started_at
+                       , completed_at)
+                 where workflow_run.id = run_update.id
+                   and workflow_run.locked_by = :workerInstanceId
+                returning workflow_run.id
                 """);
 
         final var ids = new ArrayList<UUID>(runUpdates.size());
@@ -359,8 +333,8 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "TIMESTAMPTZ")
-                .registerArrayType(WorkflowRunStatus.class, "WORKFLOW_RUN_STATUS")
+                .registerArrayType(Instant.class, "timestamptz")
+                .registerArrayType(WorkflowRunStatus.class, "workflow_run_status")
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("ids", UUID.class, ids)
                 .bindArray("statuses", WorkflowRunStatus.class, statuses)
@@ -369,16 +343,16 @@ public final class WorkflowDao {
                 .bindArray("updatedAts", Instant.class, updatedAts)
                 .bindArray("startedAts", Instant.class, startedAts)
                 .bindArray("completedAts", Instant.class, completedAts)
-                .executeAndReturnGeneratedKeys("ID")
+                .executeAndReturnGeneratedKeys("id")
                 .mapTo(UUID.class)
                 .list();
     }
 
     public WorkflowRunRow getRun(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT *
-                  FROM "WORKFLOW_RUN"
-                 WHERE "ID" = :id
+                select *
+                  from workflow_run
+                 where id = :id
                 """);
 
         return query
@@ -390,11 +364,11 @@ public final class WorkflowDao {
 
     public boolean existsRunWithNonTerminalStatus(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT EXISTS (
-                    SELECT 1
-                      FROM "WORKFLOW_RUN"
-                     WHERE "ID" = :id
-                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]))
+                select exists (
+                    select 1
+                      from workflow_run
+                     where id = :id
+                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]))
                 """);
 
         return query
@@ -410,36 +384,36 @@ public final class WorkflowDao {
             final Duration lockTimeout,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE_POLL" AS (
-                    SELECT "ID"
-                      FROM "WORKFLOW_RUN"
-                     WHERE "WORKFLOW_NAME" = :workflowName
-                       AND "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[])
-                       AND ("CONCURRENCY_GROUP_ID" IS NULL
-                            OR "ID" = (SELECT "NEXT_RUN_ID"
-                                         FROM "WORKFLOW_CONCURRENCY_GROUP" AS "WCG"
-                                        WHERE "WCG"."ID" = "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"))
-                       AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
-                       AND EXISTS (SELECT 1
-                                     FROM "WORKFLOW_RUN_INBOX"
-                                    WHERE "WORKFLOW_RUN_ID" = "WORKFLOW_RUN"."ID"
-                                      AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW()))
-                     ORDER BY "PRIORITY" DESC NULLS LAST
-                            , "CREATED_AT"
-                       FOR NO KEY UPDATE
-                      SKIP LOCKED
-                     LIMIT :limit)
-                UPDATE "WORKFLOW_RUN"
-                   SET "LOCKED_BY" = :workerInstanceId
-                     , "LOCKED_UNTIL" = NOW() + :lockTimeout
-                  FROM "CTE_POLL"
-                 WHERE "CTE_POLL"."ID" = "WORKFLOW_RUN"."ID"
-                RETURNING "WORKFLOW_RUN"."ID"
-                        , "WORKFLOW_RUN"."WORKFLOW_NAME"
-                        , "WORKFLOW_RUN"."WORKFLOW_VERSION"
-                        , "WORKFLOW_RUN"."CONCURRENCY_GROUP_ID"
-                        , "WORKFLOW_RUN"."PRIORITY"
-                        , "WORKFLOW_RUN"."TAGS"
+                with cte_poll as (
+                    select id
+                      from workflow_run
+                     where workflow_name = :workflowName
+                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[])
+                       and (concurrency_group_id is null
+                            or id = (select next_run_id
+                                         from workflow_concurrency_group as wcg
+                                        where wcg.id = workflow_run.concurrency_group_id))
+                       and (locked_until is null or locked_until <= now())
+                       and exists (select 1
+                                     from workflow_run_inbox
+                                    where workflow_run_id = workflow_run.id
+                                      and (visible_from is null or visible_from <= now()))
+                     order by priority desc nulls last
+                            , created_at
+                       for no key update
+                      skip locked
+                     limit :limit)
+                update workflow_run
+                   set locked_by = :workerInstanceId
+                     , locked_until = now() + :lockTimeout
+                  from cte_poll
+                 where cte_poll.id = workflow_run.id
+                returning workflow_run.id
+                        , workflow_run.workflow_name
+                        , workflow_run.workflow_version
+                        , workflow_run.concurrency_group_id
+                        , workflow_run.priority
+                        , workflow_run.tags
                 """);
 
         return update
@@ -448,23 +422,23 @@ public final class WorkflowDao {
                 .bind("lockTimeout", lockTimeout)
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
-                        "ID",
-                        "WORKFLOW_NAME",
-                        "WORKFLOW_VERSION",
-                        "CONCURRENCY_GROUP_ID",
-                        "PRIORITY",
-                        "TAGS")
+                        "id",
+                        "workflow_name",
+                        "workflow_version",
+                        "concurrency_group_id",
+                        "priority",
+                        "tags")
                 .map(new PolledWorkflowRunRowMapper())
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }
 
     public int unlockRun(final UUID workerInstanceId, final UUID workflowRunId) {
         final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_RUN"
-                   SET "LOCKED_BY" = NULL
-                     , "LOCKED_UNTIL" = NULL
-                 WHERE "ID" = :workflowRunId
-                   AND "LOCKED_BY" = :workerInstanceId
+                update workflow_run
+                   set locked_by = null
+                     , locked_until = null
+                 where id = :workflowRunId
+                   and locked_by = :workerInstanceId
                 """);
 
         return update
@@ -475,12 +449,12 @@ public final class WorkflowDao {
 
     public int createRunInboxEvents(final SequencedCollection<NewWorkflowRunInboxRow> newEvents) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_RUN_INBOX" (
-                  "WORKFLOW_RUN_ID"
-                , "VISIBLE_FROM"
-                , "EVENT"
+                insert into workflow_run_inbox (
+                  workflow_run_id
+                , visible_from
+                , event
                 )
-                SELECT * FROM UNNEST(:runIds, :visibleFroms, :events)
+                select * from unnest(:runIds, :visibleFroms, :events)
                 """);
 
         final var runIds = new ArrayList<UUID>(newEvents.size());
@@ -493,7 +467,7 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "TIMESTAMPTZ")
+                .registerArrayType(Instant.class, "timestamptz")
                 .registerArrayType(new WorkflowEventSqlArrayType())
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
@@ -506,44 +480,44 @@ public final class WorkflowDao {
             final UUID workerInstanceId,
             final Collection<UUID> workflowRunIds) {
         final Query query = jdbiHandle.createQuery("""
-                WITH
-                "CTE_JOURNAL" AS (
-                    SELECT "WORKFLOW_RUN_ID"
-                         , "EVENT"
-                      FROM "WORKFLOW_RUN_JOURNAL"
-                     WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
-                     ORDER BY "SEQUENCE_NUMBER"
+                with
+                cte_journal as (
+                    select workflow_run_id
+                         , event
+                      from workflow_run_journal
+                     where workflow_run_id = any(:workflowRunIds)
+                     order by sequence_number
                 ),
-                "CTE_INBOX_POLL_CANDIDATE" AS (
-                    SELECT "ID"
-                      FROM "WORKFLOW_RUN_INBOX"
-                     WHERE "WORKFLOW_RUN_ID" = ANY(:workflowRunIds)
-                       AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
-                     ORDER BY "ID"
-                       FOR NO KEY UPDATE
-                      SKIP LOCKED
+                cte_inbox_poll_candidate as (
+                    select id
+                      from workflow_run_inbox
+                     where workflow_run_id = any(:workflowRunIds)
+                       and (visible_from is null or visible_from <= now())
+                     order by id
+                       for no key update
+                      skip locked
                 ),
-                "CTE_POLLED_INBOX" AS (
-                    UPDATE "WORKFLOW_RUN_INBOX"
-                       SET "LOCKED_BY" = :workerInstanceId
-                         , "DEQUEUE_COUNT" = COALESCE("DEQUEUE_COUNT", 0) + 1
-                      FROM "CTE_INBOX_POLL_CANDIDATE"
-                     WHERE "CTE_INBOX_POLL_CANDIDATE"."ID" = "WORKFLOW_RUN_INBOX"."ID"
-                    RETURNING "WORKFLOW_RUN_INBOX"."WORKFLOW_RUN_ID"
-                            , "WORKFLOW_RUN_INBOX"."EVENT"
-                            , "WORKFLOW_RUN_INBOX"."DEQUEUE_COUNT"
+                cte_polled_inbox as (
+                    update workflow_run_inbox
+                       set locked_by = :workerInstanceId
+                         , dequeue_count = coalesce(dequeue_count, 0) + 1
+                      from cte_inbox_poll_candidate
+                     where cte_inbox_poll_candidate.id = workflow_run_inbox.id
+                    returning workflow_run_inbox.workflow_run_id
+                            , workflow_run_inbox.event
+                            , workflow_run_inbox.dequeue_count
                 )
-                SELECT 'JOURNAL' AS "EVENT_TYPE"
-                     , "WORKFLOW_RUN_ID"
-                     , "EVENT"
-                     , NULL AS "DEQUEUE_COUNT"
-                  FROM "CTE_JOURNAL"
-                 UNION ALL
-                SELECT 'INBOX' AS "EVENT_TYPE"
-                     , "WORKFLOW_RUN_ID"
-                     , "EVENT"
-                     , "DEQUEUE_COUNT"
-                  FROM "CTE_POLLED_INBOX"
+                select 'JOURNAL' as event_type
+                     , workflow_run_id
+                     , event
+                     , null as dequeue_count
+                  from cte_journal
+                 union all
+                select 'INBOX' as event_type
+                     , workflow_run_id
+                     , event
+                     , dequeue_count
+                  from cte_polled_inbox
                 """);
 
         final List<PolledWorkflowEventRow> polledEventRows = query
@@ -586,10 +560,10 @@ public final class WorkflowDao {
 
     public List<WorkflowEvent> getRunInbox(final UUID workflowRunId) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT "EVENT"
-                  FROM "WORKFLOW_RUN_INBOX"
-                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
-                 ORDER BY "ID"
+                select event
+                  from workflow_run_inbox
+                 where workflow_run_id = :workflowRunId
+                 order by id
                 """);
 
         return query
@@ -603,11 +577,11 @@ public final class WorkflowDao {
             final UUID workflowRunId,
             final Duration visibilityDelay) {
         final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_RUN_INBOX"
-                   SET "LOCKED_BY" = NULL
-                     , "VISIBLE_FROM" = NOW() + :visibilityDelay
-                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
-                   AND "LOCKED_BY" = :workerInstanceId
+                update workflow_run_inbox
+                   set locked_by = null
+                     , visible_from = now() + :visibilityDelay
+                 where workflow_run_id = :workflowRunId
+                   and locked_by = :workerInstanceId
                 """);
 
         return update
@@ -621,12 +595,12 @@ public final class WorkflowDao {
             final UUID workerInstanceId,
             final Collection<DeleteInboxEventsCommand> deleteCommands) {
         final Update update = jdbiHandle.createUpdate("""
-                DELETE
-                  FROM "WORKFLOW_RUN_INBOX"
-                 USING UNNEST(:workflowRunIds, :onlyLockeds) AS "DELETE_COMMAND" ("WORKFLOW_RUN_ID", "ONLY_LOCKED")
-                 WHERE "WORKFLOW_RUN_INBOX"."WORKFLOW_RUN_ID" = "DELETE_COMMAND"."WORKFLOW_RUN_ID"
-                   AND (NOT "DELETE_COMMAND"."ONLY_LOCKED"
-                         OR "WORKFLOW_RUN_INBOX"."LOCKED_BY" = :workerInstanceId)
+                delete
+                  from workflow_run_inbox
+                 using unnest(:workflowRunIds, :onlyLockeds) as delete_command (workflow_run_id, only_locked)
+                 where workflow_run_inbox.workflow_run_id = delete_command.workflow_run_id
+                   and (not delete_command.only_locked
+                         or workflow_run_inbox.locked_by = :workerInstanceId)
                 """);
 
         final var runIds = new ArrayList<UUID>(deleteCommands.size());
@@ -645,12 +619,12 @@ public final class WorkflowDao {
 
     public int createRunJournalEntries(final Collection<NewWorkflowRunJournalRow> newJournalEntries) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_RUN_JOURNAL" (
-                  "WORKFLOW_RUN_ID"
-                , "SEQUENCE_NUMBER"
-                , "EVENT"
+                insert into workflow_run_journal (
+                  workflow_run_id
+                , sequence_number
+                , event
                 )
-                SELECT * FROM UNNEST(:runIds, :sequenceNumbers, :events)
+                select * from unnest(:runIds, :sequenceNumbers, :events)
                 """);
 
         final var runIds = new ArrayList<UUID>(newJournalEntries.size());
@@ -672,10 +646,10 @@ public final class WorkflowDao {
 
     public List<WorkflowEvent> getRunJournal(final UUID runId) {
         final Query query = jdbiHandle.createQuery("""
-                SELECT "EVENT"
-                  FROM "WORKFLOW_RUN_JOURNAL"
-                 WHERE "WORKFLOW_RUN_ID" = :runId
-                 ORDER BY "SEQUENCE_NUMBER"
+                select event
+                  from workflow_run_journal
+                 where workflow_run_id = :runId
+                 order by sequence_number
                 """);
 
         return query
@@ -686,18 +660,18 @@ public final class WorkflowDao {
 
     public int createActivityTasks(final Collection<NewActivityTaskRow> newTasks) {
         final Update update = jdbiHandle.createUpdate("""
-                INSERT INTO "WORKFLOW_ACTIVITY_TASK" (
-                  "WORKFLOW_RUN_ID"
-                , "SCHEDULED_EVENT_ID"
-                , "ACTIVITY_NAME"
-                , "PRIORITY"
-                , "ARGUMENT"
-                , "VISIBLE_FROM"
-                , "CREATED_AT"
+                insert into workflow_activity_task (
+                  workflow_run_id
+                , scheduled_event_id
+                , activity_name
+                , priority
+                , argument
+                , visible_from
+                , created_at
                 )
-                SELECT *
-                     , NOW()
-                  FROM UNNEST (
+                select *
+                     , now()
+                  from unnest (
                          :runIds
                        , :scheduledEventIds
                        , :activityNames
@@ -722,7 +696,7 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "TIMESTAMPTZ")
+                .registerArrayType(Instant.class, "timestamptz")
                 .registerArrayType(new WorkflowPayloadSqlArrayType())
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
@@ -739,31 +713,31 @@ public final class WorkflowDao {
             final Duration lockTimeout,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE_POLL" AS (
-                    SELECT "WORKFLOW_RUN_ID"
-                         , "SCHEDULED_EVENT_ID"
-                      FROM "WORKFLOW_ACTIVITY_TASK"
-                     WHERE "ACTIVITY_NAME" = :activityName
-                       AND ("VISIBLE_FROM" IS NULL OR "VISIBLE_FROM" <= NOW())
-                       AND ("LOCKED_UNTIL" IS NULL OR "LOCKED_UNTIL" <= NOW())
-                     ORDER BY "PRIORITY" DESC NULLS LAST
-                            , "CREATED_AT"
-                       FOR NO KEY UPDATE
-                      SKIP LOCKED
-                     LIMIT :limit)
-                UPDATE "WORKFLOW_ACTIVITY_TASK"
-                   SET "LOCKED_BY" = :workerInstanceId
-                     , "LOCKED_UNTIL" = NOW() + :lockTimeout
-                     , "UPDATED_AT" = NOW()
-                  FROM "CTE_POLL"
-                 WHERE "CTE_POLL"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                   AND "CTE_POLL"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
-                RETURNING "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                        , "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
-                        , "WORKFLOW_ACTIVITY_TASK"."ACTIVITY_NAME"
-                        , "WORKFLOW_ACTIVITY_TASK"."PRIORITY"
-                        , "WORKFLOW_ACTIVITY_TASK"."ARGUMENT"
-                        , "WORKFLOW_ACTIVITY_TASK"."LOCKED_UNTIL"
+                with cte_poll as (
+                    select workflow_run_id
+                         , scheduled_event_id
+                      from workflow_activity_task
+                     where activity_name = :activityName
+                       and (visible_from is null or visible_from <= now())
+                       and (locked_until is null or locked_until <= now())
+                     order by priority desc nulls last
+                            , created_at
+                       for no key update
+                      skip locked
+                     limit :limit)
+                update workflow_activity_task
+                   set locked_by = :workerInstanceId
+                     , locked_until = now() + :lockTimeout
+                     , updated_at = now()
+                  from cte_poll
+                 where cte_poll.workflow_run_id = workflow_activity_task.workflow_run_id
+                   and cte_poll.scheduled_event_id = workflow_activity_task.scheduled_event_id
+                returning workflow_activity_task.workflow_run_id
+                        , workflow_activity_task.scheduled_event_id
+                        , workflow_activity_task.activity_name
+                        , workflow_activity_task.priority
+                        , workflow_activity_task.argument
+                        , workflow_activity_task.locked_until
                 """);
 
         return update
@@ -772,12 +746,12 @@ public final class WorkflowDao {
                 .bind("lockTimeout", lockTimeout)
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
-                        "WORKFLOW_RUN_ID",
-                        "SCHEDULED_EVENT_ID",
-                        "ACTIVITY_NAME",
-                        "PRIORITY",
-                        "ARGUMENT",
-                        "LOCKED_UNTIL")
+                        "workflow_run_id",
+                        "scheduled_event_id",
+                        "activity_name",
+                        "priority",
+                        "argument",
+                        "locked_until")
                 .map(new PolledActivityTaskRowMapper())
                 .list();
     }
@@ -787,13 +761,13 @@ public final class WorkflowDao {
             final ActivityTaskId activityTask,
             final Duration lockTimeout) {
         final Update update = jdbiHandle.createUpdate("""
-                UPDATE "WORKFLOW_ACTIVITY_TASK"
-                   SET "LOCKED_UNTIL" = "LOCKED_UNTIL" + :lockTimeout
-                     , "UPDATED_AT" = NOW()
-                 WHERE "WORKFLOW_RUN_ID" = :workflowRunId
-                   AND "SCHEDULED_EVENT_ID" = :scheduledEventId
-                   AND "LOCKED_BY" = :workerInstanceId
-                RETURNING "LOCKED_UNTIL"
+                update workflow_activity_task
+                   set locked_until = locked_until + :lockTimeout
+                     , updated_at = now()
+                 where workflow_run_id = :workflowRunId
+                   and scheduled_event_id = :scheduledEventId
+                   and locked_by = :workerInstanceId
+                returning locked_until
                 """);
 
         return update
@@ -801,7 +775,7 @@ public final class WorkflowDao {
                 .bind("workflowRunId", activityTask.workflowRunId())
                 .bind("scheduledEventId", activityTask.scheduledEventId())
                 .bind("lockTimeout", lockTimeout)
-                .executeAndReturnGeneratedKeys("LOCKED_UNTIL")
+                .executeAndReturnGeneratedKeys("locked_until")
                 .mapTo(Instant.class)
                 .findOne()
                 .orElse(null);
@@ -817,16 +791,16 @@ public final class WorkflowDao {
         }
 
         final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE" AS (
-                    SELECT *
-                      FROM UNNEST(:workflowRunIds, :scheduledEventIds) AS t("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID"))
-                UPDATE "WORKFLOW_ACTIVITY_TASK"
-                   SET "LOCKED_BY" = NULL
-                     , "LOCKED_UNTIL" = NULL
-                  FROM "CTE"
-                 WHERE "CTE"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                   AND "CTE"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
-                   AND "WORKFLOW_ACTIVITY_TASK"."LOCKED_BY" = :workerInstanceId
+                with cte as (
+                    select *
+                      from unnest(:workflowRunIds, :scheduledEventIds) as t(workflow_run_id, scheduled_event_id))
+                update workflow_activity_task
+                   set locked_by = null
+                     , locked_until = null
+                  from cte
+                 where cte.workflow_run_id = workflow_activity_task.workflow_run_id
+                   and cte.scheduled_event_id = workflow_activity_task.scheduled_event_id
+                   and workflow_activity_task.locked_by = :workerInstanceId
                 """);
 
         return update
@@ -846,15 +820,15 @@ public final class WorkflowDao {
         }
 
         final Update update = jdbiHandle.createUpdate("""
-                WITH "CTE" AS (
-                    SELECT *
-                      FROM UNNEST(:workflowRunIds, :scheduledEventIds) AS t("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID"))
-                DELETE
-                  FROM "WORKFLOW_ACTIVITY_TASK"
-                 USING "CTE"
-                 WHERE "CTE"."WORKFLOW_RUN_ID" = "WORKFLOW_ACTIVITY_TASK"."WORKFLOW_RUN_ID"
-                   AND "CTE"."SCHEDULED_EVENT_ID" = "WORKFLOW_ACTIVITY_TASK"."SCHEDULED_EVENT_ID"
-                   AND "WORKFLOW_ACTIVITY_TASK"."LOCKED_BY" = :workerInstanceId
+                with cte as (
+                    select *
+                      from unnest(:workflowRunIds, :scheduledEventIds) as t(workflow_run_id, scheduled_event_id))
+                delete
+                  from workflow_activity_task
+                 using cte
+                 where cte.workflow_run_id = workflow_activity_task.workflow_run_id
+                   and cte.scheduled_event_id = workflow_activity_task.scheduled_event_id
+                   and workflow_activity_task.locked_by = :workerInstanceId
                 """);
 
         return update

@@ -1,13 +1,12 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog
-        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet id="1" author="nscuro">
         <sql>
-            CREATE TYPE WORKFLOW_RUN_STATUS AS ENUM (
+            create type workflow_run_status as enum (
               'PENDING'
             , 'RUNNING'
             , 'SUSPENDED'
@@ -16,24 +15,24 @@
             , 'FAILED'
             );
 
-            CREATE TABLE "WORKFLOW_RUN" (
-              "ID" UUID
-            , "PARENT_ID" UUID
-            , "WORKFLOW_NAME" TEXT NOT NULL
-            , "WORKFLOW_VERSION" SMALLINT NOT NULL
-            , "STATUS" WORKFLOW_RUN_STATUS NOT NULL DEFAULT 'PENDING'
-            , "CUSTOM_STATUS" TEXT
-            , "CONCURRENCY_GROUP_ID" TEXT
-            , "PRIORITY" SMALLINT
-            , "TAGS" TEXT[]
-            , "LOCKED_BY" TEXT
-            , "LOCKED_UNTIL" TIMESTAMPTZ(3)
-            , "CREATED_AT" TIMESTAMPTZ(3) NOT NULL DEFAULT NOW()
-            , "UPDATED_AT" TIMESTAMPTZ(3)
-            , "STARTED_AT" TIMESTAMPTZ(3)
-            , "COMPLETED_AT" TIMESTAMPTZ(3)
-            , CONSTRAINT "WORKFLOW_RUN_PK" PRIMARY KEY ("ID")
-            , CONSTRAINT "WORKFLOW_RUN_PARENT_FK" FOREIGN KEY ("PARENT_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            create table workflow_run (
+              id uuid
+            , parent_id uuid
+            , workflow_name text not null
+            , workflow_version smallint not null
+            , status workflow_run_status not null default 'PENDING'
+            , custom_status text
+            , concurrency_group_id text
+            , priority smallint
+            , tags text[]
+            , locked_by text
+            , locked_until timestamptz(3)
+            , created_at timestamptz(3) not null default now()
+            , updated_at timestamptz(3)
+            , started_at timestamptz(3)
+            , completed_at timestamptz(3)
+            , constraint workflow_run_pk primary key (id)
+            , constraint workflow_run_parent_fk foreign key (parent_id) references workflow_run (id) on delete cascade
             );
 
             <!--
@@ -45,22 +44,22 @@
               https://docs.hatchet.run/blog/multi-tenant-queues#first-attempt-partition-by
               https://blog.sequinstream.com/build-your-own-sqs-or-kafka-with-postgres/
             -->
-            CREATE TABLE "WORKFLOW_CONCURRENCY_GROUP" (
-              "ID" TEXT
-            , "NEXT_RUN_ID" UUID NOT NULL
-            , CONSTRAINT "WORKFLOW_RUN_CONCURRENCY_GROUP_PK" PRIMARY KEY ("ID")
+            create table workflow_concurrency_group (
+              id text
+            , next_run_id uuid not null
+            , constraint workflow_run_concurrency_group_pk primary key (id)
             );
 
             <!--
               NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
               It's mostly append-only and doesn't accumulate lots of bloat, unless records are deleted (i.e. as part of workflow run retention).
             -->
-            CREATE TABLE "WORKFLOW_RUN_JOURNAL" (
-              "WORKFLOW_RUN_ID" UUID
-            , "SEQUENCE_NUMBER" INT
-            , "EVENT" BYTEA NOT NULL
-            , CONSTRAINT "WORKFLOW_RUN_JOURNAL_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SEQUENCE_NUMBER")
-            , CONSTRAINT "WORKFLOW_RUN_JOURNAL_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            create table workflow_run_journal (
+              workflow_run_id uuid
+            , sequence_number int
+            , event bytea not null
+            , constraint workflow_run_journal_pk primary key (workflow_run_id, sequence_number)
+            , constraint workflow_run_journal_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             );
 
             <!--
@@ -69,62 +68,62 @@
               But since records are deleted frequently, it might accumulate quite a bit of bloat.
               Partitioning might help with that, but this remains to be verified.
             -->
-            CREATE TABLE "WORKFLOW_RUN_INBOX" (
-              "ID" BIGINT GENERATED ALWAYS AS IDENTITY
-            , "WORKFLOW_RUN_ID" UUID NOT NULL
-            , "VISIBLE_FROM" TIMESTAMPTZ(3)
-            , "LOCKED_BY" TEXT
-            , "DEQUEUE_COUNT" SMALLINT
-            , "EVENT" BYTEA NOT NULL
-            , CONSTRAINT "WORKFLOW_RUN_INBOX_PK" PRIMARY KEY ("ID")
-            , CONSTRAINT "WORKFLOW_RUN_INBOX_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            create table workflow_run_inbox (
+              id bigint generated always as identity
+            , workflow_run_id uuid not null
+            , visible_from timestamptz(3)
+            , locked_by text
+            , dequeue_count smallint
+            , event bytea not null
+            , constraint workflow_run_inbox_pk primary key (id)
+            , constraint workflow_run_inbox_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             );
 
-            CREATE TABLE "WORKFLOW_ACTIVITY_TASK" (
-              "WORKFLOW_RUN_ID" UUID
-            , "SCHEDULED_EVENT_ID" INT
-            , "ACTIVITY_NAME" TEXT NOT NULL
-            , "PRIORITY" SMALLINT
-            , "ARGUMENT" BYTEA
-            , "VISIBLE_FROM" TIMESTAMPTZ(3)
-            , "LOCKED_BY" TEXT
-            , "LOCKED_UNTIL" TIMESTAMPTZ(3)
-            , "CREATED_AT" TIMESTAMPTZ(3) NOT NULL DEFAULT NOW()
-            , "UPDATED_AT" TIMESTAMPTZ(3)
-            , CONSTRAINT "WORKFLOW_ACTIVITY_TASK_PK" PRIMARY KEY ("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID")
-            , CONSTRAINT "WORKFLOW_ACTIVITY_TASK_WORKFLOW_RUN_FK" FOREIGN KEY ("WORKFLOW_RUN_ID") REFERENCES "WORKFLOW_RUN" ("ID") ON DELETE CASCADE
+            create table workflow_activity_task (
+              workflow_run_id uuid
+            , scheduled_event_id int
+            , activity_name text not null
+            , priority smallint
+            , argument bytea
+            , visible_from timestamptz(3)
+            , locked_by text
+            , locked_until timestamptz(3)
+            , created_at timestamptz(3) not null default now()
+            , updated_at timestamptz(3)
+            , constraint workflow_activity_task_pk primary key (workflow_run_id, scheduled_event_id)
+            , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             );
 
-            CREATE INDEX "WORKFLOW_RUN_POLL_IDX"
-                ON "WORKFLOW_RUN" (
-                      "PRIORITY" DESC NULLS LAST
-                    , "CREATED_AT"
-                    , "WORKFLOW_NAME"
-                    , "LOCKED_UNTIL")
-                INCLUDE ("ID", "CONCURRENCY_GROUP_ID")
-              WHERE "STATUS" = ANY('{PENDING, RUNNING, SUSPENDED}'::WORKFLOW_RUN_STATUS[]);
+            create index workflow_run_poll_idx
+                on workflow_run (
+                      priority desc nulls last
+                    , created_at
+                    , workflow_name
+                    , locked_until)
+                include (id, concurrency_group_id)
+              where status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]);
 
-            CREATE INDEX "WORKFLOW_RUN_TAGS_IDX"
-                ON "WORKFLOW_RUN" USING GIN ("TAGS")
-                WHERE "TAGS" IS NOT NULL;
+            create index workflow_run_tags_idx
+                on workflow_run using gin (tags)
+                where tags is not null;
 
-            CREATE INDEX "WORKFLOW_RUN_INBOX_POLL_IDX"
-                ON "WORKFLOW_RUN_INBOX" ("WORKFLOW_RUN_ID", "VISIBLE_FROM");
+            create index workflow_run_inbox_poll_idx
+                on workflow_run_inbox (workflow_run_id, visible_from);
 
             <!-- TODO: Verify if all these columns are indeed needed for an index-only scan. -->
-            CREATE INDEX "WORKFLOW_ACTIVITY_TASK_POLL_IDX"
-                ON "WORKFLOW_ACTIVITY_TASK" (
-                      "PRIORITY" DESC NULLS LAST
-                    , "CREATED_AT"
-                    , "ACTIVITY_NAME"
-                    , "LOCKED_UNTIL"
-                    , "VISIBLE_FROM")
-                INCLUDE ("WORKFLOW_RUN_ID", "SCHEDULED_EVENT_ID");
+            create index workflow_activity_task_poll_idx
+                on workflow_activity_task (
+                      priority desc nulls last
+                    , created_at
+                    , activity_name
+                    , locked_until
+                    , visible_from)
+                include (workflow_run_id, scheduled_event_id);
 
-            ALTER TABLE "WORKFLOW_RUN" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
-            ALTER TABLE "WORKFLOW_CONCURRENCY_GROUP" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
-            ALTER TABLE "WORKFLOW_RUN_INBOX" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
-            ALTER TABLE "WORKFLOW_ACTIVITY_TASK" SET (AUTOVACUUM_VACUUM_SCALE_FACTOR = 0.02);
+            alter table workflow_run set (autovacuum_vacuum_scale_factor = 0.02);
+            alter table workflow_concurrency_group set (autovacuum_vacuum_scale_factor = 0.02);
+            alter table workflow_run_inbox set (autovacuum_vacuum_scale_factor = 0.02);
+            alter table workflow_activity_task set (autovacuum_vacuum_scale_factor = 0.02);
         </sql>
     </changeSet>
 </databaseChangeLog>
