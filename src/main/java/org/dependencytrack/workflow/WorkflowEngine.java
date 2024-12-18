@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
+import alpine.persistence.OrderDirection;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
@@ -970,10 +971,12 @@ public class WorkflowEngine implements Closeable {
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
             final Set<String> tagsFilter,
+            final String orderBy,
+            final OrderDirection orderDirection,
             final int offset,
             final int limit) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunListPage(
-                workflowNameFilter, statusFilter, concurrencyGroupIdFilter, tagsFilter, offset, limit));
+                workflowNameFilter, statusFilter, concurrencyGroupIdFilter, tagsFilter, orderBy, orderDirection, offset, limit));
     }
 
     public List<WorkflowEvent> getRunJournal(final UUID runId) {

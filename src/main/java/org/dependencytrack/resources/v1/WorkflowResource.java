@@ -203,6 +203,8 @@ public class WorkflowResource extends AlpineResource {
                 statusFilter,
                 concurrencyGroupIdFilter,
                 tagsFilter,
+                getAlpineRequest().getOrderBy(),
+                getAlpineRequest().getOrderDirection(),
                 getAlpineRequest().getPagination().getOffset(),
                 getAlpineRequest().getPagination().getLimit());
         final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
