@@ -98,27 +98,18 @@
                 on workflow_run (
                       priority desc nulls last
                     , created_at
-                    , workflow_name
-                    , locked_until)
-                include (id, concurrency_group_id)
+                    , workflow_name)
               where status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]);
 
             create index workflow_run_tags_idx
                 on workflow_run using gin (tags)
                 where tags is not null;
 
-            create index workflow_run_inbox_poll_idx
-                on workflow_run_inbox (workflow_run_id, visible_from);
-
-            <!-- TODO: Verify if all these columns are indeed needed for an index-only scan. -->
             create index workflow_activity_task_poll_idx
                 on workflow_activity_task (
-                      priority desc nulls last
-                    , created_at
-                    , activity_name
-                    , locked_until
-                    , visible_from)
-                include (workflow_run_id, scheduled_event_id);
+                     priority desc nulls last
+                   , created_at
+                   , activity_name);
 
             alter table workflow_run set (autovacuum_vacuum_scale_factor = 0.02);
             alter table workflow_concurrency_group set (autovacuum_vacuum_scale_factor = 0.02);

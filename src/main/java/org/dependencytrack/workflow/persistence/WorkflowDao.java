@@ -21,13 +21,6 @@ package org.dependencytrack.workflow.persistence;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowRunStatus;
-import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
-import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowEventRowMapper;
-import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
-import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowEventSqlArrayType;
-import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
@@ -333,8 +326,6 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "timestamptz")
-                .registerArrayType(WorkflowRunStatus.class, "workflow_run_status")
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("ids", UUID.class, ids)
                 .bindArray("statuses", WorkflowRunStatus.class, statuses)
@@ -368,7 +359,7 @@ public final class WorkflowDao {
                     select 1
                       from workflow_run
                      where id = :id
-                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]))
+                       and status = any(cast('{PENDING, RUNNING, SUSPENDED}' as workflow_run_status[])))
                 """);
 
         return query
@@ -388,11 +379,11 @@ public final class WorkflowDao {
                     select id
                       from workflow_run
                      where workflow_name = :workflowName
-                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[])
+                       and status = any(cast('{PENDING, RUNNING, SUSPENDED}' as workflow_run_status[]))
                        and (concurrency_group_id is null
                             or id = (select next_run_id
-                                         from workflow_concurrency_group as wcg
-                                        where wcg.id = workflow_run.concurrency_group_id))
+                                       from workflow_concurrency_group as wcg
+                                      where wcg.id = workflow_run.concurrency_group_id))
                        and (locked_until is null or locked_until <= now())
                        and exists (select 1
                                      from workflow_run_inbox
@@ -428,7 +419,7 @@ public final class WorkflowDao {
                         "concurrency_group_id",
                         "priority",
                         "tags")
-                .map(new PolledWorkflowRunRowMapper())
+                .mapTo(PolledWorkflowRunRow.class)
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }
 
@@ -467,12 +458,9 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "timestamptz")
-                .registerArrayType(new WorkflowEventSqlArrayType())
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
                 .bindArray("events", WorkflowEvent.class, events)
-                .registerArgument(new WorkflowEventArgumentFactory())
                 .execute();
     }
 
@@ -523,7 +511,7 @@ public final class WorkflowDao {
         final List<PolledWorkflowEventRow> polledEventRows = query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .map(new PolledWorkflowEventRowMapper())
+                .mapTo(PolledWorkflowEventRow.class)
                 .list();
 
         final var journalByRunId = new HashMap<UUID, List<WorkflowEvent>>(workflowRunIds.size());
@@ -568,7 +556,7 @@ public final class WorkflowDao {
 
         return query
                 .bind("workflowRunId", workflowRunId)
-                .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .mapTo(WorkflowEvent.class)
                 .list();
     }
 
@@ -637,7 +625,6 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(new WorkflowEventSqlArrayType())
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("sequenceNumbers", Integer.class, sequenceNumbers)
                 .bindArray("events", WorkflowEvent.class, events)
@@ -654,7 +641,7 @@ public final class WorkflowDao {
 
         return query
                 .bind("runId", runId)
-                .map(new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .mapTo(WorkflowEvent.class)
                 .list();
     }
 
@@ -696,8 +683,6 @@ public final class WorkflowDao {
         }
 
         return update
-                .registerArrayType(Instant.class, "timestamptz")
-                .registerArrayType(new WorkflowPayloadSqlArrayType())
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
                 .bindArray("activityNames", String.class, activityNames)
@@ -725,19 +710,19 @@ public final class WorkflowDao {
                        for no key update
                       skip locked
                      limit :limit)
-                update workflow_activity_task
+                update workflow_activity_task as wat
                    set locked_by = :workerInstanceId
                      , locked_until = now() + :lockTimeout
                      , updated_at = now()
                   from cte_poll
-                 where cte_poll.workflow_run_id = workflow_activity_task.workflow_run_id
-                   and cte_poll.scheduled_event_id = workflow_activity_task.scheduled_event_id
-                returning workflow_activity_task.workflow_run_id
-                        , workflow_activity_task.scheduled_event_id
-                        , workflow_activity_task.activity_name
-                        , workflow_activity_task.priority
-                        , workflow_activity_task.argument
-                        , workflow_activity_task.locked_until
+                 where cte_poll.workflow_run_id = wat.workflow_run_id
+                   and cte_poll.scheduled_event_id = wat.scheduled_event_id
+                returning wat.workflow_run_id
+                        , wat.scheduled_event_id
+                        , wat.activity_name
+                        , wat.priority
+                        , wat.argument
+                        , wat.locked_until
                 """);
 
         return update
@@ -752,7 +737,7 @@ public final class WorkflowDao {
                         "priority",
                         "argument",
                         "locked_until")
-                .map(new PolledActivityTaskRowMapper())
+                .mapTo(PolledActivityTaskRow.class)
                 .list();
     }
 

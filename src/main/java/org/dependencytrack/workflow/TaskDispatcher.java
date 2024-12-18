@@ -34,7 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 final class TaskDispatcher<T extends Task> implements Runnable {
 
@@ -49,9 +48,10 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private final MeterRegistry meterRegistry;
     private Instant lastPolledAt;
     private Timer taskPollLatencyTimer;
+    private Counter taskPollsCounter;
     private DistributionSummary taskPollDistribution;
-    private Function<Task, Counter> tasksProcessedCounter;
-    private Function<Task, Timer> taskProcessLatencyTimer;
+    private Counter tasksProcessedCounter;
+    private Timer taskProcessLatencyTimer;
 
     TaskDispatcher(
             final WorkflowEngine engine,
@@ -104,6 +104,10 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             assert tasksToPoll > 0;
 
             LOGGER.debug("Polling up to {} tasks", tasksToPoll);
+            if (taskPollsCounter != null) {
+                taskPollsCounter.increment();
+            }
+
             final List<T> polledTasks;
             final Timer.Sample taskPollLatencySample = Timer.start();
             try {
@@ -165,12 +169,11 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                 taskProcessor.process(task);
 
                 if (tasksProcessedCounter != null) {
-                    tasksProcessedCounter.apply(task).increment();
+                    tasksProcessedCounter.increment();
                 }
             } finally {
                 if (taskProcessLatencyTimer != null) {
-                    taskProcessingLatencySample.stop(
-                            taskProcessLatencyTimer.apply(task));
+                    taskProcessingLatencySample.stop(taskProcessLatencyTimer);
                 }
             }
         } catch (InterruptedException e) {
@@ -214,7 +217,13 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                 Tag.of("taskType", switch (taskProcessor) {
                     case ActivityTaskProcessor<?, ?> ignored -> "activity";
                     case WorkflowTaskProcessor<?, ?> ignored -> "workflow";
-                }));
+                }),
+                Tag.of("taskName", taskProcessor.taskName()));
+
+        taskPollsCounter = Counter
+                .builder("dtrack.workflow.task.polls")
+                .tags(commonTags)
+                .register(meterRegistry);
 
         taskPollLatencyTimer = Timer
                 .builder("dtrack.workflow.task.dispatcher.poll.latency")
@@ -226,16 +235,14 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                 .tags(commonTags)
                 .register(meterRegistry);
 
-        tasksProcessedCounter = task -> Counter
+        tasksProcessedCounter = Counter
                 .builder("dtrack.workflow.tasks.processed")
                 .tags(commonTags)
-                .tag("taskName", task.taskName())
                 .register(meterRegistry);
 
-        taskProcessLatencyTimer = task -> Timer
+        taskProcessLatencyTimer = Timer
                 .builder("dtrack.workflow.task.process.latency")
                 .tags(commonTags)
-                .tag("taskName", task.taskName())
                 .register(meterRegistry);
     }
 

@@ -44,12 +44,21 @@ import org.dependencytrack.workflow.annotation.Activity;
 import org.dependencytrack.workflow.annotation.Workflow;
 import org.dependencytrack.workflow.payload.PayloadConverter;
 import org.dependencytrack.workflow.persistence.WorkflowDao;
+import org.dependencytrack.workflow.persistence.mapping.PolledActivityTaskRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowEventRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.PolledWorkflowRunRowMapper;
+import org.dependencytrack.workflow.persistence.mapping.ProtobufColumnMapper;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowEventArgumentFactory;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowEventSqlArrayType;
+import org.dependencytrack.workflow.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.workflow.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunInboxRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.persistence.model.NewWorkflowRunRow;
+import org.dependencytrack.workflow.persistence.model.PolledActivityTaskRow;
+import org.dependencytrack.workflow.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowConcurrencyGroupRow;
@@ -87,6 +96,11 @@ import java.util.stream.Stream;
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
 
+// TODO: Add metrics for:
+//   - Workflow runs scheduled
+//   - Workflow runs completed/failed
+//   - Activities scheduled
+//   - Activities completed/failed
 public class WorkflowEngine implements Closeable {
 
     enum State {
@@ -141,11 +155,21 @@ public class WorkflowEngine implements Closeable {
         this.config = requireNonNull(config);
         this.jdbi = Jdbi
                 .create(config.dataSource())
-                .installPlugin(new PostgresPlugin());
+                .installPlugin(new PostgresPlugin())
+                .registerArgument(new WorkflowEventArgumentFactory())
+                .registerArrayType(Instant.class, "timestamptz")
+                .registerArrayType(WorkflowRunStatus.class, "workflow_run_status")
+                .registerArrayType(new WorkflowEventSqlArrayType())
+                .registerArrayType(new WorkflowPayloadSqlArrayType())
+                .registerColumnMapper(WorkflowEvent.class, new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .registerRowMapper(PolledActivityTaskRow.class, new PolledActivityTaskRowMapper())
+                .registerRowMapper(PolledWorkflowEventRow.class, new PolledWorkflowEventRowMapper())
+                .registerRowMapper(PolledWorkflowRunRow.class, new PolledWorkflowRunRowMapper());
     }
 
     public void start() {
         setState(State.STARTING);
+        LOGGER.debug("Starting");
 
         externalEventBuffer = new Buffer<>(
                 "workflow-external-event",
@@ -182,11 +206,13 @@ public class WorkflowEngine implements Closeable {
         }
 
         setState(State.RUNNING);
+        LOGGER.debug("Started");
     }
 
     @Override
     public void close() throws IOException {
         setState(State.STOPPING);
+        LOGGER.debug("Stopping");
 
         LOGGER.debug("Waiting for task dispatcher to stop");
         taskDispatcherExecutor.close();
@@ -196,13 +222,16 @@ public class WorkflowEngine implements Closeable {
         executorServiceByName.values().forEach(ExecutorService::close);
         executorServiceByName = null;
 
+        LOGGER.debug("Waiting for external event buffer to stop");
         externalEventBuffer.close();
         externalEventBuffer = null;
 
+        LOGGER.debug("Waiting for task action buffer to stop");
         taskActionBuffer.close();
         taskActionBuffer = null;
 
         setState(State.STOPPED);
+        LOGGER.debug("Stopped");
     }
 
     public <A, R> void registerWorkflowRunner(
@@ -241,6 +270,8 @@ public class WorkflowEngine implements Closeable {
             throw new IllegalStateException("Workflow %s is already registered".formatted(workflowName));
         }
 
+        // TODO: Micrometer currently can't instrument this executor type.
+        //  Can an update of Micrometer resolve that?
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
@@ -303,6 +334,8 @@ public class WorkflowEngine implements Closeable {
             throw new IllegalStateException("Activity %s is already registered".formatted(activityName));
         }
 
+        // TODO: Micrometer currently can't instrument this executor type.
+        //  Can an update of Micrometer resolve that?
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
@@ -916,6 +949,10 @@ public class WorkflowEngine implements Closeable {
     // TODO: This should not return an internal persistence model.
     public WorkflowRunRow getRun(final UUID runId) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
+    }
+
+    public boolean existsRunWithNonTerminalStatus(final UUID runId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).existsRunWithNonTerminalStatus(runId));
     }
 
     // TODO: This should not return an internal persistence model.

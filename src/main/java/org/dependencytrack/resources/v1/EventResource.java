@@ -44,6 +44,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 
 /**
  * JAX-RS resources for processing Events
@@ -94,9 +95,7 @@ public class EventResource extends AlpineResource {
             isProcessing = true;
         } else {
             if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
-                isProcessing = withJdbiHandle(getAlpineRequest(),
-                        handle -> new org.dependencytrack.workflow.persistence.WorkflowDao(handle)
-                                .existsRunWithNonTerminalStatus(token));
+                isProcessing = workflowEngine().existsRunWithNonTerminalStatus(token);
             } else {
                 isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));

@@ -27,7 +27,6 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.util.PersistenceUtil;
-import org.dependencytrack.workflow.persistence.WorkflowDao;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.After;
 import org.junit.Before;
@@ -150,17 +149,21 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 });
     }
 
-    private static class StatsReporter implements Runnable {
+    private class StatsReporter implements Runnable {
 
         private static final Logger LOGGER = Logger.getLogger(StatsReporter.class);
 
         @Override
         public void run() {
+            if (engine == null || engine.state() != WorkflowEngine.State.RUNNING) {
+                LOGGER.info("Engine not ready yet");
+                return;
+            }
+
             LOGGER.info("==========");
 
             try {
-                final List<WorkflowRunCountByNameAndStatusRow> statusRows =
-                        withJdbiHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
+                final List<WorkflowRunCountByNameAndStatusRow> statusRows = engine.getRunStats();
                 final Map<WorkflowRunStatus, Long> countByStatus = statusRows.stream()
                         .collect(Collectors.toMap(
                                 WorkflowRunCountByNameAndStatusRow::status,

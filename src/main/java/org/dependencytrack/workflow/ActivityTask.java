@@ -29,10 +29,4 @@ record ActivityTask(
         String activityName,
         WorkflowPayload argument,
         Instant lockedUntil) implements Task {
-
-    @Override
-    public String taskName() {
-        return activityName;
-    }
-
 }

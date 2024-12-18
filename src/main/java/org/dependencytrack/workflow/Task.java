@@ -19,7 +19,4 @@
 package org.dependencytrack.workflow;
 
 sealed interface Task permits ActivityTask, WorkflowTask {
-
-    String taskName();
-
 }

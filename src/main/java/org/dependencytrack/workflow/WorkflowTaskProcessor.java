@@ -59,6 +59,11 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     }
 
     @Override
+    public String taskName() {
+        return workflowName;
+    }
+
+    @Override
     public List<WorkflowTask> poll(final int limit) {
         return engine.pollWorkflowTasks(workflowName, limit, taskLockTimeout);
     }
