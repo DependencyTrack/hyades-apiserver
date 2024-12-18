@@ -306,7 +306,16 @@ public class WorkflowEngine implements Closeable {
             final Duration taskLockTimeout) {
         requireNonNull(activityRunner, "activityRunner must not be null");
 
-        final var activityAnnotation = activityRunner.getClass().getAnnotation(Activity.class);
+        // TODO: Find a better way to do this.
+        //  It's only temporary to make testing easier.
+        final Class<? extends ActivityRunner> activityRunnerClass;
+        if (activityRunner instanceof final FaultInjectingActivityRunner<A, R> runner) {
+            activityRunnerClass = runner.delegate().getClass();
+        } else {
+            activityRunnerClass = activityRunner.getClass();
+        }
+
+        final var activityAnnotation = activityRunnerClass.getAnnotation(Activity.class);
         if (activityAnnotation == null) {
             throw new IllegalArgumentException("activityRunner class must be annotated with @Activity");
         }
