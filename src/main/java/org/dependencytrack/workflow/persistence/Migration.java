@@ -31,20 +31,17 @@ import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.ui.LoggerUIService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
 
 public class Migration {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Migration.class);
-
     public static void run(final DataSource dataSource) {
         final var scopeAttributes = new HashMap<String, Object>();
         scopeAttributes.put(AnalyticsArgs.ENABLED.getKey(), false);
         scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
+        // TODO: scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
 
         try {
             Scope.child(scopeAttributes, () -> {

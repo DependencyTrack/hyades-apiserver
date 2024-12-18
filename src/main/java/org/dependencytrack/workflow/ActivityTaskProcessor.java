@@ -56,6 +56,11 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     }
 
     @Override
+    public String taskName() {
+        return activityName;
+    }
+
+    @Override
     public List<ActivityTask> poll(final int limit) {
         return engine.pollActivityTasks(activityName, limit, taskLockTimeout);
     }

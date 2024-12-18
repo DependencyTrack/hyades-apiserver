@@ -22,6 +22,8 @@ import java.util.List;
 
 sealed interface TaskProcessor<T extends Task> permits ActivityTaskProcessor, WorkflowTaskProcessor {
 
+    String taskName();
+
     List<T> poll(final int limit);
 
     void process(final T task);
