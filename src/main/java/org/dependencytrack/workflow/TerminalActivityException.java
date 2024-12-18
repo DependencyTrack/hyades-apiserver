@@ -24,4 +24,8 @@ public class TerminalActivityException extends WorkflowException {
         super(message, cause);
     }
 
+    public TerminalActivityException(final String message) {
+        super(message);
+    }
+
 }

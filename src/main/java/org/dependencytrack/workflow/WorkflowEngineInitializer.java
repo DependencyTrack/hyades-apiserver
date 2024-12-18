@@ -42,6 +42,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -140,38 +141,40 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
 
+        final var random = new SecureRandom();
+
         engine.registerActivityRunner(
-                new BomUploadProcessingTask(),
+                maybeFaultInjecting(new BomUploadProcessingTask(), random),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(IngestBomArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new InternalAnalysisActivity(),
+                maybeFaultInjecting(new InternalAnalysisActivity(), random),
                 /* maxConcurrency */ 20,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new OssIndexAnalysisActivity(),
+                maybeFaultInjecting(new OssIndexAnalysisActivity(), random),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new ProcessProjectAnalysisResultsActivity(),
+                maybeFaultInjecting(new ProcessProjectAnalysisResultsActivity(), random),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(ProcessProjectAnalysisResultsArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new PolicyEvaluationTask(),
+                maybeFaultInjecting(new PolicyEvaluationTask(), random),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(EvalProjectPoliciesArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                new ProjectMetricsUpdateTask(),
+                maybeFaultInjecting(new ProjectMetricsUpdateTask(), random),
                 /* maxConcurrency */ 20,
                 /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
                 /* resultConverter */ voidConverter(),
@@ -226,6 +229,16 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         try (final PersistenceManager pm = PersistenceManagerFactory.createPersistenceManager()) {
             return PersistenceUtil.getDataSource(pm);
         }
+    }
+
+    private static <A, R> ActivityRunner<A, R> maybeFaultInjecting(
+            final ActivityRunner<A, R> activityRunner,
+            final SecureRandom random) {
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_INJECT_ACTIVITY_FAULTS)) {
+            return new FaultInjectingActivityRunner<>(activityRunner, random);
+        }
+
+        return activityRunner;
     }
 
 }
