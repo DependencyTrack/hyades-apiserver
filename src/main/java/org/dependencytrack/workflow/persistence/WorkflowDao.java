@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.persistence;
 
+import alpine.persistence.OrderDirection;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.WorkflowRunStatus;
@@ -221,10 +222,21 @@ public final class WorkflowDao {
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
             final Set<String> tagsFilter,
+            final String orderBy,
+            final OrderDirection orderDirection,
             final int offset,
             final int limit) {
+        // TODO: Use a more JDBI-native and more safe way to do this.
+        final String orderDirectionStr = orderDirection == OrderDirection.DESCENDING ? "desc nulls last" : "";
+        final String orderByClause = switch (orderBy) {
+            case "createdAt" -> "created_at";
+            case "startedAt" -> "started_at";
+            case "completedAt" -> "completed_at";
+            default -> "updated_at ";
+        } + " " + orderDirectionStr;
+
         // TODO: Ordering by user-defined field.
-        final Query query = jdbiHandle.createQuery("""
+        final Query query = jdbiHandle.createQuery(/* language=SQL */ """
                 select id as id
                      , workflow_name
                      , workflow_version
@@ -244,9 +256,9 @@ public final class WorkflowDao {
                    and (cast(:statusFilter as workflow_run_status) IS NULL OR status = cast(:statusFilter as workflow_run_status))
                    and (:concurrencyGroupIdFilter IS NULL OR concurrency_group_id = :concurrencyGroupIdFilter)
                    and (cast(:tagsFilter as text[]) IS NULL OR tags @> cast(:tagsFilter as text[]))
-                 order by updated_at desc nulls last
+                 order by %s
                 offset :offset fetch next :limit rows only
-                """);
+                """.formatted(orderByClause));
 
         return query
                 .bind("workflowNameFilter", workflowNameFilter)
