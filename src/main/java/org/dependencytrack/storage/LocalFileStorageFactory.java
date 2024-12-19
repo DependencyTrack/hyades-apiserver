@@ -40,8 +40,20 @@ public class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
             ConfigSource.DEPLOYMENT,
             /* isRequired */ false,
             /* isSecret */ false);
+    private static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
+            "compression.threshold.bytes",
+            ConfigSource.DEPLOYMENT,
+            /* isRequired */ false,
+            /* isSecret */ false);
+    private static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
+            "compression.level",
+            ConfigSource.DEPLOYMENT,
+            /* isRequired */ false,
+            /* isSecret */ false);
 
     private Path directoryPath;
+    private int compressionThresholdBytes;
+    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -80,11 +92,18 @@ public class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
         }
 
         LOGGER.info("Files will be stored in {}", directoryPath);
+
+        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES)
+                .map(Integer::parseInt)
+                .orElse(1024);
+        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL)
+                .map(Integer::parseInt)
+                .orElse(5);
     }
 
     @Override
     public LocalFileStorage create() {
-        return new LocalFileStorage(directoryPath);
+        return new LocalFileStorage(directoryPath, compressionThresholdBytes, compressionLevel);
     }
 
 }

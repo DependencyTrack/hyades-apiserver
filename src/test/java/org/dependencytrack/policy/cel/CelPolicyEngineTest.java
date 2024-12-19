@@ -49,7 +49,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.storage.FileMetadata;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;

@@ -63,7 +63,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
-import org.dependencytrack.storage.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
@@ -182,13 +181,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         project.setName(args.getProject().getName());
         project.setVersion(args.getProject().getVersion());
 
-        final org.dependencytrack.proto.storage.v1alpha1.FileMetadata bomFileMetadata = args.getBomFileMetadata();
-
-        final var bomUploadEvent = new BomUploadEvent(project,
-                new FileMetadata(
-                        bomFileMetadata.getKey(),
-                        bomFileMetadata.getStorage(),
-                        bomFileMetadata.getSha256()));
+        final var bomUploadEvent = new BomUploadEvent(project, args.getBomFileMetadata());
         inform(bomUploadEvent);
 
         return Optional.empty();
@@ -211,7 +204,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
             processEvent(ctx, fileStorage, event);
 
             try {
-                fileStorage.delete(event.getFileMetadata().key());
+                fileStorage.delete(event.getFileMetadata().getKey());
             } catch (IOException ex) {
                 LOGGER.warn("Failed to delete BOM file from storage", ex);
             }
@@ -228,7 +221,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
 
         final ConsumedBom consumedBom;
         try {
-            final byte[] cdxBomBytes = fileStorage.get(event.getFileMetadata().key());
+            final byte[] cdxBomBytes = fileStorage.get(event.getFileMetadata().getKey());
             final Parser parser = BomParserFactory.createParser(cdxBomBytes);
             final org.cyclonedx.model.Bom cdxBom = parser.parse(cdxBomBytes);
 

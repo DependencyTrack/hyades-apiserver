@@ -41,7 +41,7 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.Group;
 import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.storage.FileMetadata;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.junit.Before;
 import org.junit.Test;

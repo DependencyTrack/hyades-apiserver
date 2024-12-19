@@ -58,12 +58,12 @@ import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.storage.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
@@ -499,11 +499,7 @@ public class BomResource extends AlpineResource {
                                                         .setName(project.getName())
                                                         .setVersion(project.getVersion())
                                                         .build())
-                                                .setBomFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
-                                                        .setKey(bomFileMetadata.key())
-                                                        .setStorage(bomFileMetadata.storage())
-                                                        .setSha256(bomFileMetadata.sha256())
-                                                        .build())
+                                                .setBomFileMetadata(bomFileMetadata)
                                                 .build(),
                                         protoConverter(ProcessBomUploadArgs.class)));
             } else {
@@ -558,11 +554,7 @@ public class BomResource extends AlpineResource {
                                                             .setName(project.getName())
                                                             .setVersion(project.getVersion())
                                                             .build())
-                                                    .setBomFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
-                                                            .setKey(bomFileMetadata.key())
-                                                            .setStorage(bomFileMetadata.storage())
-                                                            .setSha256(bomFileMetadata.sha256())
-                                                            .build())
+                                                    .setBomFileMetadata(bomFileMetadata)
                                                     .build(),
                                             protoConverter(ProcessBomUploadArgs.class)));
                 } else {
