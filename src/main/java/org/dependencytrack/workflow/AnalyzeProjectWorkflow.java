@@ -27,7 +27,11 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysi
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
-import org.dependencytrack.workflow.annotation.Workflow;
+import org.dependencytrack.workflow.framework.Awaitable;
+import org.dependencytrack.workflow.framework.RetryPolicy;
+import org.dependencytrack.workflow.framework.WorkflowRunContext;
+import org.dependencytrack.workflow.framework.WorkflowRunner;
+import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,9 +40,9 @@ import java.util.Optional;
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_OSSINDEX_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "analyze-project")
 public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs, Void> {

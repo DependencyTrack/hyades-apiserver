@@ -22,7 +22,7 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.ScheduleProjectAnalysesEvent;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
-import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 
 public class ProjectAnalysisSchedulerTask implements Subscriber {
 

@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.workflow.framework.WorkflowEngine;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.HealthCheckResponseBuilder;

@@ -29,9 +29,9 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
-import org.dependencytrack.workflow.ActivityRunContext;
-import org.dependencytrack.workflow.ActivityRunner;
-import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.framework.ActivityRunContext;
+import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.annotation.Activity;
 
 import java.util.Optional;
 import java.util.UUID;

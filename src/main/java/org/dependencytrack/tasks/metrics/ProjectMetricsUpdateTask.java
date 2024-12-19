@@ -28,9 +28,9 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
-import org.dependencytrack.workflow.ActivityRunContext;
-import org.dependencytrack.workflow.ActivityRunner;
-import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.framework.ActivityRunContext;
+import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.slf4j.MDC;
 
 import java.time.Duration;

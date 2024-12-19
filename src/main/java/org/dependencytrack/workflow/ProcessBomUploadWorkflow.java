@@ -22,13 +22,15 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
-import org.dependencytrack.workflow.annotation.Workflow;
+import org.dependencytrack.workflow.framework.WorkflowRunContext;
+import org.dependencytrack.workflow.framework.WorkflowRunner;
+import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflow implements WorkflowRunner<ProcessBomUploadArgs, Void> {

@@ -54,7 +54,7 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
@@ -77,7 +77,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 
 /**
  * JAX-RS resources for processing findings.
