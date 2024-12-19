@@ -23,7 +23,9 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsRe
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.storage.FileStorage;
-import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.framework.ActivityRunContext;
+import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

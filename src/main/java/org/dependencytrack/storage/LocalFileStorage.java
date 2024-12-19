@@ -49,7 +49,7 @@ public class LocalFileStorage implements FileStorage {
     }
 
     @Override
-    public org.dependencytrack.proto.storage.v1alpha1.FileMetadata store(final String name, final byte[] content) throws IOException {
+    public FileMetadata store(final String name, final byte[] content) throws IOException {
         requireNonNull(name, "name must not be null");
         requireNonNull(content, "content must not be null");
 

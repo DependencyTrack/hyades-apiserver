@@ -65,7 +65,7 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.storage.FileStorage;
-import org.dependencytrack.workflow.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -103,7 +103,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_M
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
 import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.

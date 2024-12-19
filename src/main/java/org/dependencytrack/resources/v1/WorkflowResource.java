@@ -43,10 +43,10 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
-import org.dependencytrack.workflow.WorkflowRunStatus;
-import org.dependencytrack.workflow.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
-import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.framework.WorkflowRunStatus;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCountByNameAndStatusRow;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.ClientErrorException;

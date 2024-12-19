@@ -66,9 +66,9 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
-import org.dependencytrack.workflow.ActivityRunContext;
-import org.dependencytrack.workflow.ActivityRunner;
-import org.dependencytrack.workflow.annotation.Activity;
+import org.dependencytrack.workflow.framework.ActivityRunContext;
+import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 

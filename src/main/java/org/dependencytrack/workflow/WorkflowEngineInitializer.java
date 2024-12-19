@@ -36,7 +36,11 @@ import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.util.PersistenceUtil;
-import org.dependencytrack.workflow.persistence.Migration;
+import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.FaultInjectingActivityRunner;
+import org.dependencytrack.workflow.framework.WorkflowEngine;
+import org.dependencytrack.workflow.framework.WorkflowEngineConfig;
+import org.dependencytrack.workflow.framework.persistence.Migration;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -46,8 +50,8 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
 
