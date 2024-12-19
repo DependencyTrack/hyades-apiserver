@@ -53,8 +53,8 @@ public class SupportedMetaHandlerTest extends PersistenceCapableTest {
         IntegrityMetaComponent result = handler.handle();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                     assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
                     assertThat(command.getComponent().getInternal()).isFalse();
@@ -81,8 +81,8 @@ public class SupportedMetaHandlerTest extends PersistenceCapableTest {
         IntegrityMetaComponent integrityMetaComponent = handler.handle();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                     assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
                     assertThat(command.getComponent().getInternal()).isFalse();
@@ -111,8 +111,8 @@ public class SupportedMetaHandlerTest extends PersistenceCapableTest {
         IntegrityMetaComponent integrityMetaComponent = handler.handle();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:maven/org.http4s/blaze-core_2.12");
                     assertThat(command.getComponent().getUuid()).isEqualTo(uuid.toString());
                     assertThat(command.getComponent().getInternal()).isFalse();

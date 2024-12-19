@@ -229,7 +229,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
@@ -277,7 +277,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals(204, response.getStatus(), 0);
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
@@ -306,7 +306,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
@@ -512,7 +512,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals(204, response.getStatus(), 0);
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
@@ -535,7 +535,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.TOPIC_NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
