@@ -132,4 +132,11 @@
                AND "PROPERTYNAME" = 'nvd.feeds.url';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-9" author="nscuro">
+        <sql>
+            CREATE INDEX "COMPONENT_PROPERTY_COMPONENT_ID_IDX"
+                ON "COMPONENT_PROPERTY" ("COMPONENT_ID");
+        </sql>
+    </changeSet>
 </databaseChangeLog>
