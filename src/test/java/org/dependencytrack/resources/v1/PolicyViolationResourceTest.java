@@ -55,7 +55,7 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -107,7 +107,7 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsByProjectTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component0 = new Component();
         component0.setProject(project);
@@ -179,14 +179,14 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsByProjectIssue2766() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project projectA = qm.createProject("acme-app-a", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("acme-app-a", null, "1.0", null, null, null, null, false);
         final var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setName("acme-lib-a");
         componentA.setVersion("1.0.1");
         qm.persist(componentA);
 
-        final Project projectB = qm.createProject("acme-app-b", null, "2.0", null, null, null, true, false);
+        final Project projectB = qm.createProject("acme-app-b", null, "2.0", null, null, null, null, false);
         final var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setName("acme-lib-b");
@@ -244,7 +244,7 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsByComponentTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);

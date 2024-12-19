@@ -76,7 +76,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.BOOLEAN,
                 null
         );
-        Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(
                 project,
                 DEFECTDOJO_ENABLED.getGroupName(),
@@ -93,7 +93,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
 
     @Test
     public void testIntegrationDisabledCases() {
-        Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
         DefectDojoUploader extension = new DefectDojoUploader();
         extension.setQueryManager(qm);
         Assert.assertFalse(extension.isEnabled());
