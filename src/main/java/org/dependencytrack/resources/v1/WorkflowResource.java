@@ -23,9 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,7 +39,9 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
+import org.dependencytrack.resources.v1.vo.WorkflowRunListResponseItem;
+import org.dependencytrack.resources.v1.vo.WorkflowRunResponse;
+import org.dependencytrack.resources.v1.vo.WorkflowRunStats;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
@@ -58,7 +57,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -109,26 +107,6 @@ public class WorkflowResource extends AlpineResource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
         return Response.ok(workflowStates).build();
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record WorkflowRunListResponseItem(
-            UUID id,
-            String workflowName,
-            int workflowVersion,
-            String status,
-            WorkflowRunStatus runtimeStatus,
-            String concurrencyGroupId,
-            Integer priority,
-            Set<String> tags,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant startedAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt) {
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record WorkflowRunStats(Map<String, Map<WorkflowRunStatus, Long>> statuses) {
     }
 
     @GET
@@ -225,24 +203,6 @@ public class WorkflowResource extends AlpineResource {
 
         final long totalCount = runRows.isEmpty() ? 0 : runRows.getFirst().totalCount();
         return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record WorkflowRunResponse(
-            UUID id,
-            String workflowName,
-            int workflowVersion,
-            String status,
-            WorkflowRunStatus runtimeStatus,
-            Integer priority,
-            Set<String> tags,
-            String lockedBy,
-            Instant lockedUntil,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
-            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> journal,
-            @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> inbox) {
     }
 
     @GET
