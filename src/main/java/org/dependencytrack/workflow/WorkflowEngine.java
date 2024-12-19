@@ -68,6 +68,7 @@ import org.dependencytrack.workflow.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,7 @@ import static java.util.Objects.requireNonNull;
 //   - Workflow runs completed/failed
 //   - Activities scheduled
 //   - Activities completed/failed
+// TODO: Buffer schedule commands for ~5ms.
 public class WorkflowEngine implements Closeable {
 
     enum State {
@@ -157,15 +159,37 @@ public class WorkflowEngine implements Closeable {
         this.jdbi = Jdbi
                 .create(config.dataSource())
                 .installPlugin(new PostgresPlugin())
+                // Ensure all required mappings are registered *once*
+                // on startup. Defining these on a per-query basis imposes
+                // additional overhead that is worth avoiding given how
+                // frequently queries are being executed.
+                // TODO: Don't do this in the engine's constructor.
                 .registerArgument(new WorkflowEventArgumentFactory())
                 .registerArrayType(Instant.class, "timestamptz")
                 .registerArrayType(WorkflowRunStatus.class, "workflow_run_status")
                 .registerArrayType(new WorkflowEventSqlArrayType())
                 .registerArrayType(new WorkflowPayloadSqlArrayType())
-                .registerColumnMapper(WorkflowEvent.class, new ProtobufColumnMapper<>(WorkflowEvent.parser()))
-                .registerRowMapper(PolledActivityTaskRow.class, new PolledActivityTaskRowMapper())
-                .registerRowMapper(PolledWorkflowEventRow.class, new PolledWorkflowEventRowMapper())
-                .registerRowMapper(PolledWorkflowRunRow.class, new PolledWorkflowRunRowMapper());
+                .registerColumnMapper(
+                        WorkflowEvent.class,
+                        new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .registerRowMapper(
+                        WorkflowRunCountByNameAndStatusRow.class,
+                        ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
+                .registerRowMapper(
+                        WorkflowRunListRow.class,
+                        ConstructorMapper.of(WorkflowRunListRow.class))
+                .registerRowMapper(
+                        WorkflowRunRow.class,
+                        ConstructorMapper.of(WorkflowRunRow.class))
+                .registerRowMapper(
+                        PolledActivityTaskRow.class,
+                        new PolledActivityTaskRowMapper())
+                .registerRowMapper(
+                        PolledWorkflowEventRow.class,
+                        new PolledWorkflowEventRowMapper())
+                .registerRowMapper(
+                        PolledWorkflowRunRow.class,
+                        new PolledWorkflowRunRowMapper());
     }
 
     public void start() {

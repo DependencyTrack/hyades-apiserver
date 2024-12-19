@@ -47,11 +47,11 @@
             create table workflow_concurrency_group (
               id text
             , next_run_id uuid not null
-            , constraint workflow_run_concurrency_group_pk primary key (id)
+            , constraint workflow_concurrency_group_pk primary key (id)
             );
 
             <!--
-              NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
+              NB: This table could be partitioned by workflow_run_id since it's never queried without that ID.
               It's mostly append-only and doesn't accumulate lots of bloat, unless records are deleted (i.e. as part of workflow run retention).
             -->
             create table workflow_run_journal (
@@ -63,7 +63,7 @@
             );
 
             <!--
-              NB: This table could be partitioned by WORKFLOW_RUN_ID since it's never queried without that ID.
+              NB: This table could be partitioned by workflow_run_id since it's never queried without that ID.
               It will usually hold ~1 record per active workflow run and thus will not get that huge.
               But since records are deleted frequently, it might accumulate quite a bit of bloat.
               Partitioning might help with that, but this remains to be verified.
@@ -94,22 +94,33 @@
             , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             );
 
+            <!--
+              NB: A covering index (enabling index-only scans) doesn't yield any benefit here.
+              Since the table has such a high churn, the query planner ends up having to check
+              the visibility map all the time.
+              https://www.pgmustard.com/blog/2019/03/04/index-only-scans-in-postgres
+            -->
             create index workflow_run_poll_idx
                 on workflow_run (
                       priority desc nulls last
                     , created_at
-                    , workflow_name)
+                    , workflow_name
+                    , locked_until)
               where status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]);
 
             create index workflow_run_tags_idx
                 on workflow_run using gin (tags)
                 where tags is not null;
 
+            create index workflow_run_inbox_workflow_run_id_idx
+                on workflow_run_inbox (workflow_run_id);
+
             create index workflow_activity_task_poll_idx
                 on workflow_activity_task (
                      priority desc nulls last
                    , created_at
-                   , activity_name);
+                   , activity_name
+                   , locked_until);
 
             alter table workflow_run set (autovacuum_vacuum_scale_factor = 0.02);
             alter table workflow_concurrency_group set (autovacuum_vacuum_scale_factor = 0.02);
