@@ -28,7 +28,7 @@ import java.util.logging.Level;
 /**
  * @since 5.5.0
  */
-class LiquibaseLogger extends AbstractLogger {
+public class LiquibaseLogger extends AbstractLogger {
 
     private final Logger logger;
 
@@ -51,7 +51,7 @@ class LiquibaseLogger extends AbstractLogger {
         }
     }
 
-    static class LogService extends AbstractLogService {
+    public static class LogService extends AbstractLogService {
 
         @Override
         public int getPriority() {
