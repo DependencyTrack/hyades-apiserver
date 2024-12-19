@@ -39,7 +39,6 @@ import org.dependencytrack.workflow.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 
@@ -232,12 +231,11 @@ public final class WorkflowDao {
             case "createdAt" -> "created_at";
             case "startedAt" -> "started_at";
             case "completedAt" -> "completed_at";
-            default -> "updated_at ";
+            default -> "updated_at";
         } + " " + orderDirectionStr;
 
-        // TODO: Ordering by user-defined field.
         final Query query = jdbiHandle.createQuery(/* language=SQL */ """
-                select id as id
+                select id
                      , workflow_name
                      , workflow_version
                      , status
@@ -251,11 +249,10 @@ public final class WorkflowDao {
                      , completed_at
                      , count(*) over() as total_count
                   from workflow_run
-                 where 1 = 1
-                   and (:workflowNameFilter IS NULL OR workflow_name = :workflowNameFilter)
-                   and (cast(:statusFilter as workflow_run_status) IS NULL OR status = cast(:statusFilter as workflow_run_status))
-                   and (:concurrencyGroupIdFilter IS NULL OR concurrency_group_id = :concurrencyGroupIdFilter)
-                   and (cast(:tagsFilter as text[]) IS NULL OR tags @> cast(:tagsFilter as text[]))
+                 where (:workflowNameFilter is null or workflow_name = :workflowNameFilter)
+                   and (cast(:statusFilter as workflow_run_status) is null or status = cast(:statusFilter as workflow_run_status))
+                   and (:concurrencyGroupIdFilter is null or concurrency_group_id = :concurrencyGroupIdFilter)
+                   and (cast(:tagsFilter as text[]) is null or tags @> cast(:tagsFilter as text[]))
                  order by %s
                 offset :offset fetch next :limit rows only
                 """.formatted(orderByClause));
@@ -267,7 +264,7 @@ public final class WorkflowDao {
                 .bindArray("tagsFilter", String.class, tagsFilter)
                 .bind("offset", offset)
                 .bind("limit", limit)
-                .map(ConstructorMapper.of(WorkflowRunListRow.class))
+                .mapTo(WorkflowRunListRow.class)
                 .list();
     }
 
@@ -282,7 +279,7 @@ public final class WorkflowDao {
                 """);
 
         return query
-                .map(ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
+                .mapTo(WorkflowRunCountByNameAndStatusRow.class)
                 .list();
     }
 
@@ -360,7 +357,7 @@ public final class WorkflowDao {
 
         return query
                 .bind("id", id)
-                .map(ConstructorMapper.of(WorkflowRunRow.class))
+                .mapTo(WorkflowRunRow.class)
                 .findOne()
                 .orElse(null);
     }

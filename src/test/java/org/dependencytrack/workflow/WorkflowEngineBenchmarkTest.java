@@ -183,12 +183,12 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                         "dtrack.buffer.flush.batch.size").summaries();
 
                 for (final Timer timer : taskDispatcherPollLatencies) {
-                    LOGGER.info("Dispatcher Poll Latency: taskType=%s, mean=%.2fms, max=%.2fms".formatted(
-                            timer.getId().getTag("taskType"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
+                    LOGGER.info("Dispatcher Poll Latency: taskType=%s, taskName=%s mean=%.2fms, max=%.2fms".formatted(
+                            timer.getId().getTag("taskType"), timer.getId().getTag("taskName"), timer.mean(TimeUnit.MILLISECONDS), timer.max(TimeUnit.MILLISECONDS)));
                 }
                 for (final DistributionSummary summary : taskDispatcherPollTasks) {
-                    LOGGER.info("Dispatcher Poll Tasks: taskType=%s, mean=%.2f, max=%.2f".formatted(
-                            summary.getId().getTag("taskType"), summary.mean(), summary.max()));
+                    LOGGER.info("Dispatcher Poll Tasks: taskType=%s, taskName=%s, mean=%.2f, max=%.2f".formatted(
+                            summary.getId().getTag("taskType"), summary.getId().getTag("taskName"), summary.mean(), summary.max()));
                 }
                 for (final Timer timer : taskProcessLatencies) {
                     LOGGER.info("Task Process Latency: taskType=%s, taskName=%s, mean=%.2f, max=%.2f".formatted(
