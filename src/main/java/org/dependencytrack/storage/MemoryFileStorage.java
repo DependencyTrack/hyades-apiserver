@@ -19,6 +19,7 @@
 package org.dependencytrack.storage;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.MemoryFileStorageFactory.StoredFile;
 
 import java.io.IOException;
@@ -47,7 +48,11 @@ class MemoryFileStorage implements FileStorage {
         final String sha256 = DigestUtils.sha256Hex(content);
 
         storedFileByKey.put(key, new StoredFile(key, sha256, content));
-        return new FileMetadata(key, "memory", sha256);
+        return FileMetadata.newBuilder()
+                .setKey(key)
+                .setStorage(EXTENSION_NAME)
+                .setSha256(sha256)
+                .build();
     }
 
     @Override

@@ -19,6 +19,7 @@
 package org.dependencytrack.storage;
 
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 
 import java.io.IOException;
 

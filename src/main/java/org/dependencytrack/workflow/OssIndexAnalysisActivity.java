@@ -31,10 +31,10 @@ import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.common.ManagedHttpClientFactory;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
-import org.dependencytrack.storage.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.annotation.Activity;
 import org.jdbi.v3.core.generic.GenericType;
@@ -157,11 +157,7 @@ public class OssIndexAnalysisActivity implements ActivityRunner<AnalyzeProjectAr
         }
 
         return Optional.of(AnalyzeProjectVulnsResultX.newBuilder()
-                .setResultsFileMetadata(org.dependencytrack.proto.storage.v1alpha1.FileMetadata.newBuilder()
-                        .setKey(resultFileMetadata.key())
-                        .setSha256(resultFileMetadata.sha256())
-                        .setStorage(resultFileMetadata.storage())
-                        .build())
+                .setResultsFileMetadata(resultFileMetadata)
                 .build());
     }
 
