@@ -85,7 +85,6 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                             "name": "Acme Application",
                             "directDependencies": "${json-unit.any-string}",
                             "uuid": "${json-unit.matches:projectUuid}",
-                            "active": true,
                             "isLatest": false
                           },
                           "uuid": "${json-unit.any-string}",

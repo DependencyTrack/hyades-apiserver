@@ -2496,19 +2496,16 @@ public class ProjectResourceTest extends ResourceTest {
                       "version": "1.0.0",
                       "classifier": "APPLICATION",
                       "uuid": "${json-unit.any-string}",
-                      "active": true,
                       "isLatest": false
                     }
                   ],
                   "properties": [],
                   "tags": [],
-                  "active": true,
                   "isLatest": false,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
-                      "version": "1.0.0",
-                      "active": true
+                      "version": "1.0.0"
                     }
                   ]
                 }

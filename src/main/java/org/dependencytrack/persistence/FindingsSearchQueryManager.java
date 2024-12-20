@@ -161,7 +161,6 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         Map<String, Object> params = new HashMap<>();
         if (!showInactive) {
             queryFilter.append(" WHERE (\"PROJECT\".\"INACTIVE_SINCE\" IS NULL)");
-            params.put("active", true);
         }
         processFilters(filters, queryFilter, params, true);
         final Query<Object[]> query = pm.newQuery(Query.SQL, GroupedFinding.QUERY + queryFilter + (this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : ""));
