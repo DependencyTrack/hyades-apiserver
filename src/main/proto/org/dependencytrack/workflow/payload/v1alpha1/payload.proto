@@ -32,7 +32,8 @@ message AnalyzeProjectArgs {
 // TODO: Move this to separate package.
 // TODO: Consider project-level findings?
 message AnalyzeProjectVulnsResult {
-  repeated ComponentResult results = 1;
+  string analyzer = 1;
+  repeated ComponentResult results = 2;
 
   message ComponentResult {
     int64 component_id = 1;
@@ -55,8 +56,7 @@ message ProcessProjectAnalysisResultsArgs {
 // TODO: Find better name.
 // TODO: Move this to separate package.
 message AnalyzerStatuses {
-  bool internal_enabled = 1;
-  bool oss_index_enabled = 2;
+  map<string, bool> enabled_analyzers = 1;
 }
 
 message TriggerProjectVulnAnalysisArgs {

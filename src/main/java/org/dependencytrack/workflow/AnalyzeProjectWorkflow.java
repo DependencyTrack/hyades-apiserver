@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
@@ -39,6 +40,7 @@ import java.util.Optional;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_OSSINDEX_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_SNYK_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
@@ -69,21 +71,21 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
 
         final RetryPolicy scannerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
         final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResultX>>();
-        if (analyzerStatuses.getInternalEnabled()) {
+        if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.INTERNAL_ANALYZER.name(), false)) {
             ctx.logger().info("Scheduling internal analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
-                            InternalAnalysisActivity.class,
+                            InternalVulnerabilityAnalysisActivity.class,
                             args,
                             protoConverter(AnalyzeProjectArgs.class),
                             protoConverter(AnalyzeProjectVulnsResultX.class),
                             scannerRetryPolicy));
         }
-        if (analyzerStatuses.getOssIndexEnabled()) {
+        if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.OSSINDEX_ANALYZER.name(), false)) {
             ctx.logger().info("Scheduling OSS Index analysis");
             pendingScannerResults.add(
                     ctx.callActivity(
-                            OssIndexAnalysisActivity.class,
+                            OssIndexVulnerabilityAnalysisActivity.class,
                             args,
                             protoConverter(AnalyzeProjectArgs.class),
                             protoConverter(AnalyzeProjectVulnsResultX.class),
@@ -102,14 +104,13 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
                 .map(Optional::get)
                 .toList();
 
-        final var processResultsArgsBuilder = ProcessProjectAnalysisResultsArgs.newBuilder();
-        scannerResults.forEach(processResultsArgsBuilder::addResults);
-
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
         ctx.callActivity(
                 ProcessProjectAnalysisResultsActivity.class,
-                processResultsArgsBuilder.build(),
+                ProcessProjectAnalysisResultsArgs.newBuilder()
+                        .addAllResults(scannerResults)
+                        .build(),
                 protoConverter(ProcessProjectAnalysisResultsArgs.class),
                 voidConverter(),
                 defaultRetryPolicy()).await();
@@ -146,11 +147,18 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
         return withJdbiHandle(handle -> {
             final var dao = handle.attach(ConfigPropertyDao.class);
 
+            // TODO: Check all analyzers in a single query.
             return AnalyzerStatuses.newBuilder()
-                    .setInternalEnabled(dao.getOptionalValue(
-                            SCANNER_INTERNAL_ENABLED, Boolean.class).orElse(false))
-                    .setOssIndexEnabled(dao.getOptionalValue(
-                            SCANNER_OSSINDEX_ENABLED, Boolean.class).orElse(false))
+                    .putEnabledAnalyzers(
+                            AnalyzerIdentity.INTERNAL_ANALYZER.name(),
+                            dao.getOptionalValue(SCANNER_INTERNAL_ENABLED, Boolean.class).orElse(false))
+                    .putEnabledAnalyzers(
+                            AnalyzerIdentity.OSSINDEX_ANALYZER.name(),
+                            dao.getOptionalValue(SCANNER_OSSINDEX_ENABLED, Boolean.class).orElse(false))
+                    .putEnabledAnalyzers(
+                            AnalyzerIdentity.SNYK_ANALYZER.name(),
+                            dao.getOptionalValue(SCANNER_SNYK_ENABLED, Boolean.class).orElse(false))
+                    // TODO: Trivy
                     .build();
         });
     }

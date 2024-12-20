@@ -20,7 +20,6 @@ package org.dependencytrack.workflow.framework.persistence.mapping;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
-import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -33,9 +32,6 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.nullabl
 
 public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTaskRow> {
 
-    private final ColumnMapper<WorkflowPayload> argumentColumnMapper =
-            new ProtobufColumnMapper<>(WorkflowPayload.parser());
-
     @Override
     public PolledActivityTaskRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledActivityTaskRow(
@@ -43,7 +39,7 @@ public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask
                 rs.getInt("SCHEDULED_EVENT_ID"),
                 rs.getString("ACTIVITY_NAME"),
                 nullableInt(rs, "PRIORITY"),
-                argumentColumnMapper.map(rs, "ARGUMENT", ctx),
+                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "ARGUMENT", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "LOCKED_UNTIL", ctx));
     }
 

@@ -31,6 +31,9 @@ public interface FileStorage extends ExtensionPoint {
 
     boolean delete(final String key) throws IOException;
 
+    // TODO: deleteMany. Some remote storage backends support batch deletes.
+    //  https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html
+
     class ExtensionPointMetadata implements org.dependencytrack.plugin.api.ExtensionPointMetadata<FileStorage> {
 
         @Override

@@ -43,7 +43,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
 
-    public WorkflowTaskProcessor(
+    WorkflowTaskProcessor(
             final WorkflowEngine engine,
             final String workflowName,
             final WorkflowRunner<A, R> workflowRunner,

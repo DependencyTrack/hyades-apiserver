@@ -54,6 +54,9 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
                 final String fileKey = result.getResultsFileMetadata().getKey();
                 resultsFileKeys.add(fileKey);
 
+                // TODO: Fail with a terminal exception when a file was not found?
+                //  Consider checking for all files first so we can report when more
+                //  than one file is missing.
                 LOGGER.info("Retrieving results file {}", fileKey);
                 final byte[] fileContent = fileStorage.get(fileKey);
                 results.add(AnalyzeProjectVulnsResult.parseFrom(fileContent));
@@ -61,6 +64,25 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
         }
 
         LOGGER.info("Processing {} results", results.size());
+
+        // TODO:
+        //   1. Collect unique vulnerabilities across all results.
+        //     a. If multiple analyzers report the same vulnerability,
+        //        use a deterministic algorithm to pick the data we want to use.
+        //   2. Synchronize vulnerabilities with database if needed (single trx, batching).
+        //     a. Internal analyzer only reports vulnId & source, not sync needed for that.
+        //     b. Be mindful of unique constraint errors upon trx commit. Is very likely
+        //        when new vulns are reported multiple times in parallel.
+        //   3. Load applicable vulnerability policies.
+        //   4. Map synchronized vulnerabilities to component IDs.
+        //     a. Keep track of which analyzer reported what. That allows us to automatically
+        //        suppress findings that no analyzer reports anymore.
+        //   5. Synchronize component<->vulnerability relationships with database (single trx, batching).
+        //   6. Evaluate vulnerability policies.
+        //   7. Apply policy results if needed (single trx, batching).
+        //  Most of this already exists in VulnerabilityScanResultProcessor.
+        //  The difference is that the processor does all this for a single component at a time,
+        //  whereas here we'll deal with all components of a project.
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             for (final String fileKey : resultsFileKeys) {

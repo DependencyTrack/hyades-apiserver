@@ -42,7 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class Buffer<T> implements Closeable {
+final class Buffer<T> implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Buffer.class);
 
@@ -60,7 +60,7 @@ public class Buffer<T> implements Closeable {
     private DistributionSummary batchSizeDistribution;
     private Timer flushLatencyTimer;
 
-    public Buffer(
+    Buffer(
             final String name,
             final Consumer<List<T>> batchConsumer,
             final Duration flushInterval,

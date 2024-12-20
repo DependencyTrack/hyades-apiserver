@@ -172,6 +172,9 @@ public class WorkflowEngine implements Closeable {
                 .registerColumnMapper(
                         WorkflowEvent.class,
                         new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                .registerColumnMapper(
+                        WorkflowPayload.class,
+                        new ProtobufColumnMapper<>(WorkflowPayload.parser()))
                 .registerRowMapper(
                         WorkflowRunCountByNameAndStatusRow.class,
                         ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))

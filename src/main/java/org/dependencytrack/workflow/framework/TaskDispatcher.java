@@ -136,7 +136,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                     continue;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    LOGGER.warn("Thread interrupted during poll backoff", e);
+                    LOGGER.warn("Interrupted during poll backoff", e);
                     break;
                 }
             }

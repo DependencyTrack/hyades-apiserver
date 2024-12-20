@@ -15,6 +15,18 @@
             , 'FAILED'
             );
 
+            <!--
+              We could partition this table by status, such that completed runs are kept
+              separate from non-completed ones. This would speed up polling as the history grows.
+
+                create table workflow_run_terminal partition of workflow_run for values in ('CANCELLED', 'COMPLETED', 'FAILED');
+                create table workflow_run_nonterminal partition of workflow_run for values in ('PENDING', 'RUNNING', 'SUSPENDED');
+
+              Some drawbacks though:
+                * Queries across partitions (i.e. listing all runs ordered by updated_at) will be more expensive.
+                * Uniqueness of IDs can't be enforced across partitions. Should be fine though since we use UUIDv7.
+                * We can't have FKs to the workflow_run table anymore, since its PK would need to contain the partition key (status), which is impractical.
+            -->
             create table workflow_run (
               id uuid
             , parent_id uuid

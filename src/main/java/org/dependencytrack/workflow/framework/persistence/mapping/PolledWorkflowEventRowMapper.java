@@ -20,7 +20,6 @@ package org.dependencytrack.workflow.framework.persistence.mapping;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
-import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -30,15 +29,12 @@ import java.util.UUID;
 
 public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEventRow> {
 
-    private final ColumnMapper<WorkflowEvent> eventColumnMapper =
-            new ProtobufColumnMapper<>(WorkflowEvent.parser());
-
     @Override
     public PolledWorkflowEventRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledWorkflowEventRow(
                 PolledWorkflowEventRow.EventType.valueOf(rs.getString("EVENT_TYPE")),
                 rs.getObject("WORKFLOW_RUN_ID", UUID.class),
-                eventColumnMapper.map(rs, "EVENT", ctx),
+                ctx.findColumnMapperFor(WorkflowEvent.class).orElseThrow().map(rs, "EVENT", ctx),
                 rs.getInt("DEQUEUE_COUNT"));
     }
 

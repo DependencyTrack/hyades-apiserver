@@ -40,7 +40,7 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
 
-    public ActivityTaskProcessor(
+    ActivityTaskProcessor(
             final WorkflowEngine engine,
             final String activityName,
             final ActivityRunner<A, R> activityRunner,

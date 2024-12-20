@@ -154,13 +154,13 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                maybeFaultInjecting(new InternalAnalysisActivity(), random),
+                maybeFaultInjecting(new InternalVulnerabilityAnalysisActivity(), random),
                 /* maxConcurrency */ 20,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
-                maybeFaultInjecting(new OssIndexAnalysisActivity(), random),
+                maybeFaultInjecting(new OssIndexVulnerabilityAnalysisActivity(), random),
                 /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),

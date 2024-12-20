@@ -22,5 +22,5 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
 import java.util.UUID;
 
-public record WorkflowRunMessage(UUID recipientRunId, WorkflowEvent event) {
+record WorkflowRunMessage(UUID recipientRunId, WorkflowEvent event) {
 }
