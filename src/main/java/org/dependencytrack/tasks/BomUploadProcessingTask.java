@@ -28,12 +28,10 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
-import org.datanucleus.store.query.QueryNotUniqueException;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
@@ -68,7 +66,6 @@ import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
-import javax.jdo.JDOUserException;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
@@ -89,8 +86,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
+import static javax.jdo.FetchPlan.FETCH_SIZE_GREEDY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -453,10 +453,6 @@ public class BomUploadProcessingTask implements Subscriber {
     ) {
         assertPersistent(project, "Project must be persistent");
 
-        // Fetch IDs of all components that exist in the project already.
-        // We'll need them later to determine which components to delete.
-        final Set<Long> idsOfComponentsToDelete = getAllComponentIds(qm, project, Component.class);
-
         // Avoid redundant queries by caching resolved licenses.
         // It is likely that if license IDs were present in a BOM,
         // they appear multiple times for different components.
@@ -467,26 +463,34 @@ public class BomUploadProcessingTask implements Subscriber {
         final var customLicenseCache = new HashMap<String, License>();
 
         final var internalComponentIdentifier = new InternalComponentIdentifier();
-        final var persistentComponents = new HashMap<ComponentIdentity, Component>();
+
+        final List<Component> persistentComponents = getAllComponents(qm, project);
+
+        // Group existing components by their identity for easier lookup.
+        // Note that we exclude the UUID from the identity here,
+        // since incoming non-persistent components won't have one yet.
+        final Map<ComponentIdentity, Component> persistentComponentByIdentity = persistentComponents.stream()
+                .collect(Collectors.toMap(
+                        component -> new ComponentIdentity(component, /* excludeUuid */ true),
+                        Function.identity(),
+                        (previous, duplicate) -> {
+                            LOGGER.warn("""
+                                    More than one existing component matches the identity %s; \
+                                    Proceeding with first match, others will be deleted\
+                                    """.formatted(new ComponentIdentity(previous, /* excludeUuid */ true)));
+                            return previous;
+                        }));
+
+        final Set<Long> idsOfComponentsToDelete = persistentComponents.stream()
+                .map(Component::getId)
+                .collect(Collectors.toSet());
+
         for (final Component component : components) {
             component.setInternal(internalComponentIdentifier.isInternal(component));
             resolveAndApplyLicense(qm, component, licenseCache, customLicenseCache);
 
             final var componentIdentity = new ComponentIdentity(component);
-            Component persistentComponent;
-            try {
-                persistentComponent = qm.matchSingleIdentityExact(project, componentIdentity);
-            } catch (JDOUserException e) {
-                if (!(ExceptionUtils.getRootCause(e) instanceof QueryNotUniqueException)) {
-                    throw e;
-                }
-
-                LOGGER.warn("""
-                        More than one existing component match the identity %s; \
-                        Proceeding with first match, others will be deleted\
-                        """.formatted(componentIdentity.toJSON()));
-                persistentComponent = qm.matchFirstIdentityExact(project, componentIdentity);
-            }
+            Component persistentComponent = persistentComponentByIdentity.get(componentIdentity);
             if (persistentComponent == null) {
                 component.setProject(project);
                 persistentComponent = qm.getPersistenceManager().makePersistent(component);
@@ -536,8 +540,20 @@ public class BomUploadProcessingTask implements Subscriber {
                 identitiesByBomRef.put(bomRef, newIdentity);
             }
 
-            persistentComponents.put(newIdentity, persistentComponent);
+            persistentComponentByIdentity.put(newIdentity, persistentComponent);
         }
+
+        persistentComponentByIdentity.entrySet().removeIf(entry -> {
+            // Remove entries for identities without UUID, those were only needed for matching.
+            final ComponentIdentity identity = entry.getKey();
+            if (identity.getUuid() == null) {
+                return true;
+            }
+
+            // Remove entries for components marked for deletion.
+            final Component component = entry.getValue();
+            return idsOfComponentsToDelete.contains(component.getId());
+        });
 
         qm.getPersistenceManager().flush();
 
@@ -546,7 +562,7 @@ public class BomUploadProcessingTask implements Subscriber {
             qm.getPersistenceManager().flush();
         }
 
-        return persistentComponents;
+        return persistentComponentByIdentity;
     }
 
     private static Map<ComponentIdentity, ServiceComponent> processServices(
@@ -558,15 +574,30 @@ public class BomUploadProcessingTask implements Subscriber {
     ) {
         assertPersistent(project, "Project must be persistent");
 
-        // Fetch IDs of all services that exist in the project already.
-        // We'll need them later to determine which services to delete.
-        final Set<Long> idsOfServicesToDelete = getAllComponentIds(qm, project, ServiceComponent.class);
+        final List<ServiceComponent> persistentServices = getAllServices(qm, project);
 
-        final var persistentServices = new HashMap<ComponentIdentity, ServiceComponent>();
+        // Group existing services by their identity for easier lookup.
+        // Note that we exclude the UUID from the identity here,
+        // since incoming non-persistent services won't have one yet.
+        final Map<ComponentIdentity, ServiceComponent> persistentServiceByIdentity = persistentServices.stream()
+                .collect(Collectors.toMap(
+                        service -> new ComponentIdentity(service, /* excludeUuid */ true),
+                        Function.identity(),
+                        (previous, duplicate) -> {
+                            LOGGER.warn("""
+                                    More than one existing service matches the identity %s; \
+                                    Proceeding with first match, others will be deleted\
+                                    """.formatted(new ComponentIdentity(previous, /* excludeUuid */ true)));
+                            return previous;
+                        }));
+
+        final Set<Long> idsOfServicesToDelete = persistentServices.stream()
+                .map(ServiceComponent::getId)
+                .collect(Collectors.toSet());
 
         for (final ServiceComponent service : services) {
             final var componentIdentity = new ComponentIdentity(service);
-            ServiceComponent persistentService = qm.matchServiceIdentity(project, componentIdentity);
+            ServiceComponent persistentService = persistentServiceByIdentity.get(componentIdentity);
             if (persistentService == null) {
                 service.setProject(project);
                 persistentService = qm.getPersistenceManager().makePersistent(service);
@@ -593,8 +624,20 @@ public class BomUploadProcessingTask implements Subscriber {
                 identitiesByBomRef.put(bomRef, newIdentity);
             }
 
-            persistentServices.put(newIdentity, persistentService);
+            persistentServiceByIdentity.put(newIdentity, persistentService);
         }
+
+        persistentServiceByIdentity.entrySet().removeIf(entry -> {
+            // Remove entries for identities without UUID, those were only needed for matching.
+            final ComponentIdentity identity = entry.getKey();
+            if (identity.getUuid() == null) {
+                return true;
+            }
+
+            // Remove entries for services marked for deletion.
+            final ServiceComponent service = entry.getValue();
+            return idsOfServicesToDelete.contains(service.getId());
+        });
 
         qm.getPersistenceManager().flush();
 
@@ -603,7 +646,7 @@ public class BomUploadProcessingTask implements Subscriber {
             qm.getPersistenceManager().flush();
         }
 
-        return persistentServices;
+        return persistentServiceByIdentity;
     }
 
     private void processDependencyGraph(
@@ -783,14 +826,28 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private static <T> Set<Long> getAllComponentIds(final QueryManager qm, final Project project, final Class<T> clazz) {
-        final Query<T> query = qm.getPersistenceManager().newQuery(clazz);
-        query.setFilter("project == :project");
-        query.setParameters(project);
-        query.setResult("id");
+    private static List<Component> getAllComponents(final QueryManager qm, final Project project) {
+        final Query<Component> query = qm.getPersistenceManager().newQuery(Component.class);
+        query.getFetchPlan().addGroup(Component.FetchGroup.BOM_UPLOAD_PROCESSING.name());
+        query.getFetchPlan().setFetchSize(FETCH_SIZE_GREEDY);
+        query.setFilter("project.id == :projectId");
+        query.setParameters(project.getId());
 
         try {
-            return new HashSet<>(query.executeResultList(Long.class));
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+    }
+
+    private static List<ServiceComponent> getAllServices(final QueryManager qm, final Project project) {
+        final Query<ServiceComponent> query = qm.getPersistenceManager().newQuery(ServiceComponent.class);
+        query.getFetchPlan().setFetchSize(FETCH_SIZE_GREEDY);
+        query.setFilter("project.id == :projectId");
+        query.setParameters(project.getId());
+
+        try {
+            return List.copyOf(query.executeList());
         } finally {
             query.closeAll();
         }
