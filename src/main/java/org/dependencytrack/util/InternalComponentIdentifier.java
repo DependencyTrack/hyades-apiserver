@@ -19,12 +19,11 @@
 package org.dependencytrack.util;
 
 import alpine.model.ConfigProperty;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.QueryManager;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -40,6 +39,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONE
  *
  * @since 4.11.0
  */
+@NotThreadSafe
 public class InternalComponentIdentifier {
 
     private record Patterns(Pattern groupPattern, Pattern namePattern) {
@@ -50,10 +50,10 @@ public class InternalComponentIdentifier {
 
     }
 
-    private final Supplier<Patterns> patternsSupplier = Suppliers.memoize(InternalComponentIdentifier::loadPatterns);
+    private Patterns patterns;
 
     public boolean isInternal(final Component component) {
-        final Patterns patterns = patternsSupplier.get();
+        final Patterns patterns = getPatterns();
         if (!patterns.hasPattern()) {
             return false;
         }
@@ -76,7 +76,15 @@ public class InternalComponentIdentifier {
     }
 
     public boolean hasPatterns() {
-        return patternsSupplier.get().hasPattern();
+        return getPatterns().hasPattern();
+    }
+
+    private Patterns getPatterns() {
+        if (patterns == null) {
+            patterns = loadPatterns();
+        }
+
+        return patterns;
     }
 
     private static Patterns loadPatterns() {
