@@ -131,9 +131,6 @@ public interface ProjectDao {
             <#if activeFilter && activeFilter == true>
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
             </#if>
-            <#if activeFilter && activeFilter == false>
-                AND "PROJECT"."INACTIVE_SINCE" IS NOT NULL
-            </#if>
             <#if onlyRootFilter>
                AND (NOT :onlyRootFilter OR "PROJECT"."PARENT_PROJECT_ID" IS NULL)
             <#elseif parentUuidFilter>

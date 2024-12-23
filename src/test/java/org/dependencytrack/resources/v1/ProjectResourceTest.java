@@ -680,7 +680,7 @@ public class ProjectResourceTest extends ResourceTest {
         projectB.setName("acme-app-b");
         qm.persist(projectB);
 
-        // Should return both when active is not set.
+        // Should return both when active is not set or active is false.
         Response response = jersey.target(V1_PROJECT + "/concise")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -718,26 +718,6 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
-                    "isLatest": false,
-                    "hasChildren": false
-                  }
-                ]
-                """);
-
-        // Should return only inactive when active=false
-        response = jersey.target(V1_PROJECT + "/concise")
-                .queryParam("active", "false")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                    "uuid": "${json-unit.any-string}",
-                    "name": "acme-app-a",
-                    "inactiveSince": "${json-unit.any-number}",
                     "isLatest": false,
                     "hasChildren": false
                   }
