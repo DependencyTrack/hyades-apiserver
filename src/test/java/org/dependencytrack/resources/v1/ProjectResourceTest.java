@@ -1429,7 +1429,6 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("Acme Example", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test project", json.getString("description"));
-        Assert.assertTrue(json.getBoolean("active"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
@@ -1784,7 +1783,6 @@ public class ProjectResourceTest extends ResourceTest {
                           },
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest": false
                         }
                         """);
@@ -1938,7 +1936,6 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "tag4"
                             }
                           ],
-                          "inactiveSince": null,
                           "isLatest": false,
                           "children": []
                         }
@@ -2510,13 +2507,11 @@ public class ProjectResourceTest extends ResourceTest {
                   "children": [],
                   "properties": [],
                   "tags": [],
-                  "active": true,
                   "isLatest": false,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
-                      "version": "1.0.0",
-                      "active": true
+                      "version": "1.0.0"
                     }
                   ]
                 }
@@ -2977,7 +2972,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest":false
                         }
                         """);
@@ -3018,7 +3012,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest":false
                         }
                         """);
@@ -3100,7 +3093,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest":false
                         }
                         """);

@@ -22,6 +22,7 @@ import alpine.common.validation.RegexSequence;
 import alpine.model.Team;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -291,7 +292,8 @@ public class Project implements Serializable {
     private Double lastInheritedRiskScore;
 
     @Persistent
-    @Column(name = "INACTIVE_SINCE", allowsNull = "true")
+    @Column(name = "INACTIVE_SINCE")
+    @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
     private Date inactiveSince;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
@@ -523,10 +525,6 @@ public class Project implements Serializable {
 
     public Date getInactiveSince() {
         return inactiveSince;
-    }
-
-    public boolean isActive() {
-        return inactiveSince == null;
     }
 
     public void setInactiveSince(Date inactiveSince) {

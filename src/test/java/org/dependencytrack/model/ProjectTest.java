@@ -58,6 +58,6 @@ public class ProjectTest extends PersistenceCapableTest {
 
         Project persistedProject = qm.createProject(project, null, false);
 
-        Assert.assertTrue(persistedProject.isActive());
+        Assert.assertNull(persistedProject.getInactiveSince());
     }
 }

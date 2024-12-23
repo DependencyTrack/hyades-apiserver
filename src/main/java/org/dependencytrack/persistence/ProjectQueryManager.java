@@ -469,7 +469,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
-        if (project.getParent() != null && !Boolean.TRUE.equals(project.getParent().isActive())) {
+        if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
             throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
         }
         final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
@@ -518,7 +518,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setSwidTagId(transientProject.getSwidTagId());
         project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)) {
+        if (project.getInactiveSince() == null && transientProject.getInactiveSince() != null && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
         project.setInactiveSince(transientProject.getInactiveSince());
@@ -536,7 +536,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 throw new IllegalArgumentException("A project cannot select itself as a parent");
             }
             Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
-            if (!Boolean.TRUE.equals(parent.isActive())) {
+            if (parent.getInactiveSince() != null) {
                 throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
             } else if (isChildOf(parent, transientProject.getUuid())) {
                 throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
@@ -1347,7 +1347,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         boolean hasActiveChild = false;
         if (project.getChildren() != null) {
             for (Project child : project.getChildren()) {
-                if (Boolean.TRUE.equals(child.isActive()) || hasActiveChild) {
+                if (child.getInactiveSince() == null || hasActiveChild) {
                     return true;
                 } else {
                     hasActiveChild = hasActiveChild(child);
