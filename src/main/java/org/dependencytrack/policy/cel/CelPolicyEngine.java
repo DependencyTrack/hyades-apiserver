@@ -66,7 +66,6 @@ import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.projectnessie.cel.tools.ScriptCreateException;
 import org.projectnessie.cel.tools.ScriptException;
-import org.slf4j.MDC;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -86,7 +85,6 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static org.apache.commons.collections4.MultiMapUtils.emptyMultiValuedMap;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
@@ -143,8 +141,7 @@ public class CelPolicyEngine {
         final long startTimeNs = System.nanoTime();
 
         try (final var qm = new QueryManager();
-             final var celQm = new CelPolicyQueryManager(qm);
-             var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, uuid.toString())) {
+             final var celQm = new CelPolicyQueryManager(qm)) {
             // TODO: Should this entire procedure run in a single DB transaction?
             //   Would be better for atomicity, but could block DB connections for prolonged
             //   period of time for larger projects with many violations.

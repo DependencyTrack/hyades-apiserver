@@ -23,13 +23,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -47,9 +46,6 @@ import java.util.UUID;
 @PersistenceCapable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-// TODO: Add @Unique composite constraint on the fields component, policyCondition, and type.
-//   The legacy PolicyEngine erroneously allows for duplicates on those fields, but CelPolicyEngine
-//   will never produce such duplicates. Until we remove the legacy engine, we can't add this constraint.
 public class PolicyViolation implements Serializable {
 
     public enum Type {
@@ -69,12 +65,10 @@ public class PolicyViolation implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "PROJECT_ID", allowsNull = "false")
-    @Index(name = "POLICYVIOLATION_PROJECT_IDX")
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "COMPONENT_ID", allowsNull = "false")
-    @Index(name = "POLICYVIOLATION_COMPONENT_IDX")
     private Component component;
 
     @Persistent(defaultFetchGroup = "true")
