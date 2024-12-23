@@ -46,8 +46,8 @@ public class UnSupportedMetaHandlerTest extends PersistenceCapableTest {
         handler.handle();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
                 record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND.name());
+                    final var command = deserializeValue(KafkaTopics.TOPIC_REPO_META_ANALYSIS_COMMAND, record);
                     assertThat(command.getComponent().getPurl()).isEqualTo("pkg:golang/foo/bar@baz");
                     assertThat(command.getComponent().getInternal()).isFalse();
                     assertThat(command.getFetchMeta()).isEqualTo(FetchMeta.FETCH_META_LATEST_VERSION);
