@@ -89,6 +89,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
@@ -298,13 +301,20 @@ public class WorkflowEngine implements Closeable {
             throw new IllegalStateException("Workflow %s is already registered".formatted(workflowName));
         }
 
-        // TODO: Micrometer currently can't instrument this executor type.
-        //  Can an update of Micrometer resolve that?
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
+        // TODO: Eventually switch back to virtual threads when running
+        //  on a JVM with https://openjdk.org/jeps/491 included (JDK 24).
+        //  At the moment, threads are getting pinned due to various libraries
+        //  (e.g. DataNucleus, Apache httpclient4) still relying a lot on `synchronized`.
+        final ExecutorService executorService = new ThreadPoolExecutor(
+                /* corePoolSize */ 0,
+                /* maxPoolSize */ maxConcurrency,
+                /* keepAliveTime */ 5,
+                /* keepAliveTimeUnit */ TimeUnit.MINUTES,
+                new LinkedBlockingQueue<>(),
+                new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-WorkflowRunner-" + workflowName + "-", 0)
-                        .factory());
+                        .namingPattern("WorkflowEngine-WorkflowRunner-" + workflowName + "-%d")
+                        .build());
         if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowRunner-" + workflowName, null)
                     .bindTo(config.meterRegistry());
@@ -371,13 +381,20 @@ public class WorkflowEngine implements Closeable {
             throw new IllegalStateException("Activity %s is already registered".formatted(activityName));
         }
 
-        // TODO: Micrometer currently can't instrument this executor type.
-        //  Can an update of Micrometer resolve that?
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
+        // TODO: Eventually switch back to virtual threads when running
+        //  on a JVM with https://openjdk.org/jeps/491 included (JDK 24).
+        //  At the moment, threads are getting pinned due to various libraries
+        //  (e.g. DataNucleus, Apache httpclient4) still relying a lot on `synchronized`.
+        final ExecutorService executorService = new ThreadPoolExecutor(
+                /* corePoolSize */ 0,
+                /* maxPoolSize */ maxConcurrency,
+                /* keepAliveTime */ 5,
+                /* keepAliveTimeUnit */ TimeUnit.MINUTES,
+                new LinkedBlockingQueue<>(),
+                new BasicThreadFactory.Builder()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-ActivityRunner-" + activityName + "-", 0)
-                        .factory());
+                        .namingPattern("WorkflowEngine-ActivityRunner-" + activityName + "-%d")
+                        .build());
         if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityRunner-" + activityName, null)
                     .bindTo(config.meterRegistry());
