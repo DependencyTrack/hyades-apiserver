@@ -139,4 +139,18 @@
                 ON "COMPONENT_PROPERTY" ("COMPONENT_ID");
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-9" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="INACTIVE_SINCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    
+        <sql>UPDATE "PROJECT" SET "INACTIVE_SINCE" = NOW() WHERE "ACTIVE" IS FALSE</sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="ACTIVE" type="BOOLEAN"/>
+        </dropColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -82,7 +82,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -128,7 +128,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisWithoutExistingAnalysisTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -158,7 +158,7 @@ public class AnalysisResourceTest extends ResourceTest {
     @Test
     public void noAnalysisExists() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -187,7 +187,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisWithProjectNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -218,7 +218,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisWithComponentNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -249,7 +249,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisWithVulnerabilityNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -293,7 +293,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisCreateNewTest() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -354,7 +354,7 @@ public class AnalysisResourceTest extends ResourceTest {
         String jwt = new JsonWebToken().createToken(testUser);
         qm.addUserToTeam(testUser, team);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -411,7 +411,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -461,7 +461,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisUpdateExistingTest() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -539,7 +539,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithNoChangesTest() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -589,7 +589,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -656,7 +656,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithProjectNotFoundTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -688,7 +688,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithComponentNotFoundTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -720,7 +720,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithVulnerabilityNotFoundTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -756,7 +756,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisIssue1409Test() throws InterruptedException {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);

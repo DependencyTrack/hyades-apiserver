@@ -170,7 +170,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void processUpdateIntegrityResultTest() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -224,7 +224,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityCheckWhenComponentHashIsMissing() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -275,7 +275,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityAnalysisWillNotBePerformedIfNoIntegrityDataInResult() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -314,7 +314,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityCheckWillNotBeDoneIfComponentUuidAndIntegrityDataIsMissing() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -353,7 +353,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityIfResultHasIntegrityDataAndComponentUuidIsMissing() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -424,7 +424,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityCheckShouldReturnComponentHashMissing() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -474,7 +474,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityCheckShouldReturnComponentHashMissingAndMatchUnknown() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);
@@ -521,7 +521,7 @@ public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
     @Test
     public void testIntegrityCheckShouldFailIfNoHashMatch() throws Exception {
         // Create an active project with one component.
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         final var componentProjectA = new Component();
         UUID uuid = UUID.randomUUID();
         componentProjectA.setProject(projectA);

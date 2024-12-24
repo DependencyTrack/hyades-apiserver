@@ -291,9 +291,9 @@ public class Project implements Serializable {
     private Double lastInheritedRiskScore;
 
     @Persistent
-    @Column(name = "ACTIVE")
-    @JsonSerialize(nullsUsing = BooleanDefaultTrueSerializer.class)
-    private boolean active = true;
+    @Column(name = "INACTIVE_SINCE")
+    @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
+    private Date inactiveSince;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
     @Join(column = "PROJECT_ID")
@@ -522,12 +522,12 @@ public class Project implements Serializable {
         this.externalReferences = externalReferences;
     }
 
-    public boolean isActive() {
-        return active;
+    public Date getInactiveSince() {
+        return inactiveSince;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setInactiveSince(Date inactiveSince) {
+        this.inactiveSince = inactiveSince;
     }
 
     public String getBomRef() {

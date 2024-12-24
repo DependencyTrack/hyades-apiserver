@@ -76,7 +76,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     @Test
     public void getComponentsAndServicesByComponentUuidTests() {
         final int nbIteration = 100;
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final List<Component> components = new ArrayList<>(nbIteration);
         final List<ServiceComponent> serviceComponents = new ArrayList<>(nbIteration);
@@ -130,7 +130,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     @Test
     public void getComponentsAndServicesByComponentUuidWithRepositoryMetaTests() {
         final int nbIteration = 100;
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final String purlTemplate = "pkg:maven/%s/%s@%s?type=jar";
         final String nameTemplate = "fakePackage-%d";
@@ -212,7 +212,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     @Test
     public void getComponentsAndServicesByProjectUuidTests() {
         final int nbIteration = 100;
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final List<Component> components = new ArrayList<>(nbIteration);
         final List<ServiceComponent> serviceComponents = new ArrayList<>(nbIteration);
@@ -260,7 +260,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     @Test
     public void getComponentsAndServicesByProjectUuidWithRepositoryMetaTests() {
         final int nbIteration = 100;
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final String purlTemplate = "pkg:maven/%s/%s@%s?type=jar";
         final String nameTemplate = "fakePackage-%d";

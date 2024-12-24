@@ -151,9 +151,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
         try (final Query<Project> query = pm.newQuery(Project.class)) {
             if (lastId == null) {
-                query.setFilter("(active == null || active == true)");
+                query.setFilter("inactiveSince == null");
             } else {
-                query.setFilter("(active == null || active == true) && id < :lastId");
+                query.setFilter("inactiveSince == null && id < :lastId");
                 query.setParameters(lastId);
             }
             query.setOrdering("id DESC");
