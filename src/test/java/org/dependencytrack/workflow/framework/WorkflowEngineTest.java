@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
@@ -387,6 +388,119 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELLED);
         awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELLED);
         awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELLED);
+    }
+
+    @Test
+    public void shouldThrowWhenCancellingRunInTerminalState() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.cancelWorkflowRun(runId, "someReason"))
+                .withMessageMatching("Workflow run .+ is already in terminal status");
+    }
+
+    @Test
+    public void shouldSuspendAndResumeRunWhenRequested() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            // Sleep for a moment so we get an opportunity to suspend the run.
+            ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
+            return Optional.empty();
+        });
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        engine.suspendWorkflowRun(runId);
+
+        awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
+
+        engine.resumeWorkflowRun(runId);
+
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+    }
+
+    @Test
+    public void shouldCancelSuspendedRunWhenRequested() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            // Sleep for a moment so we get an opportunity to suspend the run.
+            ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
+            return Optional.empty();
+        });
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        engine.suspendWorkflowRun(runId);
+
+        awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
+
+        engine.cancelWorkflowRun(runId, "someReason");
+
+        awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
+    }
+
+    @Test
+    public void shouldThrowWhenSuspendingRunInTerminalState() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.suspendWorkflowRun(runId))
+                .withMessageMatching("Workflow run .+ is already in terminal status");
+    }
+
+    @Test
+    public void shouldThrowWhenSuspendingRunInSuspendedState() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            // Sleep for a moment so we get an opportunity to suspend the run.
+            ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
+            return Optional.empty();
+        });
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        engine.suspendWorkflowRun(runId);
+
+        awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.suspendWorkflowRun(runId))
+                .withMessageMatching("Workflow run .+ is already suspended");
+    }
+
+    @Test
+    public void shouldThrowWhenResumingRunInNonSuspendedState() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            // Sleep for a moment so we get an opportunity to act on the running run.
+            ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
+            return Optional.empty();
+        });
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        awaitRunStatus(runId, WorkflowRunStatus.RUNNING);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.resumeWorkflowRun(runId))
+                .withMessageMatching("Workflow run .+ can not be resumed because it is not suspended");
+    }
+
+    @Test
+    public void shouldThrowWhenResumingRunInTerminalState() {
+        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+
+        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> engine.resumeWorkflowRun(runId))
+                .withMessageMatching("Workflow run .+ is already in terminal status");
     }
 
     @Test
