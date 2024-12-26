@@ -261,7 +261,7 @@ public class WorkflowRun {
                 }
                 subWorkflowEventBuilder.setSubWorkflowRunCompleted(
                         subWorkflowCompletedBuilder.build());
-            } else if (command.status() == WorkflowRunStatus.FAILED) {
+            } else if (command.status() == WorkflowRunStatus.CANCELLED || command.status() == WorkflowRunStatus.FAILED) {
                 final var subWorkflowFailedBuilder = SubWorkflowRunFailed.newBuilder()
                         .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
                 if (command.failureDetails() != null) {

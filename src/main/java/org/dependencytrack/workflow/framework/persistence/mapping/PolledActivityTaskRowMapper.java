@@ -35,12 +35,12 @@ public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask
     @Override
     public PolledActivityTaskRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledActivityTaskRow(
-                rs.getObject("WORKFLOW_RUN_ID", UUID.class),
-                rs.getInt("SCHEDULED_EVENT_ID"),
-                rs.getString("ACTIVITY_NAME"),
-                nullableInt(rs, "PRIORITY"),
-                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "ARGUMENT", ctx),
-                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "LOCKED_UNTIL", ctx));
+                rs.getObject("workflow_run_id", UUID.class),
+                rs.getInt("scheduled_event_id"),
+                rs.getString("activity_name"),
+                nullableInt(rs, "priority"),
+                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "argument", ctx),
+                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));
     }
 
 }

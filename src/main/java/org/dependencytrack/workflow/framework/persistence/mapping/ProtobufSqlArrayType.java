@@ -27,7 +27,7 @@ abstract class ProtobufSqlArrayType<T extends Message> implements SqlArrayType<T
 
     @Override
     public String getTypeName() {
-        return "BYTEA";
+        return "bytea";
     }
 
     @Override

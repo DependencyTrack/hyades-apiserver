@@ -32,10 +32,10 @@ public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEve
     @Override
     public PolledWorkflowEventRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledWorkflowEventRow(
-                PolledWorkflowEventRow.EventType.valueOf(rs.getString("EVENT_TYPE")),
-                rs.getObject("WORKFLOW_RUN_ID", UUID.class),
-                ctx.findColumnMapperFor(WorkflowEvent.class).orElseThrow().map(rs, "EVENT", ctx),
-                rs.getInt("DEQUEUE_COUNT"));
+                PolledWorkflowEventRow.EventType.valueOf(rs.getString("event_type")),
+                rs.getObject("workflow_run_id", UUID.class),
+                ctx.findColumnMapperFor(WorkflowEvent.class).orElseThrow().map(rs, "event", ctx),
+                rs.getInt("dequeue_count"));
     }
 
 }

@@ -84,6 +84,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -497,11 +498,21 @@ public class WorkflowEngine implements Closeable {
                         .build())
                 .build();
 
-        // TODO: Assert that current run status is not terminal,
-        //  and no runCancelled event is pending already.
-
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow run = dao.getRun(runId);
+            if (run == null) {
+                throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
+            } else if (run.status().isTerminal()) {
+                throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
+            }
+
+            final boolean hasPendingCancellation = dao.getRunInbox(runId).stream()
+                    .anyMatch(WorkflowEvent::hasRunCancelled);
+            if (hasPendingCancellation) {
+                throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
+            }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
                     new NewWorkflowRunInboxRow(runId, null, cancellationEvent)));
@@ -516,11 +527,23 @@ public class WorkflowEngine implements Closeable {
                 .setRunSuspended(RunSuspended.newBuilder().build())
                 .build();
 
-        // TODO: Assert that current run status is not suspended or terminal,
-        //  and no runSuspended event is pending already.
-
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow run = dao.getRun(runId);
+            if (run == null) {
+                throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
+            } else if (run.status().isTerminal()) {
+                throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
+            } else if (run.status() == WorkflowRunStatus.SUSPENDED) {
+                throw new IllegalStateException("Workflow run %s is already suspended".formatted(runId));
+            }
+
+            final boolean hasPendingSuspension = dao.getRunInbox(runId).stream()
+                    .anyMatch(WorkflowEvent::hasRunSuspended);
+            if (hasPendingSuspension) {
+                throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
+            }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
                     new NewWorkflowRunInboxRow(runId, null, suspensionEvent)));
@@ -535,11 +558,23 @@ public class WorkflowEngine implements Closeable {
                 .setRunResumed(RunResumed.newBuilder().build())
                 .build();
 
-        // TODO: Assert that current run status is suspended,
-        //  and no runResumed event is pending already.
-
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow run = dao.getRun(runId);
+            if (run == null) {
+                throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
+            } else if (run.status().isTerminal()) {
+                throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
+            } else if (run.status() != WorkflowRunStatus.SUSPENDED) {
+                throw new IllegalStateException("Workflow run %s can not be resumed because it is not suspended".formatted(runId));
+            }
+
+            final boolean hasPendingResumption = dao.getRunInbox(runId).stream()
+                    .anyMatch(WorkflowEvent::hasRunResumed);
+            if (hasPendingResumption) {
+                throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
+            }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
                     new NewWorkflowRunInboxRow(runId, null, resumeEvent)));

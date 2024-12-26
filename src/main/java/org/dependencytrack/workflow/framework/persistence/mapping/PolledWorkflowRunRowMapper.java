@@ -35,12 +35,12 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRo
     @Override
     public PolledWorkflowRunRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledWorkflowRunRow(
-                rs.getObject("ID", UUID.class),
-                rs.getString("WORKFLOW_NAME"),
-                rs.getInt("WORKFLOW_VERSION"),
-                rs.getString("CONCURRENCY_GROUP_ID"),
-                nullableInt(rs, "PRIORITY"),
-                Set.copyOf(stringArray(rs, "TAGS")));
+                rs.getObject("id", UUID.class),
+                rs.getString("workflow_name"),
+                rs.getInt("workflow_version"),
+                rs.getString("concurrency_group_id"),
+                nullableInt(rs, "priority"),
+                Set.copyOf(stringArray(rs, "tags")));
     }
 
 }
