@@ -55,6 +55,7 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationDispatcher;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
@@ -119,6 +120,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertSe
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
@@ -236,8 +238,6 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
-            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
-            //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
 
             if (isWorkflowEngineEnabled) {
@@ -279,8 +279,6 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
                 processedBom = processBom(ctx, consumedBom);
             }
         } catch (Throwable e) {
-            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
-            //  as part of the workflow.
             dispatchBomProcessingFailedNotification(ctx, e);
 
             if (isWorkflowEngineEnabled) {
@@ -304,8 +302,6 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
         if (!delayBomProcessedNotification) {
-            // TODO: If workflow engine is enabled, perform the dispatch in a side effect
-            //  as part of the workflow.
             dispatchBomProcessedNotification(ctx);
         }
 
@@ -1063,28 +1059,38 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
     }
 
     private void dispatchBomConsumedNotification(final Context ctx) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
+       final var notification = new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_CONSUMED)
                 .level(NotificationLevel.INFORMATIONAL)
                 .title(NotificationConstants.Title.BOM_CONSUMED)
                 .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion));
+        if (isWorkflowEngineEnabled) {
+            useJdbiHandle(handle -> NotificationDispatcher.dispatch(handle, notification));
+        } else {
+            kafkaEventDispatcher.dispatchNotification(notification);
+        }
     }
 
     private void dispatchBomProcessedNotification(final Context ctx) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
+        final var notification = new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_PROCESSED)
                 .level(NotificationLevel.INFORMATIONAL)
                 .title(NotificationConstants.Title.BOM_PROCESSED)
                 .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
                 // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion));
+        if (isWorkflowEngineEnabled) {
+            useJdbiHandle(handle -> NotificationDispatcher.dispatch(handle, notification));
+        } else {
+            kafkaEventDispatcher.dispatchNotification(notification);
+        }
     }
 
     private void dispatchBomProcessingFailedNotification(final Context ctx, final Throwable throwable) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
+        final var notification = new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_PROCESSING_FAILED)
                 .level(NotificationLevel.ERROR)
@@ -1092,7 +1098,12 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
                 .content("An error occurred while processing a BOM")
                 // TODO: Look into adding more fields to BomProcessingFailed, to also cover serial number, version, etc.
                 // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomProcessingFailed(ctx.token, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat, ctx.bomSpecVersion)));
+                .subject(new BomProcessingFailed(ctx.token, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat, ctx.bomSpecVersion));
+        if (isWorkflowEngineEnabled) {
+            useJdbiHandle(handle -> NotificationDispatcher.dispatch(handle, notification));
+        } else {
+            kafkaEventDispatcher.dispatchNotification(notification);
+        }
     }
 
     private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(

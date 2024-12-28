@@ -48,6 +48,9 @@
         <listener-class>org.dependencytrack.persistence.DefaultObjectGenerator</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.notification.NotificationRouterInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>

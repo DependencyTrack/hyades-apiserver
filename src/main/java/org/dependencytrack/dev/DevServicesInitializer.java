@@ -95,6 +95,7 @@ public class DevServicesInitializer implements ServletContextListener {
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
+            postgresContainerClass.getMethod("withCommand", String.class).invoke(postgresContainer, "-c wal_level=logical");
 
             // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
             //   and pick the corresponding Testcontainers class accordingly.

@@ -29,12 +29,13 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
-        super(DockerImageName.parse("postgres:11-alpine"));
+        super(DockerImageName.parse("postgres:14-alpine"));
         withUsername("dtrack");
         withPassword("dtrack");
         withDatabaseName("dtrack");
         withLabel("owner", "hyades-apiserver");
         withUrlParam("reWriteBatchedInserts", "true");
+        withCommand("-c wal_level=logical");
 
         // Uncomment this to see queries executed by Postgres:
         //   withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger(PostgresTestContainer.class)));
