@@ -144,9 +144,8 @@ public class RepositoryMetaAnalysisTask implements Subscriber {
 
     private List<ComponentProjection> fetchNextComponentsPage(final PersistenceManager pm, final Project project, final long offset) throws Exception {
         try (final Query<Component> query = pm.newQuery(Component.class)) {
-            var filter = "project.inactiveSince == :projectInactiveSince && purlCoordinates != null";
+            var filter = "project.inactiveSince == null && purlCoordinates != null";
             var params = new HashMap<String, Object>();
-            params.put("projectInactiveSince", null);
             if (project != null) {
                 filter += " && project == :project";
                 params.put("project", project);
