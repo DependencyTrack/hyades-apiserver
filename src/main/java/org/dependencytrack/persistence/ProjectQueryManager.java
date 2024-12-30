@@ -518,10 +518,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setSwidTagId(transientProject.getSwidTagId());
         project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (project.getInactiveSince() == null && transientProject.getInactiveSince() != null && hasActiveChild(project)) {
+        if (project.isActive() && !transientProject.isActive() && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
-        project.setInactiveSince(transientProject.getInactiveSince());
+        project.setActive(transientProject.isActive());
 
         final Project oldLatestProject;
         if(Boolean.TRUE.equals(transientProject.isLatest()) && Boolean.FALSE.equals(project.isLatest())) {

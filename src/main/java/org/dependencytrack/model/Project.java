@@ -292,7 +292,8 @@ public class Project implements Serializable {
 
     @Persistent
     @Column(name = "INACTIVE_SINCE")
-    @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY,
+            type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
     private Date inactiveSince;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
@@ -324,6 +325,8 @@ public class Project implements Serializable {
     private transient List<Component> dependencyGraph;
 
     private transient String author;
+
+    private transient boolean active;
 
     public long getId() {
         return id;
@@ -528,6 +531,19 @@ public class Project implements Serializable {
 
     public void setInactiveSince(Date inactiveSince) {
         this.inactiveSince = inactiveSince;
+    }
+
+    public boolean isActive() {
+        return inactiveSince == null;
+    }
+
+    public void setActive(boolean active) {
+        if (!active && this.inactiveSince == null) {
+            this.inactiveSince = new Date();
+        }
+        if (active && this.inactiveSince != null) {
+            this.inactiveSince = null;
+        }
     }
 
     public String getBomRef() {

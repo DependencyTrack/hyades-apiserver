@@ -1314,12 +1314,14 @@ public class ProjectResourceTest extends ResourceTest {
                               "version": "1.0.0",
                               "uuid": "${json-unit.matches:childUuid}",
                               "isLatest": false,
+                              "active": false,
                               "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
                           "properties": [],
                           "tags": [],
                           "isLatest": false,
+                          "active":true,
                           "versions": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
@@ -1783,7 +1785,8 @@ public class ProjectResourceTest extends ResourceTest {
                           },
                           "properties": [],
                           "tags": [],
-                          "isLatest": false
+                          "isLatest": false,
+                          "active": true
                         }
                         """);
 
@@ -1937,6 +1940,7 @@ public class ProjectResourceTest extends ResourceTest {
                             }
                           ],
                           "isLatest": false,
+                          "active":true,
                           "children": []
                         }
                         """);
@@ -2473,12 +2477,14 @@ public class ProjectResourceTest extends ResourceTest {
                       "version": "1.0.0",
                       "classifier": "APPLICATION",
                       "uuid": "${json-unit.any-string}",
-                      "isLatest": false
+                      "isLatest": false,
+                      "active": true
                     }
                   ],
                   "properties": [],
                   "tags": [],
                   "isLatest": false,
+                  "active": true,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
@@ -2508,6 +2514,7 @@ public class ProjectResourceTest extends ResourceTest {
                   "properties": [],
                   "tags": [],
                   "isLatest": false,
+                  "active": true,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
@@ -2972,7 +2979,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "isLatest":false
+                          "isLatest":false,
+                          "active": true
                         }
                         """);
 
@@ -3012,7 +3020,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
@@ -3093,7 +3102,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
@@ -3202,11 +3212,142 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
         assertThat(qm.getAllProjects()).satisfiesExactly(project ->
                 assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly(team.getName()));
+    }
+
+    @Test
+    public void patchActiveProjectToInactiveTest() {
+        // create project as active
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                null, false, false);
+
+        // make it inactive by patch
+        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
+                        {
+                          "name": "ABC-Updated",
+                          "active": false
+                        }
+                        """));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "inactiveSince": "${json-unit.any-number}",
+                          "isLatest":false,
+                          "active": false
+                        }
+                        """);
+    }
+
+    @Test
+    public void patchInactiveProjectToActiveTest() {
+        // create project as inactive
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                new Date(), false, false);
+
+        // make it active by patch
+        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
+                        {
+                          "name": "ABC-Updated",
+                          "active": true
+                        }
+                        """));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "properties": [],
+                          "tags": [],
+                          "isLatest":false,
+                          "active": true
+                        }
+                        """);
+    }
+
+    @Test
+    public void updateActiveProjectToInactiveTest() {
+        // create project as active
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                null, false, false);
+
+        // make it inactive by update
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "ABC-Updated",
+                          "active": false
+                        }
+                        """.formatted(project.getUuid())));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "classifier":"APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "inactiveSince": "${json-unit.any-number}",
+                          "isLatest":false,
+                          "active": false
+                        }
+                        """);
+    }
+
+    @Test
+    public void updateInactiveProjectToActiveTest() {
+        // create project as inactive
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                new Date(), false, false);
+
+        // make it active by update
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "ABC-Updated",
+                          "active": true
+                        }
+                        """.formatted(project.getUuid())));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "classifier":"APPLICATION",
+                          "properties": [],
+                          "tags": [],
+                          "isLatest":false,
+                          "active": true
+                        }
+                        """);
     }
 }
