@@ -41,9 +41,6 @@ public class ProjectProjection {
     @MappedField(sqlColumnName = "CLASSIFIER")
     public String classifier;
 
-    @MappedField(protoFieldName = "inactive_since", sqlColumnName = "INACTIVE_SINCE")
-    public Date inactiveSince;
-
     @MappedField(sqlColumnName = "CPE")
     public String cpe;
 

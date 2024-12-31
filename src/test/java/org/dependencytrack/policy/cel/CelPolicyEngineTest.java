@@ -295,7 +295,6 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
                   && project.name == "projectName"
                   && project.version == "projectVersion"
                   && project.classifier == "APPLICATION"
-                  && project.inactive_since == timestamp("1970-01-01T00:00:00.777Z")
                   && project.cpe == "projectCpe"
                   && project.purl == "projectPurl"
                   && project.swid_tag_id == "projectSwidTagId"

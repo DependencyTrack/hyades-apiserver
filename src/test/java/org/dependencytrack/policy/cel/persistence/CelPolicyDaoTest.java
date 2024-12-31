@@ -109,7 +109,6 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                           "name": "projectName",
                           "version": "projectVersion",
                           "classifier": "APPLICATION",
-                          "inactiveSince":"${json-unit.any-string}",
                           "tags": [
                             "projecttaga",
                             "projecttagb"
