@@ -21,10 +21,10 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs.PublishNotificationTask;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.RetryPolicy;
+import org.dependencytrack.workflow.framework.WorkflowRunBlockedException;
 import org.dependencytrack.workflow.framework.WorkflowRunContext;
 import org.dependencytrack.workflow.framework.WorkflowRunner;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -43,40 +43,40 @@ public class PublishNotificationWorkflow implements WorkflowRunner<PublishNotifi
     @Override
     public Optional<Void> run(final WorkflowRunContext<PublishNotificationWorkflowArgs, Void> ctx) throws Exception {
         final PublishNotificationWorkflowArgs args = ctx.argument().orElseThrow();
-        if (args.getTasksCount() == 0) {
-            ctx.logger().warn("No publish tasks provided");
+        if (args.getNotificationRuleNamesCount() == 0) {
+            ctx.logger().warn("No rules provided");
             return Optional.empty();
         }
 
-        final var awaitableByTask = new HashMap<PublishNotificationTask, Awaitable<Void>>(args.getTasksCount());
-        for (final PublishNotificationTask task : args.getTasksList()) {
-            ctx.logger().debug(
-                    "Scheduling notification publish for rule {} and publisher {}",
-                    task.getRuleName(), task.getPublisherName());
+        final var awaitableByRuleName = new HashMap<String, Awaitable<Void>>(args.getNotificationRuleNamesCount());
+        for (final String ruleName : args.getNotificationRuleNamesList()) {
+            ctx.logger().debug("Scheduling notification publish for rule {}", ruleName);
             final Awaitable<Void> awaitable = ctx.callActivity(
                     PublishNotificationActivity.class,
                     PublishNotificationActivityArgs.newBuilder()
                             .setNotificationFileMetadata(args.getNotificationFileMetadata())
-                            .setRuleName(task.getRuleName())
-                            .setPublisherName(task.getPublisherName())
+                            .setNotificationRuleName(ruleName)
                             .build(),
                     protoConverter(PublishNotificationActivityArgs.class),
                     voidConverter(),
                     RetryPolicy.defaultRetryPolicy()
                             .withMaxAttempts(6));
-            awaitableByTask.put(task, awaitable);
+            awaitableByRuleName.put(ruleName, awaitable);
         }
 
-        for (final Map.Entry<PublishNotificationTask, Awaitable<Void>> entry : awaitableByTask.entrySet()) {
-            final PublishNotificationTask task = entry.getKey();
+        for (final Map.Entry<String, Awaitable<Void>> entry : awaitableByRuleName.entrySet()) {
+            final String ruleName = entry.getKey();
             final Awaitable<Void> awaitable = entry.getValue();
 
             try {
                 awaitable.await();
             } catch (RuntimeException e) {
-                ctx.logger().warn(
-                        "Failed to publish notification for rule {} and publisher {}",
-                        task.getRuleName(), task.getPublisherName(), e);
+                // TODO: Remove this check once proper activity failure handling is in place.
+                if (e instanceof WorkflowRunBlockedException) {
+                    throw e;
+                }
+
+                ctx.logger().warn("Failed to publish notification for rule {}", ruleName, e);
             }
         }
 

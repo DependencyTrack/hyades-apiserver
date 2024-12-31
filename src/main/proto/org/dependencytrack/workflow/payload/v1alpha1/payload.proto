@@ -77,18 +77,11 @@ message UpdateProjectMetricsArgs {
 
 message PublishNotificationWorkflowArgs {
   org.dependencytrack.storage.v1alpha1.FileMetadata notification_file_metadata = 1;
-  repeated PublishNotificationTask tasks = 2;
-
-  // TODO: Better name.
-  message PublishNotificationTask {
-    string rule_name = 1;
-    string publisher_name = 2;
-  }
+  repeated string notification_rule_names = 2;
 }
 
 message PublishNotificationActivityArgs {
   org.dependencytrack.storage.v1alpha1.FileMetadata notification_file_metadata = 1;
-  string rule_name = 2;
-  string publisher_name = 3;
+  string notification_rule_name = 2;
 }
 

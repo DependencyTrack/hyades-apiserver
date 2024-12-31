@@ -28,7 +28,9 @@ import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.TerminalActivityException;
 import org.dependencytrack.workflow.framework.annotation.Activity;
+import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.Query;
+import org.jdbi.v3.core.statement.StatementContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +38,8 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import java.io.FileNotFoundException;
 import java.io.StringReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -63,48 +67,67 @@ public class PublishNotificationActivity implements ActivityRunner<PublishNotifi
             throw new TerminalActivityException("Failed to parse notification", e);
         }
 
-        final JsonObject publisherConfig = getPublisherConfig(args.getRuleName(), args.getPublisherName());
+        final PublishContext publishContext = getPublishContext(args.getNotificationRuleName());
 
         // TODO: Lookup and invoke publisher class.
         LOGGER.info(
-                "Published notification for rule {} and publisher {} with config {}: {}",
-                args.getRuleName(),
-                args.getPublisherName(),
-                publisherConfig,
+                "Published notification with context {}: {}",
+                publishContext,
                 DebugFormat.singleLine().toString(notification));
 
         return Optional.empty();
     }
 
-    private JsonObject getPublisherConfig(final String ruleName, final String publisherName) {
-        final String configJsonStr = withJdbiHandle(handle -> {
+    private record PublishContext(
+            String ruleName,
+            String publisherName,
+            String publisherClass,
+            String template,
+            String templateMimeType,
+            JsonObject publisherConfig) {
+    }
+
+    private static final class PublishContextRowMapper implements RowMapper<PublishContext> {
+
+        @Override
+        public PublishContext map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+            JsonObject publisherConfig = null;
+            final String publisherConfigJson = rs.getString("PUBLISHER_CONFIG");
+            if (!rs.wasNull()) {
+                publisherConfig = Json.createReader(new StringReader(publisherConfigJson)).readObject();
+            }
+
+            return new PublishContext(
+                    rs.getString("RULE_NAME"),
+                    rs.getString("PUBLISHER_NAME"),
+                    rs.getString("PUBLISHER_CLASS"),
+                    rs.getString("TEMPLATE"),
+                    rs.getString("TEMPLATE_MIME_TYPE"),
+                    publisherConfig);
+        }
+
+    }
+
+    private PublishContext getPublishContext(final String ruleName) {
+        return withJdbiHandle(handle -> {
             final Query query = handle.createQuery("""
-                    WITH
-                    "CTE_RULE_PUBLISHER_CONFIG" AS (
-                        SELECT CAST("PUBLISHER_CONFIG" AS JSONB) AS "CONFIG"
-                          FROM "NOTIFICATIONRULE"
-                         WHERE "NAME" = :ruleName
-                         LIMIT 1
-                    ), "CTE_PUBLISHER_CONFIG" AS (
-                        SELECT JSONB_BUILD_OBJECT(
-                                 'mimeType', "TEMPLATE_MIME_TYPE"
-                               , 'template', "TEMPLATE") AS "CONFIG"
-                          FROM "NOTIFICATIONPUBLISHER"
-                         WHERE "NAME" = :publisherName
-                         LIMIT 1
-                    )
-                    SELECT (SELECT "CONFIG" FROM "CTE_RULE_PUBLISHER_CONFIG")
-                           || (SELECT "CONFIG" FROM "CTE_PUBLISHER_CONFIG")
+                    SELECT "NOTIFICATIONRULE"."NAME" AS "RULE_NAME"
+                         , "NOTIFICATIONPUBLISHER"."NAME" AS "PUBLISHER_NAME"
+                         , "NOTIFICATIONPUBLISHER"."PUBLISHER_CLASS"
+                         , "NOTIFICATIONPUBLISHER"."TEMPLATE"
+                         , "NOTIFICATIONPUBLISHER"."TEMPLATE_MIME_TYPE"
+                         , "NOTIFICATIONRULE"."PUBLISHER_CONFIG"
+                      FROM "NOTIFICATIONRULE"
+                     INNER JOIN "NOTIFICATIONPUBLISHER"
+                        ON "NOTIFICATIONPUBLISHER"."ID" = "NOTIFICATIONRULE"."PUBLISHER"
+                     WHERE "NOTIFICATIONRULE"."NAME" = :ruleName
                     """);
 
             return query
                     .bind("ruleName", ruleName)
-                    .bind("publisherName", publisherName)
-                    .mapTo(String.class)
+                    .map(new PublishContextRowMapper())
                     .one();
         });
-
-        return Json.createReader(new StringReader(configJsonStr)).readObject();
     }
 
 }
