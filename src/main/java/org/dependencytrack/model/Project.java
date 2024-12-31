@@ -326,8 +326,6 @@ public class Project implements Serializable {
 
     private transient String author;
 
-    private transient boolean active;
-
     public long getId() {
         return id;
     }
