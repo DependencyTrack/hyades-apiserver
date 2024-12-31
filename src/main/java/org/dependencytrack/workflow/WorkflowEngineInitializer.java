@@ -31,6 +31,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesAr
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
@@ -144,6 +146,12 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
+        engine.registerWorkflowRunner(
+                new PublishNotificationWorkflow(),
+                /* maxConcurrency */ 10,
+                /* argumentConverter */ protoConverter(PublishNotificationWorkflowArgs.class),
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
 
         final var random = new SecureRandom();
 
@@ -155,7 +163,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 maybeFaultInjecting(new InternalVulnerabilityAnalysisActivity(), random),
-                /* maxConcurrency */ 20,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
                 /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
@@ -179,8 +187,14 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityRunner(
                 maybeFaultInjecting(new ProjectMetricsUpdateTask(), random),
-                /* maxConcurrency */ 20,
+                /* maxConcurrency */ 10,
                 /* argumentConverter */ protoConverter(UpdateProjectMetricsArgs.class),
+                /* resultConverter */ voidConverter(),
+                /* lockTimeout */ Duration.ofSeconds(30));
+        engine.registerActivityRunner(
+                maybeFaultInjecting(new PublishNotificationActivity(), random),
+                /* maxConcurrency */ 10,
+                /* argumentConverter */ protoConverter(PublishNotificationActivityArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
     }

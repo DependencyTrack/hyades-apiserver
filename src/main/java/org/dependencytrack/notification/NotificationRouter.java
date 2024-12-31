@@ -18,9 +18,17 @@
  */
 package org.dependencytrack.notification;
 
+import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs.PublishNotificationTask;
+import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 import org.postgresql.PGConnection;
 import org.postgresql.replication.LogSequenceNumber;
 import org.postgresql.replication.PGReplicationStream;
@@ -30,14 +38,18 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 
 public class NotificationRouter implements Closeable {
 
@@ -62,7 +74,11 @@ public class NotificationRouter implements Closeable {
         }
 
         stopping = false;
-        executor = Executors.newSingleThreadExecutor();
+        executor = Executors.newSingleThreadExecutor(
+                new BasicThreadFactory.Builder()
+                        .namingPattern("NotificationRouter-%d")
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .build());
         executor.execute(() -> {
             try (final Connection connection = dataSource.getConnection();
                  final PGReplicationStream replicationStream = startReplicationStream(connection)) {
@@ -75,9 +91,11 @@ public class NotificationRouter implements Closeable {
 
                     // TODO: Consume a batch, route them, then "commit"?
                     //  Doing this one-by-one could prove a tad inefficient.
-                    final Optional<LogicalDecodingMessage> decodedMessage = decode(messageBuffer);
-
-                    decodedMessage.ifPresent(this::process);
+                    // TODO: On exception, sleep and rewind to last acked LSN.
+                    final LogicalDecodingMessage decodedMessage = maybeDecode(messageBuffer);
+                    if (decodedMessage != null) {
+                        process(decodedMessage);
+                    }
 
                     replicationStream.setAppliedLSN(replicationStream.getLastReceiveLSN());
                     replicationStream.setFlushedLSN(replicationStream.getLastReceiveLSN());
@@ -121,22 +139,41 @@ public class NotificationRouter implements Closeable {
 
         LOGGER.debug("Received notification: [{}]", DebugFormat.singleLine().lazyToString(notification));
 
-        // TODO: Evaluate notification rules, schedule workflow for dispatch.
-    }
-
-    private Optional<LogicalDecodingMessage> decode(final ByteBuffer messageBuffer) {
-        final var messageType = (char) messageBuffer.get();
-        if (messageType != 'M') {
-            if (messageType != /* BEGIN */ 'B' && messageType != /* COMMIT */ 'C') {
-                LOGGER.warn("Unexpected message type: {}", messageType);
-            } else if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Skipping message of type {}", messageType);
-            }
-
-            return Optional.empty();
+        // Depending on the type of notification, the notification content can be arbitrarily large.
+        // We're better off using file storage for it, rather than submitting it as workflow argument.
+        final FileMetadata notificationFileMetadata;
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            notificationFileMetadata = fileStorage.store("notification", notification.toByteArray());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to store notification", e);
         }
 
-        return Optional.of(LogicalDecodingMessage.parse(messageBuffer));
+        // TODO: Evaluate notification rules.
+        final var publishTasks = new ArrayList<PublishNotificationTask>();
+
+        workflowEngine().scheduleWorkflowRun(
+                new ScheduleWorkflowRunOptions("publish-notification", 1)
+                        .withArgument(
+                                PublishNotificationWorkflowArgs.newBuilder()
+                                        .setNotificationFileMetadata(notificationFileMetadata)
+                                        .addAllTasks(publishTasks)
+                                        .build(),
+                                protoConverter(PublishNotificationWorkflowArgs.class)));
+    }
+
+    private LogicalDecodingMessage maybeDecode(final ByteBuffer messageBuffer) {
+        final var messageType = (char) messageBuffer.get();
+        if (messageType == 'M') {
+            return LogicalDecodingMessage.parse(messageBuffer);
+        }
+
+        if (messageType != /* BEGIN */ 'B' && messageType != /* COMMIT */ 'C') {
+            LOGGER.warn("Unexpected message type: {}", messageType);
+        } else if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Skipping message of type {}", messageType);
+        }
+
+        return null;
     }
 
     private record LogicalDecodingMessage(
