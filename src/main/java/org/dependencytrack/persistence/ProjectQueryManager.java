@@ -1347,7 +1347,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         boolean hasActiveChild = false;
         if (project.getChildren() != null) {
             for (Project child : project.getChildren()) {
-                if (child.getInactiveSince() == null || hasActiveChild) {
+                if (child.isActive() || hasActiveChild) {
                     return true;
                 } else {
                     hasActiveChild = hasActiveChild(child);

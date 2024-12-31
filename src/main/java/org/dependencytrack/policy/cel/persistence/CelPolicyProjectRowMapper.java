@@ -51,7 +51,7 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "name", ResultSet::getString, builder::setName);
         maybeSet(rs, "version", ResultSet::getString, builder::setVersion);
         maybeSet(rs, "classifier", ResultSet::getString, builder::setClassifier);
-        maybeSet(rs, "inactive_since", RowMapperUtil::nullableTimestamp, builder::setInactiveSince);
+        maybeSet(rs, "is_active", ResultSet::getBoolean, builder::setIsActive);
         maybeSet(rs, "cpe", ResultSet::getString, builder::setCpe);
         maybeSet(rs, "purl", ResultSet::getString, builder::setPurl);
         maybeSet(rs, "swid_tag_id", ResultSet::getString, builder::setSwidTagId);

@@ -42,7 +42,7 @@ public record ConciseProject(
         @Schema(description = "Name of the project", requiredMode = Schema.RequiredMode.REQUIRED) String name,
         @Schema(description = "Version of the project") String version,
         @Schema(description = "Classifier of the project") Classifier classifier,
-        @Schema(description = "Timestamp of the project deactivation", type = "number", example = "1719499619599") Date inactiveSince,
+        @Schema(description = "Whether the project is active", requiredMode = Schema.RequiredMode.REQUIRED) boolean active,
         @Schema(description = "Whether the project version is latest") boolean isLatest,
         @Schema(description = "Tags associated with the project") List<Tag> tags,
         @Schema(description = "Teams associated with the project") List<Team> teams,
@@ -55,7 +55,7 @@ public record ConciseProject(
     public ConciseProject(final ConciseProjectListRow row) {
         this(row.uuid(), row.group(), row.name(), row.version(),
                 row.classifier() != null ? Classifier.valueOf(row.classifier()) : null,
-                row.inactiveSince() != null ? Date.from(row.inactiveSince()) : null,
+                row.inactiveSince() == null,
                 row.isLatest(),
                 convertTags(row.tags()),
                 convertTeams(row.teams()),
