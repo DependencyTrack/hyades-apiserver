@@ -179,10 +179,10 @@ public class PluginManager {
         final var pluginLoader = ServiceLoader.load(Plugin.class);
         for (final Plugin plugin : pluginLoader) {
             try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, plugin.getClass().getName())) {
-                LOGGER.info("Loading plugin");
+                LOGGER.debug("Loading plugin");
                 loadExtensionsForPlugin(plugin);
 
-                LOGGER.info("Plugin loaded successfully");
+                LOGGER.debug("Plugin loaded successfully");
                 loadedPluginByClass.put(plugin.getClass(), plugin);
             }
         }
@@ -274,7 +274,7 @@ public class PluginManager {
             );
         }
 
-        LOGGER.info("Initializing extension");
+        LOGGER.debug("Initializing extension");
         try {
             extensionFactory.init(configRegistry);
         } catch (RuntimeException e) {
@@ -318,7 +318,7 @@ public class PluginManager {
 
             try (var ignoredMdcExtensionPoint = MDC.putCloseable(MDC_EXTENSION_POINT, extensionPointClassName);
                  var ignoredMdcExtensionPointName = MDC.putCloseable(MDC_EXTENSION_POINT_NAME, extensionPointName)) {
-                LOGGER.info("Determining default extension");
+                LOGGER.debug("Determining default extension");
 
                 final SortedSet<? extends ExtensionFactory<?>> factories = getFactories(extensionPointClass);
                 if (factories == null || factories.isEmpty()) {
@@ -331,9 +331,9 @@ public class PluginManager {
 
                 final ExtensionFactory<?> extensionFactory;
                 if (defaultExtensionName.isEmpty()) {
-                    LOGGER.warn("No default extension configured; Choosing based on priority");
+                    LOGGER.debug("No default extension configured; Choosing based on priority");
                     extensionFactory = factories.first();
-                    LOGGER.info("Chose extension %s (%s) with priority %d as default"
+                    LOGGER.debug("Chose extension %s (%s) with priority %d as default"
                             .formatted(extensionFactory.extensionName(), extensionFactory.extensionClass().getName(), extensionFactory.priority()));
                 } else {
                     extensionFactory = factories.stream()
@@ -342,7 +342,7 @@ public class PluginManager {
                             .orElseThrow(() -> new NoSuchElementException("""
                                     No extension named %s exists for extension point %s (%s)"""
                                     .formatted(defaultExtensionName.get(), MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
-                    LOGGER.info("Using extension %s (%s) as default"
+                    LOGGER.debug("Using extension %s (%s) as default"
                             .formatted(extensionFactory.extensionName(), extensionFactory.extensionClass().getName()));
                 }
 
@@ -398,10 +398,10 @@ public class PluginManager {
         // Unload plugins in reverse order in which they were loaded.
         for (final Plugin plugin : loadedPluginByClass.sequencedValues().reversed()) {
             try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, plugin.getClass().getName())) {
-                LOGGER.info("Unloading plugin");
+                LOGGER.debug("Unloading plugin");
                 unloadPlugin(plugin);
 
-                LOGGER.info("Plugin unloaded");
+                LOGGER.debug("Plugin unloaded");
             }
         }
     }
