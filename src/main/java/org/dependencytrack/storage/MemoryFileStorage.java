@@ -18,9 +18,7 @@
  */
 package org.dependencytrack.storage;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.dependencytrack.storage.MemoryFileStorageFactory.StoredFile;
 
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
@@ -28,50 +26,57 @@ import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.storage.FileStorage.requireValidName;
 
-class MemoryFileStorage implements FileStorage {
+final class MemoryFileStorage implements FileStorage {
 
     static final String EXTENSION_NAME = "memory";
 
-    private final Map<String, StoredFile> storedFileByKey;
+    private final Map<String, byte[]> fileContentByKey;
 
-    MemoryFileStorage(final Map<String, StoredFile> storedFileByKey) {
-        this.storedFileByKey = requireNonNull(storedFileByKey);
+    MemoryFileStorage(final Map<String, byte[]> fileContentByKey) {
+        this.fileContentByKey = requireNonNull(fileContentByKey);
     }
 
     @Override
     public FileMetadata store(final String name, final byte[] content) throws IOException {
-        requireNonNull(name, "name must not be null");
+        requireValidName(name);
         requireNonNull(content, "content must not be null");
 
-        final String key = "%s-%s".formatted(UUID.randomUUID().toString(), name);
-        final String sha256 = DigestUtils.sha256Hex(content);
+        final String key = "%s_%s".formatted(UUID.randomUUID().toString(), name);
 
-        storedFileByKey.put(key, new StoredFile(key, sha256, content));
+        fileContentByKey.put(key, content);
         return FileMetadata.newBuilder()
                 .setKey(key)
-                .setStorage(EXTENSION_NAME)
-                .setSha256(sha256)
+                .setStorageName(EXTENSION_NAME)
                 .build();
     }
 
     @Override
-    public byte[] get(final String key) throws IOException {
-        requireNonNull(key, "key must not be null");
+    public byte[] get(final FileMetadata fileMetadata) throws IOException {
+        requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        final StoredFile storedFile = storedFileByKey.get(key);
-        if (storedFile == null) {
-            throw new NoSuchFileException(key);
+        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
+            throw new IllegalArgumentException("Unable to retrieve file from storage: " + fileMetadata.getStorageName());
         }
 
-        return storedFile.content();
+        final byte[] fileContent = fileContentByKey.get(fileMetadata.getKey());
+        if (fileContent == null) {
+            throw new NoSuchFileException(fileMetadata.getKey());
+        }
+
+        return fileContent;
     }
 
     @Override
-    public boolean delete(final String key) throws IOException {
-        requireNonNull(key, "key must not be null");
+    public boolean delete(final FileMetadata fileMetadata) throws IOException {
+        requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        return storedFileByKey.remove(key) != null;
+        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
+            throw new IllegalArgumentException("Unable to delete file from storage: " + fileMetadata.getStorageName());
+        }
+
+        return fileContentByKey.remove(fileMetadata.getKey()) != null;
     }
 
 }

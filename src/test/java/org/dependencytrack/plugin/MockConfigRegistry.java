@@ -16,22 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ExtensionFactory;
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.ConfigDefinition;
+import org.dependencytrack.plugin.api.ConfigRegistry;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-public final class FileStoragePlugin implements Plugin {
+public class MockConfigRegistry implements ConfigRegistry {
+
+    private final Map<String, String> properties;
+
+    public MockConfigRegistry(final Map<String, String> properties) {
+        this.properties = properties;
+    }
 
     @Override
-    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
-        return List.of(
-                new LocalFileStorageFactory(),
-                new MemoryFileStorageFactory());
+    public Optional<String> getOptionalValue(final ConfigDefinition config) {
+        return Optional.ofNullable(properties.get(config.name()));
     }
 
 }

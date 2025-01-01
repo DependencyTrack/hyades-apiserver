@@ -20,20 +20,24 @@ package org.dependencytrack.storage;
 
 import com.fasterxml.uuid.Generators;
 import com.github.luben.zstd.Zstd;
-import org.apache.commons.codec.digest.DigestUtils;
+import org.bouncycastle.jcajce.provider.digest.Blake3.Blake3_256;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.storage.FileStorage.requireValidName;
 
-public class LocalFileStorage implements FileStorage {
+final class LocalFileStorage implements FileStorage {
 
     static final String EXTENSION_NAME = "local";
+    private static final String METADATA_KEY_BLAKE3_DIGEST = "blake3_digest";
 
     private final Path baseDirPath;
     private final int compressionThresholdBytes;
@@ -50,17 +54,20 @@ public class LocalFileStorage implements FileStorage {
 
     @Override
     public FileMetadata store(final String name, final byte[] content) throws IOException {
-        requireNonNull(name, "name must not be null");
+        requireValidName(name);
         requireNonNull(content, "content must not be null");
 
+        // NB: Using UUIDv7 ensures that file names are sortable by creation time.
+        // TODO: Consider supporting sub-directories, where the provided name could be foo/bar/baz.
         final UUID uuid = Generators.timeBasedEpochRandomGenerator().generate();
-        final Path filePath = baseDirPath.resolve("%s_%s".formatted(uuid, name)).toAbsolutePath();
+        final Path filePath = resolveFilePath("%s_%s".formatted(uuid, name));
 
         final byte[] maybeCompressedContent = content.length >= compressionThresholdBytes
                 ? Zstd.compress(content, compressionLevel)
                 : content;
 
-        final String sha256 = DigestUtils.sha256Hex(maybeCompressedContent);
+        // TODO: Blake3 optionally supports a key. Could use that to authenticate files.
+        final byte[] contentDigest = new Blake3_256().digest(maybeCompressedContent);
 
         try (final var fileOutputStream = Files.newOutputStream(filePath);
              final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
@@ -69,16 +76,35 @@ public class LocalFileStorage implements FileStorage {
 
         return FileMetadata.newBuilder()
                 .setKey(baseDirPath.relativize(filePath).toString())
-                .setStorage(EXTENSION_NAME)
-                .setSha256(sha256)
+                .setStorageName(EXTENSION_NAME)
+                .putStorageMetadata(METADATA_KEY_BLAKE3_DIGEST, HexFormat.of().formatHex(contentDigest))
                 .build();
     }
 
     @Override
-    public byte[] get(final String key) throws IOException {
-        final Path filePath = resolveFilePath(key);
+    public byte[] get(final FileMetadata fileMetadata) throws IOException {
+        requireNonNull(fileMetadata, "fileMetadata must not be null");
+
+        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
+            throw new IllegalArgumentException("Unable to retrieve file from storage: " + fileMetadata.getStorageName());
+        }
+
+        final String expectedContentDigestHex = fileMetadata.getStorageMetadataMap().get(METADATA_KEY_BLAKE3_DIGEST);
+        if (expectedContentDigestHex == null) {
+            throw new IllegalArgumentException("File metadata does not contain " + METADATA_KEY_BLAKE3_DIGEST);
+        }
+
+        final Path filePath = resolveFilePath(fileMetadata.getKey());
 
         final byte[] maybeCompressedContent = Files.readAllBytes(filePath);
+
+        final byte[] actualContentDigest = new Blake3_256().digest(maybeCompressedContent);
+        final byte[] expectedContentDigest = HexFormat.of().parseHex(expectedContentDigestHex);
+
+        if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
+            throw new IOException("File digest mismatch: actual=%s, expected=%s".formatted(
+                    HexFormat.of().formatHex(actualContentDigest), expectedContentDigestHex));
+        }
 
         final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);
         if (Zstd.decompressedSize(maybeCompressedContent) <= 0) {
@@ -89,14 +115,18 @@ public class LocalFileStorage implements FileStorage {
     }
 
     @Override
-    public boolean delete(final String key) throws IOException {
-        final Path filePath = resolveFilePath(key);
+    public boolean delete(final FileMetadata fileMetadata) throws IOException {
+        requireNonNull(fileMetadata, "fileMetadata must not be null");
+
+        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
+            throw new IllegalArgumentException("Unable to delete file from storage: " + fileMetadata.getStorageName());
+        }
+
+        final Path filePath = resolveFilePath(fileMetadata.getKey());
         return Files.deleteIfExists(filePath);
     }
 
-    private Path resolveFilePath(final String key) {
-        requireNonNull(key, "key must not be null");
-
+    Path resolveFilePath(final String key) {
         final Path filePath = baseDirPath.resolve(key).normalize().toAbsolutePath();
         if (!filePath.startsWith(baseDirPath)) {
             throw new IllegalStateException("""

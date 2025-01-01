@@ -82,7 +82,7 @@ public class PublishNotificationWorkflow implements WorkflowRunner<PublishNotifi
 
         ctx.sideEffect("delete notification file", null, voidConverter(), ignored -> {
             try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-                fileStorage.delete(args.getNotificationFileMetadata().getKey());
+                fileStorage.delete(args.getNotificationFileMetadata());
             } catch (IOException e) {
                 ctx.logger().warn("Failed to delete notification file", e);
             }

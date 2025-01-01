@@ -31,21 +31,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
+public final class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    private static final ConfigDefinition CONFIG_DIRECTORY = new ConfigDefinition(
+    static final ConfigDefinition CONFIG_DIRECTORY = new ConfigDefinition(
             "directory",
             ConfigSource.DEPLOYMENT,
             /* isRequired */ false,
             /* isSecret */ false);
-    private static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
+    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
             "compression.threshold.bytes",
             ConfigSource.DEPLOYMENT,
             /* isRequired */ false,
             /* isSecret */ false);
-    private static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
+    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
             "compression.level",
             ConfigSource.DEPLOYMENT,
             /* isRequired */ false,
@@ -74,7 +74,9 @@ public class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
     public void init(final ConfigRegistry configRegistry) {
         directoryPath = configRegistry.getOptionalValue(CONFIG_DIRECTORY)
                 .map(Paths::get)
-                .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"));
+                .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"))
+                .normalize()
+                .toAbsolutePath();
 
         try {
             Files.createDirectories(directoryPath);
@@ -102,7 +104,7 @@ public class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
     }
 
     @Override
-    public LocalFileStorage create() {
+    public FileStorage create() {
         return new LocalFileStorage(directoryPath, compressionThresholdBytes, compressionLevel);
     }
 

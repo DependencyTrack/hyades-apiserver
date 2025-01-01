@@ -5,8 +5,15 @@ package org.dependencytrack.storage.v1alpha1;
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.storage.v1alpha1";
 
+// Metadata of a file stored by a storage provider.
 message FileMetadata {
+  // Unique identifier of the file.
   string key = 1;
-  string storage = 2;
-  string sha256 = 3;
+
+  // Name of the storage provider that hosts the file.
+  string storage_name = 2;
+
+  // Additional metadata of the storage provider,
+  // i.e. values used for integrity verification.
+  map<string, string> storage_metadata = 3;
 }

@@ -55,7 +55,7 @@ public class PublishNotificationActivity implements ActivityRunner<PublishNotifi
 
         final byte[] notificationBytes;
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            notificationBytes = fileStorage.get(args.getNotificationFileMetadata().getKey());
+            notificationBytes = fileStorage.get(args.getNotificationFileMetadata());
         } catch (FileNotFoundException e) {
             throw new TerminalActivityException("Notification file does not exist", e);
         }

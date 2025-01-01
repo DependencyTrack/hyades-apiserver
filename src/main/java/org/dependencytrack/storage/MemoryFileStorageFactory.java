@@ -24,12 +24,9 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MemoryFileStorageFactory implements ExtensionFactory<FileStorage> {
+public final class MemoryFileStorageFactory implements ExtensionFactory<FileStorage> {
 
-    record StoredFile(String key, String sha256, byte[] content) {
-    }
-
-    private Map<String, StoredFile> storedFileByKey;
+    private Map<String, byte[]> fileContentByKey;
 
     @Override
     public String extensionName() {
@@ -48,12 +45,12 @@ public class MemoryFileStorageFactory implements ExtensionFactory<FileStorage> {
 
     @Override
     public void init(final ConfigRegistry configRegistry) {
-        storedFileByKey = new ConcurrentHashMap<>();
+        fileContentByKey = new ConcurrentHashMap<>();
     }
 
     @Override
     public FileStorage create() {
-        return new MemoryFileStorage(storedFileByKey);
+        return new MemoryFileStorage(fileContentByKey);
     }
 
 }

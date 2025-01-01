@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
@@ -42,7 +43,7 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
     public Optional<Void> run(final ActivityRunContext<ProcessProjectAnalysisResultsArgs> ctx) throws Exception {
         final ProcessProjectAnalysisResultsArgs args = ctx.argument().orElseThrow();
 
-        final var resultsFileKeys = new HashSet<String>(args.getResultsCount());
+        final var resultsFileMetadataSet = new HashSet<FileMetadata>(args.getResultsCount());
         final var results = new ArrayList<AnalyzeProjectVulnsResult>(args.getResultsCount());
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
@@ -51,14 +52,13 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
                     continue;
                 }
 
-                final String fileKey = result.getResultsFileMetadata().getKey();
-                resultsFileKeys.add(fileKey);
+                resultsFileMetadataSet.add(result.getResultsFileMetadata());
 
                 // TODO: Fail with a terminal exception when a file was not found?
                 //  Consider checking for all files first so we can report when more
                 //  than one file is missing.
-                LOGGER.info("Retrieving results file {}", fileKey);
-                final byte[] fileContent = fileStorage.get(fileKey);
+                LOGGER.info("Retrieving results file {}", result.getResultsFileMetadata().getKey());
+                final byte[] fileContent = fileStorage.get(result.getResultsFileMetadata());
                 results.add(AnalyzeProjectVulnsResult.parseFrom(fileContent));
             }
         }
@@ -85,9 +85,9 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
         //  whereas here we'll deal with all components of a project.
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            for (final String fileKey : resultsFileKeys) {
-                LOGGER.info("Deleting results file {}", fileKey);
-                fileStorage.delete(fileKey);
+            for (final FileMetadata fileMetadata : resultsFileMetadataSet) {
+                LOGGER.info("Deleting results file {}", fileMetadata.getKey());
+                fileStorage.delete(fileMetadata);
             }
         }
 

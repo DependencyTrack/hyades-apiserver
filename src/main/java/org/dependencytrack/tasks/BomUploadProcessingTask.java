@@ -206,7 +206,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
             processEvent(ctx, fileStorage, event);
 
             try {
-                fileStorage.delete(event.getFileMetadata().getKey());
+                fileStorage.delete(event.getFileMetadata());
             } catch (IOException ex) {
                 LOGGER.warn("Failed to delete BOM file from storage", ex);
             }
@@ -223,7 +223,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
 
         final ConsumedBom consumedBom;
         try {
-            final byte[] cdxBomBytes = fileStorage.get(event.getFileMetadata().getKey());
+            final byte[] cdxBomBytes = fileStorage.get(event.getFileMetadata());
             final Parser parser = BomParserFactory.createParser(cdxBomBytes);
             final org.cyclonedx.model.Bom cdxBom = parser.parse(cdxBomBytes);
 
@@ -1059,7 +1059,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
     }
 
     private void dispatchBomConsumedNotification(final Context ctx) {
-       final var notification = new Notification()
+        final var notification = new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.BOM_CONSUMED)
                 .level(NotificationLevel.INFORMATIONAL)
@@ -1174,8 +1174,8 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
             qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
             return true;
         } else if (integrityMetaComponent.getStatus() == null
-                || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
-                && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
+                   || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
+                       && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
             integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
             return true;
         } else if (integrityMetaComponent.getStatus() == FetchStatus.PROCESSED || integrityMetaComponent.getStatus() == FetchStatus.NOT_AVAILABLE) {
