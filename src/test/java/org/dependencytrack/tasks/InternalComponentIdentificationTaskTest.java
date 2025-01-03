@@ -47,7 +47,7 @@ public class InternalComponentIdentificationTaskTest extends PersistenceCapableT
                 ConfigPropertyConstants.INTERNAL_COMPONENTS_NAMES_REGEX.getPropertyName(),
                 "^foobar-.*", PropertyType.STRING, null);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         // Batch insert 280 components, 30 of which are supposed to be identified as internal
         final Transaction trx = qm.getPersistenceManager().currentTransaction();

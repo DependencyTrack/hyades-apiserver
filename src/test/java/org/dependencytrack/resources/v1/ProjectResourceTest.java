@@ -34,7 +34,6 @@ import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -79,6 +78,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +122,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void getProjectsDefaultRequestTest() {
         for (int i = 0; i < 1000; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
         Response response = jersey.target(V1_PROJECT)
                 .request()
@@ -141,12 +141,12 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsWithAclEnabledTest() {
         enablePortfolioAccessControl();
         // Create project and give access to current principal's team.
-        final Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         accessProject.setAccessTeams(List.of(team));
         qm.persist(accessProject);
 
         // Create a second project that the current principal has no access to.
-        qm.createProject("acme-app-b", null, "2.0.0", null, null, null, true, false);
+        qm.createProject("acme-app-b", null, "2.0.0", null, null, null, null, false);
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
@@ -164,7 +164,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void getProjectsByNameRequestTest() {
         for (int i = 0; i < 1000; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
         Response response = jersey.target(V1_PROJECT)
                 .queryParam("name", "Acme Example")
@@ -183,7 +183,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void getProjectsByInvalidNameRequestTest() {
         for (int i = 0; i < 1000; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
         Response response = jersey.target(V1_PROJECT)
                 .queryParam("name", "blah")
@@ -200,10 +200,10 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void getProjectsByNameActiveOnlyRequestTest() {
         for (int i = 0; i < 500; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, true, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
         for (int i = 500; i < 1000; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, false, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, new Date(), false);
         }
         Response response = jersey.target(V1_PROJECT)
                 .queryParam("name", "Acme Example")
@@ -221,7 +221,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void getProjectLookupTest() {
         for (int i = 0; i < 500; i++) {
-            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, false, false);
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
         Response response = jersey.target(V1_PROJECT + "/lookup")
                 .queryParam("name", "Acme Example")
@@ -279,8 +279,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsAscOrderedRequestTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT)
                 .queryParam(ORDER_BY, "name")
                 .queryParam(SORT, SORT_ASC)
@@ -296,8 +296,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsDescOrderedRequestTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT)
                 .queryParam(ORDER_BY, "name")
                 .queryParam(SORT, SORT_DESC)
@@ -357,6 +357,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         final var projectA = new Project();
         projectA.setName("acme-app-a");
+        projectA.setInactiveSince(new Date());
         qm.persist(projectA);
 
         final var projectB = new Project();
@@ -377,7 +378,7 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-a",
-                    "active": true,
+                    "active": false,
                     "isLatest": false,
                     "teams": [
                       {
@@ -601,6 +602,7 @@ public class ProjectResourceTest extends ResourceTest {
         final var projectB = new Project();
         projectB.setParent(projectA);
         projectB.setName("acme-app-b");
+        projectB.setInactiveSince(new Date());
         qm.persist(projectB);
 
         // Should return both when onlyRoot is not set at all.
@@ -622,7 +624,7 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
-                    "active": true,
+                    "active": false,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -649,7 +651,7 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
-                    "active": true,
+                    "active": false,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -681,14 +683,14 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsConciseWithFilterByActiveTest() {
         final var projectA = new Project();
         projectA.setName("acme-app-a");
-        projectA.setActive(false);
+        projectA.setInactiveSince(new Date());
         qm.persist(projectA);
 
         final var projectB = new Project();
         projectB.setName("acme-app-b");
         qm.persist(projectB);
 
-        // Should return both when active is not set at all.
+        // Should return both when active is not set or active is false.
         Response response = jersey.target(V1_PROJECT + "/concise")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -728,26 +730,6 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-app-b",
                     "active": true,
-                    "isLatest": false,
-                    "hasChildren": false
-                  }
-                ]
-                """);
-
-        // Should return only inactive active=false.
-        response = jersey.target(V1_PROJECT + "/concise")
-                .queryParam("active", "false")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                    "uuid": "${json-unit.any-string}",
-                    "name": "acme-app-a",
-                    "active": false,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -1066,6 +1048,7 @@ public class ProjectResourceTest extends ResourceTest {
         final var childProjectB = new Project();
         childProjectB.setParent(parentProject);
         childProjectB.setName("acme-child-app-b");
+        childProjectB.setInactiveSince(new Date());
         qm.persist(childProjectB);
 
         // Should not return results for partial matches.
@@ -1091,7 +1074,7 @@ public class ProjectResourceTest extends ResourceTest {
                   {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
-                    "active": true,
+                    "active": false,
                     "isLatest": false,
                     "hasChildren": false
                   }
@@ -1325,6 +1308,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProject.setName("acme-app-child");
         childProject.setVersion("1.0.0");
         childProject.setParent(project);
+        childProject.setInactiveSince(new Date());
         qm.persist(childProject);
 
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
@@ -1352,19 +1336,20 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "acme-app-child",
                               "version": "1.0.0",
                               "uuid": "${json-unit.matches:childUuid}",
-                              "active": true,
-                              "isLatest": false
+                              "isLatest": false,
+                              "active": false,
+                              "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
                           "properties": [],
                           "tags": [],
-                          "active": true,
                           "isLatest": false,
+                          "active":true,
                           "versions": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
                               "version": "1.0.0",
-                              "active":true
+                              "active": true
                             }
                           ]
                         }
@@ -1389,7 +1374,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByInvalidUuidTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1405,8 +1390,8 @@ public class ProjectResourceTest extends ResourceTest {
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("production");
         tags.add(tag);
-        qm.createProject("ABC", null, "1.0", tags, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", tags, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/tag/" + "production")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1423,8 +1408,8 @@ public class ProjectResourceTest extends ResourceTest {
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("PRODUCTION");
         tags.add(tag);
-        qm.createProject("ABC", null, "1.0", tags, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", tags, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/tag/" + "production")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1441,8 +1426,8 @@ public class ProjectResourceTest extends ResourceTest {
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("production");
         tags.add(tag);
-        qm.createProject("ABC", null, "1.0", tags, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", tags, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/tag/" + "stable")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1470,7 +1455,6 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("Acme Example", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
         Assert.assertEquals("Test project", json.getString("description"));
-        Assert.assertTrue(json.getBoolean("active"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
@@ -1506,7 +1490,7 @@ public class ProjectResourceTest extends ResourceTest {
         final var parentProject = new Project();
         parentProject.setName("acme-app-parent");
         parentProject.setVersion("1.0.0");
-        parentProject.setActive(false);
+        parentProject.setInactiveSince(new Date());
         qm.persist(parentProject);
 
         final Response response = jersey.target(V1_PROJECT)
@@ -1574,7 +1558,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setDescription("Test project");
         Response response = jersey.target(V1_PROJECT)
                 .request()
@@ -1628,7 +1612,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void updateProjectTagsTest() {
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
-        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, true, false);
+        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
 
         final var jsonProject = new Project();
         jsonProject.setUuid(p1.getUuid());
@@ -1684,7 +1668,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectEmptyNameTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setName(" ");
         Response response = jersey.target(V1_PROJECT)
                 .request()
@@ -1695,8 +1679,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectDuplicateTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        Project project = qm.createProject("DEF", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        Project project = qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         project = qm.detach(Project.class, project.getId());
         project.setName("ABC");
         Response response = jersey.target(V1_PROJECT)
@@ -1710,7 +1694,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void deleteProjectTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1720,7 +1704,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void deleteProjectInvalidUuidTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID().toString())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1731,7 +1715,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void patchProjectNotModifiedTest() {
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
-        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, true, false);
+        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
 
         final var jsonProject = new Project();
         jsonProject.setDescription(p1.getDescription());
@@ -1747,8 +1731,8 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void patchProjectNameVersionConflictTest() {
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
-        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, true, false);
-        qm.createProject("ABC", "Test project", "0.9", null, null, null, false, false);
+        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
+        qm.createProject("ABC", "Test project", "0.9", null, null, null, null, false);
         final var jsonProject = new Project();
         jsonProject.setVersion("0.9");
         final var response = jersey.target(V1_PROJECT + "/" + p1.getUuid())
@@ -1793,9 +1777,9 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentTest() {
-        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, true, false);
-        final Project newParent = qm.createProject("GHI", null, "3.0", null, null, null, true, false);
+        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
+        final Project newParent = qm.createProject("GHI", null, "3.0", null, null, null, null, false);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
                 .add("parent", Json.createObjectBuilder()
@@ -1825,8 +1809,8 @@ public class ProjectResourceTest extends ResourceTest {
                           },
                           "properties": [],
                           "tags": [],
-                          "active": true,
-                          "isLatest": false
+                          "isLatest": false,
+                          "active": true
                         }
                         """);
 
@@ -1838,7 +1822,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectExternalReferencesTest() {
-        final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, true, false);
+        final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, null, false);
         final var ref1 = new ExternalReference();
         ref1.setType(org.cyclonedx.model.ExternalReference.Type.VCS);
         ref1.setUrl("https://github.com/DependencyTrack/awesomeness");
@@ -1871,8 +1855,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentNotFoundTest() {
-        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, true, false);
+        final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
                 .add("parent", Json.createObjectBuilder()
@@ -1897,7 +1881,7 @@ public class ProjectResourceTest extends ResourceTest {
     @Test
     public void patchProjectSuccessfullyPatchedTest() {
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
-        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, true, false);
+        final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
         final var projectManufacturerContact = new OrganizationalContact();
         projectManufacturerContact.setName("manufacturerContactName");
         final var projectManufacturer = new OrganizationalEntity();
@@ -1914,7 +1898,7 @@ public class ProjectResourceTest extends ResourceTest {
         p1.setSupplier(projectSupplier);
         qm.persist(p1);
         final var jsonProject = new Project();
-        jsonProject.setActive(false);
+        jsonProject.setInactiveSince(null);
         jsonProject.setName("new name");
         jsonProject.setPublisher("new publisher");
         jsonProject.setTags(Stream.of("tag4").map(name -> {
@@ -1979,8 +1963,8 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "tag4"
                             }
                           ],
-                          "active": false,
                           "isLatest": false,
+                          "active":true,
                           "children": []
                         }
                         """);
@@ -1988,9 +1972,9 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getRootProjectsTest() {
-        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
-        qm.createProject("GHI", null, "1.0", null, child, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
+        qm.createProject("GHI", null, "1.0", null, child, null, null, false);
         Response response = jersey.target(V1_PROJECT)
                 .queryParam("onlyRoot", true)
                 .request()
@@ -2006,10 +1990,10 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getChildrenProjectsTest() {
-        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
-        qm.createProject("GHI", null, "1.0", null, parent, null, true, false);
-        qm.createProject("JKL", null, "1.0", null, child, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
+        qm.createProject("GHI", null, "1.0", null, parent, null, null, false);
+        qm.createProject("JKL", null, "1.0", null, child, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + parent.getUuid().toString() + "/children")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -2024,14 +2008,14 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateChildAsParentOfChild() {
-        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
 
         Project tmpProject = new Project();
         tmpProject.setName(parent.getName());
         tmpProject.setVersion(parent.getVersion());
         tmpProject.setUuid(parent.getUuid());
-        tmpProject.setActive(true);
+        tmpProject.setInactiveSince(null);
 
         tmpProject.setParent(child);
         Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
@@ -2039,14 +2023,14 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateParentToInactiveWithActiveChild() {
-        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        qm.createProject("DEF", null, "1.0", null, parent, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
 
         Project tmpProject = new Project();
         tmpProject.setName(parent.getName());
         tmpProject.setVersion(parent.getVersion());
         tmpProject.setUuid(parent.getUuid());
-        tmpProject.setActive(false);
+        tmpProject.setInactiveSince(new Date());
 
         Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
     }
@@ -2072,13 +2056,13 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectParentToSelf() {
-        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
+        Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
 
         Project tmpProject = new Project();
         tmpProject.setName(parent.getName());
         tmpProject.setVersion(parent.getVersion());
         tmpProject.setUuid(parent.getUuid());
-        tmpProject.setActive(parent.isActive());
+        tmpProject.setInactiveSince(parent.getInactiveSince());
         tmpProject.setParent(parent);
 
         Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
@@ -2086,10 +2070,10 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithoutDescendantsOfTest() {
-        Project grandParent = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        Project parent = qm.createProject("DEF", null, "1.0", null, grandParent, null, true, false);
-        Project child = qm.createProject("GHI", null, "1.0", null, parent, null, true, false);
-        qm.createProject("JKL", null, "1.0", null, child, null, true, false);
+        Project grandParent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        Project parent = qm.createProject("DEF", null, "1.0", null, grandParent, null, null, false);
+        Project child = qm.createProject("GHI", null, "1.0", null, parent, null, null, false);
+        qm.createProject("JKL", null, "1.0", null, child, null, null, false);
 
         Response response = jersey.target(V1_PROJECT + "/withoutDescendantsOf/" + parent.getUuid())
                 .request()
@@ -2371,9 +2355,9 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void validateProjectVersionsActiveInactiveTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, true, false);
-        qm.createProject("ABC", null, "2.0", null, null, null, false, false);
-        qm.createProject("ABC", null, "3.0", null, null, null, true, false);
+        Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        qm.createProject("ABC", null, "2.0", null, null, null, new Date(), false);
+        qm.createProject("ABC", null, "3.0", null, null, null, null, false);
 
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
                 .request()
@@ -2392,11 +2376,11 @@ public class ProjectResourceTest extends ResourceTest {
 
         Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(1).getJsonString("uuid").getString());
         Assert.assertEquals("2.0", json.getJsonArray("versions").getJsonObject(1).getJsonString("version").getString());
-        Assert.assertFalse(json.getJsonArray("versions").getJsonObject(1).getBoolean("active"));
+        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
 
         Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(2).getJsonString("uuid").getString());
         Assert.assertEquals("3.0", json.getJsonArray("versions").getJsonObject(2).getJsonString("version").getString());
-        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(2).getBoolean("active"));
+        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4048
@@ -2517,14 +2501,14 @@ public class ProjectResourceTest extends ResourceTest {
                       "version": "1.0.0",
                       "classifier": "APPLICATION",
                       "uuid": "${json-unit.any-string}",
-                      "active": true,
-                      "isLatest": false
+                      "isLatest": false,
+                      "active": true
                     }
                   ],
                   "properties": [],
                   "tags": [],
-                  "active": true,
                   "isLatest": false,
+                  "active": true,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
@@ -2554,8 +2538,8 @@ public class ProjectResourceTest extends ResourceTest {
                   "children": [],
                   "properties": [],
                   "tags": [],
-                  "active": true,
                   "isLatest": false,
+                  "active": true,
                   "versions": [
                     {
                       "uuid": "${json-unit.any-string}",
@@ -2645,10 +2629,36 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createProjectAsInactiveTest() {
+        Project project = new Project();
+        project.setName("Acme Example");
+        project.setVersion("1.0");
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(201, response.getStatus(), 0);
+        JsonObject json = parseJsonObject(response);
+        // ensure initial value is false when not specified
+        Assert.assertTrue(json.getBoolean("active"));
+
+        project.setVersion("2.0");
+        project.setInactiveSince(new Date());
+        response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(201, response.getStatus(), 0);
+        json = parseJsonObject(response);
+        // ensure value of latest version is true when specified
+        Assert.assertFalse(json.getBoolean("active"));
+    }
+
+    @Test
     public void updateProjectAsLatestTest() {
         // create project not as latest
         Project project = qm.createProject("ABC", null, "1.0", null, null, null,
-                true, false, false);
+                null, false, false);
 
         // make it latest by update
         var jsonProject = qm.detach(project);
@@ -2663,7 +2673,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         // add another project version, "forget" to make it latest
         final Project newProject = qm.createProject("ABC", null, "1.0.1", null, null, null,
-                true, false, false);
+                null, false, false);
         // make the new version latest afterwards via update
         jsonProject = qm.detach(newProject);
         jsonProject.setIsLatest(true);
@@ -2746,7 +2756,7 @@ public class ProjectResourceTest extends ResourceTest {
     public void patchProjectAsLatestTest() {
         // create project not as latest
         Project project = qm.createProject("ABC", null, "1.0", null, null, null,
-                true, false, false);
+                null, false, false);
 
         // make it latest by patch
         var jsonProject = new Project();
@@ -2762,7 +2772,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         // add another project version, "forget" to make it latest
         final Project newProject = qm.createProject("ABC", null, "1.0.1", null, null, null,
-                true, false, false);
+                null, false, false);
         // make the new version latest afterwards via update
         jsonProject = new Project();
         jsonProject.setIsLatest(true);
@@ -2886,9 +2896,9 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getLatestProjectTest() {
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
-        qm.createProject("Acme Example", null, "1.0.2", null, null, null, true, true, false);
-        qm.createProject("Different project", null, "1.0.3", null, null, null, true, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
+        qm.createProject("Acme Example", null, "1.0.2", null, null, null, null, true, false);
+        qm.createProject("Different project", null, "1.0.3", null, null, null, null, true, false);
 
         Response response = jersey.target(V1_PROJECT_LATEST + "Acme Example")
                 .request()
@@ -2906,11 +2916,11 @@ public class ProjectResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         // Create project and give access to current principal's team.
-        Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false, false);
+        Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false, false);
         accessProject.setAccessTeams(List.of(team));
         qm.persist(accessProject);
 
-        accessProject = qm.createProject("acme-app-a", null, "1.0.2", null, null, null, true, true, false);
+        accessProject = qm.createProject("acme-app-a", null, "1.0.2", null, null, null, null, true, false);
         accessProject.setAccessTeams(List.of(team));
         qm.persist(accessProject);
 
@@ -2930,8 +2940,8 @@ public class ProjectResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         // Create projects and give NO access
-        qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false, false);
-        qm.createProject("acme-app-a", null, "1.0.2", null, null, null, true, true, false);
+        qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false, false);
+        qm.createProject("acme-app-a", null, "1.0.2", null, null, null, null, true, false);
 
         final Response response = jersey.target(V1_PROJECT_LATEST + "acme-app-a")
                 .request()
@@ -3021,8 +3031,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
-                          "isLatest":false
+                          "isLatest":false,
+                          "active": true
                         }
                         """);
 
@@ -3062,8 +3072,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
@@ -3144,8 +3154,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
@@ -3254,12 +3264,142 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true,
-                          "isLatest":false
+                          "isLatest":false,
+                          "active":true
                         }
                         """);
 
         assertThat(qm.getAllProjects()).satisfiesExactly(project ->
                 assertThat(project.getAccessTeams()).extracting(Team::getName).containsOnly(team.getName()));
+    }
+
+    @Test
+    public void patchActiveProjectToInactiveTest() {
+        // create project as active
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                null, false, false);
+
+        // make it inactive by patch
+        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
+                        {
+                          "name": "ABC-Updated",
+                          "active": false
+                        }
+                        """));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "inactiveSince": "${json-unit.any-number}",
+                          "isLatest":false,
+                          "active": false
+                        }
+                        """);
+    }
+
+    @Test
+    public void patchInactiveProjectToActiveTest() {
+        // create project as inactive
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                new Date(), false, false);
+
+        // make it active by patch
+        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
+                        {
+                          "name": "ABC-Updated",
+                          "active": true
+                        }
+                        """));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "properties": [],
+                          "tags": [],
+                          "isLatest":false,
+                          "active": true
+                        }
+                        """);
+    }
+
+    @Test
+    public void updateActiveProjectToInactiveTest() {
+        // create project as active
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                null, false, false);
+
+        // make it inactive by update
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "ABC-Updated",
+                          "active": false
+                        }
+                        """.formatted(project.getUuid())));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "classifier":"APPLICATION",
+                          "children": [],
+                          "properties": [],
+                          "tags": [],
+                          "inactiveSince": "${json-unit.any-number}",
+                          "isLatest":false,
+                          "active": false
+                        }
+                        """);
+    }
+
+    @Test
+    public void updateInactiveProjectToActiveTest() {
+        // create project as inactive
+        Project project = qm.createProject("ABC", null, null, null, null, null,
+                new Date(), false, false);
+
+        // make it active by update
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "ABC-Updated",
+                          "active": true
+                        }
+                        """.formatted(project.getUuid())));
+        Assert.assertEquals(200, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "uuid": "${json-unit.any-string}",
+                          "name": "ABC-Updated",
+                          "classifier":"APPLICATION",
+                          "properties": [],
+                          "tags": [],
+                          "isLatest":false,
+                          "active": true
+                        }
+                        """);
     }
 }

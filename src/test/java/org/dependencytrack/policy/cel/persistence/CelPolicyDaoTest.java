@@ -64,7 +64,6 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         project.setName("projectName");
         project.setVersion("projectVersion");
         project.setClassifier(Classifier.APPLICATION);
-        project.setActive(true);
         project.setCpe("projectCpe");
         project.setPurl("projectPurl");
         project.setSwidTagId("projectSwidTagId");

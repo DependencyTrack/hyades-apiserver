@@ -46,7 +46,7 @@ public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
     @Before
     public void persistComponentData() {
         environmentVariables.set("INTEGRITY_INITIALIZER_ENABLED", "true");
-        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, true, false);
+        final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         componentPersisted.setProject(projectA);
         componentPersisted.setName("acme-lib-a");
         componentPersisted.setInternal(false);

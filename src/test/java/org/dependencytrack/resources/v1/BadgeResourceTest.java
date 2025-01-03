@@ -57,7 +57,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByUuidTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -70,7 +70,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByUuidWithHeaderAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -83,7 +83,7 @@ public class BadgeResourceTest extends ResourceTest {
     public void projectVulnerabilitiesByUuidMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
         enableUnauthenticatedBadgeAccess();
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
@@ -104,7 +104,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByUuidMissingAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .get(Response.class);
         Assert.assertEquals(401, response.getStatus(), 0);
@@ -112,7 +112,7 @@ public class BadgeResourceTest extends ResourceTest {
 
     @Test
     public void projectVulnerabilitiesByUuidMissingPermissionTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -191,7 +191,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByNameAndVersionTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -205,7 +205,7 @@ public class BadgeResourceTest extends ResourceTest {
     public void projectVulnerabilitiesByNameAndVersionWithHeaderAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
         enableUnauthenticatedBadgeAccess();
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
@@ -215,7 +215,7 @@ public class BadgeResourceTest extends ResourceTest {
 
     public void projectVulnerabilitiesByNameAndVersionMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -238,7 +238,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByNameAndVersionVersionNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.2.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -249,7 +249,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectVulnerabilitiesByNameAndVersionMissingAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
         Assert.assertEquals(401, response.getStatus(), 0);
@@ -257,7 +257,7 @@ public class BadgeResourceTest extends ResourceTest {
 
     @Test
     public void projectVulnerabilitiesByNameAndVersionMissingPermissionTest() {
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -336,7 +336,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByUuidTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -349,7 +349,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByUuidWithHeaderAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -362,7 +362,7 @@ public class BadgeResourceTest extends ResourceTest {
     public void projectPolicyViolationsByUuidMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
         enableUnauthenticatedBadgeAccess();
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .request()
                 .get(Response.class);
@@ -384,7 +384,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByUuidMissingAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .get(Response.class);
         Assert.assertEquals(401, response.getStatus(), 0);
@@ -392,7 +392,7 @@ public class BadgeResourceTest extends ResourceTest {
 
     @Test
     public void projectPolicyViolationsByUuidMissingPermissionTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -471,7 +471,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByNameAndVersionTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -484,7 +484,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByNameAndVersionWithHeaderAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -497,7 +497,7 @@ public class BadgeResourceTest extends ResourceTest {
     public void projectPolicyViolationsByNameAndVersionMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
         enableUnauthenticatedBadgeAccess();
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
@@ -519,7 +519,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByNameAndVersionVersionNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.2.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -530,7 +530,7 @@ public class BadgeResourceTest extends ResourceTest {
     @Test
     public void projectPolicyViolationsByNameAndVersionMissingAuthenticationTest() {
         initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
         Assert.assertEquals(401, response.getStatus(), 0);
@@ -538,7 +538,7 @@ public class BadgeResourceTest extends ResourceTest {
 
     @Test
     public void projectPolicyViolationsByNameAndVersionMissingPermissionTest() {
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
                 .request()
@@ -556,7 +556,7 @@ public class BadgeResourceTest extends ResourceTest {
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 null
         );
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         project.setAccessTeams(List.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
@@ -578,7 +578,7 @@ public class BadgeResourceTest extends ResourceTest {
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 null
         );
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         project.setAccessTeams(List.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()

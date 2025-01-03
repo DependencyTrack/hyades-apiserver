@@ -70,8 +70,7 @@ BEGIN
   FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
         FROM "PROJECTMETRICS" AS "PM"
                INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
-        WHERE "P"."ACTIVE" = TRUE  -- Only consider active projects
-          OR "P"."ACTIVE" IS NULL -- ACTIVE is nullable, assume TRUE per default
+        WHERE "P"."INACTIVE_SINCE" IS NULL  -- Only consider active projects
         ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
   INTO
     "v_projects",

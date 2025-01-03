@@ -46,7 +46,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
     public void shouldAuditVulnerabilityFromAllSourcesUsingVex() throws Exception {
         // Arrange
         var sources = Arrays.asList(Vulnerability.Source.values());
-        var project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
