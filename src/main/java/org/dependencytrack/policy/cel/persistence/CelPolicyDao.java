@@ -195,6 +195,10 @@ public interface CelPolicyDao {
             }
         }
 
+        if (fieldsToLoad.contains("is_active")) {
+            sqlSelectColumns.add("\"P\".\"INACTIVE_SINCE\" AS \"inactive_since\"");
+        }
+
         final var sqlPropertySelectColumns = new ArrayList<String>();
         if (fieldsToLoad.contains("properties") && requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
             sqlSelectColumns.add("\"properties\"");

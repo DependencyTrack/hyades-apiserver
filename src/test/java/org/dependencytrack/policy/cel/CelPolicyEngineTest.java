@@ -295,6 +295,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
                   && project.name == "projectName"
                   && project.version == "projectVersion"
                   && project.classifier == "APPLICATION"
+                  && !project.is_active
                   && project.cpe == "projectCpe"
                   && project.purl == "projectPurl"
                   && project.swid_tag_id == "projectSwidTagId"
