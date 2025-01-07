@@ -103,7 +103,7 @@
         <lib.kafka.version>3.8.0</lib.kafka.version>
         <lib.liquibase.version>4.30.0</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.14</lib.minio.version>
+        <lib.minio.version>8.5.15</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.10.0</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
