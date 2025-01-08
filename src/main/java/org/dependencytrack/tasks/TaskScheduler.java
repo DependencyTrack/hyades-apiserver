@@ -38,6 +38,7 @@ import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
+import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
@@ -46,6 +47,7 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
@@ -95,7 +97,8 @@ public final class TaskScheduler extends BaseTaskScheduler {
                 Map.entry(new TagMaintenanceEvent(), getCronScheduleForTask(TagMaintenanceTask.class)),
                 Map.entry(new VulnerabilityDatabaseMaintenanceEvent(), getCronScheduleForTask(VulnerabilityDatabaseMaintenanceTask.class)),
                 Map.entry(new VulnerabilityScanMaintenanceEvent(), getCronScheduleForTask(VulnerabilityScanMaintenanceTask.class)),
-                Map.entry(new WorkflowMaintenanceEvent(), getCronScheduleForTask(WorkflowMaintenanceTask.class)));
+                Map.entry(new WorkflowMaintenanceEvent(), getCronScheduleForTask(WorkflowMaintenanceTask.class)),
+                Map.entry(new ProjectMaintenanceEvent(), getCronScheduleForTask(ProjectMaintenanceTask.class)));
 
         Map<Event, Schedule> configurableTasksMap = new HashMap<>();
         if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {

@@ -26,7 +26,9 @@ import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -220,4 +222,11 @@ public interface ProjectDao {
     ) {
     }
 
+    @SqlUpdate("""
+            DELETE
+              FROM "PROJECT"
+              WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+              AND NOW() - "PROJECT"."INACTIVE_SINCE" > :duration
+            """)
+    int deleteInactiveProjectsForRetentionDuration(@Bind Duration duration);
 }

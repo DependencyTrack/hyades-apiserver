@@ -28,6 +28,7 @@ import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
+import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
@@ -53,6 +54,7 @@ import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
@@ -124,6 +126,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE_ST.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, VulnerabilityDatabaseMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(VulnerabilityScanMaintenanceEvent.class, VulnerabilityScanMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(WorkflowMaintenanceEvent.class, WorkflowMaintenanceTask.class);
+        EVENT_SERVICE_ST.subscribe(ProjectMaintenanceEvent.class, ProjectMaintenanceTask.class);
 
         TaskScheduler.getInstance();
     }
@@ -166,6 +169,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE_ST.unsubscribe(VulnerabilityDatabaseMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(VulnerabilityScanMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(WorkflowMaintenanceTask.class);
+        EVENT_SERVICE_ST.unsubscribe(ProjectMaintenanceTask.class);
         EVENT_SERVICE_ST.shutdown(DRAIN_TIMEOUT_DURATION);
     }
 }
